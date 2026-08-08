@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="error_background">#CC3B1F1F</color>
+    <color name="error_text">#FFFFFFFF</color>
+    <color name="image_surface">#FF111111</color>
+    <color name="color_primary">#E88A00</color>
+    <color name="color_primary_dark">#A85A00</color>
+    <color name="color_secondary">#0097A7</color>
+    <color name="toolbar_text">#FFFFFFFF</color>
+    <color name="verification_match">#FF2E7D32</color>
+    <color name="verification_mismatch">#FFC62828</color>
+    <color name="window_background">#FFFFFFFF</color>
+    <color name="text_color_primary">#DE000000</color>
+    <color name="text_color_secondary">#99000000</color>
+    <color name="divider">#1F000000</color>
+    <color name="validation_error">#FFC62828</color>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AI Text Generation</string>
+    <string name="button_import_model">.litertlm 모델 가져오기</string>
+    <string name="import_failed">모델 가져오기 실패</string>
+    <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">모델 가져오는 중...</string>
+    <string name="import_succeeded">모델을 가져왔습니다</string>
+    <string name="model_none">설정된 모델이 없습니다</string>
+    <string name="model_status_format">모델: %1$s\n크기: %2$s\nSHA-256: %3$s</string>
+    <string name="plugin_description">기기 내 LiteRT-LM 텍스트 생성 provider</string>
+    <string name="screen_description">로컬 LiteRT-LM 모델을 선택합니다. 파일은 앱 전용 저장소에 복사되며 업로드되지 않습니다</string>
+</resources>

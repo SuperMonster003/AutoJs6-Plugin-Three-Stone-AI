@@ -1,0 +1,218 @@
+<!--suppress HtmlDeprecatedAttribute, HttpUrlsUsage -->
+
+<div align="center">
+  <p>
+    <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
+  </p>
+
+  <p>ローカル AI テキスト生成プラグイン. LiteRT-LM で端末上のプレーンテキストをストリーミング生成</p>
+
+  <p>
+    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?label=Release"/></a>
+    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/issues"><img alt="GitHub closed issues" src="https://img.shields.io/github/issues/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?color=A24232&label=Issues"/></a>
+    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/LICENSE"><img alt="GitHub License" src="https://img.shields.io/github/license/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?color=534BAE&label=License"/></a>
+  </p>
+</div>
+
+******
+
+### 言語
+
+******
+
+現在の README.md は次の言語に対応しています:
+
+- [简体中文 [zh-Hans]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-zh-Hans.md)
+- [繁體中文 (香港) [zh-Hant-HK]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-zh-Hant-HK.md)
+- [繁體中文 (台灣) [zh-Hant-TW]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-zh-Hant-TW.md)
+- [English [en]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-en.md)
+- [Français [fr]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-fr.md)
+- [Español [es]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-es.md)
+- 日本語 [ja] # 現在
+- [한국어 [ko]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-ko.md)
+- [Русский [ru]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-ru.md)
+- [العربية [ar]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-ar.md)
+
+******
+
+### 概要
+
+******
+
+AI Text Generation は AutoJs6 AI Text Generation プロトコル V1 の独立した端末内 provider です. ユーザーがインポートした LiteRT-LM モデルを CPU で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストを返します.
+
+******
+
+### 機能
+
+******
+
+- Android システムピッカーから `.litertlm` モデルパッケージをインポートし, 検証済みコピーをアプリ専用ストレージに保存します.
+- プレーンテキストの system, user, assistant 履歴からローカル生成リクエストを作成します.
+- credit バックプレッシャーでテキスト chunk を順番に配信し, 完了, 失敗, キャンセルのいずれか 1 つの終端状態だけを公開します.
+- 現在インポートされているモデルを一覧し, 置換後に新しいモデル一覧 generation を公開します.
+- モデルのダウンロードやリモート推論サービスを使わず, CPU backend で完全に端末内実行します.
+
+******
+
+### モデルとデータ形式
+
+******
+
+バージョン 1 は次のモデルとテキスト範囲だけを宣言します:
+
+```text
+model package: .litertlm
+input: text/plain message history
+output: streamed text/plain chunks
+runtime: LiteRT-LM 0.15.0
+```
+
+******
+
+### プラグインインターフェース
+
+******
+
+ホストは次の識別情報でプラグインを検出して呼び出します:
+
+```text
+service action: org.autojs.plugin.AI_TEXT_GENERATION
+plugin id: ai-text-generation
+protocol provider id: autojs6.local.text
+engine: ai-text-generation
+variant: default
+protocol: V1
+required host build: 5270
+```
+
+プラグインは ON_DEVICE 実行と NONE credential モードを宣言します. 宣言する機能は `streaming` のみで, 入出力は `text/plain` のみです.
+
+ホスト build 5270 以降が必要です. リリースには arm64-v8a, x86_64, universal APK variant が含まれます.
+
+******
+
+### ホスト統合状態
+
+******
+
+> 現在の AutoJs6 メインリポジトリには AI Android adapter, provider selector, runtime bridge がまだなく, 組み込みの `ai.*` もこのプロトコルへ移行していません. このプラグインをインストールするだけでは既存の `ai.*` 呼び出しは切り替わりません. End-to-end 利用には将来の host adapter, またはホストで明示的に有効化した adapter とこの provider の選択が必要です.
+
+******
+
+### セキュリティとプライバシー
+
+******
+
+ネットワーク権限とストレージ権限は要求しません. システムピッカーが許可した URI だけからモデルを読み込み, SHA-256 を計算しながらアプリ専用の `files/models` にコピーし, fsync 後に同じディレクトリの pointer を原子的に置換して有効化します. Provider サービスは AutoJs6 パッケージ名, 呼び出し UID の所有権, 双方の一致する署名も検証します.
+
+******
+
+### 動作制限
+
+******
+
+- モデルのインポートには 8 GiB の厳格な上限があり, 完了後に 256 MiB 以上の空き容量が必要です.
+- Application scope の単一インポート coordinator により Activity 再作成中も処理を継続します. Fsync 済み pending journal でコールドスタート復旧と stale な `.incoming`, `.current`, `.pending` 一時ファイルの cleanup を行います. 復旧で削除するのは現在の試行が新規作成し current metadata で一度も公開していない destination だけで, 公開済み, current, 履歴 hash 世代は保持します.
+- 独立した `:provider` プロセスとのプロセス間競合を避けるため, 置換インポート後も以前の SHA-256 hash 名モデル世代を保持します. これらのファイルはアプリ専用ストレージを引き続き使用します.
+- プロセス内で同時に有効な生成セッションは 1 つだけです. リクエスト記述子は非同期処理前に複製され, プロトコルの quota に従って閉じられます.
+- Provider が宣言するコンテキスト上限は 256 KiB, 出力上限は 64 KiB です. リクエストとモデルはさらに低い上限を設定できます.
+- ストリーミングは有限の credit と制限付き chunk を使い, 無制限なバッファやバックプレッシャーなしの callback を防ぎます.
+- キャンセル, セッション終了, timeout は結果公開を停止し, 1 つの終端状態でリクエストを終了します.
+
+******
+
+### 宣言しない機能
+
+******
+
+- Reasoning, tools, structured JSON, usage は宣言しません.
+- Tool role メッセージ, tool schema, tool call, tool result は受け付けません.
+- ネットワークでのモデル探索, モデルダウンロード, cloud 推論, credential フローはありません.
+- GPU または NPU backend は宣言しません. `.litertlm` 拡張子だけでは現在の LiteRT-LM runtime がモデルを読み込める保証にはなりません.
+
+******
+
+### リリース履歴
+
+******
+
+# v1.0.0
+
+###### 2026/08/08
+
+* `機能` Plugin ID と engine が `ai-text-generation`, provider ID が `autojs6.local.text`, variant が `default` の端末内 AI Text Generation プロトコル V1 provider
+* `機能` System, user, assistant 履歴と credit 制御ストリーミングに対応する CPU-only LiteRT-LM プレーンテキスト生成
+* `機能` 8 GiB 上限, 空き容量予約, SHA-256, fsync, 原子的な有効化を備えた `.litertlm` のアプリ専用領域への SAF インポート
+* `機能` 単一アクティブセッション, 制限付き I/O, descriptor quota, キャンセル, timeout, 単一終端状態, 同一署名 AutoJs6 呼び出し元検証
+* `機能` Reasoning, tools, structured JSON, usage, ネットワーク, credential 機能を明示的に非搭載
+* `機能` arm64-v8a, x86_64, universal APK と 10 言語の README, changelog, Android UI, プラグイン説明
+* `改善` `:provider` とのプロセス間競合を避けるため置換インポート後も以前の SHA-256 hash 名モデル世代を保持し, 保持ファイルがアプリ専用ストレージを引き続き使用
+* `改善` Activity 再作成中の継続, コールドスタート復旧, stale 一時ファイル cleanup, 現在の試行が作成して未公開の destination だけに限定した削除のため application scope 単一インポート coordinator と fsync 済み pending journal を追加し, 公開済み, current, 履歴 hash 世代を保持
+* `依存関係` 端末内 CPU テキスト生成用に LiteRT-LM 0.15.0 を追加
+
+##### その他のリリース
+
+* [CHANGELOG-ja.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/assets/doc/CHANGELOG-ja.md)
+
+******
+
+### ビルド
+
+******
+
+```powershell
+.\gradlew.bat :app:assembleDebug
+```
+
+リリースビルド:
+
+```powershell
+.\gradlew.bat :app:assembleRelease
+```
+
+ビルド設定は `version.properties` から取得します. 現在の最小 SDK は 24, ターゲット SDK は 36 で, JDK 21 以降が必要です.
+
+プロトコル ABI は `libs` にあるリポジトリローカル AAR から提供されます:
+
+```text
+common-plugin-api.aar
+protocol-wire-api.aar
+ai-common-api.aar
+ai-text-generation-api.aar
+```
+
+Runtime は Maven の LiteRT-LM 0.15.0 を使用します. リリースビルドは LiteRT-LM runtime クラスを保持し, 2 個の ABI APK と 1 個の universal APK を生成します.
+
+******
+
+### ライセンス
+
+******
+
+プロジェクトのソースコードは MPL-2.0 です. LiteRT-LM とその他のサードパーティコンポーネントには各ライセンスが引き続き適用されます.
+
+******
+
+### リソース構成
+
+******
+
+```text
+.readme/lang_*.json
+.changelog/lang_*.json
+.python/generate_markdown.py
+app/src/main/assets/doc/CHANGELOG-*.md
+app/src/main/res/values-*/strings.xml
+```
+
+`.python/generate_markdown.py` は JSON ソースから 10 言語の README とアプリ内 changelog を生成します. Android 文字列は各リソースディレクトリで管理されます.
+
+******
+
+### リンク
+
+******
+
+- AutoJs6 ドキュメント: https://docs.autojs6.com
+- LiteRT-LM プロジェクト: https://github.com/google-ai-edge/LiteRT-LM

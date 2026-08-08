@@ -1,0 +1,19 @@
+{
+  "repo_url": "https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation",
+  "repo_slug": "SuperMonster003/AutoJs6-Plugin-AI-Text-Generation",
+  "docs_autojs6_url": "https://docs.autojs6.com",
+  "upstream_url": "https://github.com/google-ai-edge/LiteRT-LM",
+  "plugin_action": "org.autojs.plugin.AI_TEXT_GENERATION",
+  "plugin_id": "ai-text-generation",
+  "protocol_provider_id": "autojs6.local.text",
+  "plugin_engine": "ai-text-generation",
+  "plugin_variant": "default",
+  "protocol_version": "V1",
+  "required_host_build": "5270",
+  "input_format": "text/plain message history",
+  "output_format": "streamed text/plain chunks",
+  "package_format": ".litertlm",
+  "runtime_dependency": "LiteRT-LM 0.15.0",
+  "supported_abis": "arm64-v8a, x86_64, universal",
+  "local_aars": "common-plugin-api.aar\nprotocol-wire-api.aar\nai-common-api.aar\nai-text-generation-api.aar"
+}

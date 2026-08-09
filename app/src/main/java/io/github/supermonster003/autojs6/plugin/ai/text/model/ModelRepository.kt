@@ -9,7 +9,6 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.security.MessageDigest
 import java.util.UUID
 
 internal data class ImportedModel(
@@ -91,15 +90,38 @@ internal class ModelRepository(context: Context) {
 
     @Synchronized
     fun importFrom(uri: Uri): ImportedModel {
-        require(uri.scheme == "content") { "Only a Storage Access Framework content URI is accepted" }
+        if (uri.scheme != "content") {
+            throw ModelImportFailureException(
+                ModelImportFailureReason.SOURCE_UNAVAILABLE,
+                "Only a Storage Access Framework content URI is accepted",
+            )
+        }
         ensureDirectory()
         require(!pendingMarkerFile.exists()) { "Interrupted model import recovery is required" }
-        val document = queryDocument(uri)
+        val document = querySourceDocument(uri)
         ModelImportPolicy.requireImportableName(document.displayName)
         val maximumBytes = ModelImportPolicy.maximumCopyBytes(directory.usableSpace)
-        require(maximumBytes > 0L) { "There is not enough free storage for a model" }
+        if (maximumBytes <= 0L) {
+            throw ModelImportFailureException(
+                ModelImportFailureReason.INSUFFICIENT_STORAGE,
+                "There is not enough free storage for a model",
+            )
+        }
         document.declaredSize?.let { size ->
-            require(size in 1L..maximumBytes) { "The selected model exceeds the import limit" }
+            when {
+                size <= 0L -> throw ModelImportFailureException(
+                    ModelImportFailureReason.INVALID_FORMAT,
+                    "The selected model is empty",
+                )
+                size > ModelImportPolicy.MAXIMUM_MODEL_BYTES -> throw ModelImportFailureException(
+                    ModelImportFailureReason.MODEL_TOO_LARGE,
+                    "The selected model exceeds the import limit",
+                )
+                size > maximumBytes -> throw ModelImportFailureException(
+                    ModelImportFailureReason.INSUFFICIENT_STORAGE,
+                    "There is not enough free storage for the selected model",
+                )
+            }
         }
 
         val transactionId = UUID.randomUUID().toString()
@@ -107,9 +129,21 @@ internal class ModelRepository(context: Context) {
         val pendingTemporary = File(directory, ".pending-$transactionId.tmp")
         var pendingTransaction: PendingModelTransaction? = null
         try {
-            val copied = applicationContext.contentResolver.openInputStream(uri)?.use { input ->
-                copyBounded(input, temporary, maximumBytes)
-            } ?: throw IllegalArgumentException("The selected model cannot be opened")
+            val limitFailureReason = if (maximumBytes < ModelImportPolicy.MAXIMUM_MODEL_BYTES) {
+                ModelImportFailureReason.INSUFFICIENT_STORAGE
+            } else {
+                ModelImportFailureReason.MODEL_TOO_LARGE
+            }
+            val copied = openSourceInput(uri).use { input ->
+                FileOutputStream(temporary).use { output ->
+                    ModelImportCopier.copy(
+                        input = input,
+                        output = output,
+                        maximumBytes = maximumBytes,
+                        limitFailureReason = limitFailureReason,
+                    ).also { output.fd.sync() }
+                }
+            }
             val sha256 = copied.sha256
             val destination = File(directory, "model-$sha256.litertlm")
             val destinationExistedBeforeImport = destination.exists()
@@ -253,37 +287,29 @@ internal class ModelRepository(context: Context) {
         return PendingModelTransactionPolicy.decode(pendingMarkerFile.readBytes())
     }
 
-    private fun copyBounded(input: InputStream, destination: File, maximumBytes: Long): CopyResult {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val header = ByteArray(4)
-        var headerCount = 0
-        var copied = 0L
-        val buffer = ByteArray(COPY_BUFFER_BYTES)
-        FileOutputStream(destination).use { output ->
-            while (true) {
-                if (Thread.currentThread().isInterrupted) throw InterruptedException("Model import was interrupted")
-                val count = input.read(buffer)
-                if (count < 0) break
-                if (count == 0) continue
-                require(copied <= maximumBytes - count) { "The selected model exceeds the import limit" }
-                if (headerCount < header.size) {
-                    val headerBytes = minOf(count, header.size - headerCount)
-                    buffer.copyInto(header, headerCount, 0, headerBytes)
-                    headerCount += headerBytes
-                }
-                output.write(buffer, 0, count)
-                digest.update(buffer, 0, count)
-                copied += count
-            }
-            require(copied > 0L) { "The selected model is empty" }
-            ModelImportPolicy.requireZipHeader(header.copyOf(headerCount))
-            output.fd.sync()
-        }
-        return CopyResult(
-            byteCount = copied,
-            sha256 = digest.digest().joinToString(separator = "") { byte ->
-                "%02x".format(byte.toInt() and 0xFF)
-            },
+    private fun querySourceDocument(uri: Uri): DocumentInfo = try {
+        queryDocument(uri)
+    } catch (error: Exception) {
+        throw ModelImportFailureException(
+            ModelImportFailureReason.SOURCE_UNAVAILABLE,
+            "The selected model metadata cannot be read",
+            error,
+        )
+    }
+
+    private fun openSourceInput(uri: Uri): InputStream = try {
+        applicationContext.contentResolver.openInputStream(uri)
+            ?: throw ModelImportFailureException(
+                ModelImportFailureReason.SOURCE_UNAVAILABLE,
+                "The selected model cannot be opened",
+            )
+    } catch (error: ModelImportFailureException) {
+        throw error
+    } catch (error: Exception) {
+        throw ModelImportFailureException(
+            ModelImportFailureReason.SOURCE_UNAVAILABLE,
+            "The selected model cannot be opened",
+            error,
         )
     }
 
@@ -341,15 +367,12 @@ internal class ModelRepository(context: Context) {
     }
 
     private data class DocumentInfo(val displayName: String, val declaredSize: Long?)
-    private data class CopyResult(val byteCount: Long, val sha256: String)
-
     private companion object {
         const val DIRECTORY_NAME = "models"
         const val METADATA_FILE_NAME = "current.json"
         const val PENDING_MARKER_FILE_NAME = ".pending-model.json"
         const val METADATA_SCHEMA = 1
         const val MAXIMUM_METADATA_BYTES = 64L * 1024L
-        const val COPY_BUFFER_BYTES = 1024 * 1024
         const val MAXIMUM_RECOVERY_DIRECTORY_ENTRIES = 16_384
         private const val TRANSACTION_ID_PATTERN =
             "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"

@@ -3,6 +3,11 @@
     <string name="app_name">AI Text Generation</string>
     <string name="button_import_model">.litertlm 모델 가져오기</string>
     <string name="import_failed">모델 가져오기 실패</string>
+    <string name="import_failed_insufficient_storage">모델 가져오기 실패: 사용 가능한 저장 공간이 부족합니다</string>
+    <string name="import_failed_interrupted">모델 가져오기가 중단되었습니다</string>
+    <string name="import_failed_invalid_format">모델 가져오기 실패: 선택한 파일이 유효한 LiteRT-LM 모델이 아닙니다</string>
+    <string name="import_failed_model_too_large">모델 가져오기 실패: 모델이 8 GiB 제한을 초과합니다</string>
+    <string name="import_failed_source_unavailable">모델 가져오기 실패: 선택한 파일을 읽을 수 없습니다</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">모델 가져오는 중...</string>
     <string name="import_succeeded">모델을 가져왔습니다</string>
     <string name="model_none">설정된 모델이 없습니다</string>

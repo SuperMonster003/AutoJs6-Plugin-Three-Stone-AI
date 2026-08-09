@@ -38,9 +38,16 @@ class ModelImportStateMachineTest {
         val ready = ModelImportStateMachine<String>()
         ready.finishPreparation("old-model")
         val operationId = ready.begin()!!
-        assertTrue(ready.fail(operationId, "old-model"))
+        assertTrue(
+            ready.fail(
+                operationId,
+                "old-model",
+                ModelImportFailureReason.INVALID_FORMAT,
+            ),
+        )
         assertFalse(ready.succeed(operationId, "late-model"))
         val failed = ready.snapshot() as ModelImportState.Failed
         assertEquals("old-model", failed.current)
+        assertEquals(ModelImportFailureReason.INVALID_FORMAT, failed.reason)
     }
 }

@@ -34,13 +34,38 @@ class ModelImportPolicyTest {
     }
 
     @Test
-    fun validatesArchiveHeaderAndStableId() {
-        ModelImportPolicy.requireZipHeader(byteArrayOf(0x50, 0x4B, 0x03, 0x04))
-        assertThrows(IllegalArgumentException::class.java) {
-            ModelImportPolicy.requireZipHeader(byteArrayOf(0x7F, 0x45, 0x4C, 0x46))
+    fun validatesLiteRtLmMagicAndStableId() {
+        ModelImportPolicy.requireLiteRtLmHeader(
+            "LITERTLM".toByteArray(Charsets.US_ASCII) + byteArrayOf(1, 0, 0, 0),
+        )
+        val zipFailure = assertThrows(ModelImportFailureException::class.java) {
+            ModelImportPolicy.requireLiteRtLmHeader(
+                byteArrayOf(0x50, 0x4B, 0x03, 0x04, 0, 0, 0, 0),
+            )
         }
+        assertEquals(ModelImportFailureReason.INVALID_FORMAT, zipFailure.reason)
         val digest = "ab".repeat(32)
         assertEquals("litertlm.${digest.take(32)}", ModelImportPolicy.stableModelId(digest))
+    }
+
+    @Test
+    fun rejectsShortCaseChangedAndMutatedLiteRtLmMagic() {
+        val magic = "LITERTLM".toByteArray(Charsets.US_ASCII)
+        for (length in 0 until ModelImportPolicy.LITERTLM_MAGIC_BYTES) {
+            val failure = assertThrows(ModelImportFailureException::class.java) {
+                ModelImportPolicy.requireLiteRtLmHeader(magic.copyOf(length))
+            }
+            assertEquals(ModelImportFailureReason.INVALID_FORMAT, failure.reason)
+        }
+        assertThrows(ModelImportFailureException::class.java) {
+            ModelImportPolicy.requireLiteRtLmHeader("litertlm".toByteArray(Charsets.US_ASCII))
+        }
+        magic.indices.forEach { index ->
+            val mutated = magic.copyOf().apply { this[index] = (this[index].toInt() xor 0x01).toByte() }
+            assertThrows(ModelImportFailureException::class.java) {
+                ModelImportPolicy.requireLiteRtLmHeader(mutated)
+            }
+        }
     }
 
     @Test

@@ -2,9 +2,11 @@ package io.github.supermonster003.autojs6.plugin.ai.text.model
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
@@ -36,11 +38,15 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                     repository.current()
                 }.fold(
                     onSuccess = stateMachine::finishPreparation,
-                    onFailure = { stateMachine.failPreparation() },
+                    onFailure = { error ->
+                        logFailure(operationId = null, ModelImportFailureReason.UNKNOWN, error)
+                        stateMachine.failPreparation()
+                    },
                 )
                 publishLatest()
             }
-        } catch (_: RejectedExecutionException) {
+        } catch (error: RejectedExecutionException) {
+            logFailure(operationId = null, ModelImportFailureReason.UNKNOWN, error)
             stateMachine.failPreparation()
         }
     }
@@ -65,16 +71,22 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 try {
                     runCatching { repository.importFrom(uri) }.fold(
                         onSuccess = { stateMachine.succeed(operationId, it) },
-                        onFailure = { stateMachine.fail(operationId, repository.current()) },
+                        onFailure = { error ->
+                            val reason = error.toModelImportFailureReason()
+                            logFailure(operationId, reason, error)
+                            stateMachine.fail(operationId, repository.current(), reason)
+                        },
                     )
                     publishLatest()
                 } finally {
                     if (persistedReadPermission) releaseReadPermission(uri)
                 }
             }
-        } catch (_: RejectedExecutionException) {
+        } catch (error: RejectedExecutionException) {
             if (persistedReadPermission) releaseReadPermission(uri)
-            stateMachine.fail(operationId, repository.current())
+            val reason = ModelImportFailureReason.UNKNOWN
+            logFailure(operationId, reason, error)
+            stateMachine.fail(operationId, repository.current(), reason)
             publishLatest()
         }
         return true
@@ -112,7 +124,24 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         }
     }
 
+    private fun logFailure(
+        operationId: Long?,
+        reason: ModelImportFailureReason,
+        error: Throwable,
+    ) {
+        val operation = operationId?.toString() ?: "preparation"
+        val message = "Model import failure: operation=$operation reason=$reason type=${error.javaClass.name}"
+        val debuggable = applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        if (debuggable) {
+            Log.e(TAG, message, error)
+        } else {
+            Log.e(TAG, message)
+        }
+    }
+
     companion object {
+        private const val TAG = "ModelImportCoordinator"
+
         @Volatile
         private var instance: ModelImportCoordinator? = null
 

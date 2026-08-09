@@ -14,6 +14,7 @@ import android.widget.TextView
 import android.widget.Toast
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportCoordinator
+import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportFailureReason
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportState
 
 class ModelManagerActivity : Activity() {
@@ -89,7 +90,6 @@ class ModelManagerActivity : Activity() {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/octet-stream"
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream", "application/zip"))
         }
         startActivityForResult(intent, REQUEST_OPEN_MODEL)
     }
@@ -123,8 +123,9 @@ class ModelManagerActivity : Activity() {
             }
             is ModelImportState.Failed -> {
                 setImportUi(inProgress = false, importEnabled = true)
-                showCurrent(state.current)
-                notifyOnce(state.operationId, R.string.import_failed, Toast.LENGTH_LONG)
+                val message = importFailureMessage(state.reason)
+                state.current?.let(::showModel) ?: run { status.text = getString(message) }
+                notifyOnce(state.operationId, message, Toast.LENGTH_LONG)
             }
         }
     }
@@ -145,6 +146,15 @@ class ModelManagerActivity : Activity() {
     private fun setImportUi(inProgress: Boolean, importEnabled: Boolean) {
         progress.visibility = if (inProgress) View.VISIBLE else View.GONE
         importButton.isEnabled = importEnabled
+    }
+
+    private fun importFailureMessage(reason: ModelImportFailureReason): Int = when (reason) {
+        ModelImportFailureReason.INVALID_FORMAT -> R.string.import_failed_invalid_format
+        ModelImportFailureReason.MODEL_TOO_LARGE -> R.string.import_failed_model_too_large
+        ModelImportFailureReason.INSUFFICIENT_STORAGE -> R.string.import_failed_insufficient_storage
+        ModelImportFailureReason.SOURCE_UNAVAILABLE -> R.string.import_failed_source_unavailable
+        ModelImportFailureReason.INTERRUPTED -> R.string.import_failed_interrupted
+        ModelImportFailureReason.UNKNOWN -> R.string.import_failed
     }
 
     private fun notifyOnce(operationId: Long, message: Int, duration: Int) {

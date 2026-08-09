@@ -6,7 +6,11 @@ internal sealed interface ModelImportState<out T> {
     data class Ready<T>(val current: T?) : ModelImportState<T>
     data class Running<T>(val operationId: Long, val previous: T?) : ModelImportState<T>
     data class Succeeded<T>(val operationId: Long, val model: T) : ModelImportState<T>
-    data class Failed<T>(val operationId: Long, val current: T?) : ModelImportState<T>
+    data class Failed<T>(
+        val operationId: Long,
+        val current: T?,
+        val reason: ModelImportFailureReason,
+    ) : ModelImportState<T>
 }
 
 /** Process-local state only; durable crash recovery is owned by [ModelRepository]. */
@@ -55,10 +59,14 @@ internal class ModelImportStateMachine<T> {
     }
 
     @Synchronized
-    fun fail(operationId: Long, visibleCurrent: T?): Boolean {
+    fun fail(
+        operationId: Long,
+        visibleCurrent: T?,
+        reason: ModelImportFailureReason,
+    ): Boolean {
         if (!isRunning(operationId)) return false
         current = visibleCurrent
-        state = ModelImportState.Failed(operationId, visibleCurrent)
+        state = ModelImportState.Failed(operationId, visibleCurrent, reason)
         return true
     }
 

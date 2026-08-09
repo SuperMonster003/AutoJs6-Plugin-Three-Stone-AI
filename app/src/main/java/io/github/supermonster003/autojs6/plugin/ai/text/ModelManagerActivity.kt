@@ -1,6 +1,8 @@
 package io.github.supermonster003.autojs6.plugin.ai.text
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -20,8 +22,10 @@ import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportState
 class ModelManagerActivity : Activity() {
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var status: TextView
+    private lateinit var copyModelIdButton: Button
     private lateinit var importButton: Button
     private lateinit var progress: ProgressBar
+    private var copyableModelId: String? = null
     private var lastNotifiedOperationId = 0L
     private val importObserver = ModelImportCoordinator.Observer(::renderImportState)
 
@@ -72,8 +76,17 @@ class ModelManagerActivity : Activity() {
                 textSize = 16f
                 setPadding(0, dp(20), 0, dp(20))
             })
-            status = TextView(context).apply { textSize = 15f }
+            status = TextView(context).apply {
+                textSize = 15f
+                setTextIsSelectable(true)
+            }
             addView(status, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            copyModelIdButton = Button(context).apply {
+                text = getString(R.string.button_copy_model_id)
+                visibility = View.GONE
+                setOnClickListener { copyModelId() }
+            }
+            addView(copyModelIdButton)
             progress = ProgressBar(context).apply { visibility = View.GONE }
             addView(progress)
             importButton = Button(context).apply {
@@ -99,6 +112,7 @@ class ModelManagerActivity : Activity() {
     }
 
     private fun renderImportState(state: ModelImportState<ImportedModel>) {
+        updateModelActions(ModelManagerPresentation.visibleModel(state))
         when (state) {
             ModelImportState.Preparing -> {
                 setImportUi(inProgress = true, importEnabled = false)
@@ -140,7 +154,21 @@ class ModelManagerActivity : Activity() {
             model.displayName,
             Formatter.formatFileSize(this, model.sizeBytes),
             model.sha256,
+            model.modelId,
         )
+    }
+
+    private fun updateModelActions(model: ImportedModel?) {
+        copyableModelId = model?.modelId
+        copyModelIdButton.visibility = if (model == null) View.GONE else View.VISIBLE
+    }
+
+    private fun copyModelId() {
+        val modelId = copyableModelId ?: return
+        getSystemService(ClipboardManager::class.java).setPrimaryClip(
+            ClipData.newPlainText(getString(R.string.model_id_clipboard_label), modelId),
+        )
+        Toast.makeText(this, R.string.model_id_copied, Toast.LENGTH_SHORT).show()
     }
 
     private fun setImportUi(inProgress: Boolean, importEnabled: Boolean) {

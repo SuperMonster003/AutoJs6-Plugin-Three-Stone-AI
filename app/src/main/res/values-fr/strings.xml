@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AI Text Generation</string>
+    <string name="button_copy_model_id">Copier l\'ID du modèle</string>
     <string name="button_import_model">Importer un modèle .litertlm</string>
     <string name="import_failed">Échec de l\'import du modèle</string>
     <string name="import_failed_insufficient_storage">Échec de l\'import du modèle: espace de stockage disponible insuffisant</string>
@@ -10,8 +11,10 @@
     <string name="import_failed_source_unavailable">Échec de l\'import du modèle: impossible de lire le fichier sélectionné</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">Importation du modèle...</string>
     <string name="import_succeeded">Modèle importé</string>
+    <string name="model_id_clipboard_label">ID du modèle de texte IA</string>
+    <string name="model_id_copied">ID du modèle copié</string>
     <string name="model_none">Aucun modèle configuré</string>
-    <string name="model_status_format">Modèle: %1$s\nTaille: %2$s\nSHA-256: %3$s</string>
+    <string name="model_status_format">Modèle: %1$s\nTaille: %2$s\nSHA-256: %3$s\nID du modèle: %4$s</string>
     <string name="plugin_description">Provider de génération de texte LiteRT-LM sur appareil</string>
     <string name="screen_description">Choisissez un modèle LiteRT-LM local. Le fichier est copié dans le stockage privé de l\'application et jamais envoyé</string>
 </resources>

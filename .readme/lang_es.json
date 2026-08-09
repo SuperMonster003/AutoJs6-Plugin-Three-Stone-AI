@@ -42,7 +42,7 @@
     "No se declara backend GPU o NPU. La extensión `.litertlm` por sí sola no garantiza que el runtime LiteRT-LM actual pueda cargar el modelo."
   ],
   "h3_roadmap": "Hoja de ruta",
-  "p_roadmap": "La base `R0` y la identidad del modelo están en desarrollo; `R1` a `R8` son elementos planificados. El estado de las casillas se mantiene en la hoja de ruta del proyecto.",
+  "p_roadmap": "`R0` sigue en curso porque aún no se han ejecutado las validaciones de dispositivo y compilación. `R1` está en curso solo para el primer tramo de solo lectura, desconectado y desactivado por defecto, de `exact-action discovery` y `exact-component reinspection`; todavía no incluye enlace Binder, integración runtime/UI ni rutas `ai.*`. `R2` a `R8` siguen planificados. El estado de las casillas se mantiene en la hoja de ruta del proyecto.",
   "text_link_roadmap": "Ver ROADMAP.md",
   "h3_release_history": "Historial de versiones",
   "h5_for_more_release_history": "Más versiones",

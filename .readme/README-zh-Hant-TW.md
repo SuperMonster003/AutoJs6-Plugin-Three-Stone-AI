@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-`R0` 基線與模型識別正在實作, `R1` 至 `R8` 為規劃項目. 勾選狀態以專案路線圖為準.
+`R0` 仍在進行中, 裝置與建置門檻尚未執行. `R1` 僅進入預設關閉且未接線的唯讀 `exact-action discovery` 與 `exact-component reinspection` 首個切片, 尚無 Binder 繫結, runtime/UI 整合或 `ai.*` 路由. `R2` 至 `R8` 仍為規劃項目. 勾選狀態以專案路線圖為準.
 
 - [檢視 ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

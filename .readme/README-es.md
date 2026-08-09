@@ -137,7 +137,7 @@ El plugin no solicita permisos de red ni almacenamiento. Lee el modelo solo medi
 
 ******
 
-La base `R0` y la identidad del modelo están en desarrollo; `R1` a `R8` son elementos planificados. El estado de las casillas se mantiene en la hoja de ruta del proyecto.
+`R0` sigue en curso porque aún no se han ejecutado las validaciones de dispositivo y compilación. `R1` está en curso solo para el primer tramo de solo lectura, desconectado y desactivado por defecto, de `exact-action discovery` y `exact-component reinspection`; todavía no incluye enlace Binder, integración runtime/UI ni rutas `ai.*`. `R2` a `R8` siguen planificados. El estado de las casillas se mantiene en la hoja de ruta del proyecto.
 
 - [Ver ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

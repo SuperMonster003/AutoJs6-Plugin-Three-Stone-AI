@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-`R0` の基盤とモデル識別は実装中で, `R1` から `R8` は計画項目です. チェック状態はプロジェクトロードマップを参照してください.
+`R0` は device/build gate が未実行のため引き続き進行中です. `R1` はデフォルト無効かつ未接続の読み取り専用 `exact-action discovery` と `exact-component reinspection` の最初のスライスのみ進行中で, Binder バインド, runtime/UI 統合, `ai.*` ルーティングはまだありません. `R2` から `R8` は引き続き計画項目です. チェック状態はプロジェクトロードマップを参照してください.
 
 - [ROADMAP.md を表示](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

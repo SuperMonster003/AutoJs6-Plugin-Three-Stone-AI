@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-`R0` 기준선 및 모델 식별은 구현 중이며, `R1`부터 `R8`까지는 계획 항목입니다. 체크 상태는 프로젝트 로드맵을 기준으로 합니다.
+`R0`은 device/build gate가 아직 실행되지 않아 계속 진행 중입니다. `R1`은 기본 비활성화 및 미연결 읽기 전용 `exact-action discovery`와 `exact-component reinspection` 첫 슬라이스만 진행 중이며, Binder 바인딩, runtime/UI 통합, `ai.*` 라우팅은 아직 없습니다. `R2`부터 `R8`까지는 계속 계획 항목입니다. 체크 상태는 프로젝트 로드맵을 기준으로 합니다.
 
 - [ROADMAP.md 보기](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

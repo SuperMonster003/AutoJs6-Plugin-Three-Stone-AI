@@ -2,7 +2,7 @@
 
 本文将后续工作拆分为可验证的阶段. 路线图描述的是计划和退出条件, 不代表尚未勾选的能力已经可用, 也不承诺具体发布日期.
 
-当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 在本轮实施; R1 至 R8 均为规划项.
+当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 仍在进行中, Android/device smoke 与 lint/Debug/Release 构建门禁尚未执行. R1 已进入首个只读 discovery/reinspection 切片; R2 至 R8 仍为规划项.
 
 ## 状态说明
 
@@ -14,8 +14,8 @@
 
 | 阶段 | 主题 | 状态 | 主要依赖 | 实施仓库 |
 | --- | --- | --- | --- | --- |
-| R0 | 基线与模型身份 | 进行中, 本轮实施 | 无 | 当前插件仓库 |
-| R1 | 宿主 `ai.*` adapter | 规划 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
+| R0 | 基线与模型身份 | 进行中, 设备/构建门禁待执行 | 无 | 当前插件仓库 |
+| R1 | 宿主 `ai.*` adapter | 进行中, 只读发现首切片 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
 | R2 | 多模型与安全 GC | 规划 | R0 | 当前插件仓库 |
 | R3 | 模型自检与稳定错误码 | 规划 | R0, R2 catalog | 当前插件仓库 |
 | R4 | Engine 复用与性能 | 规划 | R2 model lease, R3 健康状态 | 当前插件仓库 |
@@ -54,9 +54,11 @@
 
 目标: 让普通 AutoJs6 脚本通过稳定的 `ai.*` API 使用本地 provider, 不再要求脚本直接操作 AIDL, Binder, callback 和 credit.
 
+当前首切片仅在 AutoJs6 中加入默认关闭且未接线的只读 PackageManager discovery/reinspection. 它没有生产调用点, 不执行 Binder 绑定, 不接入 runtime/UI 或 `ai.*` 路由, 因而不代表普通脚本已经可以通过宿主使用本地 provider.
+
 ### 工作项
 
-- [ ] 在 AutoJs6 中实现 AI provider 的 Android service discovery.
+- [x] 在 AutoJs6 中加入默认关闭且未接线的只读 PackageManager `exact-action discovery` 与 `exact-component reinspection`, 仅采集本地包身份事实.
 - [ ] 核验 service action, exported/enabled 状态, binding permission, UID, signer, 宿主版本, ABI 和协议范围.
 - [ ] 固定精确 component, provider 和 model, 并在 dispatch 前重新核验身份.
 - [ ] 实现 Binder 绑定, PFD 所有权, callback UID 校验和连接死亡处理.

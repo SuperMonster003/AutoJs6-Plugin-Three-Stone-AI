@@ -137,7 +137,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 
 ******
 
-The `R0` baseline and model identity work is in progress; `R1` through `R8` are planned. Refer to the project roadmap for checkbox status.
+`R0` remains in progress because the device and build gates have not run. `R1` is in progress only for the default-off, unwired, read-only `exact-action discovery` and `exact-component reinspection` slice; it has no Binder binding, runtime/UI integration, or `ai.*` routing. `R2` through `R8` remain planned. Refer to the project roadmap for checkbox status.
 
 - [View ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

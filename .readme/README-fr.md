@@ -137,7 +137,7 @@ Le plugin ne demande aucune permission réseau ou de stockage. Il lit le modèle
 
 ******
 
-Le socle `R0` et l'identité du modèle sont en cours de réalisation; `R1` à `R8` sont planifiés. L'état des cases à cocher fait foi dans la feuille de route du projet.
+`R0` reste en cours car les validations sur appareil et de build n'ont pas encore été exécutées. `R1` est en cours uniquement pour la première tranche non raccordée et désactivée par défaut de `exact-action discovery` et `exact-component reinspection` en lecture seule; elle n'inclut encore aucune liaison Binder, intégration runtime/UI ni routage `ai.*`. `R2` à `R8` restent planifiés. L'état des cases à cocher fait foi dans la feuille de route du projet.
 
 - [Consulter ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

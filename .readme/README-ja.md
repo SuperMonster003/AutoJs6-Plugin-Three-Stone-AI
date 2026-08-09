@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-`R0` は device/build gate が未実行のため引き続き進行中です. `R1` はデフォルト無効かつ未接続の読み取り専用 `exact-action discovery` と `exact-component reinspection` の最初のスライスのみ進行中で, Binder バインド, runtime/UI 統合, `ai.*` ルーティングはまだありません. `R2` から `R8` は引き続き計画項目です. チェック状態はプロジェクトロードマップを参照してください.
+`R0` は device/build gate が未実行のため引き続き進行中です. `R1` は本番 call site のないデフォルト無効かつ未接続のホストスライスを 2 つ網羅します: 読み取り専用 PackageManager `exact-action discovery`/`exact-component reinspection`, および明示コンポーネント限定の metadata-only Binder bind. どの経路でも実際に到達した ID 境界ごとに再検査し, 成功経路では最大 3 回, bind 前/接続後/descriptor 検証済み provider info/capabilities の有界かつ厳格な decode 後に再検査します. absolute deadline は試行を失敗させて遅延結果を無視し, interface descriptor, `getProviderInfo()`, `getCapabilities()` のいずれかの同期 Binder call が実行中のまま期限切れとなった場合のみ process 内で対象コンポーネントを fuse します. getter 返却後の同期 strict decode は RPC in-flight に含まれず fuse しません. worker queue/bind/final reinspection 中の timeout でも fuse しません. この fuse はすでに block した Binder call を強制中断できず, model listing/session dispatch, PFD/生成 callback, runtime/UI 統合, `ai.*` routing はまだありません. `R2` から `R8` は引き続き計画項目です. チェック状態はプロジェクトロードマップを参照してください.
 
 - [ROADMAP.md を表示](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

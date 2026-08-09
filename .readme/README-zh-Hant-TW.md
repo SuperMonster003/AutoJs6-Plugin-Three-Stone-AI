@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-`R0` 仍在進行中, 裝置與建置門檻尚未執行. `R1` 僅進入預設關閉且未接線的唯讀 `exact-action discovery` 與 `exact-component reinspection` 首個切片, 尚無 Binder 繫結, runtime/UI 整合或 `ai.*` 路由. `R2` 至 `R8` 仍為規劃項目. 勾選狀態以專案路線圖為準.
+`R0` 仍在進行中, 裝置與建置門檻尚未執行. `R1` 現已涵蓋兩個沒有生產呼叫點的預設關閉且未接線宿主切片: 唯讀 PackageManager `exact-action discovery`/`exact-component reinspection`, 以及明確元件 metadata-only Binder 繫結. 每條路徑都會複查其實際到達的身分邊界; 成功路徑最多執行三次複查: 繫結前, 連線後, 以及 descriptor 驗證且 provider info/capabilities 完成有界嚴格解碼後. absolute deadline 會使嘗試失敗並忽略延遲結果; 僅當 deadline 到期時 interface descriptor, `getProviderInfo()` 或 `getCapabilities()` 同步 Binder 呼叫仍在執行, 才在 process 內熔斷該元件. getter 回傳後的同步嚴格解碼不計入 RPC in-flight, 不會觸發熔斷. worker queue/繫結/最終身分複查階段逾時也不會觸發熔斷. 此熔斷無法強制中止已阻塞的 Binder 呼叫; 尚無模型列舉/工作階段分派, PFD/生成回呼, runtime/UI 整合或 `ai.*` 路由. `R2` 至 `R8` 仍為規劃項目. 勾選狀態以專案路線圖為準.
 
 - [檢視 ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

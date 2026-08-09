@@ -2,7 +2,7 @@
 
 本文将后续工作拆分为可验证的阶段. 路线图描述的是计划和退出条件, 不代表尚未勾选的能力已经可用, 也不承诺具体发布日期.
 
-当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 仍在进行中, Android/device smoke 与 lint/Debug/Release 构建门禁尚未执行. R1 已进入首个只读 discovery/reinspection 切片; R2 至 R8 仍为规划项.
+当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 仍在进行中, Android/device smoke 与 lint/Debug/Release 构建门禁尚未执行. R1 已推进至默认关闭且未接线的 provider info/capabilities Binder metadata handshake 切片; R2 至 R8 仍为规划项.
 
 ## 状态说明
 
@@ -15,7 +15,7 @@
 | 阶段 | 主题 | 状态 | 主要依赖 | 实施仓库 |
 | --- | --- | --- | --- | --- |
 | R0 | 基线与模型身份 | 进行中, 设备/构建门禁待执行 | 无 | 当前插件仓库 |
-| R1 | 宿主 `ai.*` adapter | 进行中, 只读发现首切片 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
+| R1 | 宿主 `ai.*` adapter | 进行中, metadata 握手切片 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
 | R2 | 多模型与安全 GC | 规划 | R0 | 当前插件仓库 |
 | R3 | 模型自检与稳定错误码 | 规划 | R0, R2 catalog | 当前插件仓库 |
 | R4 | Engine 复用与性能 | 规划 | R2 model lease, R3 健康状态 | 当前插件仓库 |
@@ -54,12 +54,13 @@
 
 目标: 让普通 AutoJs6 脚本通过稳定的 `ai.*` API 使用本地 provider, 不再要求脚本直接操作 AIDL, Binder, callback 和 credit.
 
-当前首切片仅在 AutoJs6 中加入默认关闭且未接线的只读 PackageManager discovery/reinspection. 它没有生产调用点, 不执行 Binder 绑定, 不接入 runtime/UI 或 `ai.*` 路由, 因而不代表普通脚本已经可以通过宿主使用本地 provider.
+当前已覆盖两个默认关闭且未接线的宿主基础切片: 只读 PackageManager discovery/reinspection, 以及没有生产调用点的显式组件 metadata-only Binder 握手. 每条路径都会复查其实际到达的身份边界; 成功路径最多执行三次复查: 绑定前, 连接后, 以及 descriptor 验证且 provider info/capabilities 完成有界严格解码后. absolute deadline 会使尝试失败并忽略晚到结果; 仅当 deadline 到期时 interface descriptor, `getProviderInfo()` 或 `getCapabilities()` 同步 Binder 调用仍在执行, 才在进程内熔断该组件, getter 返回后的同步 decode 不计入 RPC in-flight. worker queue/绑定/最终身份复查阶段超时同样只会使尝试失败并忽略晚到结果, 不会触发进程级熔断. 此熔断不能硬中止已经阻塞的 Binder 调用. 当前仍无模型枚举/会话分派, PFD/生成 callback, runtime/UI 集成或 `ai.*` 路由, 因而不代表普通脚本已经可以通过宿主使用本地 provider.
 
 ### 工作项
 
 - [x] 在 AutoJs6 中加入默认关闭且未接线的只读 PackageManager `exact-action discovery` 与 `exact-component reinspection`, 仅采集本地包身份事实.
-- [ ] 核验 service action, exported/enabled 状态, binding permission, UID, signer, 宿主版本, ABI 和协议范围.
+- [x] 在 AutoJs6 中加入默认关闭且无生产调用点的显式组件 metadata-only Binder 握手, 每条路径复查其实际到达的身份边界, 成功路径最多执行绑定前/连接后/metadata 解码后三次精确身份复查, 并在 descriptor 验证后仅有界严格解码 provider info/capabilities; 以 absolute deadline 的失败/晚到结果忽略语义约束尝试, 仅当 deadline 到期时 interface descriptor, `getProviderInfo()` 或 `getCapabilities()` 同步 Binder 调用仍在执行才进程级熔断, 同步 decode 及 worker queue/绑定/最终身份复查超时不熔断; 不进入模型枚举/会话/PFD/`IAiTextCallback`, 且此熔断也不能硬中止已阻塞的 Binder 调用.
+- [x] 在 discovery/selection policy 中核验 service action, exported/enabled 状态, binding permission, UID, signer, 宿主版本, ABI 和协议范围, 并以 JVM tests 覆盖.
 - [ ] 固定精确 component, provider 和 model, 并在 dispatch 前重新核验身份.
 - [ ] 实现 Binder 绑定, PFD 所有权, callback UID 校验和连接死亡处理.
 - [ ] 自动管理初始 credit 和后续 credit, 不把背压细节暴露给普通脚本.

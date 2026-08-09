@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-`R0` ما زال قيد التنفيذ لأن بوابات الجهاز والبناء لم تشغل بعد. يجري في `R1` تنفيذ الشريحة الأولى فقط من `exact-action discovery` و `exact-component reinspection` للقراءة فقط والمعطلتين وغير الموصلتين افتراضيا; ولا يوجد حتى الآن ربط Binder أو تكامل runtime/UI أو توجيه `ai.*`. تبقى `R2` إلى `R8` عناصر مخططا لها. حالة التأشير المعتمدة موجودة في خارطة طريق المشروع.
+`R0` ما زال قيد التنفيذ لان بوابات الجهاز والبناء لم تشغل بعد. يغطي `R1` الان شريحتين للمضيف معطلتين وغير موصلتين افتراضيا ولا تملكان نقطة استدعاء انتاجية: PackageManager `exact-action discovery`/`exact-component reinspection` للقراءة فقط, وربط Binder metadata-only بمكون صريح. يعاد فحص كل حد هوية تصل اليه كل مسار فعليا; اما مسار النجاح فيصل الى ثلاثة حدود كحد اقصى: قبل الربط وبعد الاتصال وبعد التحقق من descriptor وفك provider info/capabilities بحدود صارمة. تجعل absolute deadline المحاولة تفشل وتتجاهل النتائج المتاخرة; ولا تفعل process fuse للمكون الا اذا انتهت المهلة بينما لا يزال استدعاء Binder المتزامن الخاص ب interface descriptor او `getProviderInfo()` او `getCapabilities()` قيد التنفيذ. فك الترميز المتزامن الصارم بعد رجوع getter خارج فترة RPC in-flight ولا يفعل fuse. كما لا يفعله timeout في worker queue او اثناء الربط او اعادة الفحص النهائي. ولا يستطيع هذا fuse ايقاف استدعاء Binder محظور بالفعل بالقوة; ولا تزال قائمة النماذج/ارسال الجلسات و PFD/callback للتوليد وتكامل runtime/UI وتوجيه `ai.*` غير موجودة. تبقى `R2` الى `R8` عناصر مخططا لها. حالة التأشير المعتمدة موجودة في خارطة طريق المشروع.
 
 - [عرض ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

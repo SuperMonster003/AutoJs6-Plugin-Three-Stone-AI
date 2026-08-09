@@ -137,7 +137,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 
 ******
 
-`R0` remains in progress because the device and build gates have not run. `R1` is in progress only for the default-off, unwired, read-only `exact-action discovery` and `exact-component reinspection` slice; it has no Binder binding, runtime/UI integration, or `ai.*` routing. `R2` through `R8` remain planned. Refer to the project roadmap for checkbox status.
+`R0` remains in progress because the device and build gates have not run. `R1` now covers two default-off and unwired host slices with no production call site: read-only PackageManager `exact-action discovery`/`exact-component reinspection`, and an explicit-component metadata-only Binder bind. Every path reinspects each identity boundary it reaches; the successful path reaches at most three: before bind, after connection, and after descriptor-verified provider info/capabilities pass bounded strict decoding. Its absolute deadline fails the attempt and ignores late results; it process-fuses the component only if the deadline expires while a synchronous Binder call for the interface descriptor, `getProviderInfo()`, or `getCapabilities()` is still executing. Strict synchronous decoding after either getter is outside this RPC-in-flight region and does not fuse it. Worker-queue, bind, or final-reinspection timeouts do not fuse it. The fuse cannot hard-interrupt an already blocked Binder call; there is still no model listing/session dispatch, PFD/generation callback, runtime/UI integration, or `ai.*` routing. `R2` through `R8` remain planned. Refer to the project roadmap for checkbox status.
 
 - [View ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

@@ -8,6 +8,8 @@
 
 下面的完整 Rhino 脚本以 **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** 模型为例. 此固定版本的 SHA-256 为 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此导入后的模型 ID 为 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下载文件可能名为 `model.litertlm`, 文件名不影响模型 ID. 导入后, 可使用插件说明页右上角的复制操作复制整个脚本. 请将其作为普通 AutoJs6 Rhino 脚本运行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可尝试其他请求.
 
+使用其他模型时, 请从模型管理页复制该模型的 Model ID, 并替换脚本中的 `MODEL_ID`. 不要沿用示例值.
+
 ```javascript
 var PLUGIN_PACKAGE =
     "io.github.supermonster003.autojs6.plugin.ai.text";

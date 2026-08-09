@@ -8,6 +8,8 @@
 
 Полный скрипт Rhino ниже использует в качестве примера модель **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)**. Закреплённая загрузка имеет SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, поэтому ID импортированной модели — `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. Загруженный файл может называться `model.litertlm`; имя файла не влияет на ID модели. После импорта используйте действие копирования в правом верхнем углу инструкции плагина, чтобы скопировать скрипт целиком. Запускайте его как обычный скрипт Rhino в AutoJs6, а не в режиме Node.js. Для другого запроса измените только `PROMPT`.
 
+При использовании другой модели скопируйте её Model ID на экране управления моделями и замените `MODEL_ID` в скрипте. Не используйте значение из примера.
+
 ```javascript
 var PLUGIN_PACKAGE =
     "io.github.supermonster003.autojs6.plugin.ai.text";

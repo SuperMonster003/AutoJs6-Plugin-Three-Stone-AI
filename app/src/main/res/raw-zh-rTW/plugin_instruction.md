@@ -8,6 +8,8 @@
 
 以下完整 Rhino 指令碼以 **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** 模型為例. 此固定版本的 SHA-256 為 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此匯入後的模型 ID 為 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下載檔案可能名為 `model.litertlm`, 檔案名稱不影響模型 ID. 匯入後, 可使用外掛說明頁右上角的複製操作複製整個指令碼. 請將其作為一般 AutoJs6 Rhino 指令碼執行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可嘗試其他要求.
 
+使用其他模型時, 請從模型管理頁複製該模型的 Model ID, 並取代指令碼中的 `MODEL_ID`. 請勿沿用範例值.
+
 ```javascript
 var PLUGIN_PACKAGE =
     "io.github.supermonster003.autojs6.plugin.ai.text";

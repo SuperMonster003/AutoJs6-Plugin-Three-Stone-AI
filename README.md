@@ -133,6 +133,16 @@ required host build: 5270
 
 ******
 
+### 路线图
+
+******
+
+`R0` 基线和模型身份正在实施, `R1` 至 `R8` 为规划项. 勾选状态以项目路线图为准.
+
+- [查看 ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
+
+******
+
 ### 版本历史
 
 ******

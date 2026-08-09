@@ -8,6 +8,8 @@
 
 يستخدم سكربت Rhino الكامل أدناه نموذج **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** كمثال. لهذه النسخة المثبتة SHA-256 بالقيمة `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, ولذلك يكون معرف النموذج بعد الاستيراد `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. قد يكون اسم الملف المحمل `model.litertlm`; ولا يؤثر اسم الملف في معرف النموذج. بعد استيراده, استخدم إجراء النسخ في الزاوية العلوية اليمنى من تعليمات الملحق لنسخ السكربت كاملا. شغله كسكربت AutoJs6 Rhino عادي, وليس في وضع Node.js. غير `PROMPT` فقط لتجربة طلب آخر.
 
+عند استخدام نموذج آخر, انسخ Model ID الخاص به من شاشة إدارة النماذج واستبدل `MODEL_ID` في السكربت. لا تعاود استخدام قيمة المثال.
+
 ```javascript
 var PLUGIN_PACKAGE =
     "io.github.supermonster003.autojs6.plugin.ai.text";

@@ -41,6 +41,9 @@
     "Aucune découverte réseau de modèles, aucun téléchargement, aucune inférence cloud et aucun flux credential ne sont fournis.",
     "Aucun backend GPU ou NPU n'est déclaré. L'extension `.litertlm` seule ne garantit pas que le runtime LiteRT-LM actuel puisse charger le modèle."
   ],
+  "h3_roadmap": "Feuille de route",
+  "p_roadmap": "Le socle `R0` et l'identité du modèle sont en cours de réalisation; `R1` à `R8` sont planifiés. L'état des cases à cocher fait foi dans la feuille de route du projet.",
+  "text_link_roadmap": "Consulter ROADMAP.md",
   "h3_release_history": "Historique des versions",
   "h5_for_more_release_history": "Autres versions",
   "h3_build": "Build",

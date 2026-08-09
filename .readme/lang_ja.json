@@ -41,6 +41,9 @@
     "ネットワークでのモデル探索, モデルダウンロード, cloud 推論, credential フローはありません.",
     "GPU または NPU backend は宣言しません. `.litertlm` 拡張子だけでは現在の LiteRT-LM runtime がモデルを読み込める保証にはなりません."
   ],
+  "h3_roadmap": "ロードマップ",
+  "p_roadmap": "`R0` の基盤とモデル識別は実装中で, `R1` から `R8` は計画項目です. チェック状態はプロジェクトロードマップを参照してください.",
+  "text_link_roadmap": "ROADMAP.md を表示",
   "h3_release_history": "リリース履歴",
   "h5_for_more_release_history": "その他のリリース",
   "h3_build": "ビルド",

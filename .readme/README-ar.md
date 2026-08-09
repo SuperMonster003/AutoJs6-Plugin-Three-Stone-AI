@@ -133,6 +133,16 @@ required host build: 5270
 
 ******
 
+### خارطة الطريق
+
+******
+
+يجري تنفيذ خط الأساس وهوية النموذج في `R0`, أما `R1` إلى `R8` فهي عناصر مخطط لها. حالة التأشير المعتمدة موجودة في خارطة طريق المشروع.
+
+- [عرض ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
+
+******
+
 ### سجل الإصدارات
 
 ******

@@ -133,6 +133,16 @@ El plugin no solicita permisos de red ni almacenamiento. Lee el modelo solo medi
 
 ******
 
+### Hoja de ruta
+
+******
+
+La base `R0` y la identidad del modelo están en desarrollo; `R1` a `R8` son elementos planificados. El estado de las casillas se mantiene en la hoja de ruta del proyecto.
+
+- [Ver ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
+
+******
+
 ### Historial de versiones
 
 ******

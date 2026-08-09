@@ -133,6 +133,16 @@ required host build: 5270
 
 ******
 
+### 路線圖
+
+******
+
+`R0` 基線與模型識別正在實作, `R1` 至 `R8` 為規劃項目. 勾選狀態以專案路線圖為準.
+
+- [檢視 ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
+
+******
+
 ### 版本歷史
 
 ******

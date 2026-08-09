@@ -133,6 +133,16 @@ required host build: 5270
 
 ******
 
+### 로드맵
+
+******
+
+`R0` 기준선 및 모델 식별은 구현 중이며, `R1`부터 `R8`까지는 계획 항목입니다. 체크 상태는 프로젝트 로드맵을 기준으로 합니다.
+
+- [ROADMAP.md 보기](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
+
+******
+
 ### 릴리스 기록
 
 ******

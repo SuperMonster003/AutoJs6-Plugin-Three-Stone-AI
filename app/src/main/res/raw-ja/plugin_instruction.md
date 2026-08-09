@@ -8,6 +8,8 @@ AutoJs6 ホスト build 5270 以降と Android API 24 以降が必要です.
 
 以下の完全な Rhino スクリプトでは **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** モデルを例として使用します. この固定ダウンロードの SHA-256 は `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42` であるため, インポート後のモデル ID は `litertlm.ab7838cdfc8f77e54d8ca45eadceb204` です. ダウンロードしたファイル名が `model.litertlm` でもモデル ID には影響しません. インポート後, プラグイン説明画面の右上にあるコピー操作でスクリプト全体をコピーしてください. Node.js モードではなく, 通常の AutoJs6 Rhino スクリプトとして実行します. 別のリクエストを試す場合は `PROMPT` だけを変更してください.
 
+別のモデルを使用する場合は, モデル管理画面からそのモデルの Model ID をコピーし, スクリプト内の `MODEL_ID` を置き換えてください. 例の値をそのまま使用しないでください.
+
 ```javascript
 var PLUGIN_PACKAGE =
     "io.github.supermonster003.autojs6.plugin.ai.text";

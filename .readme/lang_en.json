@@ -41,6 +41,9 @@
     "There is no network model discovery, model download, cloud inference, or credential flow.",
     "No GPU or NPU backend is declared. A `.litertlm` extension alone does not guarantee that the current LiteRT-LM runtime can load the model."
   ],
+  "h3_roadmap": "Roadmap",
+  "p_roadmap": "The `R0` baseline and model identity work is in progress; `R1` through `R8` are planned. Refer to the project roadmap for checkbox status.",
+  "text_link_roadmap": "View ROADMAP.md",
   "h3_release_history": "Release history",
   "h5_for_more_release_history": "For more releases",
   "h3_build": "Build",

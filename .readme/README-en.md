@@ -133,6 +133,16 @@ The plugin requests no network or storage permission. It reads a model only thro
 
 ******
 
+### Roadmap
+
+******
+
+The `R0` baseline and model identity work is in progress; `R1` through `R8` are planned. Refer to the project roadmap for checkbox status.
+
+- [View ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
+
+******
+
 ### Release history
 
 ******

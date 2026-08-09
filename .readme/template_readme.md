@@ -111,6 +111,16 @@ required host build: {{ required_host_build }}
 
 ******
 
+### {{ h3_roadmap }}
+
+******
+
+{{ p_roadmap }}
+
+- [{{ text_link_roadmap }}]({{ repo_url }}/blob/master/ROADMAP.md)
+
+******
+
 ### {{ h3_release_history }}
 
 ******

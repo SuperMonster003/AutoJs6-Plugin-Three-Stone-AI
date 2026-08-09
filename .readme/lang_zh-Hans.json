@@ -41,6 +41,9 @@
     "不提供联网模型发现, 模型下载, 云端推理或 credential 流程.",
     "不声明 GPU 或 NPU backend. `.litertlm` 扩展名本身不保证模型能被当前 LiteRT-LM runtime 加载."
   ],
+  "h3_roadmap": "路线图",
+  "p_roadmap": "`R0` 基线和模型身份正在实施, `R1` 至 `R8` 为规划项. 勾选状态以项目路线图为准.",
+  "text_link_roadmap": "查看 ROADMAP.md",
   "h3_release_history": "版本历史",
   "h5_for_more_release_history": "更多版本",
   "h3_build": "构建",

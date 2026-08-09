@@ -133,6 +133,16 @@ required host build: 5270
 
 ******
 
+### ロードマップ
+
+******
+
+`R0` の基盤とモデル識別は実装中で, `R1` から `R8` は計画項目です. チェック状態はプロジェクトロードマップを参照してください.
+
+- [ROADMAP.md を表示](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
+
+******
+
 ### リリース履歴
 
 ******

@@ -133,6 +133,16 @@ Le plugin ne demande aucune permission réseau ou de stockage. Il lit le modèle
 
 ******
 
+### Feuille de route
+
+******
+
+Le socle `R0` et l'identité du modèle sont en cours de réalisation; `R1` à `R8` sont planifiés. L'état des cases à cocher fait foi dans la feuille de route du projet.
+
+- [Consulter ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
+
+******
+
 ### Historique des versions
 
 ******

@@ -2,7 +2,7 @@
 
 本文将后续工作拆分为可验证的阶段. 路线图描述的是计划和退出条件, 不代表尚未勾选的能力已经可用, 也不承诺具体发布日期.
 
-当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 仍在进行中, Android/device smoke 与 lint/Debug/Release 构建门禁尚未执行. R1 已推进至默认关闭且未接线的 transport-independent 模型枚举 transcript policy 与不可变 provider-pinned catalog/exact model plan 切片; R2 至 R8 仍为规划项.
+当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 仍在进行中, 构建门禁已通过, 真实插件/模型 Android/device smoke 尚未执行. R1 已推进至默认关闭且未接线的 model-list policy/catalog 以及 Android coordinator/`IAiModelListCallback` Binder transport 窄切片; 该切片已有 isolated Gradle 与 QV710AF65F 正向 PARTIAL 证据, R2 至 R8 仍为规划项.
 
 ## 状态说明
 
@@ -14,8 +14,8 @@
 
 | 阶段 | 主题 | 状态 | 主要依赖 | 实施仓库 |
 | --- | --- | --- | --- | --- |
-| R0 | 基线与模型身份 | 进行中, 设备/构建门禁待执行 | 无 | 当前插件仓库 |
-| R1 | 宿主 `ai.*` adapter | 进行中, model-list policy/pinning 切片 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
+| R0 | 基线与模型身份 | 进行中, 真实模型/clipboard/example device 待执行 | 无 | 当前插件仓库 |
+| R1 | 宿主 `ai.*` adapter | 进行中, default-off model-list transport 窄切片 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
 | R2 | 多模型与安全 GC | 规划 | R0 | 当前插件仓库 |
 | R3 | 模型自检与稳定错误码 | 规划 | R0, R2 catalog | 当前插件仓库 |
 | R4 | Engine 复用与性能 | 规划 | R2 model lease, R3 健康状态 | 当前插件仓库 |
@@ -41,20 +41,24 @@
 - [x] 在 10 种语言中同步模型身份相关界面文案和插件使用说明.
 - [ ] 记录当前基线验证结果, 包括单元测试, lint, Debug/Release 构建和示例脚本实机结果.
 
+### 已记录证据
+
+- 2026-08-10: `testDebugUnitTest` 共 32 tests/0 failures; `lintDebug` 为 0 error; `assembleDebug` 与 `assembleRelease` 均 `BUILD SUCCESSFUL`, 总耗时 3m37s; `VERSION_BUILD`/`BUILD_TIME` 未变化. 设备 smoke 与示例脚本实机结果仍待执行.
+
 ### 退出门槛
 
 - [ ] 导入模型后, 用户可以在模型管理界面直接查看并复制与 provider `listModels` 一致的 `modelId`.
 - [ ] 复制值可以直接替换示例脚本中的 `MODEL_ID` 并成功打开会话.
 - [x] 示例模型, 下载链接, SHA-256 派生关系和示例 `modelId` 在文档中无歧义.
 - [x] 10 种语言的生成源, 生成结果和 Android 字符串保持一致.
-- [ ] 本阶段相关测试通过, lint 为 0 error, Debug/Release 构建成功.
+- [x] 本阶段相关测试通过, lint 为 0 error, Debug/Release 构建成功.
 - [ ] R0 的所有工作项都有代码, 测试或实机证据后, 阶段状态才可改为 `已完成`.
 
 ## R1: 宿主 `ai.*` adapter
 
 目标: 让普通 AutoJs6 脚本通过稳定的 `ai.*` API 使用本地 provider, 不再要求脚本直接操作 AIDL, Binder, callback 和 credit.
 
-当前已覆盖三个默认关闭且未接线的宿主基础切片: 两个 Android-dependent 切片是只读 PackageManager discovery/reinspection 和没有生产调用点的显式组件 metadata-only Binder 握手; 第三个是没有生产调用点的 transport-independent 模型枚举 transcript policy. discovery/reinspection 和 metadata 握手会复查其实际到达的身份边界; metadata 成功路径最多执行三次复查: 绑定前, 连接后, 以及 descriptor 验证且 provider info/capabilities 完成有界严格解码后. absolute deadline 会使尝试失败并忽略晚到结果; 仅当 deadline 到期时 interface descriptor, `getProviderInfo()` 或 `getCapabilities()` 同步 Binder 调用仍在执行, 才在进程内熔断该组件, getter 返回后的同步 decode 不计入 RPC in-flight. worker queue/绑定/最终身份复查阶段超时同样只会使尝试失败并忽略晚到结果, 不会触发进程级熔断. 此熔断不能硬中止已经阻塞的 Binder 调用. 模型枚举 policy 接收调用方提供的 callback-entry UID 并按 pinned provider 验证, 有界严格解码单页或多页结果及 provider error, 拒绝 listing generation 漂移, token 重放/循环, 重复 model ID, 能力不匹配及过期/重复 callback, 并让 callback/cancel/timeout/binder-death 竞态只有一个终态. 它形成不可变 provider-pinned catalog, 且只为精确匹配并能力兼容的 model 生成 session plan. 当前没有 Android `IAiModelListCallback` adapter 或实际 Binder model-list transport, 仍无 `openSession`, PFD, `IAiTextCallback`, session dispatch, runtime/UI 集成或 `ai.*` 路由; dispatch 前身份复查仍未实现, 因而不代表普通脚本已经可以通过宿主使用本地 provider.
+当前已覆盖四个默认关闭、未接线且没有生产调用点的宿主基础切片: 只读 PackageManager discovery/reinspection, 显式组件 metadata-only Binder 握手, transport-independent 模型枚举 transcript policy/catalog, 以及 Android model-list coordinator 与 `IAiModelListCallback` Binder transport. discovery/reinspection 和 metadata 握手会复查其实际到达的身份边界; metadata 成功路径最多执行三次复查: 绑定前, 连接后, 以及 descriptor 验证且 provider info/capabilities 完成有界严格解码后. 旧 metadata handshake 仅在 absolute deadline 到期时 interface descriptor、`getProviderInfo()` 或 `getCapabilities()` 同步 Binder RPC 仍在执行才熔断. 模型枚举 policy 有界严格解码单页或多页结果及 provider error, 拒绝 listing generation 漂移, token 重放/循环, 重复 model ID, 能力不匹配及过期/重复 callback, 并让相互竞争的终态只有一个胜出. 新增 coordinator 仅在 listing 初始化阶段于同一个完成 descriptor 验证的 Binder 上复验 provider metadata, 并在每次初始或 continuation dispatch 前以 `AiTextProviderPackageSnapshot.samePackageIdentityAs` 精确复查 package/component identity; callback 先核验调用 UID、typed page/error envelope 大小和有界 flood slot, 然后才执行唯一一次 payload copy; page-token ledger 按完整且稳定的 pinned identity 隔离并有界持有. coordinator 对任何已接纳的 `operationsInFlight` 保留 watchdog, 包括 exact PackageManager inspect、bind、prepare、dispatch 和 callback admission; deadline 到期仍未 unwind 时熔断 exact component. 两种 fuse 均不能硬中止卡住的 operation; coordinator gate 保持 `BUSY` 直到晚到 unwind. 该切片不含 session/`openSession`、PFD、credit、`IAiTextCallback`、session dispatch、runtime/UI 集成或 `ai.*` 路由. 已取得的 isolated Gradle 与 QV710AF65F 正向 PARTIAL 证据只支持此窄切片, 不代表普通脚本已经可以通过宿主使用本地 provider, 也不满足 R1 退出门槛.
 
 ### 工作项
 
@@ -62,6 +66,7 @@
 - [x] 在 AutoJs6 中加入默认关闭且无生产调用点的显式组件 metadata-only Binder 握手, 每条路径复查其实际到达的身份边界, 成功路径最多执行绑定前/连接后/metadata 解码后三次精确身份复查, 并在 descriptor 验证后仅有界严格解码 provider info/capabilities; 以 absolute deadline 的失败/晚到结果忽略语义约束尝试, 仅当 deadline 到期时 interface descriptor, `getProviderInfo()` 或 `getCapabilities()` 同步 Binder 调用仍在执行才进程级熔断, 同步 decode 及 worker queue/绑定/最终身份复查超时不熔断; 不进入模型枚举/会话/PFD/`IAiTextCallback`, 且此熔断也不能硬中止已阻塞的 Binder 调用.
 - [x] 在 discovery/selection policy 中核验 service action, exported/enabled 状态, binding permission, UID, signer, 宿主版本, ABI 和协议范围, 并以 JVM tests 覆盖.
 - [x] 在 AutoJs6 中加入默认关闭且未接线的 transport-independent 模型枚举 transcript policy: 接收调用方提供的 callback-entry UID 并按 pinned provider 验证, 有界严格解码单页或多页结果及 provider error, 拒绝 listing generation 漂移, token 重放/循环, 重复 model ID, 能力不匹配及过期/重复 callback, 并让 callback/cancel/timeout/binder-death 竞态只有一个终态; 形成不可变 provider-pinned catalog, 且只为精确匹配并能力兼容的 model 生成 session plan; 不含 Android `IAiModelListCallback` adapter、实际 Binder model-list transport、`openSession`/PFD/`IAiTextCallback`、runtime/UI 或 `ai.*` 接线.
+- [x] 在 AutoJs6 中加入默认关闭、未接线且没有生产调用点的 Android model-list coordinator 与 `IAiModelListCallback` Binder transport: 仅在 listing 初始化阶段复用同一个完成 descriptor 验证的 Binder 复验 provider metadata, 在每次初始或 continuation dispatch 前以 `AiTextProviderPackageSnapshot.samePackageIdentityAs` 精确复查 package/component identity; callback 在唯一一次 payload copy 前依次核验调用 UID、typed page/error envelope 大小和有界 flood slot; page-token ledger 按完整且稳定的 pinned identity 隔离并有界持有; 对任何已接纳的 `operationsInFlight` (exact PackageManager inspect、bind、prepare、dispatch、callback admission 等) 保留 watchdog, deadline 到期仍未 unwind 时熔断 exact component, fuse 不硬中止卡住的 operation, gate 保持 `BUSY` 到晚到 unwind; 不含 session/`openSession`、PFD、credit、`IAiTextCallback`、session dispatch、runtime/UI 或 `ai.*` 接线; 已有 isolated Gradle 与 QV710AF65F 正向 PARTIAL 证据.
 - [ ] 固定精确 component, provider 和 model, 并在 dispatch 前重新核验身份.
 - [ ] 实现 Binder 绑定, PFD 所有权, callback UID 校验和连接死亡处理.
 - [ ] 自动管理初始 credit 和后续 credit, 不把背压细节暴露给普通脚本.
@@ -69,6 +74,11 @@
 - [ ] 提供显式 provider/model 选择, 并显示 signer, locality, credential mode 和不可用原因.
 - [ ] 定义协议文本, stream, completion 和 error 到现有 `ai.*` 返回值的兼容映射.
 - [ ] 保持现有内置 provider 为默认基线, 禁止本地失败后静默回退到云端.
+
+### 已记录证据
+
+- 2026-08-10 isolated AutoJs6 Gradle gate: coordinator tests 为 15/0; host Debug、androidTest 与 fake provider APK 均成功 assemble; `VERSION_BUILD`/`BUILD_TIME` 未变化.
+- 2026-08-10 QV710AF65F (API 31, arm64-v8a) 正向 PARTIAL: metadata handshake 与 model-list instrumentation 各 `OK (1 test)`; `pageSize=1` 收集四页及 fake provider 的四个 model. signer/APK hash、安装前后 identity、非 main callback 与唯一终态由 AutoJs6 主仓 evidence 详记; host、androidTest、fake provider 三包安装前均不存在, 验证后卸载并恢复为均不存在. 该证据只支持上述窄 R1 item, 不勾选任何 R1 退出门槛. QV710AF65F 没有真实插件或模型, 因此 R0 的真实模型、clipboard 与示例脚本实机验证仍未覆盖.
 
 ### 退出门槛
 

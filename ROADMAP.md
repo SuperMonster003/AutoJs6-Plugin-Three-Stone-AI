@@ -2,7 +2,7 @@
 
 本文将后续工作拆分为可验证的阶段. 路线图描述的是计划和退出条件, 不代表尚未勾选的能力已经可用, 也不承诺具体发布日期.
 
-当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 仍在进行中, 构建门禁已通过, 真实插件/模型 Android/device smoke 尚未执行. R1 已推进至默认关闭的 model-list/session 基础设施、hostile Android session conformance H1/H2 窄切片, 以及显式 `ai.ask(..., { plugin: ... })` production source route; 新路由已有 standalone K2、focused Gradle 与 Android main compile 的 source-only 证据, 仍无真实插件/模型/device 运行或 UI/`chat`/`stream` 路由, R2 至 R8 仍为规划项.
+当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 仍在进行中; 构建门禁以及真实插件/模型的 public `ai.ask` Android/device smoke 已通过, 但 clipboard 写入与 Activity 重建后复制仍待验证. R1 已推进至默认关闭的 model-list/session 基础设施、hostile Android session conformance H1/H2 窄切片, 以及显式 `ai.ask(..., { plugin: ... })` production route 与真实单次 non-stream 设备 smoke; 证据仍仅限单设备、单模型和 appDebug 宿主, 不涵盖 UI/`chat`/`stream` 或广义 R1 退出门槛, R2 至 R8 仍为规划项.
 
 ## 状态说明
 
@@ -14,8 +14,8 @@
 
 | 阶段 | 主题 | 状态 | 主要依赖 | 实施仓库 |
 | --- | --- | --- | --- | --- |
-| R0 | 基线与模型身份 | 进行中, 真实模型/clipboard/example device 待执行 | 无 | 当前插件仓库 |
-| R1 | 宿主 `ai.*` adapter | 进行中, default-off transport、hostile conformance 与显式 `ai.ask` source route 窄切片 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
+| R0 | 基线与模型身份 | 进行中, 真实模型/public `ai.ask` device 已覆盖, clipboard/view-copy 待执行 | 无 | 当前插件仓库 |
+| R1 | 宿主 `ai.*` adapter | 进行中, default-off transport、hostile conformance、显式 `ai.ask` route 与真实 one-shot smoke 窄切片 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
 | R2 | 多模型与安全 GC | 规划 | R0 | 当前插件仓库 |
 | R3 | 模型自检与稳定错误码 | 规划 | R0, R2 catalog | 当前插件仓库 |
 | R4 | Engine 复用与性能 | 规划 | R2 model lease, R3 健康状态 | 当前插件仓库 |
@@ -44,6 +44,7 @@
 ### 已记录证据
 
 - 2026-08-10: `testDebugUnitTest` 共 32 tests/0 failures; `lintDebug` 为 0 error; `assembleDebug` 与 `assembleRelease` 均 `BUILD SUCCESSFUL`, 总耗时 3m37s; `VERSION_BUILD`/`BUILD_TIME` 未变化. 设备 smoke 与示例脚本实机结果仍待执行.
+- 2026-08-11: 在 QV710AF65F (API 31, arm64-v8a) 以真实 release 插件和 2,583,085,056-byte LiteRT-LM 通过 Rhino global `ai.ask(..., { plugin: ... })` 完成单次 non-stream 生成; exact instrumentation 方法为 `OK (1 test)`/7.071s. 插件的 test/lint/Debug/Release 与宿主 focused 19/19 tests/assemble 均通过. 这是 public `ai.ask` 生成脚本证据, 不是使用说明中 raw Binder/`JavaAdapter` 示例的实机结果, 也未验证 clipboard/view-copy 和将复制值替换示例 `MODEL_ID`; 因此上述 R0 工作项与退出门槛 50/51 仍为 `[ ]`.
 
 ### 退出门槛
 
@@ -58,7 +59,7 @@
 
 目标: 让普通 AutoJs6 脚本通过稳定的 `ai.*` API 使用本地 provider, 不再要求脚本直接操作 AIDL, Binder, callback 和 credit.
 
-当前已覆盖六个默认关闭、未接线且没有生产调用点的宿主基础切片: 只读 PackageManager discovery/reinspection, 显式组件 metadata-only Binder 握手, transport-independent 模型枚举 transcript policy/catalog, Android model-list coordinator 与 `IAiModelListCallback` Binder transport, transport-independent `AiTextProviderSessionPolicy`, 以及 Android exact-component session coordinator 与 `IAiTextCallback`/PFD transport; 第六个切片现另有 opt-in hostile fake provider H1/H2 instrumentation 窄验证. 新 session coordinator 在 dispatch 前及 session Binder 建立边界精确复查 package/component/pinned metadata, 只绑定显式 component, 有界严格解码 provider/session callback envelope, 并将 request PFD 同步借用、callback PFD 唯一异步所有权转移、Binder death、absolute deadline、process gate 与 per-component fuse 接入既有 transcript/credit policy. 它保持 initial 8 credits 与逐 chunk 补充, 不对已 dispatch 会话自动重试, 且只在 descriptor、remote control、binding 与已接纳 operation 全部 unwind 后释放终态/门禁. 该切片仍为 default-off/unwired; 没有 runtime/UI/`ai.*` 生产路由. 已取得的 standalone、Gradle、APK 与 device 证据仅为窄范围 PARTIAL, 不代表普通脚本已可使用本地 provider, 也不满足 R1 退出门槛.
+当前已覆盖六个默认关闭、未接线且没有生产调用点的宿主基础切片: 只读 PackageManager discovery/reinspection, 显式组件 metadata-only Binder 握手, transport-independent 模型枚举 transcript policy/catalog, Android model-list coordinator 与 `IAiModelListCallback` Binder transport, transport-independent `AiTextProviderSessionPolicy`, 以及 Android exact-component session coordinator 与 `IAiTextCallback`/PFD transport; 第六个切片现另有 opt-in hostile fake provider H1/H2 instrumentation 窄验证. 显式 `ai.ask(..., { plugin: ... })` production route 已在此基础上接线, 且已有一个 opt-in 真实插件/模型的 public Rhino one-shot device smoke. 这个窄证据证明普通脚本无需 `JavaAdapter`/AIDL 即可完成一次 non-stream 本地生成, 但尚未覆盖 stream/`chat`、UI、所有失败形态或 release 宿主/API 矩阵; 因此广义 R1 工作项和退出门槛仍保持未勾选.
 
 ### 工作项
 
@@ -71,7 +72,7 @@
 - [x] 在 AutoJs6 中加入默认关闭、未接线且没有生产调用点的 Android exact-component session coordinator 与 `IAiTextCallback`/PFD transport: dispatch 前及 Binder 边界精确复查 pinned identity/metadata, 仅向显式 component 绑定, 验证 provider/session interface descriptor 与 callback UID, 将 request PFD 仅借给同步 `openSession` 并在 callback admission 后才对 callback PFD 执行唯一异步所有权转移, 保留 initial 8 credits/逐 chunk 补充、absolute deadline、Binder death、唯一终态、late unwind 和 per-component fuse 语义; 已有 standalone K2 18/18 且同一产物 30 轮 540/540、focused Gradle 18 tests/0 failures、三 APK assemble 与 QV710AF65F 两个 `OK (1 test)` 的 PARTIAL 证据; 不含 runtime/UI/`ai.*` 接线.
 - [x] 为上述 default-off/unwired Android session transport 增加 opt-in hostile conformance H1 窄切片: isolated H1 commits `edd10008f`/`06ebc788c`, 主仓集成 commits `0cbc19d9f`/`72eb4d0c0`; ordinary-pipe completion callback 验证跨进程 PFD ownership、exact length/EOF、SHA-256、UTF-8 物化与 cleanup, tool PFD 在任何执行前被唯一拒绝为 `TOOLS_UNSUPPORTED`, malformed transcript fail-closed, duplicate terminal 仅作有界 single-terminal smoke, stall 在 `Started` 后由 host cancel 并验证 owner/gate 可复用. 该 `[x]` 仅表示这些精确 H1 方法已有证据; H1 自身不覆盖 cross-process reliable status、wrong UID/no-credit、provider death、package update/uninstall、真实插件/模型、runtime/UI 或 `ai.*`, 也不勾选任何广义 R1 工作项或退出门槛.
 - [x] 增加 hostile session H2 生命周期窄切片, 由主仓集成 commits `e5bd92b16`/`10dad3e39`/`0b9a94742` 记录: isolated-process callback 的实际 UID 与 pinned package UID 不同, host 在 decode 或发布 transcript 前以唯一 `TRANSCRIPT_REJECTED`/`CALLBACK_UID_MISMATCH` fail-closed 并释放 owner/gate; fake provider 在 `Started` 和 sequence 0 合法 chunk 已获 host credit replenishment acknowledgement 后结束进程, host 发布唯一 `BinderDied` 并释放 owner/gate. 该 Android 证据仅为这两个 exact 方法的 PARTIAL; no-credit 仍只有确定性 JVM policy 证据, package `lastUpdateTime` 漂移和 final reinspection `Completed(emptyList())` 仅模拟 update/uninstall 形状的 JVM 证据, 本轮没有执行任何实机 package update/uninstall. 因此 cross-process no-credit、实机 update/uninstall、真实插件/模型、runtime/UI 与 `ai.*` 仍未覆盖, 广义 R1 工作项和退出门槛保持 `[ ]`.
-- [x] 在 AutoJs6 中接入显式 `ai.ask(..., { plugin: ... })` production source route, 由主仓 commits `e4297a688`/`64db31ea5` 记录: selector 严格固定 exact component/provider/model; `plugin` 缺席时保留 legacy cloud 行为, 一旦出现则不读取 vault、不进入 HTTP/cloud、也不 fallback; 当前仅接纳单条 plain-text user message 与 non-stream 请求, 并在 engine close 时传播 cancel/close 到远端 session. standalone K2 为 15/15, focused Gradle 为 19/19 且 Android main compile 通过, 均为 source-only 证据. 该 `[x]` 不含真实插件/模型/device 运行, 也不含 UI、`chat` 或 `stream` 路由; 广义 R1 工作项与全部退出门槛保持 `[ ]`.
+- [x] 在 AutoJs6 中接入显式 `ai.ask(..., { plugin: ... })` production route, 由主仓 commits `e4297a688`/`64db31ea5` 记录; 实机构建与 smoke 直接源为隔离树 commit `ceb44b8ba272a958bad37ec4f1aae2fd4b29dcbd`, 同一 test blob 后续在当前 main parent 上集成为 `7ce26ceea`, 两者 app tree 一致. selector 严格固定 exact component/provider/model; `plugin` 缺席时保留 legacy cloud 行为, 一旦出现则不读取 vault、不进入 HTTP/cloud、也不 fallback; 当前仅接纳单条 plain-text user message 与 non-stream 请求, 并在 engine close 时传播 cancel/close 到远端 session. standalone K2 为 15/15, focused Gradle 为 19/19 且 Android assemble 通过; QV710AF65F 上的真实插件/模型 exact method 为 `OK (1 test)`. 该 `[x]` 仍仅是单设备、单模型、appDebug 宿主的 one-shot 窄证据, 不含 UI、`chat`、`stream`、tools、structured output 或 usage; 广义 R1 工作项与全部退出门槛保持 `[ ]`.
 - [ ] 固定精确 component, provider 和 model, 并在 dispatch 前重新核验身份.
 - [ ] 实现 Binder 绑定, PFD 所有权, callback UID 校验和连接死亡处理.
 - [ ] 自动管理初始 credit 和后续 credit, 不把背压细节暴露给普通脚本.
@@ -101,6 +102,7 @@
   三 APK 的 local/device SHA-256 均已精确一致: host `0685CE99C0F9E8F9056BE5F3A8EEBC2C7EA5FFCA2D422E21EAC69D0CB3364629`, androidTest `7C91A0AF651E2098AD124FF8A89AE3AC3018E0F1D0DEC068367595E964739178`, fake provider `6C7319A6682B08CAB2E3C610D6DB0919C7C71BC034C2CEC8B46EB23623D55A18`; 三者 v2 signer certificate SHA-256 均为 `2e64822e13a6c80c12e1c4b47e8fb32d1e9334526289da75777b7a79145de4b8`. host、androidTest 与 fake provider 三包在安装前均为 absent, cleanup 后再次均为 absent. no-credit 仍只复用已有确定性 JVM 用例; update/uninstall 仅由 coordinator final reinspection 的 `lastUpdateTime` 漂移与 `Completed(emptyList())` JVM 用例覆盖形状, 本轮没有实机 package 变更. 该 Android 证据仅支持 wrong-UID/provider-death 两个窄方法, 不覆盖 cross-process no-credit、实机 update/uninstall、真实插件/模型、runtime/UI 或 `ai.*`; 广义 R1 工作项与全部退出门槛保持 `[ ]`.
 
 - 2026-08-11 显式 `ai.ask` plugin route production source 接线窄切片: AutoJs6 主仓 commits `e4297a688`/`64db31ea5`; selector 严格固定 exact component/provider/model, `plugin` 缺席时保留 legacy cloud 行为, 一旦出现则禁止 vault、HTTP/cloud 与 fallback; 仅接纳单条 plain-text user message 和 non-stream 请求, engine close 会传播远端 session teardown. standalone Kotlin K2/JDK 21/JVM 17 为 15/15, focused Gradle 为 19 tests/0 failures, Android main source compile 通过. 这些均为 source-only 证据, 不包含真实插件/模型/device、UI、`chat` 或 `stream`; 广义 R1 工作项与退出门槛保持 `[ ]`.
+- 2026-08-11 真实 public `ai.ask` device smoke: 构建与实机运行直接源为 AutoJs6 隔离树 commit `ceb44b8ba272a958bad37ec4f1aae2fd4b29dcbd`; 同一 test blob 已集成为当前 main parent 上的 `7ce26ceea`, 两者 app tree 一致, 但后者不是 APK 直接构建源. QV710AF65F (API 31, arm64-v8a) 上的 Rhino global `ai.ask(..., { plugin: ... })` 经 release 插件运行 2,583,085,056-byte LiteRT-LM. 模型 SHA-256 为 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 派生 `modelId` 为 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`; `AiTextPluginPublicAskSmokeTest#publicRhinoAiAskCompletesThroughExactRealPlugin` 返回 `OK (1 test)`/7.071s. local/device APK SHA-256 精确一致: host `b7dab13c33b49f12f45de7a2091fabffa41618c983055fa19083ab1482af9561`, androidTest `09b6277f7da86d1b0a6b7143bb27236c46873c731736640b79fe8e72edcfd5cf`, plugin `ee16cea749753b4e8d7c03d4cce72066495f8b7fb251ea0a88bf5165a6c0a5bb`; 三者 v2 signer certificate SHA-256 均为 `31a681fcfffb3e428420cae280ded89292b12a3b0f59e19b7a73e32a8ae4c213`, device base 与候选 APK 一致. users 0/10 的 host/test/plugin 三包与专用 staging/UI-dump 路径在前置检查与 cleanup 后均为 absent. 该证据仅覆盖单设备/单模型/non-stream one-shot/appDebug 宿主; 不覆盖 clipboard、stream/`chat`、tools、structured output、usage、release 宿主/API 矩阵、实机 update/uninstall、性能或 soak. DocumentsUI 的 last-location 状态无法无损复原; 广义 R1 工作项与退出门槛仍为 `[ ]`.
 
 ### 退出门槛
 
@@ -214,17 +216,27 @@
 - [ ] 覆盖 callback death, bind death, timeout, cancel, close 和 service destroy 竞态.
 - [ ] 覆盖 descriptor 重复, 缺失, 截断, 超长, pipe error 和所有权释放.
 - [ ] 覆盖 worker/callback queue 饱和和唯一终态.
-- [ ] 增加可选真实 `.litertlm` device smoke suite, 模型不提交到 Git 仓库.
+- [x] 增加可选真实 `.litertlm` device smoke suite, 模型不提交到 Git 仓库.
 - [ ] 增加 CI 的单元测试, lint, Debug/Release 构建和生成文档一致性检查.
 - [ ] 固定四个本地协议 AAR 的来源和 digest, 并执行 ABI/golden-wire 兼容检查.
 - [ ] CI 不依赖发布签名秘密; 正式签名和 APK 验证继续作为受控发布步骤.
+
+### 真实模型 smoke 本地入口与记录格式
+
+前置条件: 在显式 serial 对应的 user 0 安装 host appDebug、androidTest 和 release plugin; 三个 APK 的 v2 signer 一致且 installed base SHA-256 与本地候选一致; 通过插件 SAF UI 导入真实 `.litertlm`, 并从已验证 SHA-256 派生与 UI 显示的 `modelId`. 模型只保存在本地, 不提交到 Git. 可复制入口为:
+
+```text
+adb -s QV710AF65F shell am instrument -w -r -e autojs.aiText.publicAskSmoke.enabled true -e autojs.aiText.publicAskSmoke.serial QV710AF65F -e autojs.aiText.publicAskSmoke.modelId litertlm.ab7838cdfc8f77e54d8ca45eadceb204 -e autojs.aiText.publicAskSmoke.timeoutMillis 600000 -e class org.autojs.autojs.core.plugin.ai.AiTextPluginPublicAskSmokeTest#publicRhinoAiAskCompletesThroughExactRealPlugin org.autojs.autojs6.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+每次结果记录固定包含: tested-source commit 与 integration commit, device serial/API/ABI, model bytes/SHA-256/`modelId`, host/androidTest/plugin APK SHA-256, v2 signer certificate SHA-256, local/device digest 是否一致, exact `Class#method`/runner, elapsed time, `OK (1 test)` 或完整失败终态, 以及 users 0/10 的 exact packages 与专用 staging/UI-dump 路径在安装前/cleanup 后的 absent/present 状态. 上述 2026-08-11 记录是该格式的首个完整样例.
 
 ### 退出门槛
 
 - [ ] provider 主要成功路径和 hostile 生命周期路径均由自动化 Service/Binder 测试覆盖.
 - [ ] descriptor 和终态泄漏测试可重复运行且无偶发失败.
 - [ ] 每个 pull request 自动运行测试, lint, 构建和文档一致性检查.
-- [ ] 真实模型 smoke test 有明确的本地运行入口和结果记录格式.
+- [x] 真实模型 smoke test 有明确的本地运行入口和结果记录格式.
 - [ ] 协议 AAR 发生未审阅变化时 CI 明确失败.
 
 ## R7: Structured JSON

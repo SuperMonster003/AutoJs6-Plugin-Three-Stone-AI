@@ -2,7 +2,7 @@
 
 本文将后续工作拆分为可验证的阶段. 路线图描述的是计划和退出条件, 不代表尚未勾选的能力已经可用, 也不承诺具体发布日期.
 
-当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 仍在进行中, 构建门禁已通过, 真实插件/模型 Android/device smoke 尚未执行. R1 已推进至默认关闭且未接线的 model-list policy/catalog、Android coordinator/`IAiModelListCallback` Binder transport、transport-independent session transcript/credit policy, 以及 Android exact-component session coordinator/`IAiTextCallback`/PFD transport 与 hostile Android session conformance H1/H2 窄切片; 新增 session transport 已有 standalone K2、focused Gradle、三 APK assemble 与 QV710AF65F PARTIAL 证据, R2 至 R8 仍为规划项.
+当前稳定边界仍是 LiteRT-LM 0.15.0, CPU backend, `text/plain`, 单活动生成会话和 credit 背压流式输出. R0 仍在进行中, 构建门禁已通过, 真实插件/模型 Android/device smoke 尚未执行. R1 已推进至默认关闭的 model-list/session 基础设施、hostile Android session conformance H1/H2 窄切片, 以及显式 `ai.ask(..., { plugin: ... })` production source route; 新路由已有 standalone K2、focused Gradle 与 Android main compile 的 source-only 证据, 仍无真实插件/模型/device 运行或 UI/`chat`/`stream` 路由, R2 至 R8 仍为规划项.
 
 ## 状态说明
 
@@ -15,7 +15,7 @@
 | 阶段 | 主题 | 状态 | 主要依赖 | 实施仓库 |
 | --- | --- | --- | --- | --- |
 | R0 | 基线与模型身份 | 进行中, 真实模型/clipboard/example device 待执行 | 无 | 当前插件仓库 |
-| R1 | 宿主 `ai.*` adapter | 进行中, default-off model-list、Android session transport 与 hostile conformance H1/H2 窄切片 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
+| R1 | 宿主 `ai.*` adapter | 进行中, default-off transport、hostile conformance 与显式 `ai.ask` source route 窄切片 | R0, AutoJs6 宿主 | AutoJs6 主仓为主 |
 | R2 | 多模型与安全 GC | 规划 | R0 | 当前插件仓库 |
 | R3 | 模型自检与稳定错误码 | 规划 | R0, R2 catalog | 当前插件仓库 |
 | R4 | Engine 复用与性能 | 规划 | R2 model lease, R3 健康状态 | 当前插件仓库 |
@@ -71,6 +71,7 @@
 - [x] 在 AutoJs6 中加入默认关闭、未接线且没有生产调用点的 Android exact-component session coordinator 与 `IAiTextCallback`/PFD transport: dispatch 前及 Binder 边界精确复查 pinned identity/metadata, 仅向显式 component 绑定, 验证 provider/session interface descriptor 与 callback UID, 将 request PFD 仅借给同步 `openSession` 并在 callback admission 后才对 callback PFD 执行唯一异步所有权转移, 保留 initial 8 credits/逐 chunk 补充、absolute deadline、Binder death、唯一终态、late unwind 和 per-component fuse 语义; 已有 standalone K2 18/18 且同一产物 30 轮 540/540、focused Gradle 18 tests/0 failures、三 APK assemble 与 QV710AF65F 两个 `OK (1 test)` 的 PARTIAL 证据; 不含 runtime/UI/`ai.*` 接线.
 - [x] 为上述 default-off/unwired Android session transport 增加 opt-in hostile conformance H1 窄切片: isolated H1 commits `edd10008f`/`06ebc788c`, 主仓集成 commits `0cbc19d9f`/`72eb4d0c0`; ordinary-pipe completion callback 验证跨进程 PFD ownership、exact length/EOF、SHA-256、UTF-8 物化与 cleanup, tool PFD 在任何执行前被唯一拒绝为 `TOOLS_UNSUPPORTED`, malformed transcript fail-closed, duplicate terminal 仅作有界 single-terminal smoke, stall 在 `Started` 后由 host cancel 并验证 owner/gate 可复用. 该 `[x]` 仅表示这些精确 H1 方法已有证据; H1 自身不覆盖 cross-process reliable status、wrong UID/no-credit、provider death、package update/uninstall、真实插件/模型、runtime/UI 或 `ai.*`, 也不勾选任何广义 R1 工作项或退出门槛.
 - [x] 增加 hostile session H2 生命周期窄切片, 由主仓集成 commits `e5bd92b16`/`10dad3e39`/`0b9a94742` 记录: isolated-process callback 的实际 UID 与 pinned package UID 不同, host 在 decode 或发布 transcript 前以唯一 `TRANSCRIPT_REJECTED`/`CALLBACK_UID_MISMATCH` fail-closed 并释放 owner/gate; fake provider 在 `Started` 和 sequence 0 合法 chunk 已获 host credit replenishment acknowledgement 后结束进程, host 发布唯一 `BinderDied` 并释放 owner/gate. 该 Android 证据仅为这两个 exact 方法的 PARTIAL; no-credit 仍只有确定性 JVM policy 证据, package `lastUpdateTime` 漂移和 final reinspection `Completed(emptyList())` 仅模拟 update/uninstall 形状的 JVM 证据, 本轮没有执行任何实机 package update/uninstall. 因此 cross-process no-credit、实机 update/uninstall、真实插件/模型、runtime/UI 与 `ai.*` 仍未覆盖, 广义 R1 工作项和退出门槛保持 `[ ]`.
+- [x] 在 AutoJs6 中接入显式 `ai.ask(..., { plugin: ... })` production source route, 由主仓 commits `e4297a688`/`64db31ea5` 记录: selector 严格固定 exact component/provider/model; `plugin` 缺席时保留 legacy cloud 行为, 一旦出现则不读取 vault、不进入 HTTP/cloud、也不 fallback; 当前仅接纳单条 plain-text user message 与 non-stream 请求, 并在 engine close 时传播 cancel/close 到远端 session. standalone K2 为 15/15, focused Gradle 为 19/19 且 Android main compile 通过, 均为 source-only 证据. 该 `[x]` 不含真实插件/模型/device 运行, 也不含 UI、`chat` 或 `stream` 路由; 广义 R1 工作项与全部退出门槛保持 `[ ]`.
 - [ ] 固定精确 component, provider 和 model, 并在 dispatch 前重新核验身份.
 - [ ] 实现 Binder 绑定, PFD 所有权, callback UID 校验和连接死亡处理.
 - [ ] 自动管理初始 credit 和后续 credit, 不把背压细节暴露给普通脚本.
@@ -98,6 +99,8 @@
   - `AiTextProviderSessionAndroidConformanceTest#callbackFromIsolatedProviderUidIsRejectedAndReleasesOwner`: isolated-process relay 以不同于 pinned package UID 的实际 Binder UID 发送 `Started`, host 在发布任何 transcript 前唯一拒绝为 `TRANSCRIPT_REJECTED`/`CALLBACK_UID_MISMATCH`, 随后 owner/gate 可复用.
   - `AiTextProviderSessionAndroidConformanceTest#providerProcessDeathAfterStartedPublishesOneBinderDiedAndReleasesOwner`: fake provider 发出一个 `Started` 和 sequence 0 合法 chunk, 等待 host credit replenishment 作为已处理 acknowledgement 后结束 provider 进程; host 仅发布一个 `BinderDied` 终态, 随后 owner/gate 可复用.
   三 APK 的 local/device SHA-256 均已精确一致: host `0685CE99C0F9E8F9056BE5F3A8EEBC2C7EA5FFCA2D422E21EAC69D0CB3364629`, androidTest `7C91A0AF651E2098AD124FF8A89AE3AC3018E0F1D0DEC068367595E964739178`, fake provider `6C7319A6682B08CAB2E3C610D6DB0919C7C71BC034C2CEC8B46EB23623D55A18`; 三者 v2 signer certificate SHA-256 均为 `2e64822e13a6c80c12e1c4b47e8fb32d1e9334526289da75777b7a79145de4b8`. host、androidTest 与 fake provider 三包在安装前均为 absent, cleanup 后再次均为 absent. no-credit 仍只复用已有确定性 JVM 用例; update/uninstall 仅由 coordinator final reinspection 的 `lastUpdateTime` 漂移与 `Completed(emptyList())` JVM 用例覆盖形状, 本轮没有实机 package 变更. 该 Android 证据仅支持 wrong-UID/provider-death 两个窄方法, 不覆盖 cross-process no-credit、实机 update/uninstall、真实插件/模型、runtime/UI 或 `ai.*`; 广义 R1 工作项与全部退出门槛保持 `[ ]`.
+
+- 2026-08-11 显式 `ai.ask` plugin route production source 接线窄切片: AutoJs6 主仓 commits `e4297a688`/`64db31ea5`; selector 严格固定 exact component/provider/model, `plugin` 缺席时保留 legacy cloud 行为, 一旦出现则禁止 vault、HTTP/cloud 与 fallback; 仅接纳单条 plain-text user message 和 non-stream 请求, engine close 会传播远端 session teardown. standalone Kotlin K2/JDK 21/JVM 17 为 15/15, focused Gradle 为 19 tests/0 failures, Android main source compile 通过. 这些均为 source-only 证据, 不包含真实插件/模型/device、UI、`chat` 或 `stream`; 广义 R1 工作项与退出门槛保持 `[ ]`.
 
 ### 退出门槛
 

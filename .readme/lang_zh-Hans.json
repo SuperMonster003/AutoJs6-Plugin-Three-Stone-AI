@@ -42,7 +42,7 @@
     "不声明 GPU 或 NPU backend. `.litertlm` 扩展名本身不保证模型能被当前 LiteRT-LM runtime 加载."
   ],
   "h3_roadmap": "路线图",
-  "p_roadmap": "路线图包含 28 个可勾选产品结果，已完成 13 项、开放 15 项。D3“多模型 catalog 与选择”仍是当前阶段；完整 `listModels`、有界 V1 page token 及公开字段驱动的 `listingGeneration` 已达到 L2，事务化迁移和管理 UI 仍开放。插件生产实现为 `6489a59`、focused tests 为 `af0c5fe`；Gradle `BUILD SUCCESSFUL`，17 份 XML 共 50 tests、0 failures/errors/skipped，其中 `ModelCatalogTest` 5 项、`ModelPagerTest` 6 项。宿主 source/build `b695c303` 在 Xiaomi 23046RP50C transport、`ro.serialno=968e9f18`、API 35、arm64-v8a 上通过 exact real-plugin listing method，结果为 `OK (1 test)`/0.691s。证据使用 3 个 8-byte listing-only fixture、`pageSize=1`、B/A/C 顺序及 generation `litertlm-catalog-v2-43e043444d5ca606e2c33805c0d5f656`，固定三份 APK 的 hash/signer，并证明变更前后 3 个 exact package 与 9 条 external path 均 absent；未调用 LiteRT-LM、`openSession` 或真实模型，也未执行 soak 或设备/API/ABI matrix。",
+  "p_roadmap": "路线图包含 28 个可勾选产品结果，已完成 14 项、开放 14 项；事务化 catalog 迁移仍开放，因此 D3 仍是当前阶段。模型管理与原子选择 L2 已由插件生产实现 `98d438e`、focused tests `a6bc0e3`、18 份 JVM XML 共 57 tests 且 0 failures/errors/skipped（focused 7+7+1+5），以及 `lintDebug`、Debug/Release 构建证明；首次完整构建 105 tasks，最终增量复跑也成功。宿主 test `6495079ea` 及相关 622-task build 通过。QV710AF65F/API 31/arm64-v8a 上，真实 Activity 将 A 切换为 B，force-stop/restart 后 B 仍选中；Binder 前后的两个 exact model 和 generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916` 不变，`planExact` 对两者均命中。三份 APK hash、共同 signer 及清理回执已冻结在 ROADMAP。fixture 仅为两个 8-byte listing 文件，未调用 `openSession`、LiteRT-LM/native、真实模型或旧活动 generation；旧会话安全仅由 request-time 路径固定、选择不改变模型文件及 JVM policy tests 支持，不提升为真实生成证据。",
   "text_link_roadmap": "查看 ROADMAP.md",
   "h3_release_history": "版本历史",
   "h5_for_more_release_history": "更多版本",

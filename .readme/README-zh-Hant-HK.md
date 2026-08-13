@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-路線圖包含 28 個可勾選產品結果，已完成 13 項、開放 15 項。D3「多模型 catalog 與選擇」仍是目前階段；完整 `listModels`、有界 V1 page token 及由公開欄位驅動的 `listingGeneration` 已達 L2，transactional migration 和管理 UI 仍開放。Plugin 生產實作為 `6489a59`、focused tests 為 `af0c5fe`；Gradle `BUILD SUCCESSFUL`，17 份 XML 共 50 tests、0 failures/errors/skipped，其中 `ModelCatalogTest` 5 項、`ModelPagerTest` 6 項。Host source/build `b695c303` 在 Xiaomi 23046RP50C transport、`ro.serialno=968e9f18`、API 35、arm64-v8a 上通過 exact real-plugin listing method，結果為 `OK (1 test)`/0.691s。證據使用 3 個 8-byte listing-only fixture、`pageSize=1`、B/A/C 次序及 generation `litertlm-catalog-v2-43e043444d5ca606e2c33805c0d5f656`，固定三份 APK 的 hash/signer，並證明變更前後 3 個 exact package 與 9 條 external path 均 absent；沒有調用 LiteRT-LM、`openSession` 或真實模型，也沒有執行 soak 或裝置/API/ABI matrix。
+路線圖包含 28 個可勾選產品結果，已完成 14 項、開放 14 項；transactional catalog migration 仍開放，因此 D3 仍是目前階段。模型管理與原子選擇 L2 已由 Plugin 生產實作 `98d438e`、focused tests `a6bc0e3`、18 份 JVM XML 共 57 tests 且 0 failures/errors/skipped（focused 7+7+1+5），以及 `lintDebug`、Debug/Release build 證明；首次完整 build 105 tasks，最終增量重跑亦成功。Host test `6495079ea` 及相關 622-task build 通過。QV710AF65F/API 31/arm64-v8a 上，真實 Activity 將 A 切換為 B，force-stop/restart 後 B 仍被選中；Binder 前後的兩個 exact model 和 generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916` 不變，`planExact` 對兩者均命中。三份 APK hash、共同 signer 和清理回執已凍結於 ROADMAP。Fixture 只有兩個 8-byte listing 檔案，沒有調用 `openSession`、LiteRT-LM/native、真實模型或舊活動 generation；舊工作階段安全只由 request-time 路徑固定、選擇不改動模型檔案及 JVM policy tests 支持，不提升為真實生成證據。
 
 - [查看 ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

@@ -57,14 +57,14 @@ class ModelCatalogTest {
     @Test
     fun duplicateDigestSelectsExistingWithoutChangingMetadataOrListingGeneration() {
         val original = ModelCatalogDocument(3L, null, listOf(entryA))
-        val generation = ModelCatalogPolicy.listingGeneration(original)
+        val generation = listingGeneration(original)
         val duplicate = entryA.copy(displayName = "replacement", importedAtMillis = 999L)
         val update = ModelCatalogPolicy.integrateImport(original, duplicate)
         assertTrue(update.changed)
         assertEquals(entryA, update.model)
         assertEquals(listOf(entryA), update.document.entries)
         assertEquals(4L, update.document.revision)
-        assertEquals(generation, ModelCatalogPolicy.listingGeneration(update.document))
+        assertEquals(generation, listingGeneration(update.document))
 
         val noOp = ModelCatalogPolicy.integrateImport(update.document, duplicate)
         assertFalse(noOp.changed)
@@ -75,11 +75,14 @@ class ModelCatalogTest {
     fun selectionAndRevisionDoNotAffectGenerationButPublicFieldsDo() {
         val first = ModelCatalogDocument(1L, entryA.modelId, listOf(entryA, entryB))
         val selectionOnly = first.copy(revision = 9L, selectedModelId = entryB.modelId)
-        assertEquals(ModelCatalogPolicy.listingGeneration(first), ModelCatalogPolicy.listingGeneration(selectionOnly))
+        assertEquals(listingGeneration(first), listingGeneration(selectionOnly))
         assertNotEquals(
-            ModelCatalogPolicy.listingGeneration(first),
-            ModelCatalogPolicy.listingGeneration(first.copy(entries = listOf(entryA.copy(displayName = "renamed"), entryB))),
+            listingGeneration(first),
+            listingGeneration(first.copy(entries = listOf(entryA.copy(displayName = "renamed"), entryB))),
         )
+        assertNotEquals(listingGeneration(first), listingGeneration(first, listOf("streaming", "reasoning")))
+        assertNotEquals(listingGeneration(first), listingGeneration(first, maximumContextBytes = 1L))
+        assertNotEquals(listingGeneration(first), listingGeneration(first, maximumOutputBytes = 1L))
     }
 
     @Test
@@ -105,4 +108,16 @@ class ModelCatalogTest {
     private fun legacy(entry: ModelCatalogEntry): ByteArray =
         """{"schema":1,"modelId":"${entry.modelId}","displayName":"${entry.displayName}","fileName":"${entry.fileName}","sizeBytes":${entry.sizeBytes},"sha256":"${entry.sha256}","importedAtMillis":${entry.importedAtMillis}}"""
             .toByteArray(Charsets.UTF_8)
+
+    private fun listingGeneration(
+        document: ModelCatalogDocument,
+        capabilityIds: List<String> = listOf("streaming"),
+        maximumContextBytes: Long = 256L * 1024L,
+        maximumOutputBytes: Long = 64L * 1024L,
+    ) = ModelCatalogPolicy.listingGeneration(
+        document,
+        capabilityIds,
+        maximumContextBytes,
+        maximumOutputBytes,
+    )
 }

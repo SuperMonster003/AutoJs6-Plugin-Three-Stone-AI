@@ -42,7 +42,7 @@
     "GPU または NPU backend は宣言しません. `.litertlm` 拡張子だけでは現在の LiteRT-LM runtime がモデルを読み込める保証にはなりません."
   ],
   "h3_roadmap": "ロードマップ",
-  "p_roadmap": "Roadmap は 28 個の確認可能な product outcome を中心に構成されています。D0（単一モデル local Provider）、D1（明示的 public plugin `ai.ask`/prompt-only `ai.chat`/`ai.stream`）、D2（大規模モデル import の進捗と正確な cancel）は完了し、D3「複数モデル catalog と選択」が現在の段階です。D2 の L1 gate は `:app:testDebugUnitTest :app:assembleDebug` を 1 回の invocation で実行し、21 秒で `BUILD SUCCESSFUL`、48 tasks（21 executed/27 up-to-date）、version hash 不変、独立監査の High/Medium 0 件を確認しました。L1 は実装・focused tests・影響 build、L2 は Android/Binder 統合、L3 は署名済み実 plugin/model の実機証拠です。上位証拠がなくても完了 outcome は再オープンせず、soak や広範な API/端末 matrix は通常の blocker ではなく Release Candidate のリスク確認として扱います。",
+  "p_roadmap": "Roadmap は 28 個の確認可能な product outcome を中心に構成されています。D0、D1、D2 は完了し、D3「複数モデル catalog と選択」が引き続き現在の段階です。このうち安定した model metadata、選択状態、同一 SHA-256 の再 import の冪等性に関する outcome は L1 に到達しました。production は `1f92414`、focused tests は `c38a016` です。`:app:testDebugUnitTest :app:assembleDebug` を 1 回の invocation で実行し、35 秒で `BUILD SUCCESSFUL`、48 tasks、16 XML・44 tests・0 failures/errors/skipped、そのうち `ModelCatalogTest` 5 件と `PendingModelTransactionPolicyTest` 4 件を確認し、version hash は不変でした。この slice では ADB と fault injection は実行しておらず、migration L2、pager/listing、UI は未完了です。L1 は実装・focused tests・影響 build、L2 は Android/Binder 統合、L3 は署名済み実 plugin/model の実機証拠であり、上位証拠がなくても完了 outcome は再オープンしません。",
   "text_link_roadmap": "ROADMAP.md を表示",
   "h3_release_history": "リリース履歴",
   "h5_for_more_release_history": "その他のリリース",

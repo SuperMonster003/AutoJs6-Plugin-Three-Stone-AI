@@ -26,7 +26,7 @@ class PendingModelTransactionPolicyTest {
             PendingModelRecoveryDecision.DELETE_UNPUBLISHED_DESTINATION,
             PendingModelTransactionPolicy.decideRecovery(
                 marker = marker,
-                currentFileName = "model-${"cd".repeat(32)}.litertlm",
+                publishedFileNames = setOf("model-${"cd".repeat(32)}.litertlm"),
                 destinationExists = true,
             ),
         )
@@ -34,7 +34,7 @@ class PendingModelTransactionPolicyTest {
             PendingModelRecoveryDecision.RETAIN_PUBLISHED_DESTINATION,
             PendingModelTransactionPolicy.decideRecovery(
                 marker = marker,
-                currentFileName = marker.destinationFileName,
+                publishedFileNames = setOf(marker.destinationFileName, "model-${"cd".repeat(32)}.litertlm"),
                 destinationExists = true,
             ),
         )
@@ -42,7 +42,7 @@ class PendingModelTransactionPolicyTest {
             PendingModelRecoveryDecision.DISCARD_MARKER,
             PendingModelTransactionPolicy.decideRecovery(
                 marker = marker,
-                currentFileName = null,
+                publishedFileNames = emptySet(),
                 destinationExists = false,
             ),
         )

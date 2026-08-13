@@ -5,10 +5,11 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.system.Os
 import android.system.OsConstants
-import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.security.MessageDigest
 import java.util.UUID
 
 internal data class ImportedModel(
@@ -26,34 +27,26 @@ internal data class ImportedModel(
 internal class ModelRepository(context: Context) {
     private val applicationContext = context.applicationContext
     private val directory = File(applicationContext.filesDir, DIRECTORY_NAME)
-    private val metadataFile = File(directory, METADATA_FILE_NAME)
+    private val catalogFile = File(directory, CATALOG_FILE_NAME)
+    private val legacyMetadataFile = File(directory, LEGACY_METADATA_FILE_NAME)
     private val pendingMarkerFile = File(directory, PENDING_MARKER_FILE_NAME)
 
     @Synchronized
-    fun current(): ImportedModel? = runCatching { readCurrent() }.getOrNull()
+    fun current(): ImportedModel? = runCatching {
+        val catalog = readCatalogWithLegacyFallback()
+        catalog.selectedModelId?.let { selected ->
+            catalog.entries.single { it.modelId == selected }.toImportedModel()
+        }
+    }.getOrNull()
+
+    /** A coherent, immutable provider listing snapshot. A present corrupt catalog fails closed. */
+    @Synchronized
+    fun catalogSnapshot(): ModelCatalogDocument = readCatalogWithLegacyFallback()
 
     @Synchronized
-    fun findByModelId(modelId: String): ImportedModel? {
-        current()?.takeIf { it.modelId == modelId }?.let { return it }
-        val match = MODEL_ID.matchEntire(modelId) ?: return null
-        val digestPrefix = match.groupValues[1]
-        val candidates = directory.listFiles { file ->
-            file.isFile && FILE_NAME.matches(file.name) && file.name.startsWith("model-$digestPrefix")
-        }.orEmpty()
-        if (candidates.size != 1) return null
-        val file = candidates.single()
-        val digest = FILE_NAME.matchEntire(file.name)?.groupValues?.get(1) ?: return null
-        val size = file.length()
-        if (size !in 1L..ModelImportPolicy.MAXIMUM_MODEL_BYTES) return null
-        return ImportedModel(
-            modelId = ModelImportPolicy.stableModelId(digest),
-            displayName = file.name,
-            file = file,
-            sizeBytes = size,
-            sha256 = digest,
-            importedAtMillis = file.lastModified(),
-        )
-    }
+    fun findByModelId(modelId: String): ImportedModel? = runCatching {
+        readCatalogWithLegacyFallback().entries.singleOrNull { it.modelId == modelId }?.toImportedModel()
+    }.getOrNull()
 
     /**
      * Called exactly once by the process-local model-manager coordinator before it accepts imports.
@@ -84,6 +77,18 @@ internal class ModelRepository(context: Context) {
                 resolvePendingTransaction(marker)
             }
             directoryChanged = true
+        }
+        if (!catalogFile.exists()) {
+            val initial = if (legacyMetadataFile.exists()) {
+                ModelCatalogPolicy.fromLegacy(readLegacyCurrentEntry())
+            } else {
+                ModelCatalogPolicy.empty()
+            }
+            publishCatalogExactly(initial)
+            directoryChanged = true
+        } else {
+            // A present catalog is authoritative. Validate it rather than falling back to legacy.
+            readCatalog()
         }
         if (directoryChanged) syncDirectory()
     }
@@ -192,7 +197,11 @@ internal class ModelRepository(context: Context) {
             val destination = File(directory, "model-$sha256.litertlm")
             val destinationExistedBeforeImport = destination.exists()
             if (!PendingModelTransactionPolicy.shouldCreateMarker(destinationExistedBeforeImport)) {
-                require(destination.isFile && destination.length() == copied.byteCount) {
+                require(
+                    destination.isFile &&
+                        destination.length() == copied.byteCount &&
+                        digestExistingFile(destination, operation) == sha256
+                ) {
                     "A conflicting private model file already exists"
                 }
                 operation.whileActive {
@@ -211,10 +220,10 @@ internal class ModelRepository(context: Context) {
                 }
             }
 
-            val imported = ImportedModel(
+            val candidate = ModelCatalogEntry(
                 modelId = ModelImportPolicy.stableModelId(sha256),
                 displayName = ModelImportPolicy.safeDisplayName(document.displayName),
-                file = destination,
+                fileName = destination.name,
                 sizeBytes = copied.byteCount,
                 sha256 = sha256,
                 importedAtMillis = System.currentTimeMillis(),
@@ -227,11 +236,16 @@ internal class ModelRepository(context: Context) {
                 ),
             )
             operation.beginCommit()
-            publishCommittedImport(imported, pendingTransaction)
+            val update = ModelCatalogPolicy.integrateImport(
+                document = readCatalog(),
+                candidate = candidate,
+                select = true,
+            )
+            publishCommittedImport(update, pendingTransaction)
             // The Binder provider runs in a separate process. A previous model may already have
             // been selected from metadata but not opened by LiteRT-LM yet, so hash-named model
             // generations are intentionally retained instead of being deleted during import.
-            return imported
+            return update.model.toImportedModel()
         } catch (error: Throwable) {
             pendingTransaction?.let { marker -> runCatching { rollbackOwnedPendingTransaction(marker) } }
             throw error
@@ -241,71 +255,82 @@ internal class ModelRepository(context: Context) {
         }
     }
 
-    private fun readCurrent(): ImportedModel? {
-        if (!metadataFile.isFile || metadataFile.length() !in 1L..MAXIMUM_METADATA_BYTES) return null
-        val json = JSONObject(metadataFile.readText(Charsets.UTF_8))
-        if (json.getInt("schema") != METADATA_SCHEMA) return null
-        val sha256 = json.getString("sha256")
-        val expectedModelId = ModelImportPolicy.stableModelId(sha256)
-        if (json.getString("modelId") != expectedModelId) return null
-        val expectedFileName = "model-$sha256.litertlm"
-        if (json.getString("fileName") != expectedFileName) return null
-        val modelFile = File(directory, expectedFileName)
-        if (modelFile.canonicalFile.parentFile != directory.canonicalFile) return null
-        val size = json.getLong("sizeBytes")
-        if (!modelFile.isFile || size !in 1L..ModelImportPolicy.MAXIMUM_MODEL_BYTES || modelFile.length() != size) {
-            return null
-        }
-        val displayName = ModelImportPolicy.safeDisplayName(json.getString("displayName"))
-        return ImportedModel(
-            modelId = expectedModelId,
-            displayName = displayName,
-            file = modelFile,
-            sizeBytes = size,
-            sha256 = sha256,
-            importedAtMillis = json.getLong("importedAtMillis"),
-        )
+    private fun readCatalogWithLegacyFallback(): ModelCatalogDocument = when {
+        catalogFile.exists() -> readCatalog()
+        legacyMetadataFile.exists() -> ModelCatalogPolicy.fromLegacy(readLegacyCurrentEntry())
+        else -> ModelCatalogPolicy.empty()
     }
 
-    private fun publishMetadata(model: ImportedModel) {
-        val json = JSONObject()
-            .put("schema", METADATA_SCHEMA)
-            .put("modelId", model.modelId)
-            .put("displayName", model.displayName)
-            .put("fileName", model.file.name)
-            .put("sizeBytes", model.sizeBytes)
-            .put("sha256", model.sha256)
-            .put("importedAtMillis", model.importedAtMillis)
-        val temporary = File(directory, ".current-${UUID.randomUUID()}.tmp")
-        try {
+    private fun readCatalog(): ModelCatalogDocument {
+        requireSafeRegularFile(catalogFile)
+        require(catalogFile.length() in 1L..ModelCatalogCodec.MAXIMUM_CATALOG_BYTES.toLong()) {
+            "Model catalog size is invalid"
+        }
+        return ModelCatalogCodec.decode(catalogFile.readBytes()).also(::requireCatalogFiles)
+    }
+
+    private fun readLegacyCurrentEntry(): ModelCatalogEntry {
+        requireSafeRegularFile(legacyMetadataFile)
+        require(legacyMetadataFile.length() in 1L..ModelCatalogCodec.MAXIMUM_LEGACY_BYTES.toLong()) {
+            "Legacy model metadata size is invalid"
+        }
+        return ModelCatalogCodec.decodeLegacyCurrent(legacyMetadataFile.readBytes()).also(::requireCatalogFile)
+    }
+
+    private fun requireCatalogFiles(document: ModelCatalogDocument) {
+        document.entries.forEach(::requireCatalogFile)
+    }
+
+    private fun requireCatalogFile(entry: ModelCatalogEntry) {
+        val modelFile = File(directory, entry.fileName)
+        requireSafeRegularFile(modelFile)
+        require(modelFile.length() == entry.sizeBytes) { "Catalog model file size changed" }
+    }
+
+    private fun ModelCatalogEntry.toImportedModel(): ImportedModel = ImportedModel(
+        modelId = modelId,
+        displayName = displayName,
+        file = File(directory, fileName),
+        sizeBytes = sizeBytes,
+        sha256 = sha256,
+        importedAtMillis = importedAtMillis,
+    )
+
+    private fun publishCatalogExactly(document: ModelCatalogDocument) {
+        val normalized = ModelCatalogPolicy.normalize(document)
+        val bytes = ModelCatalogCodec.encode(normalized)
+        val temporary = File(directory, ".catalog-${UUID.randomUUID()}.tmp")
+        val publicationFailure = try {
             FileOutputStream(temporary).use { output ->
-                output.write(json.toString().toByteArray(Charsets.UTF_8))
+                output.write(bytes)
                 output.fd.sync()
             }
-            Os.rename(temporary.absolutePath, metadataFile.absolutePath)
+            Os.rename(temporary.absolutePath, catalogFile.absolutePath)
             syncDirectory()
+            null
+        } catch (error: Throwable) {
+            error
         } finally {
             if (temporary.exists()) temporary.delete()
         }
+        if (publicationFailure == null) return
+        if (runCatching { readCatalog() == normalized }.getOrDefault(false).not()) {
+            throw publicationFailure
+        }
+        try {
+            syncDirectory()
+        } catch (retryFailure: Throwable) {
+            retryFailure.addSuppressed(publicationFailure)
+            throw retryFailure
+        }
     }
 
-    /** Verifies and re-syncs metadata when the first directory sync reports an ambiguous failure. */
+    /** Verifies and re-syncs catalog publication when the first directory sync is ambiguous. */
     private fun publishCommittedImport(
-        model: ImportedModel,
+        update: ModelCatalogUpdate,
         marker: PendingModelTransaction?,
     ) {
-        val publicationFailure = runCatching { publishMetadata(model) }.exceptionOrNull()
-        if (publicationFailure != null) {
-            if (runCatching { readCurrent() == model }.getOrDefault(false).not()) {
-                throw publicationFailure
-            }
-            try {
-                syncDirectory()
-            } catch (retryFailure: Throwable) {
-                retryFailure.addSuppressed(publicationFailure)
-                throw retryFailure
-            }
-        }
+        if (update.changed) publishCatalogExactly(update.document)
         marker?.let { runCatching { completePendingTransaction(it) } }
     }
 
@@ -322,8 +347,8 @@ internal class ModelRepository(context: Context) {
 
     private fun completePendingTransaction(marker: PendingModelTransaction) {
         require(readPendingMarker() == marker) { "Model transaction marker changed unexpectedly" }
-        require(readCurrent()?.file?.name == marker.destinationFileName) {
-            "Model transaction metadata was not published"
+        require(readCatalog().entries.any { it.fileName == marker.destinationFileName }) {
+            "Model transaction catalog was not published"
         }
         require(pendingMarkerFile.delete() || !pendingMarkerFile.exists()) {
             "Published model transaction marker cannot be removed"
@@ -344,7 +369,7 @@ internal class ModelRepository(context: Context) {
         requireSafeDirectChild(destination)
         val decision = PendingModelTransactionPolicy.decideRecovery(
             marker = marker,
-            currentFileName = readCurrent()?.file?.name,
+            publishedFileNames = readCatalogWithLegacyFallback().entries.mapTo(linkedSetOf()) { it.fileName },
             destinationExists = destination.exists(),
         )
         if (decision == PendingModelRecoveryDecision.DELETE_UNPUBLISHED_DESTINATION) {
@@ -374,6 +399,22 @@ internal class ModelRepository(context: Context) {
             "The selected model metadata cannot be read",
             error,
         )
+    }
+
+    private fun digestExistingFile(file: File, operation: ModelImportOperationControl): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(256 * 1024)
+        FileInputStream(file).use { input ->
+            while (true) {
+                operation.ensureActive()
+                val read = input.read(buffer)
+                if (read < 0) break
+                if (read > 0) digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { byte ->
+            (byte.toInt() and 0xff).toString(16).padStart(2, '0')
+        }
     }
 
     private fun openSourceInput(uri: Uri): InputStream = try {
@@ -448,15 +489,12 @@ internal class ModelRepository(context: Context) {
     private data class DocumentInfo(val displayName: String, val declaredSize: Long?)
     private companion object {
         const val DIRECTORY_NAME = "models"
-        const val METADATA_FILE_NAME = "current.json"
+        const val CATALOG_FILE_NAME = "catalog.json"
+        const val LEGACY_METADATA_FILE_NAME = "current.json"
         const val PENDING_MARKER_FILE_NAME = ".pending-model.json"
-        const val METADATA_SCHEMA = 1
-        const val MAXIMUM_METADATA_BYTES = 64L * 1024L
         const val MAXIMUM_RECOVERY_DIRECTORY_ENTRIES = 16_384
         private const val TRANSACTION_ID_PATTERN =
             "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
-        val MODEL_ID = Regex("^litertlm\\.([0-9a-f]{32})$")
-        val FILE_NAME = Regex("^model-([0-9a-f]{64})\\.litertlm$")
-        val RECOVERABLE_TEMP_FILE = Regex("^\\.(?:incoming|current|pending)-$TRANSACTION_ID_PATTERN\\.tmp$")
+        val RECOVERABLE_TEMP_FILE = Regex("^\\.(?:incoming|current|catalog|pending)-$TRANSACTION_ID_PATTERN\\.tmp$")
     }
 }

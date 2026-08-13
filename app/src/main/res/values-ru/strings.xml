@@ -2,7 +2,10 @@
 <resources>
     <string name="app_name">AI Text Generation</string>
     <string name="button_copy_model_id">Копировать ID модели</string>
+    <string name="button_cancel_import">Отменить импорт</string>
     <string name="button_import_model">Импорт модели .litertlm</string>
+    <string name="import_cancelled">Импорт модели отменён</string>
+    <string name="import_cancelling">Отмена импорта модели</string>
     <string name="import_failed">Не удалось импортировать модель</string>
     <string name="import_failed_insufficient_storage">Не удалось импортировать модель: недостаточно свободного места</string>
     <string name="import_failed_interrupted">Импорт модели прерван</string>
@@ -10,6 +13,11 @@
     <string name="import_failed_model_too_large">Не удалось импортировать модель: размер модели превышает ограничение 8 GiB</string>
     <string name="import_failed_source_unavailable">Не удалось импортировать модель: не удалось прочитать выбранный файл</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">Импорт модели...</string>
+    <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
+    <string name="import_progress_unknown">%1$s: обработано %2$s</string>
+    <string name="import_stage_copying">Копирование и проверка модели</string>
+    <string name="import_stage_publishing">Публикация модели</string>
+    <string name="import_stage_validating">Проверка источника</string>
     <string name="import_succeeded">Модель импортирована</string>
     <string name="model_id_clipboard_label">ID модели генерации текста ИИ</string>
     <string name="model_id_copied">ID модели скопирован</string>

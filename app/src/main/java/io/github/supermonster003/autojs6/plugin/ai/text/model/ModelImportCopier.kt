@@ -18,6 +18,7 @@ internal object ModelImportCopier {
         output: OutputStream,
         maximumBytes: Long,
         limitFailureReason: ModelImportFailureReason,
+        progressListener: (processedBytes: Long) -> Unit = {},
     ): ModelCopyResult {
         if (maximumBytes < ModelImportPolicy.LITERTLM_MAGIC_BYTES) {
             throw ModelImportFailureException(
@@ -40,6 +41,7 @@ internal object ModelImportCopier {
         output.write(header)
         digest.update(header)
         var copied = header.size.toLong()
+        progressListener(copied)
         val buffer = ByteArray(COPY_BUFFER_BYTES)
         while (true) {
             ensureNotInterrupted()
@@ -56,6 +58,7 @@ internal object ModelImportCopier {
             output.write(buffer, 0, count)
             digest.update(buffer, 0, count)
             copied += count
+            progressListener(copied)
         }
         return ModelCopyResult(
             byteCount = copied,

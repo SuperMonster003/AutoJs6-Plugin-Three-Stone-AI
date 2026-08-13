@@ -2,7 +2,10 @@
 <resources>
     <string name="app_name">AI Text Generation</string>
     <string name="button_copy_model_id">Copy model ID</string>
+    <string name="button_cancel_import">Cancel import</string>
     <string name="button_import_model">Import .litertlm model</string>
+    <string name="import_cancelled">Model import cancelled</string>
+    <string name="import_cancelling">Cancelling model import</string>
     <string name="import_failed">Model import failed</string>
     <string name="import_failed_insufficient_storage">Model import failed: not enough free storage</string>
     <string name="import_failed_interrupted">Model import was interrupted</string>
@@ -10,6 +13,11 @@
     <string name="import_failed_model_too_large">Model import failed: the model exceeds the 8 GiB limit</string>
     <string name="import_failed_source_unavailable">Model import failed: the selected file could not be read</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">Importing model...</string>
+    <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
+    <string name="import_progress_unknown">%1$s: %2$s processed</string>
+    <string name="import_stage_copying">Copying and verifying model</string>
+    <string name="import_stage_publishing">Publishing model</string>
+    <string name="import_stage_validating">Validating source</string>
     <string name="import_succeeded">Model imported</string>
     <string name="model_id_clipboard_label">AI text model ID</string>
     <string name="model_id_copied">Model ID copied</string>

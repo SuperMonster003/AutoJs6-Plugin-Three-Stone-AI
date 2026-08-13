@@ -88,8 +88,22 @@ internal class ModelRepository(context: Context) {
         if (directoryChanged) syncDirectory()
     }
 
+    /**
+     * Repeats bounded recovery before the coordinator releases its active-import ownership. The
+     * unconditional sync also retries a marker deletion whose first directory sync was ambiguous.
+     */
     @Synchronized
-    fun importFrom(uri: Uri): ImportedModel {
+    fun recoverInterruptedImportAfterWorker() {
+        recoverInterruptedImportFromManagerColdStart()
+        syncDirectory()
+    }
+
+    @Synchronized
+    fun importFrom(
+        uri: Uri,
+        operation: ModelImportOperationControl = ModelImportOperationControl(),
+    ): ImportedModel {
+        operation.reportProgress(ModelImportProgress.initial())
         if (uri.scheme != "content") {
             throw ModelImportFailureException(
                 ModelImportFailureReason.SOURCE_UNAVAILABLE,
@@ -98,7 +112,9 @@ internal class ModelRepository(context: Context) {
         }
         ensureDirectory()
         require(!pendingMarkerFile.exists()) { "Interrupted model import recovery is required" }
+        operation.ensureActive()
         val document = querySourceDocument(uri)
+        operation.ensureActive()
         ModelImportPolicy.requireImportableName(document.displayName)
         val maximumBytes = ModelImportPolicy.maximumCopyBytes(directory.usableSpace)
         if (maximumBytes <= 0L) {
@@ -123,6 +139,13 @@ internal class ModelRepository(context: Context) {
                 )
             }
         }
+        operation.reportProgress(
+            ModelImportProgress(
+                stage = ModelImportStage.VALIDATING,
+                processedBytes = 0L,
+                totalBytes = null,
+            ),
+        )
 
         val transactionId = UUID.randomUUID().toString()
         val temporary = File(directory, ".incoming-$transactionId.tmp")
@@ -134,15 +157,36 @@ internal class ModelRepository(context: Context) {
             } else {
                 ModelImportFailureReason.MODEL_TOO_LARGE
             }
-            val copied = openSourceInput(uri).use { input ->
-                FileOutputStream(temporary).use { output ->
-                    ModelImportCopier.copy(
-                        input = input,
-                        output = output,
-                        maximumBytes = maximumBytes,
-                        limitFailureReason = limitFailureReason,
-                    ).also { output.fd.sync() }
+            val input = openSourceInput(uri)
+            operation.registerCancellationResource(input)
+            val copied = try {
+                input.use {
+                    FileOutputStream(temporary).use { output ->
+                        ModelImportCopier.copy(
+                            input = input,
+                            output = output,
+                            maximumBytes = maximumBytes,
+                            limitFailureReason = limitFailureReason,
+                            progressListener = { processedBytes ->
+                                operation.reportProgress(
+                                    ModelImportProgress(
+                                        stage = ModelImportStage.COPYING,
+                                        processedBytes = processedBytes,
+                                        totalBytes = document.declaredSize?.takeIf {
+                                            it > 0L && processedBytes <= it
+                                        },
+                                    ),
+                                )
+                            },
+                        ).also {
+                            operation.ensureActive()
+                            output.fd.sync()
+                            operation.ensureActive()
+                        }
+                    }
                 }
+            } finally {
+                operation.unregisterCancellationResource(input)
             }
             val sha256 = copied.sha256
             val destination = File(directory, "model-$sha256.litertlm")
@@ -151,12 +195,20 @@ internal class ModelRepository(context: Context) {
                 require(destination.isFile && destination.length() == copied.byteCount) {
                     "A conflicting private model file already exists"
                 }
-                temporary.delete()
+                operation.whileActive {
+                    require(temporary.delete() || !temporary.exists()) {
+                        "Duplicate model transaction file cannot be removed"
+                    }
+                }
             } else {
                 pendingTransaction = PendingModelTransactionPolicy.create(transactionId, sha256)
-                publishPendingMarker(pendingTransaction, pendingTemporary)
-                Os.rename(temporary.absolutePath, destination.absolutePath)
-                syncDirectory()
+                operation.whileActive {
+                    publishPendingMarker(pendingTransaction, pendingTemporary)
+                }
+                operation.whileActive {
+                    Os.rename(temporary.absolutePath, destination.absolutePath)
+                    syncDirectory()
+                }
             }
 
             val imported = ImportedModel(
@@ -167,8 +219,15 @@ internal class ModelRepository(context: Context) {
                 sha256 = sha256,
                 importedAtMillis = System.currentTimeMillis(),
             )
-            publishMetadata(imported)
-            pendingTransaction?.let(::completePendingTransaction)
+            operation.reportProgress(
+                ModelImportProgress(
+                    stage = ModelImportStage.PUBLISHING,
+                    processedBytes = copied.byteCount,
+                    totalBytes = copied.byteCount,
+                ),
+            )
+            operation.beginCommit()
+            publishCommittedImport(imported, pendingTransaction)
             // The Binder provider runs in a separate process. A previous model may already have
             // been selected from metadata but not opened by LiteRT-LM yet, so hash-named model
             // generations are intentionally retained instead of being deleted during import.
@@ -228,6 +287,26 @@ internal class ModelRepository(context: Context) {
         } finally {
             if (temporary.exists()) temporary.delete()
         }
+    }
+
+    /** Verifies and re-syncs metadata when the first directory sync reports an ambiguous failure. */
+    private fun publishCommittedImport(
+        model: ImportedModel,
+        marker: PendingModelTransaction?,
+    ) {
+        val publicationFailure = runCatching { publishMetadata(model) }.exceptionOrNull()
+        if (publicationFailure != null) {
+            if (runCatching { readCurrent() == model }.getOrDefault(false).not()) {
+                throw publicationFailure
+            }
+            try {
+                syncDirectory()
+            } catch (retryFailure: Throwable) {
+                retryFailure.addSuppressed(publicationFailure)
+                throw retryFailure
+            }
+        }
+        marker?.let { runCatching { completePendingTransaction(it) } }
     }
 
     private fun publishPendingMarker(marker: PendingModelTransaction, temporary: File) {

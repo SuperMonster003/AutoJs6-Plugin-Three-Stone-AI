@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.ai.text.model
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -49,5 +50,106 @@ class ModelImportStateMachineTest {
         val failed = ready.snapshot() as ModelImportState.Failed
         assertEquals("old-model", failed.current)
         assertEquals(ModelImportFailureReason.INVALID_FORMAT, failed.reason)
+    }
+
+    @Test
+    fun cancellationBecomesTerminalOnlyAfterTheWorkerFinishes() {
+        val cancellationWins = ModelImportStateMachine<String>()
+        cancellationWins.finishPreparation("old-model")
+        val cancelledOperation = cancellationWins.begin()!!
+
+        assertTrue(cancellationWins.beginCancellation(cancelledOperation))
+        val cancelling = cancellationWins.snapshot() as ModelImportState.Cancelling
+        assertEquals(cancelledOperation, cancelling.operationId)
+        assertEquals("old-model", cancelling.previous)
+        assertNull(cancellationWins.begin())
+        assertFalse(cancellationWins.succeed(cancelledOperation, "late-model"))
+        assertTrue(cancellationWins.finishCancellation(cancelledOperation, "old-model"))
+        assertFalse(
+            cancellationWins.fail(
+                cancelledOperation,
+                "late-model",
+                ModelImportFailureReason.UNKNOWN,
+            ),
+        )
+        assertEquals(
+            ModelImportState.Cancelled(cancelledOperation, "old-model"),
+            cancellationWins.snapshot(),
+        )
+
+        val completionWins = ModelImportStateMachine<String>()
+        completionWins.finishPreparation("old-model")
+        val completedOperation = completionWins.begin()!!
+
+        assertTrue(completionWins.succeed(completedOperation, "new-model"))
+        assertFalse(completionWins.beginCancellation(completedOperation))
+        assertEquals(
+            ModelImportState.Succeeded(completedOperation, "new-model"),
+            completionWins.snapshot(),
+        )
+    }
+
+    @Test
+    fun unknownTotalCopyStillPublishesMonotonicFinalByteProgress() {
+        val state = ModelImportStateMachine<String>()
+        state.finishPreparation("old-model")
+        val operationId = state.begin()!!
+
+        assertTrue(
+            state.updateProgress(
+                operationId,
+                ModelImportProgress(ModelImportStage.COPYING, processedBytes = 8L, totalBytes = null),
+            ),
+        )
+        assertTrue(
+            state.updateProgress(
+                operationId,
+                ModelImportProgress(ModelImportStage.COPYING, processedBytes = 24L, totalBytes = null),
+            ),
+        )
+        val copying = state.snapshot() as ModelImportState.Running
+        assertNull(copying.progress.totalBytes)
+        assertTrue(
+            state.updateProgress(
+                operationId,
+                ModelImportProgress(ModelImportStage.PUBLISHING, processedBytes = 24L, totalBytes = 24L),
+            ),
+        )
+
+        val running = state.snapshot() as ModelImportState.Running
+        assertEquals(ModelImportStage.PUBLISHING, running.progress.stage)
+        assertEquals(24L, running.progress.processedBytes)
+        assertEquals(24L, running.progress.totalBytes)
+    }
+
+    @Test
+    fun rejectsByteRegressionAcrossImportStages() {
+        val state = ModelImportStateMachine<String>()
+        state.finishPreparation(null)
+        val operationId = state.begin()!!
+        assertTrue(
+            state.updateProgress(
+                operationId,
+                ModelImportProgress(ModelImportStage.COPYING, processedBytes = 24L, totalBytes = null),
+            ),
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            state.updateProgress(
+                operationId,
+                ModelImportProgress(ModelImportStage.PUBLISHING, processedBytes = 23L, totalBytes = 23L),
+            )
+        }
+    }
+
+    @Test
+    fun rejectsProcessedBytesBeyondTheKnownTotal() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelImportProgress(
+                stage = ModelImportStage.COPYING,
+                processedBytes = 9L,
+                totalBytes = 8L,
+            )
+        }
     }
 }

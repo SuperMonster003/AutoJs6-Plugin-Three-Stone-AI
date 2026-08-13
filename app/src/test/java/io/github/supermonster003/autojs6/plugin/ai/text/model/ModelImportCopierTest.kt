@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.ai.text.model
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -26,6 +27,24 @@ class ModelImportCopierTest {
         assertArrayEquals(content, output.toByteArray())
         assertEquals(content.size.toLong(), copied.byteCount)
         assertEquals(sha256(content), copied.sha256)
+    }
+
+    @Test
+    fun reportsMonotonicProgressThroughTheFinalByte() {
+        val content = "LITERTLM".toByteArray(Charsets.US_ASCII) + ByteArray(257) { it.toByte() }
+        val progress = mutableListOf<Long>()
+
+        ModelImportCopier.copy(
+            input = ChunkedInputStream(content, maximumChunkBytes = 3),
+            output = ByteArrayOutputStream(),
+            maximumBytes = content.size.toLong(),
+            limitFailureReason = ModelImportFailureReason.MODEL_TOO_LARGE,
+            progressListener = progress::add,
+        )
+
+        assertEquals(ModelImportPolicy.LITERTLM_MAGIC_BYTES.toLong(), progress.first())
+        assertTrue(progress.zipWithNext().all { (before, after) -> after > before })
+        assertEquals(content.size.toLong(), progress.last())
     }
 
     @Test

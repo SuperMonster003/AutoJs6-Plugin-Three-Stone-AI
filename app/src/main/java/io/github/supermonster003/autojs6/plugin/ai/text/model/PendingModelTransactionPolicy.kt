@@ -103,12 +103,15 @@ internal object PendingModelTransactionPolicy {
 
     fun decideRecovery(
         marker: PendingModelTransaction,
-        currentFileName: String?,
+        publishedFileNames: Set<String>,
         destinationExists: Boolean,
     ): PendingModelRecoveryDecision {
         requireValid(marker)
+        require(publishedFileNames.size <= ModelCatalogPolicy.MAXIMUM_ENTRIES) {
+            "Published model set is too large"
+        }
         if (!destinationExists) return PendingModelRecoveryDecision.DISCARD_MARKER
-        return if (currentFileName == marker.destinationFileName) {
+        return if (marker.destinationFileName in publishedFileNames) {
             PendingModelRecoveryDecision.RETAIN_PUBLISHED_DESTINATION
         } else {
             PendingModelRecoveryDecision.DELETE_UNPUBLISHED_DESTINATION

@@ -21,7 +21,14 @@
     <string name="import_succeeded">Модель импортирована</string>
     <string name="model_id_clipboard_label">ID модели генерации текста ИИ</string>
     <string name="model_id_copied">ID модели скопирован</string>
+    <string name="model_catalog_empty">Нет импортированных моделей</string>
+    <string name="model_catalog_loading">Загрузка каталога моделей</string>
+    <string name="model_catalog_unavailable">Каталог моделей недоступен</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_summary">Импортировано моделей: %1$d - Всего занято: %2$s</string>
     <string name="model_none">Модель не настроена</string>
+    <string name="model_selection_failed">Не удалось выбрать модель</string>
+    <string name="model_selection_succeeded">Модель выбрана</string>
     <string name="model_status_format">Модель: %1$s\nРазмер: %2$s\nSHA-256: %3$s\nID модели: %4$s</string>
     <string name="plugin_description">Provider генерации текста LiteRT-LM на устройстве</string>
     <string name="screen_description">Выберите локальную модель LiteRT-LM. Файл копируется в закрытое хранилище приложения и никогда не отправляется</string>

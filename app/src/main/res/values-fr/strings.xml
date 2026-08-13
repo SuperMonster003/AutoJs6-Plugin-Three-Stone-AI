@@ -21,7 +21,14 @@
     <string name="import_succeeded">Modèle importé</string>
     <string name="model_id_clipboard_label">ID du modèle de texte IA</string>
     <string name="model_id_copied">ID du modèle copié</string>
+    <string name="model_catalog_empty">Aucun modèle importé</string>
+    <string name="model_catalog_loading">Chargement du catalogue de modèles</string>
+    <string name="model_catalog_unavailable">Catalogue de modèles indisponible</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_summary">Modèles importés : %1$d - Stockage total : %2$s</string>
     <string name="model_none">Aucun modèle configuré</string>
+    <string name="model_selection_failed">Échec de la sélection du modèle</string>
+    <string name="model_selection_succeeded">Modèle sélectionné</string>
     <string name="model_status_format">Modèle: %1$s\nTaille: %2$s\nSHA-256: %3$s\nID du modèle: %4$s</string>
     <string name="plugin_description">Provider de génération de texte LiteRT-LM sur appareil</string>
     <string name="screen_description">Choisissez un modèle LiteRT-LM local. Le fichier est copié dans le stockage privé de l\'application et jamais envoyé</string>

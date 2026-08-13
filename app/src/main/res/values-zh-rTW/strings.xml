@@ -21,7 +21,14 @@
     <string name="import_succeeded">模型已匯入</string>
     <string name="model_id_clipboard_label">AI 文字模型 ID</string>
     <string name="model_id_copied">模型 ID 已複製</string>
+    <string name="model_catalog_empty">尚未匯入模型</string>
+    <string name="model_catalog_loading">正在載入模型目錄</string>
+    <string name="model_catalog_unavailable">模型目錄無法使用</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_summary">已匯入模型: %1$d - 儲存空間總用量: %2$s</string>
     <string name="model_none">尚未設定模型</string>
+    <string name="model_selection_failed">選取模型失敗</string>
+    <string name="model_selection_succeeded">已選取模型</string>
     <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s</string>
     <string name="plugin_description">裝置端 LiteRT-LM 文字生成 provider</string>
     <string name="screen_description">選擇本機 LiteRT-LM 模型. 檔案會複製到應用程式私人儲存空間且絕不會上傳</string>

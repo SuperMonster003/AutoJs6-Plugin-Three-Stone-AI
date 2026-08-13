@@ -71,7 +71,31 @@ internal class ModelImportStateMachine<T> {
     @Synchronized
     fun failPreparation() {
         check(state === ModelImportState.Preparing) { "Model import preparation already finished" }
+        current = null
         state = ModelImportState.Unavailable
+    }
+
+    /** Replaces the visible current model only while no import owns the state machine. */
+    @Synchronized
+    fun replaceCurrent(value: T?): Boolean {
+        if (
+            state === ModelImportState.Preparing || state === ModelImportState.Unavailable ||
+            state is ModelImportState.Running<*> || state is ModelImportState.Cancelling<*>
+        ) {
+            return false
+        }
+        current = value
+        state = ModelImportState.Ready(value)
+        return true
+    }
+
+    /** Fails closed after a non-import catalog refresh can no longer establish coherent state. */
+    @Synchronized
+    fun makeUnavailable(): Boolean {
+        if (state is ModelImportState.Running<*> || state is ModelImportState.Cancelling<*>) return false
+        current = null
+        state = ModelImportState.Unavailable
+        return true
     }
 
     @Synchronized

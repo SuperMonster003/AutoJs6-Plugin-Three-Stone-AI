@@ -60,6 +60,7 @@ class AiTextProviderService : Service() {
         sessions.toList().forEach(RemoteAiTextSession::serviceDestroyed)
         sessions.clear()
         worker.shutdownNow()
+        modelPager.close()
         timeoutScheduler.shutdownNow()
         callbackLane.close()
         super.onDestroy()
@@ -86,17 +87,21 @@ class AiTextProviderService : Service() {
             }
             val requestCopy = request.copyOf()
             if (!submitListWork {
-                    val result = runCatching {
-                        AiTextCodec.encodeModelPage(modelPager.page(AiTextCodec.decodeModelListRequest(requestCopy)))
-                    }
+                    val result = runCatching { decodeListRequest(requestCopy) }
+                        .mapCatching(modelPager::page)
+                        .mapCatching(::encodeModelPage)
                     callbackLane.dispatch(
                         callback = {
                             result.fold(
                                 onSuccess = callback::onPage,
-                                onFailure = {
+                                onFailure = { error ->
+                                    val failure = classifyModelListFailure(error)
                                     callback.onFailed(
                                         AiCommonCodec.encodeError(
-                                            AiError(AiErrorCode.INVALID_REQUEST, "Model-list request is invalid"),
+                                            AiError(
+                                                failure.code,
+                                                failure.message,
+                                            ),
                                         ),
                                     )
                                 },
@@ -177,4 +182,28 @@ class AiTextProviderService : Service() {
             onFailure = {},
         )
     }
+
+    private fun decodeListRequest(request: ByteArray) = try {
+        AiTextCodec.decodeModelListRequest(request)
+    } catch (error: Throwable) {
+        throw InvalidModelListRequestException()
+    }
+
+    private fun encodeModelPage(page: org.autojs.plugin.ai.text.api.AiModelPage): ByteArray = try {
+        AiTextCodec.encodeModelPage(page)
+    } catch (error: Throwable) {
+        throw ModelListingFailedException(error)
+    }
+
+    private fun classifyModelListFailure(error: Throwable): ModelListFailure = when (error) {
+        is UnsupportedModelListProtocolException ->
+            ModelListFailure(AiErrorCode.UNSUPPORTED_PROTOCOL, "Model-list protocol is unsupported")
+        is ModelListingUnavailableException ->
+            ModelListFailure(AiErrorCode.PROVIDER_UNAVAILABLE, "Model catalog is unavailable")
+        is ModelListingFailedException ->
+            ModelListFailure(AiErrorCode.PROVIDER_FAILED, "Model listing failed")
+        else -> ModelListFailure(AiErrorCode.INVALID_REQUEST, "Model-list request is invalid")
+    }
+
+    private data class ModelListFailure(val code: Int, val message: String)
 }

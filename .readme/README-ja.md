@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-Roadmap は 28 個の確認可能な product outcome を中心に構成されています。D0、D1、D2 は完了し、D3「複数モデル catalog と選択」が引き続き現在の段階です。このうち安定した model metadata、選択状態、同一 SHA-256 の再 import の冪等性に関する outcome は L1 に到達しました。production は `1f92414`、focused tests は `c38a016` です。`:app:testDebugUnitTest :app:assembleDebug` を 1 回の invocation で実行し、35 秒で `BUILD SUCCESSFUL`、48 tasks、16 XML・44 tests・0 failures/errors/skipped、そのうち `ModelCatalogTest` 5 件と `PendingModelTransactionPolicyTest` 4 件を確認し、version hash は不変でした。この slice では ADB と fault injection は実行しておらず、migration L2、pager/listing、UI は未完了です。L1 は実装・focused tests・影響 build、L2 は Android/Binder 統合、L3 は署名済み実 plugin/model の実機証拠であり、上位証拠がなくても完了 outcome は再オープンしません。
+Roadmap には確認可能な product outcome が 28 個あり、13 個が完了、15 個が未完了です。D3「複数モデル catalog と選択」は引き続き現在の段階です。完全な `listModels`、有界 V1 page token、公開フィールド由来の `listingGeneration` は L2 に到達し、transactional migration と管理 UI は未完了です。Plugin production は `6489a59`、focused tests は `af0c5fe` で、Gradle は `BUILD SUCCESSFUL`、17 XML・50 tests・0 failures/errors/skipped、そのうち `ModelCatalogTest` 5 件と `ModelPagerTest` 6 件でした。Host source/build `b695c303` は Xiaomi 23046RP50C transport、`ro.serialno=968e9f18`、API 35、arm64-v8a で exact real-plugin listing method を `OK (1 test)`/0.691s で通過しました。証拠は 3 個の 8-byte listing-only fixture、`pageSize=1`、B/A/C 順、generation `litertlm-catalog-v2-43e043444d5ca606e2c33805c0d5f656` を使い、3 APK の hash/signer を固定し、前後とも 3 exact packages と 9 external paths が absent であることを確認しました。LiteRT-LM、`openSession`、実モデル、soak、device/API/ABI matrix は実行していません。
 
 - [ROADMAP.md を表示](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

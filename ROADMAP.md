@@ -16,6 +16,8 @@
 
 ## 总体进度
 
+当前 28 个 outcome 中已完成 13 项、开放 15 项；D3 仍是当前阶段。
+
 | 阶段 | 产品结果 | 状态 | 最低证据 | 主要实施仓库 |
 | --- | --- | --- | --- | --- |
 | D0 | 单模型本地 Provider 基线 | 已完成 | L1；真实生成 L3 | 当前插件仓库 |
@@ -54,7 +56,7 @@
 
 - [ ] 将单一 `current.json` 迁移为事务化 catalog，旧 schema 无损升级，异常或中断后只能看到完整旧状态或完整新状态。`L2`
 - [x] catalog 保存稳定 `modelId`、显示名、SHA-256、大小、导入时间和选择状态；相同内容重复导入幂等。`L1`
-- [ ] `listModels` 返回全部公开模型，必要时使用有界 V1 page token，并在任何可见 catalog 变化后更新 `listingGeneration`。`L2`
+- [x] `listModels` 返回全部公开模型，必要时使用有界 V1 page token，并在任何可见 catalog 变化后更新 `listingGeneration`。`L2`
 - [ ] 模型管理 UI 支持导入、查看占用和显式选择；切换模型不复制大文件，也不破坏已经打开的旧模型会话。`L2`
 
 ## D4：model lease、安全删除与 GC
@@ -102,6 +104,7 @@
 - public fake-provider smokes：stream tested-source `50b43d00c`，`OK (1 test)`/1.645s；chat tested-source `b0aa6768484d6046551264f69ecc84b527bbb442`，`OK (1 test)`/1.54s。
 - D2 最终 L1 gate：同一 Gradle invocation 的 `:app:testDebugUnitTest :app:assembleDebug` 在 21s 内 `BUILD SUCCESSFUL`，48 tasks（21 executed/27 up-to-date），`version.properties` hash 未变化；独立终审 High/Medium 为 0。
 - D3 catalog metadata/idempotence L1：生产实现 `1f92414`、focused tests `c38a016`；同一 Gradle invocation 的 `:app:testDebugUnitTest :app:assembleDebug` 在 35s 内 `BUILD SUCCESSFUL`，48 tasks，16 份 XML 共 44 tests、0 failures/errors/skipped，其中 `ModelCatalogTest` 5 项、`PendingModelTransactionPolicyTest` 4 项，`version.properties` hash 未变化。本轮未运行 ADB 或故障注入，迁移 L2、pager/listing 与 UI outcome 仍保持开放。
+- D3 完整 model listing L2：插件生产实现 `6489a59`、focused tests `af0c5fe`；插件 Gradle 结果为 `BUILD SUCCESSFUL`，17 份 XML 共 50 tests、0 failures/errors/skipped，其中 `ModelCatalogTest` 5 项、`ModelPagerTest` 6 项。宿主 tested source/build 为 `b695c303`；Xiaomi 23046RP50C（ADB transport）/`ro.serialno=968e9f18`/API 35/arm64-v8a 上，exact method `AiTextProviderModelListingAndroidConformanceTest#exactRealPluginListsExternallyProvisionedThreeModelCatalogAcrossStablePages` 返回 `OK (1 test)`/0.691s。L2 fixture 仅含 3 个 8-byte listing-only 文件，以 `pageSize=1` 按 B/A/C 顺序列出 `litertlm.808c1f662212f7efb70b16956fb784a7`、`litertlm.85515105bf0e6b25b0ed8ce1cc3801ab`、`litertlm.c78909e014ed1db7552f0993df44a860`，generation 为 `litertlm-catalog-v2-43e043444d5ca606e2c33805c0d5f656`。host/plugin/test APK SHA-256 分别为 `69149b0b2400e8d2069bffc9e495b49f4600c7b2a0a29d26c1c015ff4517f638`、`fffb8c9b02f247a48675892bd3f43c8cca757eac68f4c375ba03b7c68dbbbb94`、`b9183783eaecd240b3ef517e2c0d4ff3356e654e25d7994a87cc2d2da1d7c0a3`，共同 signer SHA-256 为 `2e64822e13a6c80c12e1c4b47e8fb32d1e9334526289da75777b7a79145de4b8`；设备变更前后 3 个 exact package 与 9 条 external path 均 absent。本证据未调用 LiteRT-LM、`openSession` 或真实模型，也未执行 soak 或设备/API/ABI matrix；catalog 迁移与管理 UI outcome 仍开放。
 - 详细 Binder、PFD、hostile lifecycle、APK digest、signer 和 reversible cleanup 回执保存在 AutoJs6 的 `docs/dev/ai-plugin-protocol-evaluation.md`、`docs/dev/ai-text-plugin-protocol-v1.md` 与 `docs/dev/compiler-ai-protocol-conformance.md`；本文件不再复制长日志。
 
 ## Release Candidate 清单

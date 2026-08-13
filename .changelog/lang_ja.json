@@ -13,7 +13,8 @@
         "8 GiB 上限, 空き容量予約, SHA-256, fsync, 原子的な有効化を備えた `.litertlm` のアプリ専用領域への SAF インポート",
         "単一アクティブセッション, 制限付き I/O, descriptor quota, キャンセル, timeout, 単一終端状態, 同一署名 AutoJs6 呼び出し元検証",
         "Reasoning, tools, structured JSON, usage, ネットワーク, credential 機能を明示的に非搭載",
-        "arm64-v8a, x86_64, universal APK と 10 言語の README, changelog, Android UI, プラグイン説明"
+        "arm64-v8a, x86_64, universal APK と 10 言語の README, changelog, Android UI, プラグイン説明",
+        "完全なモデルカタログとアプリ専用ストレージの使用量を確認でき、モデルファイルをコピーせずに現在のモデルを原子的に切り替えるモデル管理画面"
       ],
       "improvement": [
         "`:provider` とのプロセス間競合を避けるため置換インポート後も以前の SHA-256 hash 名モデル世代を保持し, 保持ファイルがアプリ専用ストレージを引き続き使用",

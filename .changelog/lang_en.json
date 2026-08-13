@@ -13,7 +13,8 @@
         "SAF import of `.litertlm` into app-private storage with an 8 GiB limit, free-space reserve, SHA-256, fsync, and atomic activation",
         "One active session, bounded I/O, descriptor quotas, cancellation, timeout, one terminal state, and same-signature AutoJs6 caller verification",
         "Explicit omission of reasoning, tools, structured JSON, usage, network, and credential capabilities",
-        "arm64-v8a, x86_64, and universal APKs plus README, changelog, Android UI, and plugin instructions in 10 languages"
+        "arm64-v8a, x86_64, and universal APKs plus README, changelog, Android UI, and plugin instructions in 10 languages",
+        "A model management screen for viewing the complete model catalog and private-storage usage, with atomic current-model selection that does not copy model files"
       ],
       "improvement": [
         "Retained previous model generations named by SHA-256 hash after replacement imports to avoid cross-process `:provider` races, with retained files continuing to occupy app-private storage",

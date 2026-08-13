@@ -13,7 +13,8 @@
         "Import SAF de `.litertlm` dans le stockage privé avec limite de 8 GiB, réserve d'espace, SHA-256, fsync et activation atomique",
         "Une session active, I/O bornées, quotas de descripteurs, annulation, timeout, un état terminal et vérification de l'appelant AutoJs6 avec la même signature",
         "Absence explicite des capacités reasoning, tools, structured JSON, usage, réseau et credential",
-        "APK arm64-v8a, x86_64 et universal avec README, changelog, interface Android et instructions du plugin en 10 langues"
+        "APK arm64-v8a, x86_64 et universal avec README, changelog, interface Android et instructions du plugin en 10 langues",
+        "Écran de gestion des modèles affichant le catalogue complet et l'espace occupé dans le stockage privé, avec sélection atomique du modèle courant sans copie des fichiers de modèle"
       ],
       "improvement": [
         "Conservation des générations précédentes nommées par hash SHA-256 après un import de remplacement afin d'éviter les courses interprocessus avec `:provider`, les fichiers conservés continuant d'occuper le stockage privé",

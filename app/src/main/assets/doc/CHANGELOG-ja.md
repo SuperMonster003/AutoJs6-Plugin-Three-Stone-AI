@@ -14,6 +14,7 @@
 * `機能` 単一アクティブセッション, 制限付き I/O, descriptor quota, キャンセル, timeout, 単一終端状態, 同一署名 AutoJs6 呼び出し元検証
 * `機能` Reasoning, tools, structured JSON, usage, ネットワーク, credential 機能を明示的に非搭載
 * `機能` arm64-v8a, x86_64, universal APK と 10 言語の README, changelog, Android UI, プラグイン説明
+* `機能` 完全なモデルカタログとアプリ専用ストレージの使用量を確認でき、モデルファイルをコピーせずに現在のモデルを原子的に切り替えるモデル管理画面
 * `改善` `:provider` とのプロセス間競合を避けるため置換インポート後も以前の SHA-256 hash 名モデル世代を保持し, 保持ファイルがアプリ専用ストレージを引き続き使用
 * `改善` Activity 再作成中の継続, コールドスタート復旧, stale 一時ファイル cleanup, 現在の試行が作成して未公開の destination だけに限定した削除のため application scope 単一インポート coordinator と fsync 済み pending journal を追加し, 公開済み, current, 履歴 hash 世代を保持
 * `依存関係` 端末内 CPU テキスト生成用に LiteRT-LM 0.15.0 を追加

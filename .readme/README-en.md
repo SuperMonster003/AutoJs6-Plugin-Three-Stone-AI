@@ -157,6 +157,7 @@ The roadmap contains 28 checkable product outcomes: 13 complete and 15 open. D3,
 * `Feature` One active session, bounded I/O, descriptor quotas, cancellation, timeout, one terminal state, and same-signature AutoJs6 caller verification
 * `Feature` Explicit omission of reasoning, tools, structured JSON, usage, network, and credential capabilities
 * `Feature` arm64-v8a, x86_64, and universal APKs plus README, changelog, Android UI, and plugin instructions in 10 languages
+* `Feature` A model management screen for viewing the complete model catalog and private-storage usage, with atomic current-model selection that does not copy model files
 * `Improvement` Retained previous model generations named by SHA-256 hash after replacement imports to avoid cross-process `:provider` races, with retained files continuing to occupy app-private storage
 * `Improvement` Added an application-scoped single-import coordinator and fsynced pending journal for Activity-recreation continuity, cold-start recovery, stale temp cleanup, and deletion restricted to destinations created by the current attempt and never published, while preserving published, current, and historical hash generations
 * `Dependency` Added LiteRT-LM 0.15.0 for on-device CPU text generation

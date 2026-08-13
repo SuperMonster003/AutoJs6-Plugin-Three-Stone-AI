@@ -157,6 +157,7 @@ required host build: 5270
 * `新增` 單活動工作階段, 有界 I/O, descriptor 配額, 取消, 逾時, 唯一終態及同簽名 AutoJs6 呼叫方核驗
 * `新增` 明確不宣告 reasoning, tools, structured JSON, usage, 網絡或 credential 能力
 * `新增` arm64-v8a, x86_64 和 universal APK, 以及 10 種語言的 README, 更新日誌, Android 介面和插件說明
+* `新增` 模型管理介面可查看完整模型目錄和私人儲存空間佔用, 並在不複製模型檔案的情況下原子切換目前模型
 * `優化` 為避免獨立 `:provider` 進程競態, 替換匯入後保留先前以 SHA-256 hash 命名的模型代次, 保留檔案會繼續佔用應用程式私人儲存空間
 * `優化` 加入應用程式級單匯入協調器和 fsync pending journal, 在 Activity 重建時保持匯入, 支援冷啟動復原和 stale 暫存檔案清理, 刪除僅限本次新建而從未發佈的 destination, 並保留已發佈, current 和歷史 hash 代次
 * `依賴` 附加 LiteRT-LM 0.15.0, 用於裝置端 CPU 文字生成

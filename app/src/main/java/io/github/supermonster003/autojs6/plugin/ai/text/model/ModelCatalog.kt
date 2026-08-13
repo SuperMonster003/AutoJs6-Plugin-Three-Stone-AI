@@ -97,6 +97,21 @@ internal object ModelCatalogPolicy {
         return ModelCatalogUpdate(updated, chosen, contentChanged)
     }
 
+    /** Selects an existing immutable model generation without changing its catalog entry. */
+    fun select(document: ModelCatalogDocument, modelId: String): ModelCatalogUpdate {
+        val current = normalize(document)
+        val selected = current.entries.singleOrNull { it.modelId == modelId }
+            ?: throw IllegalArgumentException("Selected model is not present in the catalog")
+        if (current.selectedModelId == modelId) return ModelCatalogUpdate(current, selected, changed = false)
+        val updated = normalize(
+            current.copy(
+                revision = Math.addExact(current.revision, 1L),
+                selectedModelId = modelId,
+            ),
+        )
+        return ModelCatalogUpdate(updated, selected, changed = true)
+    }
+
     /** Changes only when fields exposed by model listing change. */
     fun listingGeneration(
         document: ModelCatalogDocument,

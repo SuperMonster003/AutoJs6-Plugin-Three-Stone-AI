@@ -12,6 +12,9 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ImportedModel
@@ -20,6 +23,8 @@ import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportFailure
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportProgress
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportStage
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportState
+import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelManagerState
+import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelSelectionState
 
 class ModelManagerActivity : Activity() {
     private lateinit var importCoordinator: ModelImportCoordinator
@@ -28,37 +33,41 @@ class ModelManagerActivity : Activity() {
     private lateinit var importButton: Button
     private lateinit var cancelImportButton: Button
     private lateinit var progress: ProgressBar
+    private lateinit var catalogSummary: TextView
+    private lateinit var catalogRows: RadioGroup
     private var copyableModelId: String? = null
     private var cancellableOperationId: Long? = null
-    private var lastNotifiedOperationId = 0L
-    private val importObserver = ModelImportCoordinator.Observer(::renderImportState)
+    private var lastNotifiedImportOperationId = 0L
+    private var lastNotifiedSelectionOperationId = 0L
+    private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
+    private var renderedManagerView: ModelManagerViewState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         importCoordinator = ModelImportCoordinator.get(applicationContext)
-        lastNotifiedOperationId = if (
-            savedInstanceState?.getString(STATE_PROCESS_SESSION_TOKEN) ==
-            importCoordinator.processSessionToken
-        ) {
-            savedInstanceState.getLong(STATE_LAST_NOTIFIED_OPERATION_ID)
-        } else {
-            0L
+        savedInstanceState?.takeIf { restored ->
+            restored.getString(STATE_PROCESS_SESSION_TOKEN) == importCoordinator.processSessionToken
+        }?.let { restored ->
+            lastNotifiedImportOperationId = restored.getLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID)
+            lastNotifiedSelectionOperationId =
+                restored.getLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID)
         }
         setContentView(createContentView())
     }
 
     override fun onStart() {
         super.onStart()
-        renderImportState(importCoordinator.attach(importObserver))
+        renderManagerState(importCoordinator.attachManager(managerObserver))
     }
 
     override fun onStop() {
-        importCoordinator.detach(importObserver)
+        importCoordinator.detachManager(managerObserver)
         super.onStop()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putLong(STATE_LAST_NOTIFIED_OPERATION_ID, lastNotifiedOperationId)
+        outState.putLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID, lastNotifiedImportOperationId)
+        outState.putLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID, lastNotifiedSelectionOperationId)
         outState.putString(STATE_PROCESS_SESSION_TOKEN, importCoordinator.processSessionToken)
         super.onSaveInstanceState(outState)
     }
@@ -74,7 +83,7 @@ class ModelManagerActivity : Activity() {
     private fun createContentView(): View {
         val density = resources.displayMetrics.density
         fun dp(value: Int) = (value * density).toInt()
-        return LinearLayout(this).apply {
+        val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(24), dp(48), dp(24), dp(24))
@@ -115,7 +124,16 @@ class ModelManagerActivity : Activity() {
                 setOnClickListener { openModelPicker() }
             }
             addView(importButton)
+
+            catalogSummary = TextView(context).apply {
+                textSize = 15f
+                setPadding(0, dp(24), 0, dp(8))
+            }
+            addView(catalogSummary, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            catalogRows = RadioGroup(context).apply { orientation = RadioGroup.VERTICAL }
+            addView(catalogRows, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
+        return ScrollView(this).apply { addView(content) }
     }
 
     @Suppress("DEPRECATION")
@@ -129,7 +147,9 @@ class ModelManagerActivity : Activity() {
     }
 
     private fun importModel(uri: Uri, grantedFlags: Int) {
-        if (!importCoordinator.beginImport(uri, grantedFlags)) renderImportState(importCoordinator.snapshot())
+        if (!importCoordinator.beginImport(uri, grantedFlags)) {
+            renderManagerState(importCoordinator.managerState())
+        }
     }
 
     private fun renderImportState(state: ModelImportState<ImportedModel>) {
@@ -164,19 +184,82 @@ class ModelManagerActivity : Activity() {
             is ModelImportState.Succeeded -> {
                 setImportUi(inProgress = false, importEnabled = true)
                 showModel(state.model)
-                notifyOnce(state.operationId, R.string.import_succeeded, Toast.LENGTH_SHORT)
+                notifyImportOnce(state.operationId, R.string.import_succeeded, Toast.LENGTH_SHORT)
             }
             is ModelImportState.Cancelled -> {
                 setImportUi(inProgress = false, importEnabled = true)
                 state.current?.let(::showModel) ?: run { status.text = getString(R.string.model_none) }
-                notifyOnce(state.operationId, R.string.import_cancelled, Toast.LENGTH_SHORT)
+                notifyImportOnce(state.operationId, R.string.import_cancelled, Toast.LENGTH_SHORT)
             }
             is ModelImportState.Failed -> {
                 setImportUi(inProgress = false, importEnabled = state.retryAllowed)
                 val message = importFailureMessage(state.reason)
                 state.current?.let(::showModel) ?: run { status.text = getString(message) }
-                notifyOnce(state.operationId, message, Toast.LENGTH_LONG)
+                notifyImportOnce(state.operationId, message, Toast.LENGTH_LONG)
             }
+        }
+    }
+
+    private fun renderManagerState(state: ModelManagerState) {
+        renderImportState(state.importState)
+        renderManagerCatalog(state)
+        when (val selection = state.selection) {
+            is ModelSelectionState.Succeeded -> notifySelectionOnce(
+                selection.operationId,
+                R.string.model_selection_succeeded,
+                Toast.LENGTH_SHORT,
+            )
+            is ModelSelectionState.Failed -> notifySelectionOnce(
+                selection.operationId,
+                R.string.model_selection_failed,
+                Toast.LENGTH_LONG,
+            )
+            ModelSelectionState.Idle,
+            is ModelSelectionState.Selecting,
+            -> Unit
+        }
+    }
+
+    private fun renderManagerCatalog(state: ModelManagerState) {
+        if (!::catalogRows.isInitialized) return
+        val view = ModelManagerPresentation.managerView(state)
+        if (view.selectionBusy) importButton.isEnabled = false
+        if (view == renderedManagerView) return
+        renderedManagerView = view
+        catalogSummary.text = when (view.availability) {
+            ModelCatalogAvailability.LOADING -> getString(R.string.model_catalog_loading)
+            ModelCatalogAvailability.UNAVAILABLE -> getString(R.string.model_catalog_unavailable)
+            ModelCatalogAvailability.READY -> if (view.rows.isEmpty()) {
+                getString(R.string.model_catalog_empty)
+            } else {
+                getString(
+                    R.string.model_catalog_summary,
+                    view.rows.size,
+                    Formatter.formatFileSize(this, view.totalSizeBytes),
+                )
+            }
+        }
+        catalogRows.removeAllViews()
+        view.rows.forEach { row ->
+            catalogRows.addView(RadioButton(this).apply {
+                text = getString(
+                    R.string.model_catalog_item,
+                    row.displayName,
+                    Formatter.formatFileSize(this@ModelManagerActivity, row.sizeBytes),
+                    row.modelId,
+                )
+                isChecked = row.selected
+                isEnabled = row.selectionEnabled
+                tag = row.modelId
+                setOnClickListener {
+                    if (row.selected) return@setOnClickListener
+                    renderedManagerView = null
+                    isEnabled = false
+                    if (!importCoordinator.beginSelection(row.modelId)) {
+                        renderManagerState(importCoordinator.managerState())
+                    }
+                }
+            })
         }
     }
 
@@ -211,9 +294,10 @@ class ModelManagerActivity : Activity() {
         val operationId = cancellableOperationId ?: return
         cancelImportButton.isEnabled = false
         if (importCoordinator.cancelImport(operationId)) return
-        val latest = importCoordinator.snapshot()
-        renderImportState(latest)
-        if (latest is ModelImportState.Running && latest.operationId == operationId) {
+        val latest = importCoordinator.managerState()
+        renderManagerState(latest)
+        val importState = latest.importState
+        if (importState is ModelImportState.Running && importState.operationId == operationId) {
             cancellableOperationId = null
             cancelImportButton.isEnabled = false
         }
@@ -273,15 +357,22 @@ class ModelManagerActivity : Activity() {
         ModelImportFailureReason.UNKNOWN -> R.string.import_failed
     }
 
-    private fun notifyOnce(operationId: Long, message: Int, duration: Int) {
-        if (operationId <= lastNotifiedOperationId) return
-        lastNotifiedOperationId = operationId
+    private fun notifyImportOnce(operationId: Long, message: Int, duration: Int) {
+        if (operationId <= lastNotifiedImportOperationId) return
+        lastNotifiedImportOperationId = operationId
+        Toast.makeText(this, message, duration).show()
+    }
+
+    private fun notifySelectionOnce(operationId: Long, message: Int, duration: Int) {
+        if (operationId <= lastNotifiedSelectionOperationId) return
+        lastNotifiedSelectionOperationId = operationId
         Toast.makeText(this, message, duration).show()
     }
 
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
-        const val STATE_LAST_NOTIFIED_OPERATION_ID = "lastNotifiedOperationId"
+        const val STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID = "lastNotifiedImportOperationId"
+        const val STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID = "lastNotifiedSelectionOperationId"
         const val STATE_PROCESS_SESSION_TOKEN = "processSessionToken"
         const val PROGRESS_MAX = 10_000
     }

@@ -21,7 +21,14 @@
     <string name="import_succeeded">تم استيراد النموذج</string>
     <string name="model_id_clipboard_label">معرف نموذج النص بالذكاء الاصطناعي</string>
     <string name="model_id_copied">تم نسخ معرف النموذج</string>
+    <string name="model_catalog_empty">لا توجد نماذج مستوردة</string>
+    <string name="model_catalog_loading">جارٍ تحميل كتالوج النماذج</string>
+    <string name="model_catalog_unavailable">كتالوج النماذج غير متاح</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_summary">النماذج المستوردة: %1$d - إجمالي مساحة التخزين: %2$s</string>
     <string name="model_none">لا يوجد نموذج مهيأ</string>
+    <string name="model_selection_failed">فشل اختيار النموذج</string>
+    <string name="model_selection_succeeded">تم اختيار النموذج</string>
     <string name="model_status_format">النموذج: %1$s\nالحجم: %2$s\nSHA-256: %3$s\nمعرف النموذج: %4$s</string>
     <string name="plugin_description">Provider لتوليد النص باستخدام LiteRT-LM على الجهاز</string>
     <string name="screen_description">اختر نموذج LiteRT-LM محليا. ينسخ الملف إلى مساحة التطبيق الخاصة ولا يرفع أبدا</string>

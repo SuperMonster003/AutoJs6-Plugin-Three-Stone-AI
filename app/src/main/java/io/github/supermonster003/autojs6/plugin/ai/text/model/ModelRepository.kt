@@ -10,6 +10,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.security.MessageDigest
+import java.util.Collections
 import java.util.UUID
 
 internal data class ImportedModel(
@@ -22,6 +23,27 @@ internal data class ImportedModel(
 ) {
     val listingGeneration: String
         get() = "litertlm-${sha256.take(32)}"
+}
+
+/** A defensive, read-only view of every managed model and the atomically selected model ID. */
+internal class ModelManagerSnapshot private constructor(
+    models: List<ImportedModel>,
+    val selectedModelId: String?,
+    val totalSizeBytes: Long,
+) {
+    val models: List<ImportedModel> = Collections.unmodifiableList(ArrayList(models))
+    val selectedModel: ImportedModel? = selectedModelId?.let { selected ->
+        this.models.single { it.modelId == selected }
+    }
+
+    companion object {
+        fun from(document: ModelCatalogDocument, convert: (ModelCatalogEntry) -> ImportedModel): ModelManagerSnapshot {
+            val normalized = ModelCatalogPolicy.normalize(document)
+            val models = normalized.entries.map(convert)
+            val totalSizeBytes = models.fold(0L) { total, model -> Math.addExact(total, model.sizeBytes) }
+            return ModelManagerSnapshot(models, normalized.selectedModelId, totalSizeBytes)
+        }
+    }
 }
 
 internal class ModelRepository(context: Context) {
@@ -47,6 +69,18 @@ internal class ModelRepository(context: Context) {
     fun findByModelId(modelId: String): ImportedModel? = runCatching {
         readCatalogWithLegacyFallback().entries.singleOrNull { it.modelId == modelId }?.toImportedModel()
     }.getOrNull()
+
+    /** Returns one coherent manager view; a present corrupt catalog fails closed. */
+    @Synchronized
+    fun managerSnapshot(): ModelManagerSnapshot = readAuthoritativeManagerCatalog().toManagerSnapshot()
+
+    /** Atomically switches only the catalog pointer. No model generation is copied or removed. */
+    @Synchronized
+    fun selectExisting(modelId: String): ModelManagerSnapshot {
+        val update = ModelCatalogPolicy.select(readAuthoritativeManagerCatalog(), modelId)
+        if (update.changed) publishCatalogExactly(update.document)
+        return update.document.toManagerSnapshot()
+    }
 
     /**
      * Called exactly once by the process-local model-manager coordinator before it accepts imports.
@@ -116,7 +150,7 @@ internal class ModelRepository(context: Context) {
             )
         }
         ensureDirectory()
-        require(!pendingMarkerFile.exists()) { "Interrupted model import recovery is required" }
+        readAuthoritativeManagerCatalog()
         operation.ensureActive()
         val document = querySourceDocument(uri)
         operation.ensureActive()
@@ -261,6 +295,11 @@ internal class ModelRepository(context: Context) {
         else -> ModelCatalogPolicy.empty()
     }
 
+    private fun readAuthoritativeManagerCatalog(): ModelCatalogDocument {
+        require(!pendingMarkerFile.exists()) { "Interrupted model import recovery is required" }
+        return readCatalog()
+    }
+
     private fun readCatalog(): ModelCatalogDocument {
         requireSafeRegularFile(catalogFile)
         require(catalogFile.length() in 1L..ModelCatalogCodec.MAXIMUM_CATALOG_BYTES.toLong()) {
@@ -295,6 +334,9 @@ internal class ModelRepository(context: Context) {
         sha256 = sha256,
         importedAtMillis = importedAtMillis,
     )
+
+    private fun ModelCatalogDocument.toManagerSnapshot(): ModelManagerSnapshot =
+        ModelManagerSnapshot.from(this) { entry -> entry.toImportedModel() }
 
     private fun publishCatalogExactly(document: ModelCatalogDocument) {
         val normalized = ModelCatalogPolicy.normalize(document)

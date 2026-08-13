@@ -53,6 +53,24 @@ class ModelImportStateMachineTest {
     }
 
     @Test
+    fun currentSelectionCannotChangeWhileImportOwnsTheStateMachine() {
+        val state = ModelImportStateMachine<String>()
+        state.finishPreparation("model-a")
+        val operationId = state.begin()!!
+
+        assertFalse(state.replaceCurrent("model-b"))
+        assertFalse(state.makeUnavailable())
+        assertEquals(
+            ModelImportState.Running(operationId, "model-a"),
+            state.snapshot(),
+        )
+
+        assertTrue(state.succeed(operationId, "model-c"))
+        assertTrue(state.replaceCurrent("model-b"))
+        assertEquals(ModelImportState.Ready("model-b"), state.snapshot())
+    }
+
+    @Test
     fun cancellationBecomesTerminalOnlyAfterTheWorkerFinishes() {
         val cancellationWins = ModelImportStateMachine<String>()
         cancellationWins.finishPreparation("old-model")

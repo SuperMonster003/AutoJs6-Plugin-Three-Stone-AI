@@ -98,13 +98,23 @@ internal object ModelCatalogPolicy {
     }
 
     /** Changes only when fields exposed by model listing change. */
-    fun listingGeneration(document: ModelCatalogDocument): String {
+    fun listingGeneration(
+        document: ModelCatalogDocument,
+        capabilityIds: List<String>,
+        maximumContextBytes: Long,
+        maximumOutputBytes: Long,
+    ): String {
         val normalized = normalize(document)
         val bytes = ByteArrayOutputStream().use { buffer ->
             DataOutputStream(buffer).use { output ->
+                output.writeInt(normalized.entries.size)
                 normalized.entries.forEach { entry ->
                     output.writeLengthPrefixed(entry.modelId)
                     output.writeLengthPrefixed(entry.displayName)
+                    output.writeInt(capabilityIds.size)
+                    capabilityIds.forEach { capabilityId -> output.writeLengthPrefixed(capabilityId) }
+                    output.writeLong(maximumContextBytes)
+                    output.writeLong(maximumOutputBytes)
                 }
             }
             buffer.toByteArray()

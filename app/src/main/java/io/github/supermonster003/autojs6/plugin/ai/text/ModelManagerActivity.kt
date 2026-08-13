@@ -17,6 +17,8 @@ import android.widget.Toast
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportFailureReason
+import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportProgress
+import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportStage
 import io.github.supermonster003.autojs6.plugin.ai.text.model.ModelImportState
 
 class ModelManagerActivity : Activity() {
@@ -24,16 +26,25 @@ class ModelManagerActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var copyModelIdButton: Button
     private lateinit var importButton: Button
+    private lateinit var cancelImportButton: Button
     private lateinit var progress: ProgressBar
     private var copyableModelId: String? = null
+    private var cancellableOperationId: Long? = null
     private var lastNotifiedOperationId = 0L
     private val importObserver = ModelImportCoordinator.Observer(::renderImportState)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        lastNotifiedOperationId = savedInstanceState?.getLong(STATE_LAST_NOTIFIED_OPERATION_ID) ?: 0L
-        setContentView(createContentView())
         importCoordinator = ModelImportCoordinator.get(applicationContext)
+        lastNotifiedOperationId = if (
+            savedInstanceState?.getString(STATE_PROCESS_SESSION_TOKEN) ==
+            importCoordinator.processSessionToken
+        ) {
+            savedInstanceState.getLong(STATE_LAST_NOTIFIED_OPERATION_ID)
+        } else {
+            0L
+        }
+        setContentView(createContentView())
     }
 
     override fun onStart() {
@@ -48,6 +59,7 @@ class ModelManagerActivity : Activity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putLong(STATE_LAST_NOTIFIED_OPERATION_ID, lastNotifiedOperationId)
+        outState.putString(STATE_PROCESS_SESSION_TOKEN, importCoordinator.processSessionToken)
         super.onSaveInstanceState(outState)
     }
 
@@ -87,8 +99,17 @@ class ModelManagerActivity : Activity() {
                 setOnClickListener { copyModelId() }
             }
             addView(copyModelIdButton)
-            progress = ProgressBar(context).apply { visibility = View.GONE }
-            addView(progress)
+            progress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+                max = PROGRESS_MAX
+                visibility = View.GONE
+            }
+            addView(progress, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            cancelImportButton = Button(context).apply {
+                text = getString(R.string.button_cancel_import)
+                visibility = View.GONE
+                setOnClickListener { cancelImport() }
+            }
+            addView(cancelImportButton)
             importButton = Button(context).apply {
                 text = getString(R.string.button_import_model)
                 setOnClickListener { openModelPicker() }
@@ -116,6 +137,7 @@ class ModelManagerActivity : Activity() {
         when (state) {
             ModelImportState.Preparing -> {
                 setImportUi(inProgress = true, importEnabled = false)
+                progress.isIndeterminate = true
                 status.text = getString(R.string.import_in_progress)
             }
             ModelImportState.Unavailable -> {
@@ -127,16 +149,30 @@ class ModelManagerActivity : Activity() {
                 showCurrent(state.current)
             }
             is ModelImportState.Running -> {
+                setImportUi(
+                    inProgress = true,
+                    importEnabled = false,
+                    cancelOperationId = state.operationId,
+                )
+                showImportProgress(state.progress)
+            }
+            is ModelImportState.Cancelling -> {
                 setImportUi(inProgress = true, importEnabled = false)
-                status.text = getString(R.string.import_in_progress)
+                showImportProgress(state.progress)
+                status.text = getString(R.string.import_cancelling)
             }
             is ModelImportState.Succeeded -> {
                 setImportUi(inProgress = false, importEnabled = true)
                 showModel(state.model)
                 notifyOnce(state.operationId, R.string.import_succeeded, Toast.LENGTH_SHORT)
             }
-            is ModelImportState.Failed -> {
+            is ModelImportState.Cancelled -> {
                 setImportUi(inProgress = false, importEnabled = true)
+                state.current?.let(::showModel) ?: run { status.text = getString(R.string.model_none) }
+                notifyOnce(state.operationId, R.string.import_cancelled, Toast.LENGTH_SHORT)
+            }
+            is ModelImportState.Failed -> {
+                setImportUi(inProgress = false, importEnabled = state.retryAllowed)
                 val message = importFailureMessage(state.reason)
                 state.current?.let(::showModel) ?: run { status.text = getString(message) }
                 notifyOnce(state.operationId, message, Toast.LENGTH_LONG)
@@ -171,8 +207,60 @@ class ModelManagerActivity : Activity() {
         Toast.makeText(this, R.string.model_id_copied, Toast.LENGTH_SHORT).show()
     }
 
-    private fun setImportUi(inProgress: Boolean, importEnabled: Boolean) {
+    private fun cancelImport() {
+        val operationId = cancellableOperationId ?: return
+        cancelImportButton.isEnabled = false
+        if (importCoordinator.cancelImport(operationId)) return
+        val latest = importCoordinator.snapshot()
+        renderImportState(latest)
+        if (latest is ModelImportState.Running && latest.operationId == operationId) {
+            cancellableOperationId = null
+            cancelImportButton.isEnabled = false
+        }
+    }
+
+    private fun showImportProgress(value: ModelImportProgress) {
+        val stage = getString(
+            when (value.stage) {
+                ModelImportStage.VALIDATING -> R.string.import_stage_validating
+                ModelImportStage.COPYING -> R.string.import_stage_copying
+                ModelImportStage.PUBLISHING -> R.string.import_stage_publishing
+            },
+        )
+        val totalBytes = value.totalBytes?.takeIf { value.processedBytes <= it }
+        if (totalBytes == null) {
+            progress.isIndeterminate = true
+            status.text = getString(
+                R.string.import_progress_unknown,
+                stage,
+                Formatter.formatFileSize(this, value.processedBytes),
+            )
+            return
+        }
+        progress.isIndeterminate = false
+        progress.progress = if (value.processedBytes >= totalBytes) {
+            PROGRESS_MAX
+        } else {
+            (value.processedBytes * PROGRESS_MAX / totalBytes).toInt()
+        }
+        status.text = getString(
+            R.string.import_progress_known,
+            stage,
+            Formatter.formatFileSize(this, value.processedBytes),
+            Formatter.formatFileSize(this, totalBytes),
+            progress.progress / (PROGRESS_MAX / 100),
+        )
+    }
+
+    private fun setImportUi(
+        inProgress: Boolean,
+        importEnabled: Boolean,
+        cancelOperationId: Long? = null,
+    ) {
+        cancellableOperationId = cancelOperationId
         progress.visibility = if (inProgress) View.VISIBLE else View.GONE
+        cancelImportButton.visibility = if (cancelOperationId == null) View.GONE else View.VISIBLE
+        cancelImportButton.isEnabled = cancelOperationId != null
         importButton.isEnabled = importEnabled
     }
 
@@ -194,5 +282,7 @@ class ModelManagerActivity : Activity() {
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
         const val STATE_LAST_NOTIFIED_OPERATION_ID = "lastNotifiedOperationId"
+        const val STATE_PROCESS_SESSION_TOKEN = "processSessionToken"
+        const val PROGRESS_MAX = 10_000
     }
 }

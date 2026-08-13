@@ -9,7 +9,9 @@ internal object ModelManagerPresentation {
         -> null
         is ModelImportState.Ready -> state.current
         is ModelImportState.Running -> state.previous
+        is ModelImportState.Cancelling -> state.previous
         is ModelImportState.Succeeded -> state.model
+        is ModelImportState.Cancelled -> state.current
         is ModelImportState.Failed -> state.current
     }
 }

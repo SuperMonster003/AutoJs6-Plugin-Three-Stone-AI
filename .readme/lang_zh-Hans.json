@@ -42,7 +42,7 @@
     "不声明 GPU 或 NPU backend. `.litertlm` 扩展名本身不保证模型能被当前 LiteRT-LM runtime 加载."
   ],
   "h3_roadmap": "路线图",
-  "p_roadmap": "路线图按 28 个可勾选产品结果组织。D0（单模型本地 Provider）、D1（显式 public plugin `ai.ask`/prompt-only `ai.chat`/`ai.stream`）和 D2（大模型导入进度与精确取消）已完成；D3“多模型 catalog 与选择”是当前阶段。D2 的 L1 gate 以单次 invocation 运行 `:app:testDebugUnitTest :app:assembleDebug`：21s 内 `BUILD SUCCESSFUL`，48 tasks（21 executed/27 up-to-date），版本哈希未变，独立终审 High/Medium 为 0。L1 表示实现、focused tests 与受影响构建，L2 表示 Android/Binder 集成，L3 表示签名真实插件/模型的实机证据。更高等级证据欠缺不会反向打开已完成结果，soak 与广泛 API/设备矩阵仅作为 Release Candidate 风险检查，不阻塞普通进度。",
+  "p_roadmap": "路线图按 28 个可勾选产品结果组织。D0、D1 和 D2 已完成；D3“多模型 catalog 与选择”仍是当前阶段，其中保存稳定模型元数据、选择状态及相同 SHA-256 重复导入幂等的 outcome 已达到 L1。生产实现为 `1f92414`，focused tests 为 `c38a016`；单次 invocation 运行 `:app:testDebugUnitTest :app:assembleDebug`，35s 内 `BUILD SUCCESSFUL`，48 tasks，16 份 XML 共 44 tests、0 failures/errors/skipped，其中 `ModelCatalogTest` 5 项、`PendingModelTransactionPolicyTest` 4 项，版本哈希未变。本轮未运行 ADB 或故障注入；迁移 L2、pager/listing 与 UI 仍保持开放。L1 表示实现、focused tests 与受影响构建，L2 表示 Android/Binder 集成，L3 表示签名真实插件/模型的实机证据；更高等级证据欠缺不会反向打开已完成结果。",
   "text_link_roadmap": "查看 ROADMAP.md",
   "h3_release_history": "版本历史",
   "h5_for_more_release_history": "更多版本",

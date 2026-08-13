@@ -53,7 +53,7 @@
 ## D3：多模型 catalog 与选择
 
 - [ ] 将单一 `current.json` 迁移为事务化 catalog，旧 schema 无损升级，异常或中断后只能看到完整旧状态或完整新状态。`L2`
-- [ ] catalog 保存稳定 `modelId`、显示名、SHA-256、大小、导入时间和选择状态；相同内容重复导入幂等。`L1`
+- [x] catalog 保存稳定 `modelId`、显示名、SHA-256、大小、导入时间和选择状态；相同内容重复导入幂等。`L1`
 - [ ] `listModels` 返回全部公开模型，必要时使用有界 V1 page token，并在任何可见 catalog 变化后更新 `listingGeneration`。`L2`
 - [ ] 模型管理 UI 支持导入、查看占用和显式选择；切换模型不复制大文件，也不破坏已经打开的旧模型会话。`L2`
 
@@ -101,6 +101,7 @@
 - 真实 public ask：tested-source `ceb44b8ba272a958bad37ec4f1aae2fd4b29dcbd`，QV710AF65F/API 31/arm64-v8a，exact method `OK (1 test)`/7.071s。
 - public fake-provider smokes：stream tested-source `50b43d00c`，`OK (1 test)`/1.645s；chat tested-source `b0aa6768484d6046551264f69ecc84b527bbb442`，`OK (1 test)`/1.54s。
 - D2 最终 L1 gate：同一 Gradle invocation 的 `:app:testDebugUnitTest :app:assembleDebug` 在 21s 内 `BUILD SUCCESSFUL`，48 tasks（21 executed/27 up-to-date），`version.properties` hash 未变化；独立终审 High/Medium 为 0。
+- D3 catalog metadata/idempotence L1：生产实现 `1f92414`、focused tests `c38a016`；同一 Gradle invocation 的 `:app:testDebugUnitTest :app:assembleDebug` 在 35s 内 `BUILD SUCCESSFUL`，48 tasks，16 份 XML 共 44 tests、0 failures/errors/skipped，其中 `ModelCatalogTest` 5 项、`PendingModelTransactionPolicyTest` 4 项，`version.properties` hash 未变化。本轮未运行 ADB 或故障注入，迁移 L2、pager/listing 与 UI outcome 仍保持开放。
 - 详细 Binder、PFD、hostile lifecycle、APK digest、signer 和 reversible cleanup 回执保存在 AutoJs6 的 `docs/dev/ai-plugin-protocol-evaluation.md`、`docs/dev/ai-text-plugin-protocol-v1.md` 与 `docs/dev/compiler-ai-protocol-conformance.md`；本文件不再复制长日志。
 
 ## Release Candidate 清单

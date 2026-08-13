@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-Roadmap은 확인 가능한 28개의 제품 outcome을 중심으로 구성됩니다. D0(단일 모델 local Provider), D1(명시적 public plugin `ai.ask`/prompt-only `ai.chat`/`ai.stream`), D2(대형 모델 import 진행률과 정확한 취소)는 완료되었고 D3인 다중 모델 catalog와 선택이 현재 단계입니다. D2의 L1 gate는 한 번의 invocation으로 `:app:testDebugUnitTest :app:assembleDebug`를 실행해 21초 만에 `BUILD SUCCESSFUL`, 48 tasks(21 executed/27 up-to-date), 변경 없는 version hash, 독립 감사 High/Medium 0건을 확인했습니다. L1은 구현, focused tests와 영향받는 build를, L2는 Android/Binder 통합을, L3는 서명된 실제 plugin/model 기기 증거를 뜻합니다. 상위 증거가 없어도 완료 outcome은 다시 열지 않으며 soak와 광범위한 API/기기 matrix는 일반 blocker가 아닌 Release Candidate 위험 검사로 남습니다.
+Roadmap은 확인 가능한 28개의 제품 outcome을 중심으로 구성됩니다. D0, D1, D2는 완료되었고 D3인 다중 모델 catalog와 선택이 계속 현재 단계이며, 안정적인 model metadata와 선택 상태 및 동일 SHA-256 재import의 멱등성 outcome은 L1에 도달했습니다. production은 `1f92414`, focused tests는 `c38a016`입니다. 한 번의 invocation으로 `:app:testDebugUnitTest :app:assembleDebug`를 실행해 35초 만에 `BUILD SUCCESSFUL`, 48 tasks, 16 XML에서 44 tests와 0 failures/errors/skipped를 확인했으며 `ModelCatalogTest` 5건, `PendingModelTransactionPolicyTest` 4건이 포함되고 version hash는 변경되지 않았습니다. 이번 slice에서는 ADB와 fault injection을 실행하지 않았으며 migration L2, pager/listing과 UI는 아직 열려 있습니다. L1은 구현, focused tests와 영향받는 build를, L2는 Android/Binder 통합을, L3는 서명된 실제 plugin/model 기기 증거를 뜻하며 상위 증거가 없어도 완료 outcome은 다시 열지 않습니다.
 
 - [ROADMAP.md 보기](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 

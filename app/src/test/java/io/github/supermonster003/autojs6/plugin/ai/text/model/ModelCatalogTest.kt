@@ -86,6 +86,44 @@ class ModelCatalogTest {
     }
 
     @Test
+    fun selectingExistingModelChangesOnlyPointerAndRevisionWhileReselectIsANoOp() {
+        val original = ModelCatalogPolicy.normalize(
+            ModelCatalogDocument(7L, entryA.modelId, listOf(entryB, entryA)),
+        )
+        val originalGeneration = listingGeneration(original)
+
+        val selected = ModelCatalogPolicy.select(original, entryB.modelId)
+
+        assertTrue(selected.changed)
+        assertEquals(entryB, selected.model)
+        assertEquals(entryB.modelId, selected.document.selectedModelId)
+        assertEquals(8L, selected.document.revision)
+        assertEquals(original.entries, selected.document.entries)
+        assertEquals(originalGeneration, listingGeneration(selected.document))
+
+        val repeated = ModelCatalogPolicy.select(selected.document, entryB.modelId)
+        assertFalse(repeated.changed)
+        assertEquals(entryB, repeated.model)
+        assertEquals(selected.document, repeated.document)
+    }
+
+    @Test
+    fun selectingUnknownModelFailsWithoutChangingTheInputCatalog() {
+        val original = ModelCatalogPolicy.normalize(
+            ModelCatalogDocument(7L, entryA.modelId, listOf(entryA, entryB)),
+        )
+        val originalBytes = ModelCatalogCodec.encode(original)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelCatalogPolicy.select(original, "litertlm.${"ff".repeat(16)}")
+        }
+
+        assertTrue(originalBytes.contentEquals(ModelCatalogCodec.encode(original)))
+        assertEquals(entryA.modelId, original.selectedModelId)
+        assertEquals(7L, original.revision)
+    }
+
+    @Test
     fun prefixCollisionFailsClosed() {
         val collisionDigest = digestA.take(32) + "33".repeat(16)
         assertThrows(IllegalArgumentException::class.java) {

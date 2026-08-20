@@ -25,6 +25,11 @@ internal data class ImportedModel(
         get() = "litertlm-${sha256.take(32)}"
 }
 
+internal data class ModelDeletionResult(
+    val deletedModel: ImportedModel,
+    val snapshot: ModelManagerSnapshot,
+)
+
 /** A defensive, read-only view of every managed model and the atomically selected model ID. */
 internal class ModelManagerSnapshot private constructor(
     models: List<ImportedModel>,
@@ -80,6 +85,56 @@ internal class ModelRepository(context: Context) {
         val update = ModelCatalogPolicy.select(readAuthoritativeManagerCatalog(), modelId)
         if (update.changed) publishCatalogExactly(update.document)
         return update.document.toManagerSnapshot()
+    }
+
+    /**
+     * Removes one unselected immutable generation and durably releases its private-storage file.
+     * The catalog is published first so a crash can leave only an unreferenced file, never a
+     * catalog entry whose file was already removed. Such an orphan remains safe for a later bounded
+     * storage-recovery pass.
+     */
+    @Synchronized
+    fun deleteUnselected(modelId: String): ModelDeletionResult {
+        val original = readAuthoritativeManagerCatalog()
+        val deletion = ModelCatalogPolicy.deleteUnselected(original, modelId)
+        requireCatalogFile(deletion.model)
+        val target = File(directory, deletion.model.fileName)
+
+        publishCatalogExactly(deletion.document)
+        val deletionFailure = try {
+            require(target.delete() || !target.exists()) { "Model file cannot be deleted" }
+            syncDirectory()
+            null
+        } catch (error: Throwable) {
+            error
+        }
+
+        if (deletionFailure != null) {
+            if (!target.exists()) {
+                try {
+                    syncDirectory()
+                } catch (retryFailure: Throwable) {
+                    retryFailure.addSuppressed(deletionFailure)
+                    throw retryFailure
+                }
+            } else {
+                try {
+                    requireCatalogFile(deletion.model)
+                    publishCatalogExactly(
+                        original.copy(revision = Math.addExact(deletion.document.revision, 1L)),
+                    )
+                } catch (rollbackFailure: Throwable) {
+                    deletionFailure.addSuppressed(rollbackFailure)
+                }
+                throw deletionFailure
+            }
+        }
+
+        check(!target.exists()) { "Deleted model file is still present" }
+        return ModelDeletionResult(
+            deletedModel = deletion.model.toImportedModel(),
+            snapshot = deletion.document.toManagerSnapshot(),
+        )
     }
 
     /**

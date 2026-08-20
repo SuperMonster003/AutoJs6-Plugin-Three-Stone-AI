@@ -27,6 +27,11 @@ internal data class ModelCatalogUpdate(
     val changed: Boolean,
 )
 
+internal data class ModelCatalogDeletion(
+    val document: ModelCatalogDocument,
+    val model: ModelCatalogEntry,
+)
+
 internal object ModelCatalogPolicy {
     const val SCHEMA = 2
     const val MAXIMUM_ENTRIES = 100
@@ -110,6 +115,21 @@ internal object ModelCatalogPolicy {
             ),
         )
         return ModelCatalogUpdate(updated, selected, changed = true)
+    }
+
+    /** Removes an existing immutable generation while preserving the selected model pointer. */
+    fun deleteUnselected(document: ModelCatalogDocument, modelId: String): ModelCatalogDeletion {
+        val current = normalize(document)
+        val target = current.entries.singleOrNull { it.modelId == modelId }
+            ?: throw IllegalArgumentException("Deleted model is not present in the catalog")
+        require(current.selectedModelId != modelId) { "The selected model cannot be deleted" }
+        val updated = normalize(
+            current.copy(
+                revision = Math.addExact(current.revision, 1L),
+                entries = current.entries.filterNot { it.modelId == modelId },
+            ),
+        )
+        return ModelCatalogDeletion(updated, target)
     }
 
     /** Changes only when fields exposed by model listing change. */

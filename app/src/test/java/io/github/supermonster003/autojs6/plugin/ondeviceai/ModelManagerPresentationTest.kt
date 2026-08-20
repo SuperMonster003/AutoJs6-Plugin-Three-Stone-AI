@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.ondeviceai
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelCatalogDocument
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelCatalogEntry
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDeletionState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportFailureReason
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportProgress
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportPolicy
@@ -93,7 +94,7 @@ class ModelManagerPresentationTest {
         assertEquals(ModelCatalogAvailability.READY, ready.availability)
         assertTrue(ready.rows.isEmpty())
         assertEquals(0L, ready.totalSizeBytes)
-        assertFalse(ready.selectionBusy)
+        assertFalse(ready.catalogMutationBusy)
     }
 
     @Test
@@ -116,8 +117,9 @@ class ModelManagerPresentationTest {
         assertEquals(listOf(8L, 13L), view.rows.map { it.sizeBytes })
         assertEquals(listOf(true, false), view.rows.map { it.selected })
         assertTrue(view.rows.all { it.selectionEnabled })
+        assertTrue(view.rows.all { it.deletionEnabled })
         assertEquals(21L, view.totalSizeBytes)
-        assertFalse(view.selectionBusy)
+        assertFalse(view.catalogMutationBusy)
     }
 
     @Test
@@ -136,7 +138,8 @@ class ModelManagerPresentationTest {
 
         assertEquals(listOf(false, true), view.rows.map { it.selected })
         assertTrue(view.rows.none { it.selectionEnabled })
-        assertTrue(view.selectionBusy)
+        assertTrue(view.rows.none { it.deletionEnabled })
+        assertTrue(view.catalogMutationBusy)
 
         val importing = ModelManagerPresentation.managerView(
             ModelManagerState(
@@ -146,7 +149,29 @@ class ModelManagerPresentationTest {
             ),
         )
         assertTrue(importing.rows.none { it.selectionEnabled })
-        assertFalse(importing.selectionBusy)
+        assertTrue(importing.rows.none { it.deletionEnabled })
+        assertFalse(importing.catalogMutationBusy)
+    }
+
+    @Test
+    fun pendingDeletionKeepsSelectionStableAndDisablesEveryCatalogMutation() {
+        val entryA = entry("11", "A", 8L)
+        val entryB = entry("22", "B", 13L)
+        val snapshot = snapshot(entryA.modelId, listOf(entryA, entryB))
+
+        val view = ModelManagerPresentation.managerView(
+            ModelManagerState(
+                importState = ModelImportState.Ready(snapshot.selectedModel),
+                snapshot = snapshot,
+                selection = ModelSelectionState.Idle,
+                deletion = ModelDeletionState.Deleting(9L, entryB.modelId),
+            ),
+        )
+
+        assertEquals(listOf(true, false), view.rows.map { it.selected })
+        assertTrue(view.rows.none { it.selectionEnabled })
+        assertTrue(view.rows.none { it.deletionEnabled })
+        assertTrue(view.catalogMutationBusy)
     }
 
     private fun snapshot(

@@ -4,6 +4,7 @@
     <string name="button_copy_model_id">複製模型 ID</string>
     <string name="button_cancel_import">取消匯入</string>
     <string name="button_import_model">匯入 .litertlm 模型</string>
+    <string name="button_delete_model">刪除模型</string>
     <string name="import_cancelled">模型匯入已取消</string>
     <string name="import_cancelling">正在取消模型匯入</string>
     <string name="import_failed">模型匯入失敗</string>
@@ -27,6 +28,11 @@
     <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
     <string name="model_catalog_summary">已匯入模型: %1$d - 總儲存空間用量: %2$s</string>
     <string name="model_none">尚未設定模型</string>
+    <string name="model_delete_confirm_title">刪除模型?</string>
+    <string name="model_delete_confirm_message">確定刪除模型「%1$s」嗎? 此操作無法復原.</string>
+    <string name="model_delete_selected_blocked">無法刪除目前選取的模型. 請先選擇其他模型.</string>
+    <string name="model_deletion_failed">刪除模型失敗</string>
+    <string name="model_deletion_succeeded">模型已刪除</string>
     <string name="model_selection_failed">選擇模型失敗</string>
     <string name="model_selection_succeeded">已選擇模型</string>
     <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s</string>

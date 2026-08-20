@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDeletionState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelSelectionState
@@ -10,6 +11,7 @@ internal data class ModelManagerRow(
     val sizeBytes: Long,
     val selected: Boolean,
     val selectionEnabled: Boolean,
+    val deletionEnabled: Boolean,
 )
 
 internal enum class ModelCatalogAvailability {
@@ -22,7 +24,7 @@ internal data class ModelManagerViewState(
     val rows: List<ModelManagerRow>,
     val totalSizeBytes: Long,
     val availability: ModelCatalogAvailability,
-    val selectionBusy: Boolean,
+    val catalogMutationBusy: Boolean,
 )
 
 internal object ModelManagerPresentation {
@@ -49,7 +51,9 @@ internal object ModelManagerPresentation {
             else -> true
         }
         val selectionBusy = state.selection is ModelSelectionState.Selecting
-        val selectionEnabled = snapshot != null && importAllowsMutation && !selectionBusy && !importInFlight
+        val deletionBusy = state.deletion is ModelDeletionState.Deleting
+        val catalogMutationBusy = selectionBusy || deletionBusy
+        val mutationEnabled = snapshot != null && importAllowsMutation && !catalogMutationBusy && !importInFlight
         val selectedModelId = (state.selection as? ModelSelectionState.Selecting)?.modelId
             ?: snapshot?.selectedModelId
         return ModelManagerViewState(
@@ -59,7 +63,8 @@ internal object ModelManagerPresentation {
                     displayName = model.displayName,
                     sizeBytes = model.sizeBytes,
                     selected = model.modelId == selectedModelId,
-                    selectionEnabled = selectionEnabled,
+                    selectionEnabled = mutationEnabled,
+                    deletionEnabled = mutationEnabled,
                 )
             },
             totalSizeBytes = snapshot?.totalSizeBytes ?: 0L,
@@ -68,7 +73,7 @@ internal object ModelManagerPresentation {
                 state.importState === ModelImportState.Preparing -> ModelCatalogAvailability.LOADING
                 else -> ModelCatalogAvailability.UNAVAILABLE
             },
-            selectionBusy = selectionBusy,
+            catalogMutationBusy = catalogMutationBusy,
         )
     }
 }

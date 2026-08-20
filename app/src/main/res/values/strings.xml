@@ -4,6 +4,7 @@
     <string name="button_copy_model_id">Copy model ID</string>
     <string name="button_cancel_import">Cancel import</string>
     <string name="button_import_model">Import .litertlm model</string>
+    <string name="button_delete_model">Delete model</string>
     <string name="import_cancelled">Model import cancelled</string>
     <string name="import_cancelling">Cancelling model import</string>
     <string name="import_failed">Model import failed</string>
@@ -27,6 +28,11 @@
     <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
     <string name="model_catalog_summary">Imported models: %1$d - Total storage: %2$s</string>
     <string name="model_none">No model is configured</string>
+    <string name="model_delete_confirm_title">Delete model?</string>
+    <string name="model_delete_confirm_message">Delete model "%1$s"? This cannot be undone.</string>
+    <string name="model_delete_selected_blocked">The selected model cannot be deleted. Select another model first.</string>
+    <string name="model_deletion_failed">Model deletion failed</string>
+    <string name="model_deletion_succeeded">Model deleted</string>
     <string name="model_selection_failed">Model selection failed</string>
     <string name="model_selection_succeeded">Model selected</string>
     <string name="model_status_format">Model: %1$s\nSize: %2$s\nSHA-256: %3$s\nModel ID: %4$s</string>

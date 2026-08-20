@@ -4,6 +4,7 @@
     <string name="button_copy_model_id">نسخ معرف النموذج</string>
     <string name="button_cancel_import">إلغاء الاستيراد</string>
     <string name="button_import_model">استيراد نموذج .litertlm</string>
+    <string name="button_delete_model">حذف النموذج</string>
     <string name="import_cancelled">تم إلغاء استيراد النموذج</string>
     <string name="import_cancelling">جار إلغاء استيراد النموذج</string>
     <string name="import_failed">فشل استيراد النموذج</string>
@@ -27,6 +28,11 @@
     <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
     <string name="model_catalog_summary">النماذج المستوردة: %1$d - إجمالي مساحة التخزين: %2$s</string>
     <string name="model_none">لا يوجد نموذج مهيأ</string>
+    <string name="model_delete_confirm_title">حذف النموذج؟</string>
+    <string name="model_delete_confirm_message">هل تريد حذف النموذج "%1$s"؟ لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="model_delete_selected_blocked">لا يمكن حذف النموذج المحدد. اختر نموذجا آخر أولا.</string>
+    <string name="model_deletion_failed">فشل حذف النموذج</string>
+    <string name="model_deletion_succeeded">تم حذف النموذج</string>
     <string name="model_selection_failed">فشل اختيار النموذج</string>
     <string name="model_selection_succeeded">تم اختيار النموذج</string>
     <string name="model_status_format">النموذج: %1$s\nالحجم: %2$s\nSHA-256: %3$s\nمعرف النموذج: %4$s</string>

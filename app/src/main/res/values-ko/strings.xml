@@ -4,6 +4,7 @@
     <string name="button_copy_model_id">모델 ID 복사</string>
     <string name="button_cancel_import">가져오기 취소</string>
     <string name="button_import_model">.litertlm 모델 가져오기</string>
+    <string name="button_delete_model">모델 삭제</string>
     <string name="import_cancelled">모델 가져오기가 취소되었습니다</string>
     <string name="import_cancelling">모델 가져오기 취소 중</string>
     <string name="import_failed">모델 가져오기 실패</string>
@@ -27,6 +28,11 @@
     <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
     <string name="model_catalog_summary">가져온 모델: %1$d개 - 총 저장 공간: %2$s</string>
     <string name="model_none">설정된 모델이 없습니다</string>
+    <string name="model_delete_confirm_title">모델을 삭제하시겠습니까?</string>
+    <string name="model_delete_confirm_message">"%1$s" 모델을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="model_delete_selected_blocked">선택한 모델은 삭제할 수 없습니다. 먼저 다른 모델을 선택하세요.</string>
+    <string name="model_deletion_failed">모델 삭제에 실패했습니다</string>
+    <string name="model_deletion_succeeded">모델을 삭제했습니다</string>
     <string name="model_selection_failed">모델 선택에 실패했습니다</string>
     <string name="model_selection_succeeded">모델을 선택했습니다</string>
     <string name="model_status_format">모델: %1$s\n크기: %2$s\nSHA-256: %3$s\n모델 ID: %4$s</string>

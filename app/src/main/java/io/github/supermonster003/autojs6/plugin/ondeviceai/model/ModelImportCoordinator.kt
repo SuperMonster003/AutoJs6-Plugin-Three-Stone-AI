@@ -24,15 +24,23 @@ internal sealed interface ModelSelectionState {
     data class Failed(val operationId: Long, val modelId: String) : ModelSelectionState
 }
 
+internal sealed interface ModelDeletionState {
+    data object Idle : ModelDeletionState
+    data class Deleting(val operationId: Long, val modelId: String) : ModelDeletionState
+    data class Succeeded(val operationId: Long, val modelId: String) : ModelDeletionState
+    data class Failed(val operationId: Long, val modelId: String) : ModelDeletionState
+}
+
 internal data class ModelManagerState(
     val importState: ModelImportState<ImportedModel>,
     val snapshot: ModelManagerSnapshot?,
     val selection: ModelSelectionState,
+    val deletion: ModelDeletionState = ModelDeletionState.Idle,
 )
 
 /**
- * Owns the one process-local import independently of any Activity instance. A process death is
- * handled by the repository transaction marker the next time the model manager cold-starts.
+ * Serializes process-local model imports, selections, and deletions independently of any Activity
+ * instance. A process death is handled by repository recovery when the manager next cold-starts.
  */
 internal class ModelImportCoordinator private constructor(context: Context) {
     fun interface Observer {
@@ -53,13 +61,16 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     private val publishScheduled = AtomicBoolean(false)
     private var activeImport: ActiveImport? = null
     private var activeSelection: ActiveSelection? = null
+    private var activeDeletion: ActiveDeletion? = null
     private var nextSelectionOperationId = 1L
+    private var nextDeletionOperationId = 1L
     private var visibleManagerSnapshot: ModelManagerSnapshot? = null
     private var selectionState: ModelSelectionState = ModelSelectionState.Idle
+    private var deletionState: ModelDeletionState = ModelDeletionState.Idle
     private var catalogMutationAvailable = false
     val processSessionToken: String = UUID.randomUUID().toString()
     private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "litertlm-model-import").apply { isDaemon = true }
+        Thread(runnable, "litertlm-model-manager").apply { isDaemon = true }
     }
     private val cancellationExecutor = ThreadPoolExecutor(
         1,
@@ -135,6 +146,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             importState = stateMachine.snapshot(),
             snapshot = visibleManagerSnapshot,
             selection = selectionState,
+            deletion = deletionState,
         )
     }
 
@@ -144,7 +156,10 @@ internal class ModelImportCoordinator private constructor(context: Context) {
      */
     fun beginSelection(modelId: String): Boolean {
         val active = synchronized(lifecycleLock) {
-            if (!catalogMutationAvailable || activeImport != null || activeSelection != null) return false
+            if (
+                !catalogMutationAvailable || activeImport != null || activeSelection != null ||
+                activeDeletion != null
+            ) return false
             val snapshot = visibleManagerSnapshot ?: return false
             if (snapshot.models.none { it.modelId == modelId }) return false
             if (snapshot.selectedModelId == modelId) return false
@@ -154,6 +169,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             ActiveSelection(operationId, modelId).also { operation ->
                 activeSelection = operation
                 selectionState = ModelSelectionState.Selecting(operationId, modelId)
+                deletionState = ModelDeletionState.Idle
             }
         }
         publishState()
@@ -172,9 +188,47 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         return true
     }
 
+    /** Deletes only an unselected model from the last coherent manager snapshot. */
+    fun beginDeletion(modelId: String): Boolean {
+        val active = synchronized(lifecycleLock) {
+            if (
+                !catalogMutationAvailable || activeImport != null || activeSelection != null ||
+                activeDeletion != null
+            ) return false
+            val snapshot = visibleManagerSnapshot ?: return false
+            if (snapshot.models.none { it.modelId == modelId }) return false
+            if (snapshot.selectedModelId == modelId) return false
+            check(nextDeletionOperationId > 0L) { "Model deletion operation IDs are exhausted" }
+            val operationId = nextDeletionOperationId
+            nextDeletionOperationId = if (operationId == Long.MAX_VALUE) 0L else operationId + 1L
+            ActiveDeletion(operationId, modelId).also { operation ->
+                activeDeletion = operation
+                selectionState = ModelSelectionState.Idle
+                deletionState = ModelDeletionState.Deleting(operationId, modelId)
+            }
+        }
+        publishState()
+        try {
+            executor.execute { executeDeletion(active) }
+        } catch (error: RejectedExecutionException) {
+            logDeletionFailure(active, error)
+            synchronized(lifecycleLock) {
+                if (activeDeletion === active) {
+                    activeDeletion = null
+                    deletionState = ModelDeletionState.Failed(active.operationId, active.modelId)
+                }
+            }
+            publishState()
+        }
+        return true
+    }
+
     fun beginImport(uri: Uri, grantedFlags: Int): Boolean {
         val active = synchronized(lifecycleLock) {
-            if (!catalogMutationAvailable || activeImport != null || activeSelection != null) return false
+            if (
+                !catalogMutationAvailable || activeImport != null || activeSelection != null ||
+                activeDeletion != null
+            ) return false
             val operationId = stateMachine.begin() ?: return false
             val running = stateMachine.snapshot() as ModelImportState.Running<ImportedModel>
             val persistedReadPermission = persistReadPermission(uri, grantedFlags)
@@ -193,6 +247,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             )
             activeImport = operation
             selectionState = ModelSelectionState.Idle
+            deletionState = ModelDeletionState.Idle
             operation
         }
         publishState()
@@ -353,6 +408,55 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         publishState()
     }
 
+    private fun executeDeletion(active: ActiveDeletion) {
+        val result = runCatching {
+            repository.deleteUnselected(active.modelId).also { deletion ->
+                check(deletion.deletedModel.modelId == active.modelId) {
+                    "Deleted model does not match the requested model"
+                }
+                check(deletion.snapshot.models.none { it.modelId == active.modelId }) {
+                    "Deleted model is still present in the manager snapshot"
+                }
+            }.snapshot
+        }
+        result.exceptionOrNull()?.let { error -> logDeletionFailure(active, error) }
+        val reread = if (result.isFailure) runCatching { repository.managerSnapshot() } else null
+        reread?.exceptionOrNull()?.let { error -> logDeletionFailure(active, error) }
+        synchronized(lifecycleLock) {
+            if (activeDeletion !== active) return
+            result.fold(
+                onSuccess = { snapshot ->
+                    if (stateMachine.replaceCurrent(snapshot.selectedModel)) {
+                        visibleManagerSnapshot = snapshot
+                        catalogMutationAvailable = true
+                        deletionState = ModelDeletionState.Succeeded(active.operationId, active.modelId)
+                    } else {
+                        visibleManagerSnapshot = null
+                        catalogMutationAvailable = false
+                        stateMachine.makeUnavailable()
+                        deletionState = ModelDeletionState.Failed(active.operationId, active.modelId)
+                    }
+                },
+                onFailure = {
+                    val refreshed = reread?.getOrNull()
+                    if (refreshed != null && stateMachine.replaceCurrent(refreshed.selectedModel)) {
+                        visibleManagerSnapshot = refreshed
+                        catalogMutationAvailable = true
+                    } else {
+                        visibleManagerSnapshot = null
+                        catalogMutationAvailable = false
+                        check(stateMachine.makeUnavailable()) {
+                            "A deletion refresh can fail closed only while no import is active"
+                        }
+                    }
+                    deletionState = ModelDeletionState.Failed(active.operationId, active.modelId)
+                },
+            )
+            activeDeletion = null
+        }
+        publishState()
+    }
+
     private fun finishActiveImport(active: ActiveImport) {
         synchronized(lifecycleLock) {
             if (activeImport === active) activeImport = null
@@ -384,7 +488,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         }
     }
 
-    /** Publishes one coherent import/catalog/selection snapshot from one main-thread post. */
+    /** Publishes one coherent import/catalog/selection/deletion snapshot from one main-thread post. */
     private fun publishState() {
         if (!publishScheduled.compareAndSet(false, true)) return
         val accepted = mainHandler.post {
@@ -422,7 +526,23 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         }
     }
 
+    private fun logDeletionFailure(active: ActiveDeletion, error: Throwable) {
+        val message =
+            "Model deletion failure: operation=${active.operationId} type=${error.javaClass.name}"
+        val debuggable = applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        if (debuggable) {
+            Log.e(TAG, message, error)
+        } else {
+            Log.e(TAG, message)
+        }
+    }
+
     private data class ActiveSelection(
+        val operationId: Long,
+        val modelId: String,
+    )
+
+    private data class ActiveDeletion(
         val operationId: Long,
         val modelId: String,
     )

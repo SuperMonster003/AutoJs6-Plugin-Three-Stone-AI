@@ -124,6 +124,55 @@ class ModelCatalogTest {
     }
 
     @Test
+    fun deletingUnselectedModelRemovesOnlyThatGenerationAndAdvancesRevision() {
+        val original = ModelCatalogPolicy.normalize(
+            ModelCatalogDocument(7L, entryA.modelId, listOf(entryA, entryB)),
+        )
+        val originalGeneration = listingGeneration(original)
+
+        val deletion = ModelCatalogPolicy.deleteUnselected(original, entryB.modelId)
+
+        assertEquals(entryB, deletion.model)
+        assertEquals(entryA.modelId, deletion.document.selectedModelId)
+        assertEquals(listOf(entryA), deletion.document.entries)
+        assertEquals(8L, deletion.document.revision)
+        assertNotEquals(originalGeneration, listingGeneration(deletion.document))
+        assertEquals(listOf(entryA, entryB), original.entries)
+        assertEquals(7L, original.revision)
+    }
+
+    @Test
+    fun deletingSelectedOrUnknownModelFailsWithoutChangingTheCatalog() {
+        val original = ModelCatalogPolicy.normalize(
+            ModelCatalogDocument(7L, entryA.modelId, listOf(entryA, entryB)),
+        )
+        val originalBytes = ModelCatalogCodec.encode(original)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelCatalogPolicy.deleteUnselected(original, entryA.modelId)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelCatalogPolicy.deleteUnselected(original, "litertlm.${"ff".repeat(16)}")
+        }
+
+        assertTrue(originalBytes.contentEquals(ModelCatalogCodec.encode(original)))
+        assertEquals(entryA.modelId, original.selectedModelId)
+        assertEquals(7L, original.revision)
+    }
+
+    @Test
+    fun catalogWithoutASelectionCanDeleteItsLastModel() {
+        val original = ModelCatalogDocument(3L, null, listOf(entryA))
+
+        val deletion = ModelCatalogPolicy.deleteUnselected(original, entryA.modelId)
+
+        assertEquals(entryA, deletion.model)
+        assertEquals(null, deletion.document.selectedModelId)
+        assertTrue(deletion.document.entries.isEmpty())
+        assertEquals(4L, deletion.document.revision)
+    }
+
+    @Test
     fun prefixCollisionFailsClosed() {
         val collisionDigest = digestA.take(32) + "33".repeat(16)
         assertThrows(IllegalArgumentException::class.java) {

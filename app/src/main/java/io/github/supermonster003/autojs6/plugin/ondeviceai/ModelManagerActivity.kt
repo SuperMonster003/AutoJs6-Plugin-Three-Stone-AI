@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -13,11 +14,11 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.RadioButton
-import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ImportedModel
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDeletionState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportFailureReason
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportProgress
@@ -34,11 +35,12 @@ class ModelManagerActivity : Activity() {
     private lateinit var cancelImportButton: Button
     private lateinit var progress: ProgressBar
     private lateinit var catalogSummary: TextView
-    private lateinit var catalogRows: RadioGroup
+    private lateinit var catalogRows: LinearLayout
     private var copyableModelId: String? = null
     private var cancellableOperationId: Long? = null
     private var lastNotifiedImportOperationId = 0L
     private var lastNotifiedSelectionOperationId = 0L
+    private var lastNotifiedDeletionOperationId = 0L
     private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
     private var renderedManagerView: ModelManagerViewState? = null
 
@@ -51,6 +53,8 @@ class ModelManagerActivity : Activity() {
             lastNotifiedImportOperationId = restored.getLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID)
             lastNotifiedSelectionOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID)
+            lastNotifiedDeletionOperationId =
+                restored.getLong(STATE_LAST_NOTIFIED_DELETION_OPERATION_ID)
         }
         setContentView(createContentView())
     }
@@ -68,6 +72,7 @@ class ModelManagerActivity : Activity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID, lastNotifiedImportOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID, lastNotifiedSelectionOperationId)
+        outState.putLong(STATE_LAST_NOTIFIED_DELETION_OPERATION_ID, lastNotifiedDeletionOperationId)
         outState.putString(STATE_PROCESS_SESSION_TOKEN, importCoordinator.processSessionToken)
         super.onSaveInstanceState(outState)
     }
@@ -130,7 +135,7 @@ class ModelManagerActivity : Activity() {
                 setPadding(0, dp(24), 0, dp(8))
             }
             addView(catalogSummary, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            catalogRows = RadioGroup(context).apply { orientation = RadioGroup.VERTICAL }
+            catalogRows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
             addView(catalogRows, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
         return ScrollView(this).apply { addView(content) }
@@ -147,9 +152,8 @@ class ModelManagerActivity : Activity() {
     }
 
     private fun importModel(uri: Uri, grantedFlags: Int) {
-        if (!importCoordinator.beginImport(uri, grantedFlags)) {
-            renderManagerState(importCoordinator.managerState())
-        }
+        importCoordinator.beginImport(uri, grantedFlags)
+        renderManagerState(importCoordinator.managerState())
     }
 
     private fun renderImportState(state: ModelImportState<ImportedModel>) {
@@ -218,12 +222,27 @@ class ModelManagerActivity : Activity() {
             is ModelSelectionState.Selecting,
             -> Unit
         }
+        when (val deletion = state.deletion) {
+            is ModelDeletionState.Succeeded -> notifyDeletionOnce(
+                deletion.operationId,
+                R.string.model_deletion_succeeded,
+                Toast.LENGTH_SHORT,
+            )
+            is ModelDeletionState.Failed -> notifyDeletionOnce(
+                deletion.operationId,
+                R.string.model_deletion_failed,
+                Toast.LENGTH_LONG,
+            )
+            ModelDeletionState.Idle,
+            is ModelDeletionState.Deleting,
+            -> Unit
+        }
     }
 
     private fun renderManagerCatalog(state: ModelManagerState) {
         if (!::catalogRows.isInitialized) return
         val view = ModelManagerPresentation.managerView(state)
-        if (view.selectionBusy) importButton.isEnabled = false
+        if (view.catalogMutationBusy) importButton.isEnabled = false
         if (view == renderedManagerView) return
         renderedManagerView = view
         catalogSummary.text = when (view.availability) {
@@ -241,7 +260,11 @@ class ModelManagerActivity : Activity() {
         }
         catalogRows.removeAllViews()
         view.rows.forEach { row ->
-            catalogRows.addView(RadioButton(this).apply {
+            val catalogRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val selectionButton = RadioButton(this).apply {
                 text = getString(
                     R.string.model_catalog_item,
                     row.displayName,
@@ -254,12 +277,61 @@ class ModelManagerActivity : Activity() {
                 setOnClickListener {
                     if (row.selected) return@setOnClickListener
                     renderedManagerView = null
-                    isEnabled = false
-                    if (!importCoordinator.beginSelection(row.modelId)) {
-                        renderManagerState(importCoordinator.managerState())
-                    }
+                    importCoordinator.beginSelection(row.modelId)
+                    renderManagerState(importCoordinator.managerState())
                 }
-            })
+            }
+            val deleteButton = Button(this).apply {
+                text = getString(R.string.button_delete_model)
+                isEnabled = row.deletionEnabled
+                setOnClickListener { confirmModelDeletion(row) }
+            }
+            catalogRow.addView(
+                selectionButton,
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+            )
+            catalogRow.addView(
+                deleteButton,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+            catalogRows.addView(
+                catalogRow,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
+    }
+
+    private fun confirmModelDeletion(row: ModelManagerRow) {
+        if (row.selected) {
+            Toast.makeText(this, R.string.model_delete_selected_blocked, Toast.LENGTH_LONG).show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.model_delete_confirm_title)
+            .setMessage(getString(R.string.model_delete_confirm_message, row.displayName))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.button_delete_model) { _, _ -> deleteModel(row.modelId) }
+            .show()
+    }
+
+    private fun deleteModel(modelId: String) {
+        val before = importCoordinator.managerState()
+        if (before.snapshot?.selectedModelId == modelId) {
+            renderManagerState(before)
+            Toast.makeText(this, R.string.model_delete_selected_blocked, Toast.LENGTH_LONG).show()
+            return
+        }
+        val accepted = importCoordinator.beginDeletion(modelId)
+        val after = importCoordinator.managerState()
+        renderManagerState(after)
+        if (!accepted && after.snapshot?.selectedModelId == modelId) {
+            Toast.makeText(this, R.string.model_delete_selected_blocked, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -369,10 +441,17 @@ class ModelManagerActivity : Activity() {
         Toast.makeText(this, message, duration).show()
     }
 
+    private fun notifyDeletionOnce(operationId: Long, message: Int, duration: Int) {
+        if (operationId <= lastNotifiedDeletionOperationId) return
+        lastNotifiedDeletionOperationId = operationId
+        Toast.makeText(this, message, duration).show()
+    }
+
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
         const val STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID = "lastNotifiedImportOperationId"
         const val STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID = "lastNotifiedSelectionOperationId"
+        const val STATE_LAST_NOTIFIED_DELETION_OPERATION_ID = "lastNotifiedDeletionOperationId"
         const val STATE_PROCESS_SESSION_TOKEN = "processSessionToken"
         const val PROGRESS_MAX = 10_000
     }

@@ -14,8 +14,10 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal class LiteRtLmGenerationBackend(
+    private val modelSha256: String,
     private val modelPath: String,
     private val cacheDirectory: File,
+    private val engineCache: ReusableResourceCache<String, Engine>,
 ) : GenerationBackend {
     private val lifecycleLock = Any()
     private val nativeLifecycleLock = Any()
@@ -25,7 +27,7 @@ internal class LiteRtLmGenerationBackend(
     private val closed = AtomicBoolean(false)
 
     @Volatile
-    private var engine: Engine? = null
+    private var engineLease: ResourceLease<Engine>? = null
 
     @Volatile
     private var conversation: Conversation? = null
@@ -36,19 +38,28 @@ internal class LiteRtLmGenerationBackend(
         try {
             synchronized(nativeLifecycleLock) {
                 if (closed.get() || cancelled.get()) return
-                val localEngine = Engine(
-                    EngineConfig(
-                        modelPath = modelPath,
-                        backend = Backend.CPU(threadCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 8)),
-                        cacheDir = cacheDirectory.absolutePath,
-                    ),
-                )
-                synchronized(lifecycleLock) { engine = localEngine }
-                if (closed.get() || cancelled.get()) return
-                localEngine.initialize()
+                val localEngineLease = engineCache.acquire(modelSha256) {
+                    Engine(
+                        EngineConfig(
+                            modelPath = modelPath,
+                            backend = Backend.CPU(
+                                threadCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 8),
+                            ),
+                            cacheDir = cacheDirectory.absolutePath,
+                        ),
+                    ).also { created ->
+                        try {
+                            created.initialize()
+                        } catch (error: Throwable) {
+                            runCatching(created::close)
+                            throw error
+                        }
+                    }
+                }
+                synchronized(lifecycleLock) { engineLease = localEngineLease }
                 if (closed.get() || cancelled.get()) return
 
-                val localConversation = localEngine.createConversation(
+                val localConversation = localEngineLease.value.createConversation(
                     ConversationConfig(
                         initialMessages = request.history.map(::toLiteRtMessage),
                         samplerConfig = request.samplingOptions?.toLiteRtSamplerConfig(),
@@ -75,6 +86,7 @@ internal class LiteRtLmGenerationBackend(
                         }
 
                         override fun onError(throwable: Throwable) {
+                            localEngineLease.invalidate()
                             callbackGate.runCallback { listener.onFailed(throwable) }
                         }
                     },
@@ -82,6 +94,7 @@ internal class LiteRtLmGenerationBackend(
                 )
             }
         } catch (error: Throwable) {
+            synchronized(lifecycleLock) { engineLease }?.invalidate()
             callbackGate.runCallback {
                 if (!closed.get() && !cancelled.get()) listener.onFailed(error)
             }
@@ -105,11 +118,12 @@ internal class LiteRtLmGenerationBackend(
             val activeConversation = synchronized(lifecycleLock) {
                 conversation.also { conversation = null }
             }
-            val activeEngine = synchronized(lifecycleLock) {
-                engine.also { engine = null }
+            val activeEngineLease = synchronized(lifecycleLock) {
+                engineLease.also { engineLease = null }
             }
-            runCatching { activeConversation?.close() }
-            runCatching { activeEngine?.close() }
+            val conversationClosed = runCatching { activeConversation?.close() }.isSuccess
+            if (!conversationClosed) activeEngineLease?.invalidate()
+            runCatching { activeEngineLease?.close() }
         }
     }
 

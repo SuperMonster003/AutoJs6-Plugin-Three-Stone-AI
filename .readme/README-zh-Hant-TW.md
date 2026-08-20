@@ -51,6 +51,7 @@ On-Device AI (裝置端 AI) 是 AutoJs6 的官方裝置端 AI 文字生成外掛
 - 開啟系統檔案選擇器前預檢私人儲存空間, 顯示目前匯入預算與私人副本預計占用, 並在複製前再次檢查所選檔案.
 - 使用純文字 system, user 和 assistant 歷史建立本機生成請求.
 - 將 AutoJs6 `ai.ask`, `ai.chat` 和 `ai.stream` 的 `temperature`, `topK`, `topP` 與 `maxTokens` 傳遞到 LiteRT-LM.
+- 依模型 SHA-256 重複使用已初始化 Engine, 消除同一模型連續請求的重複冷啟動.
 - 透過 credit 背壓依序傳送文字 chunk, 並只發布一個完成, 錯誤或取消終態.
 - 列出, 選取及重新命名已匯入模型, 刪除未選取模型, 並在管理介面一鍵回收未參照模型檔案.
 - 完全在裝置端以 CPU backend 執行, 不下載模型, 不呼叫遠端推論服務.
@@ -118,6 +119,7 @@ required host build: 5276
 - 應用程式層級單一匯入協調器使 Activity 重建不會中斷進行中的匯入. Fsync pending journal 支援冷啟動復原並清理 stale `.incoming`, `.current` 和 `.pending` 暫存檔案. 復原只會刪除本次嘗試新建且從未由 current metadata 發布的 destination, 已發布或 current 模型及歷史 hash 代次均會保留.
 - 為避免與獨立 `:provider` 程序發生競態, 匯入時不會自動刪除先前以 SHA-256 hash 命名的模型代次. 模型管理介面可刪除未選取的 catalog 模型, 並回收不再由 catalog 參照的 hash 命名檔案.
 - 同一程序最多有一個作用中生成工作階段. 請求描述元會在非同步處理前複製並依協定配額關閉.
+- Provider 最多快取一個已初始化 Engine. 同一模型的連續請求會重複使用它; 切換模型時立即釋放, 閒置 5 分鐘後釋放, 收到系統明確記憶體壓力通知時則在目前作用中工作階段結束後安全釋放.
 - Provider 宣告的內容上限為 256 KiB, 輸出上限為 64 KiB, 請求和模型也可施加更低上限.
 - `maxTokens` 接受 1 至 2,147,483,647 的整數. `temperature` 必須為非負有限數, `topK` 必須為正整數, `topP` 必須為 0 至 1 的有限數. 三項取樣參數全部省略時保留模型或引擎預設值; 部分覆寫時, 未設定項使用 LiteRT-LM 基準 `topK: 1`, `topP: 0.95`, `temperature: 1`.
 - 串流輸出使用有限 credit 和有界 chunk, 防止無限制緩衝或無背壓回呼.

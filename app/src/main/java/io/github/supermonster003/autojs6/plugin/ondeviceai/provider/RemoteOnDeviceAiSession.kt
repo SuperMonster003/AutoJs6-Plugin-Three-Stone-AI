@@ -62,6 +62,7 @@ internal class RemoteOnDeviceAiSession(
     private val callbackDeathRecipient = IBinder.DeathRecipient { callbackDied() }
     private val callbackDeathLinked = AtomicBoolean(false)
     private val cleaned = AtomicBoolean(false)
+    private val backendCloseClaimed = AtomicBoolean(false)
     private val drainScheduled = AtomicBoolean(false)
     private val timeoutFuture = AtomicReference<Future<*>?>()
     private val backend = AtomicReference<GenerationBackend?>()
@@ -149,7 +150,7 @@ internal class RemoteOnDeviceAiSession(
             val generationRequest = PromptPlanner.plan(request, materialized)
             emitStarted(request)
             ensureActive()
-            val activeBackend = backendFactory.create(model.file.absolutePath)
+            val activeBackend = backendFactory.create(model.sha256, model.file.absolutePath)
             if (cleaned.get() || !state.isActive) {
                 runCatching { activeBackend.close() }
                 throw SessionStopped()
@@ -396,25 +397,30 @@ internal class RemoteOnDeviceAiSession(
     }
 
     private fun cleanup(cancelWorkers: Boolean, closeBackendDirectly: Boolean = false) {
-        if (!cleaned.compareAndSet(false, true)) return
+        if (!cleaned.compareAndSet(false, true)) {
+            if (closeBackendDirectly) closeBackendAndFinish()
+            return
+        }
         timeoutFuture.getAndSet(null)?.cancel(false)
         descriptors.close()
         unlinkCallbackDeath()
-        val activeBackend = backend.getAndSet(null)
         if (cancelWorkers) futures.forEach { it.cancel(true) }
-        val closeAndFinish = {
-            runCatching { activeBackend?.close() }
-            onFinished(this)
-        }
-        if (activeBackend == null || closeBackendDirectly) {
-            closeAndFinish()
+        if (backend.get() == null || closeBackendDirectly) {
+            closeBackendAndFinish()
         } else {
             try {
-                worker.execute(closeAndFinish)
+                worker.execute(::closeBackendAndFinish)
             } catch (_: RejectedExecutionException) {
-                Thread(closeAndFinish, "on-device-ai-backend-close").apply { isDaemon = true }.start()
+                Thread(::closeBackendAndFinish, "on-device-ai-backend-close").apply { isDaemon = true }.start()
             }
         }
+    }
+
+    /** Service teardown can overtake a queued normal close; exactly one caller owns final cleanup. */
+    private fun closeBackendAndFinish() {
+        if (!backendCloseClaimed.compareAndSet(false, true)) return
+        runCatching { backend.getAndSet(null)?.close() }
+        onFinished(this)
     }
 
     private fun scheduleTimeout() {

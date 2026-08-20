@@ -10,6 +10,7 @@
 
     <application
         android:allowBackup="false"
+        android:name=".OnDeviceAiApplication"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"
         android:hardwareAccelerated="true"

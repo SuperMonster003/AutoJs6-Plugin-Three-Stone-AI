@@ -5,9 +5,9 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import io.github.supermonster003.autojs6.plugin.ondeviceai.OnDeviceAiPlugin
+import io.github.supermonster003.autojs6.plugin.ondeviceai.OnDeviceAiApplication
 import io.github.supermonster003.autojs6.plugin.ondeviceai.aiProviderInfo
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationBackendFactory
-import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.LiteRtLmGenerationBackend
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelRepository
 import org.autojs.plugin.ai.common.api.AiCommonCodec
 import org.autojs.plugin.ai.common.api.AiCommonLimits
@@ -18,7 +18,6 @@ import org.autojs.plugin.ondeviceai.api.IAiModelListCallback
 import org.autojs.plugin.ondeviceai.api.IOnDeviceAiCallback
 import org.autojs.plugin.ondeviceai.api.IOnDeviceAiProvider
 import org.autojs.plugin.ondeviceai.api.IOnDeviceAiSession
-import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -47,9 +46,9 @@ class OnDeviceAiProviderService : Service() {
         callbackLane = SerialCallbackLane()
         repository = ModelRepository(this)
         modelPager = ModelPager(repository)
-        val cache = File(cacheDir, "litertlm").apply { mkdirs() }
-        backendFactory = GenerationBackendFactory { modelPath ->
-            LiteRtLmGenerationBackend(modelPath, cache)
+        val engineRuntime = (application as OnDeviceAiApplication).engineRuntime
+        backendFactory = GenerationBackendFactory { modelSha256, modelPath ->
+            engineRuntime.createBackend(modelSha256, modelPath)
         }
     }
 

@@ -12,6 +12,7 @@
     "Contrôler le stockage privé avant d’ouvrir le sélecteur, afficher le budget d’import actuel et l’espace estimé de la copie privée, puis revérifier le fichier sélectionné avant la copie.",
     "Créer des requêtes de génération locale avec un historique system, user et assistant en texte brut.",
     "Transmettre `temperature`, `topK`, `topP` et `maxTokens` depuis `ai.ask`, `ai.chat` et `ai.stream` d'AutoJs6 jusqu'à LiteRT-LM.",
+    "Réutiliser l'Engine initialisé selon le SHA-256 du modèle afin d'éviter un nouveau démarrage à froid pour les requêtes consécutives sur le même modèle.",
     "Transmettre les chunks de texte dans l'ordre avec une contre-pression par credits et publier un seul état terminal terminé, échoué ou annulé.",
     "Lister, sélectionner et renommer les modèles importés, supprimer les modèles non sélectionnés et récupérer les fichiers de modèle non référencés depuis le gestionnaire.",
     "Fonctionner entièrement sur l'appareil avec un backend CPU, sans téléchargement de modèle ni service d'inférence distant."
@@ -32,6 +33,7 @@
     "Un coordinateur d'import unique à portée application maintient le travail pendant la recréation de Activity. Un pending journal synchronisé par fsync permet la récupération au démarrage à froid et le nettoyage des fichiers temporaires stale `.incoming`, `.current` et `.pending`. La récupération supprime uniquement une destination créée par la tentative actuelle et jamais publiée par current metadata; les générations publiées, current et historiques nommées par hash sont conservées.",
     "Pour éviter les conditions de concurrence interprocessus avec le processus isolé `:provider`, les imports ne suppriment pas automatiquement les générations précédentes nommées par hash SHA-256. Le gestionnaire peut supprimer les modèles non sélectionnés du catalogue et récupérer les fichiers nommés par hash qui ne sont plus référencés.",
     "Une seule session de génération peut être active dans le processus. Les descripteurs sont dupliqués avant le travail asynchrone et fermés selon les quotas du protocole.",
+    "Le provider ne conserve qu'un seul Engine initialisé. Les requêtes consécutives sur le même modèle le réutilisent; il est libéré immédiatement lors d'un changement de modèle, après cinq minutes d'inactivité ou, en toute sécurité, après la session active lorsqu'Android signale explicitement une pression mémoire.",
     "Le provider annonce un plafond de contexte de 256 KiB et un plafond de sortie de 64 KiB. Les requêtes et modèles peuvent imposer des limites inférieures.",
     "`maxTokens` accepte les entiers de 1 à 2 147 483 647. `temperature` doit être fini et positif ou nul, `topK` un entier positif et `topP` fini entre 0 et 1. Omettre les trois réglages d'échantillonnage conserve les valeurs du modèle ou moteur ; un remplacement partiel complète les réglages omis avec la base LiteRT-LM `topK: 1`, `topP: 0.95` et `temperature: 1`.",
     "Le streaming utilise des credits finis et des chunks bornés pour éviter les tampons illimités ou les callbacks sans contre-pression.",

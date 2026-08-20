@@ -15,12 +15,15 @@
     <string name="import_failed_invalid_format">فشل استيراد النموذج: الملف المحدد ليس نموذج LiteRT-LM صالحا</string>
     <string name="import_failed_model_too_large">فشل استيراد النموذج: يتجاوز النموذج حد 8 GiB</string>
     <string name="import_failed_source_unavailable">فشل استيراد النموذج: تعذرت قراءة الملف المحدد</string>
+    <string name="import_picker_blocked_insufficient_storage">لا يمكن اختيار نموذج: يجب أن تتجاوز المساحة الحرة الاحتياطي البالغ %1$s.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">جار استيراد النموذج...</string>
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: تمت معالجة %2$s</string>
     <string name="import_stage_copying">جار نسخ النموذج والتحقق منه</string>
     <string name="import_stage_publishing">جار نشر النموذج</string>
     <string name="import_stage_validating">جار التحقق من المصدر</string>
+    <string name="import_storage_preflight_ready">فحص ما قبل الاستيراد: يتوفر %1$s؛ يمكن إضافة ما يصل إلى %2$s الآن؛ يبقى %3$s احتياطيا. تستخدم النسخة الخاصة مساحة تقارب حجم الملف المحدد.</string>
+    <string name="import_storage_preflight_unavailable">الاستيراد غير متاح: يتوفر %1$s؛ يجب أن تتجاوز المساحة الحرة الاحتياطي البالغ %2$s.</string>
     <string name="import_succeeded">تم استيراد النموذج</string>
     <string name="model_id_clipboard_label">معرف نموذج النص بالذكاء الاصطناعي</string>
     <string name="model_id_copied">تم نسخ معرف النموذج</string>

@@ -15,12 +15,15 @@
     <string name="import_failed_invalid_format">Error al importar el modelo: el archivo seleccionado no es un modelo LiteRT-LM válido</string>
     <string name="import_failed_model_too_large">Error al importar el modelo: el modelo supera el límite de 8 GiB</string>
     <string name="import_failed_source_unavailable">Error al importar el modelo: no se pudo leer el archivo seleccionado</string>
+    <string name="import_picker_blocked_insufficient_storage">No se puede elegir un modelo: el espacio libre debe superar la reserva de %1$s.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">Importando modelo...</string>
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: %2$s procesados</string>
     <string name="import_stage_copying">Copiando y verificando el modelo</string>
     <string name="import_stage_publishing">Publicando el modelo</string>
     <string name="import_stage_validating">Validando el origen</string>
+    <string name="import_storage_preflight_ready">Comprobación previa: %1$s disponibles; ahora se pueden añadir hasta %2$s; se reservan %3$s. La copia privada ocupa aproximadamente el tamaño del archivo seleccionado.</string>
+    <string name="import_storage_preflight_unavailable">Importación no disponible: %1$s disponibles; el espacio libre debe superar la reserva de %2$s.</string>
     <string name="import_succeeded">Modelo importado</string>
     <string name="model_id_clipboard_label">ID del modelo de texto con IA</string>
     <string name="model_id_copied">ID del modelo copiado</string>

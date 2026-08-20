@@ -22,6 +22,7 @@ class ModelImportPolicyTest {
 
     @Test
     fun reservesFreeSpaceAndAppliesHardLimit() {
+        assertEquals(0L, ModelImportPolicy.maximumCopyBytes(Long.MIN_VALUE))
         assertEquals(0L, ModelImportPolicy.maximumCopyBytes(ModelImportPolicy.RESERVED_FREE_BYTES))
         assertEquals(
             1024L,
@@ -31,6 +32,56 @@ class ModelImportPolicyTest {
             ModelImportPolicy.MAXIMUM_MODEL_BYTES,
             ModelImportPolicy.maximumCopyBytes(Long.MAX_VALUE),
         )
+    }
+
+    @Test
+    fun storagePreflightBlocksBeforeAMinimumHeaderFitsAndReportsTheExactBudget() {
+        val blocked = ModelImportPolicy.storagePreflight(
+            ModelImportPolicy.RESERVED_FREE_BYTES + ModelImportPolicy.LITERTLM_MAGIC_BYTES - 1L,
+        )
+        assertFalse(blocked.canOpenPicker)
+        assertEquals(ModelImportPolicy.LITERTLM_MAGIC_BYTES - 1L, blocked.maximumAdditionalModelBytes)
+
+        val allowed = ModelImportPolicy.storagePreflight(
+            ModelImportPolicy.RESERVED_FREE_BYTES + ModelImportPolicy.LITERTLM_MAGIC_BYTES,
+        )
+        assertTrue(allowed.canOpenPicker)
+        assertEquals(
+            ModelImportPolicy.LITERTLM_MAGIC_BYTES.toLong(),
+            allowed.maximumAdditionalModelBytes,
+        )
+        assertEquals(ModelImportPolicy.RESERVED_FREE_BYTES, allowed.reservedFreeBytes)
+
+        val capped = ModelImportPolicy.storagePreflight(Long.MAX_VALUE)
+        assertTrue(capped.canOpenPicker)
+        assertEquals(ModelImportPolicy.MAXIMUM_MODEL_BYTES, capped.maximumAdditionalModelBytes)
+    }
+
+    @Test
+    fun declaredSourceSizeMustFitThePrecopyBudget() {
+        ModelImportPolicy.requireDeclaredSizeWithinBudget(declaredSize = null, maximumBytes = 64L)
+        ModelImportPolicy.requireDeclaredSizeWithinBudget(declaredSize = 64L, maximumBytes = 64L)
+
+        val empty = assertThrows(ModelImportFailureException::class.java) {
+            ModelImportPolicy.requireDeclaredSizeWithinBudget(declaredSize = 0L, maximumBytes = 64L)
+        }
+        assertEquals(ModelImportFailureReason.INVALID_FORMAT, empty.reason)
+
+        val tooLarge = assertThrows(ModelImportFailureException::class.java) {
+            ModelImportPolicy.requireDeclaredSizeWithinBudget(
+                declaredSize = ModelImportPolicy.MAXIMUM_MODEL_BYTES + 1L,
+                maximumBytes = 64L,
+            )
+        }
+        assertEquals(ModelImportFailureReason.MODEL_TOO_LARGE, tooLarge.reason)
+
+        val insufficient = assertThrows(ModelImportFailureException::class.java) {
+            ModelImportPolicy.requireDeclaredSizeWithinBudget(
+                declaredSize = 65L,
+                maximumBytes = 64L,
+            )
+        }
+        assertEquals(ModelImportFailureReason.INSUFFICIENT_STORAGE, insufficient.reason)
     }
 
     @Test

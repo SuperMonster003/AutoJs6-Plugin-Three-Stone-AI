@@ -48,6 +48,7 @@ On-Device AI est le plugin officiel de génération de texte IA locale pour Auto
 ******
 
 - Importer un paquet de modèle `.litertlm` avec le sélecteur système Android et conserver une copie vérifiée dans le stockage privé de l'application.
+- Contrôler le stockage privé avant d’ouvrir le sélecteur, afficher le budget d’import actuel et l’espace estimé de la copie privée, puis revérifier le fichier sélectionné avant la copie.
 - Créer des requêtes de génération locale avec un historique system, user et assistant en texte brut.
 - Transmettre les chunks de texte dans l'ordre avec une contre-pression par credits et publier un seul état terminal terminé, échoué ou annulé.
 - Lister, sélectionner et renommer les modèles importés, supprimer les modèles non sélectionnés et récupérer les fichiers de modèle non référencés depuis le gestionnaire.

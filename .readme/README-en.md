@@ -48,6 +48,7 @@ On-Device AI is the official on-device on-device AI plugin for AutoJs6. It runs 
 ******
 
 - Import a `.litertlm` model package through the Android system picker and keep a verified copy in app-private storage.
+- Preflight private storage before opening the picker, show the current import budget and estimated private-copy footprint, and recheck the selected file before copying.
 - Create local generation requests from plain-text system, user, and assistant history.
 - Deliver text chunks in order with credit backpressure and publish exactly one completed, failed, or cancelled terminal state.
 - List, select, and rename imported models, delete unselected models, and reclaim unreferenced model files from the manager.

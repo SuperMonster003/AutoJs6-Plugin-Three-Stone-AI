@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ClipData
@@ -26,8 +27,10 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDisplayNam
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportFailureReason
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportProgress
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportPolicy
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportStage
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportStoragePreflight
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelRenameState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelSelectionState
@@ -38,6 +41,7 @@ class ModelManagerActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var copyModelIdButton: Button
     private lateinit var importButton: Button
+    private lateinit var importStoragePreflight: TextView
     private lateinit var cancelImportButton: Button
     private lateinit var progress: ProgressBar
     private lateinit var catalogSummary: TextView
@@ -52,6 +56,9 @@ class ModelManagerActivity : Activity() {
     private var lastNotifiedStorageCleanupOperationId = 0L
     private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
     private var renderedManagerView: ModelManagerViewState? = null
+    private var importStateAllowsPicker = false
+    private var catalogMutationBlocksPicker = false
+    private var storageAllowsPicker = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,6 +154,15 @@ class ModelManagerActivity : Activity() {
                 setOnClickListener { openModelPicker() }
             }
             addView(importButton)
+            importStoragePreflight = TextView(context).apply {
+                textSize = 14f
+                setPadding(0, dp(8), 0, 0)
+            }
+            addView(
+                importStoragePreflight,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
 
             catalogSummary = TextView(context).apply {
                 textSize = 15f
@@ -167,6 +183,18 @@ class ModelManagerActivity : Activity() {
 
     @Suppress("DEPRECATION")
     private fun openModelPicker() {
+        val preflight = refreshImportStoragePreflight()
+        if (!preflight.canOpenPicker) {
+            Toast.makeText(
+                this,
+                getString(
+                    R.string.import_picker_blocked_insufficient_storage,
+                    Formatter.formatFileSize(this, preflight.reservedFreeBytes),
+                ),
+                Toast.LENGTH_LONG,
+            ).show()
+            return
+        }
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/octet-stream"
@@ -304,7 +332,8 @@ class ModelManagerActivity : Activity() {
     private fun renderManagerCatalog(state: ModelManagerState) {
         if (!::catalogRows.isInitialized) return
         val view = ModelManagerPresentation.managerView(state)
-        if (view.catalogMutationBusy) importButton.isEnabled = false
+        catalogMutationBlocksPicker = view.catalogMutationBusy
+        updateImportButtonEnabled()
         cleanupStorageButton.isEnabled = view.cleanupEnabled
         cleanupStorageButton.text = getString(
             if (view.cleanupInProgress) {
@@ -315,6 +344,7 @@ class ModelManagerActivity : Activity() {
         )
         if (view == renderedManagerView) return
         renderedManagerView = view
+        refreshImportStoragePreflight()
         catalogSummary.text = when (view.availability) {
             ModelCatalogAvailability.LOADING -> getString(R.string.model_catalog_loading)
             ModelCatalogAvailability.UNAVAILABLE -> getString(R.string.model_catalog_unavailable)
@@ -537,7 +567,36 @@ class ModelManagerActivity : Activity() {
         progress.visibility = if (inProgress) View.VISIBLE else View.GONE
         cancelImportButton.visibility = if (cancelOperationId == null) View.GONE else View.VISIBLE
         cancelImportButton.isEnabled = cancelOperationId != null
-        importButton.isEnabled = importEnabled
+        importStateAllowsPicker = importEnabled
+        updateImportButtonEnabled()
+    }
+
+    @SuppressLint("UsableSpace") // The budget is deliberately conservative and excludes reclaimable caches.
+    private fun refreshImportStoragePreflight(): ModelImportStoragePreflight {
+        val usableBytes = runCatching { filesDir.usableSpace }.getOrDefault(0L)
+        val preflight = ModelImportPolicy.storagePreflight(usableBytes)
+        storageAllowsPicker = preflight.canOpenPicker
+        importStoragePreflight.text = if (preflight.canOpenPicker) {
+            getString(
+                R.string.import_storage_preflight_ready,
+                Formatter.formatFileSize(this, preflight.usableBytes),
+                Formatter.formatFileSize(this, preflight.maximumAdditionalModelBytes),
+                Formatter.formatFileSize(this, preflight.reservedFreeBytes),
+            )
+        } else {
+            getString(
+                R.string.import_storage_preflight_unavailable,
+                Formatter.formatFileSize(this, preflight.usableBytes),
+                Formatter.formatFileSize(this, preflight.reservedFreeBytes),
+            )
+        }
+        updateImportButtonEnabled()
+        return preflight
+    }
+
+    private fun updateImportButtonEnabled() {
+        importButton.isEnabled =
+            importStateAllowsPicker && !catalogMutationBlocksPicker && storageAllowsPicker
     }
 
     private fun importFailureMessage(reason: ModelImportFailureReason): Int = when (reason) {

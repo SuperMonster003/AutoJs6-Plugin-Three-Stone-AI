@@ -262,34 +262,20 @@ internal class ModelRepository(context: Context) {
         val document = querySourceDocument(uri)
         operation.ensureActive()
         ModelImportPolicy.requireImportableName(document.displayName)
-        val maximumBytes = ModelImportPolicy.maximumCopyBytes(directory.usableSpace)
-        if (maximumBytes <= 0L) {
+        val storagePreflight = ModelImportPolicy.storagePreflight(directory.usableSpace)
+        val maximumBytes = storagePreflight.maximumAdditionalModelBytes
+        if (!storagePreflight.canOpenPicker) {
             throw ModelImportFailureException(
                 ModelImportFailureReason.INSUFFICIENT_STORAGE,
                 "There is not enough free storage for a model",
             )
         }
-        document.declaredSize?.let { size ->
-            when {
-                size <= 0L -> throw ModelImportFailureException(
-                    ModelImportFailureReason.INVALID_FORMAT,
-                    "The selected model is empty",
-                )
-                size > ModelImportPolicy.MAXIMUM_MODEL_BYTES -> throw ModelImportFailureException(
-                    ModelImportFailureReason.MODEL_TOO_LARGE,
-                    "The selected model exceeds the import limit",
-                )
-                size > maximumBytes -> throw ModelImportFailureException(
-                    ModelImportFailureReason.INSUFFICIENT_STORAGE,
-                    "There is not enough free storage for the selected model",
-                )
-            }
-        }
+        ModelImportPolicy.requireDeclaredSizeWithinBudget(document.declaredSize, maximumBytes)
         operation.reportProgress(
             ModelImportProgress(
                 stage = ModelImportStage.VALIDATING,
                 processedBytes = 0L,
-                totalBytes = null,
+                totalBytes = document.declaredSize,
             ),
         )
 

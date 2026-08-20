@@ -15,12 +15,15 @@
     <string name="import_failed_invalid_format">模型匯入失敗: 所選檔案不是有效的 LiteRT-LM 模型</string>
     <string name="import_failed_model_too_large">模型匯入失敗: 模型超過 8 GiB 上限</string>
     <string name="import_failed_source_unavailable">模型匯入失敗: 無法讀取所選檔案</string>
+    <string name="import_picker_blocked_insufficient_storage">無法選取模型: 可用空間必須超過 %1$s 預留空間.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">正在匯入模型...</string>
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: 已處理 %2$s</string>
     <string name="import_stage_copying">正在複製並驗證模型</string>
     <string name="import_stage_publishing">正在發佈模型</string>
     <string name="import_stage_validating">正在驗證來源</string>
+    <string name="import_storage_preflight_ready">匯入預檢: 目前可用 %1$s; 最多可新增 %2$s; 保留 %3$s 可用空間. 私人副本預計占用與所選檔案大小相近.</string>
+    <string name="import_storage_preflight_unavailable">無法匯入: 目前可用 %1$s; 可用空間必須超過 %2$s 預留空間.</string>
     <string name="import_succeeded">模型已匯入</string>
     <string name="model_id_clipboard_label">AI 文字模型 ID</string>
     <string name="model_id_copied">模型 ID 已複製</string>

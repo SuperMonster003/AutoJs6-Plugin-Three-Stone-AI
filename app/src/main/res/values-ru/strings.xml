@@ -15,12 +15,15 @@
     <string name="import_failed_invalid_format">Не удалось импортировать модель: выбранный файл не является допустимой моделью LiteRT-LM</string>
     <string name="import_failed_model_too_large">Не удалось импортировать модель: размер модели превышает ограничение 8 GiB</string>
     <string name="import_failed_source_unavailable">Не удалось импортировать модель: не удалось прочитать выбранный файл</string>
+    <string name="import_picker_blocked_insufficient_storage">Нельзя выбрать модель: свободного места должно быть больше резерва %1$s.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">Импорт модели...</string>
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: обработано %2$s</string>
     <string name="import_stage_copying">Копирование и проверка модели</string>
     <string name="import_stage_publishing">Публикация модели</string>
     <string name="import_stage_validating">Проверка источника</string>
+    <string name="import_storage_preflight_ready">Проверка перед импортом: доступно %1$s; сейчас можно добавить до %2$s; %3$s остаётся в резерве. Закрытая копия занимает примерно столько же, сколько выбранный файл.</string>
+    <string name="import_storage_preflight_unavailable">Импорт недоступен: доступно %1$s; свободного места должно быть больше резерва %2$s.</string>
     <string name="import_succeeded">Модель импортирована</string>
     <string name="model_id_clipboard_label">ID модели генерации текста ИИ</string>
     <string name="model_id_copied">ID модели скопирован</string>

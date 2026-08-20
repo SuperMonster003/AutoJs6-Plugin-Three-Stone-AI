@@ -15,12 +15,15 @@
     <string name="import_failed_invalid_format">모델 가져오기 실패: 선택한 파일이 유효한 LiteRT-LM 모델이 아닙니다</string>
     <string name="import_failed_model_too_large">모델 가져오기 실패: 모델이 8 GiB 제한을 초과합니다</string>
     <string name="import_failed_source_unavailable">모델 가져오기 실패: 선택한 파일을 읽을 수 없습니다</string>
+    <string name="import_picker_blocked_insufficient_storage">모델을 선택할 수 없습니다: 여유 공간이 %1$s 예약 공간보다 커야 합니다.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">모델 가져오는 중...</string>
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: %2$s 처리됨</string>
     <string name="import_stage_copying">모델 복사 및 확인 중</string>
     <string name="import_stage_publishing">모델 게시 중</string>
     <string name="import_stage_validating">소스 확인 중</string>
+    <string name="import_storage_preflight_ready">가져오기 사전 확인: %1$s 사용 가능, 현재 최대 %2$s 추가 가능, %3$s 예약 유지. 비공개 사본은 선택한 파일 크기와 비슷한 공간을 사용합니다.</string>
+    <string name="import_storage_preflight_unavailable">가져오기 불가: %1$s 사용 가능, 여유 공간이 %2$s 예약 공간보다 커야 합니다.</string>
     <string name="import_succeeded">모델을 가져왔습니다</string>
     <string name="model_id_clipboard_label">AI 텍스트 모델 ID</string>
     <string name="model_id_copied">모델 ID를 복사했습니다</string>

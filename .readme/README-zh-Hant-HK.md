@@ -50,7 +50,7 @@ On-Device AI (裝置端 AI) 係 AutoJs6 嘅官方裝置端 AI 文本生成插件
 - 透過 Android 系統檔案選擇器匯入 `.litertlm` 模型套件, 並將驗證後的副本儲存到應用程式私人儲存空間.
 - 使用純文字 system, user 和 assistant 歷史建立本地生成請求.
 - 透過 credit 背壓按序傳送文字 chunk, 並只發佈一個完成, 錯誤或取消終態.
-- 列出目前已匯入模型, 並在匯入替換後為主程式提供新的模型清單 generation.
+- 列出並選擇已匯入模型, 刪除未選取模型, 並喺管理介面一鍵回收未引用模型檔案.
 - 完全在裝置端以 CPU backend 執行, 不下載模型, 不呼叫遠端推理服務.
 
 ******
@@ -114,7 +114,7 @@ required host build: 5270
 
 - 模型匯入硬上限為 8 GiB, 且匯入後至少保留 256 MiB 可用空間.
 - 應用程式級單匯入協調器使 Activity 重建不會中斷正在進行的匯入. Fsync pending journal 支援冷啟動復原並清理 stale `.incoming`, `.current` 和 `.pending` 暫存檔案. 復原只會刪除本次嘗試新建且從未由 current metadata 發佈的 destination, 已發佈或 current 模型及歷史 hash 代次均會保留.
-- 為避免與獨立 `:provider` 進程發生競態, 替換匯入後仍會保留先前以 SHA-256 hash 命名的模型代次. 這些檔案會繼續佔用應用程式私人儲存空間.
+- 為避免與獨立 `:provider` 進程發生競態, 匯入時唔會自動刪除先前以 SHA-256 hash 命名嘅模型代次. 模型管理介面可刪除未選取嘅 catalog 模型, 並回收唔再由 catalog 引用嘅 hash 命名檔案.
 - 同一進程最多有一個活動生成工作階段. 請求描述符會在非同步處理前複製並按協議配額關閉.
 - Provider 宣告的內容上限為 256 KiB, 輸出上限為 64 KiB, 請求和模型亦可施加更低上限.
 - 串流輸出使用有限 credit 和有界 chunk, 防止無限制緩衝或無背壓回呼.

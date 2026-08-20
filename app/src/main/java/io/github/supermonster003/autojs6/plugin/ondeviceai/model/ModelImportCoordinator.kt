@@ -31,11 +31,28 @@ internal sealed interface ModelDeletionState {
     data class Failed(val operationId: Long, val modelId: String) : ModelDeletionState
 }
 
+internal sealed interface ModelStorageCleanupState {
+    data object Idle : ModelStorageCleanupState
+    data class Cleaning(val operationId: Long) : ModelStorageCleanupState
+    data class Succeeded(
+        val operationId: Long,
+        val removedFileCount: Int,
+        val releasedBytes: Long,
+    ) : ModelStorageCleanupState {
+        init {
+            require(removedFileCount >= 0) { "Removed model file count cannot be negative" }
+            require(releasedBytes >= 0L) { "Released model storage cannot be negative" }
+        }
+    }
+    data class Failed(val operationId: Long) : ModelStorageCleanupState
+}
+
 internal data class ModelManagerState(
     val importState: ModelImportState<ImportedModel>,
     val snapshot: ModelManagerSnapshot?,
     val selection: ModelSelectionState,
     val deletion: ModelDeletionState = ModelDeletionState.Idle,
+    val storageCleanup: ModelStorageCleanupState = ModelStorageCleanupState.Idle,
 )
 
 /**
@@ -62,11 +79,14 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     private var activeImport: ActiveImport? = null
     private var activeSelection: ActiveSelection? = null
     private var activeDeletion: ActiveDeletion? = null
+    private var activeStorageCleanup: ActiveStorageCleanup? = null
     private var nextSelectionOperationId = 1L
     private var nextDeletionOperationId = 1L
+    private var nextStorageCleanupOperationId = 1L
     private var visibleManagerSnapshot: ModelManagerSnapshot? = null
     private var selectionState: ModelSelectionState = ModelSelectionState.Idle
     private var deletionState: ModelDeletionState = ModelDeletionState.Idle
+    private var storageCleanupState: ModelStorageCleanupState = ModelStorageCleanupState.Idle
     private var catalogMutationAvailable = false
     val processSessionToken: String = UUID.randomUUID().toString()
     private val executor = Executors.newSingleThreadExecutor { runnable ->
@@ -147,6 +167,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             snapshot = visibleManagerSnapshot,
             selection = selectionState,
             deletion = deletionState,
+            storageCleanup = storageCleanupState,
         )
     }
 
@@ -156,10 +177,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
      */
     fun beginSelection(modelId: String): Boolean {
         val active = synchronized(lifecycleLock) {
-            if (
-                !catalogMutationAvailable || activeImport != null || activeSelection != null ||
-                activeDeletion != null
-            ) return false
+            if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
             val snapshot = visibleManagerSnapshot ?: return false
             if (snapshot.models.none { it.modelId == modelId }) return false
             if (snapshot.selectedModelId == modelId) return false
@@ -170,6 +188,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 activeSelection = operation
                 selectionState = ModelSelectionState.Selecting(operationId, modelId)
                 deletionState = ModelDeletionState.Idle
+                storageCleanupState = ModelStorageCleanupState.Idle
             }
         }
         publishState()
@@ -191,10 +210,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     /** Deletes only an unselected model from the last coherent manager snapshot. */
     fun beginDeletion(modelId: String): Boolean {
         val active = synchronized(lifecycleLock) {
-            if (
-                !catalogMutationAvailable || activeImport != null || activeSelection != null ||
-                activeDeletion != null
-            ) return false
+            if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
             val snapshot = visibleManagerSnapshot ?: return false
             if (snapshot.models.none { it.modelId == modelId }) return false
             if (snapshot.selectedModelId == modelId) return false
@@ -205,6 +221,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 activeDeletion = operation
                 selectionState = ModelSelectionState.Idle
                 deletionState = ModelDeletionState.Deleting(operationId, modelId)
+                storageCleanupState = ModelStorageCleanupState.Idle
             }
         }
         publishState()
@@ -223,12 +240,42 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         return true
     }
 
+    /** Reclaims only catalog-unreferenced hash model files on the serial manager worker. */
+    fun beginStorageCleanup(): Boolean {
+        val active = synchronized(lifecycleLock) {
+            if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
+            if (visibleManagerSnapshot == null) return false
+            check(nextStorageCleanupOperationId > 0L) {
+                "Model storage cleanup operation IDs are exhausted"
+            }
+            val operationId = nextStorageCleanupOperationId
+            nextStorageCleanupOperationId = if (operationId == Long.MAX_VALUE) 0L else operationId + 1L
+            ActiveStorageCleanup(operationId).also { operation ->
+                activeStorageCleanup = operation
+                selectionState = ModelSelectionState.Idle
+                deletionState = ModelDeletionState.Idle
+                storageCleanupState = ModelStorageCleanupState.Cleaning(operationId)
+            }
+        }
+        publishState()
+        try {
+            executor.execute { executeStorageCleanup(active) }
+        } catch (error: RejectedExecutionException) {
+            logStorageCleanupFailure(active, error)
+            synchronized(lifecycleLock) {
+                if (activeStorageCleanup === active) {
+                    activeStorageCleanup = null
+                    storageCleanupState = ModelStorageCleanupState.Failed(active.operationId)
+                }
+            }
+            publishState()
+        }
+        return true
+    }
+
     fun beginImport(uri: Uri, grantedFlags: Int): Boolean {
         val active = synchronized(lifecycleLock) {
-            if (
-                !catalogMutationAvailable || activeImport != null || activeSelection != null ||
-                activeDeletion != null
-            ) return false
+            if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
             val operationId = stateMachine.begin() ?: return false
             val running = stateMachine.snapshot() as ModelImportState.Running<ImportedModel>
             val persistedReadPermission = persistReadPermission(uri, grantedFlags)
@@ -248,6 +295,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             activeImport = operation
             selectionState = ModelSelectionState.Idle
             deletionState = ModelDeletionState.Idle
+            storageCleanupState = ModelStorageCleanupState.Idle
             operation
         }
         publishState()
@@ -457,6 +505,55 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         publishState()
     }
 
+    private fun executeStorageCleanup(active: ActiveStorageCleanup) {
+        val result = runCatching { repository.cleanUnreferencedModelFiles() }
+        result.exceptionOrNull()?.let { error -> logStorageCleanupFailure(active, error) }
+        val reread = if (result.isFailure) runCatching { repository.managerSnapshot() } else null
+        reread?.exceptionOrNull()?.let { error -> logStorageCleanupFailure(active, error) }
+        synchronized(lifecycleLock) {
+            if (activeStorageCleanup !== active) return
+            result.fold(
+                onSuccess = { cleanup ->
+                    if (stateMachine.replaceCurrent(cleanup.snapshot.selectedModel)) {
+                        visibleManagerSnapshot = cleanup.snapshot
+                        catalogMutationAvailable = true
+                        storageCleanupState = ModelStorageCleanupState.Succeeded(
+                            operationId = active.operationId,
+                            removedFileCount = cleanup.removedFileCount,
+                            releasedBytes = cleanup.releasedBytes,
+                        )
+                    } else {
+                        visibleManagerSnapshot = null
+                        catalogMutationAvailable = false
+                        stateMachine.makeUnavailable()
+                        storageCleanupState = ModelStorageCleanupState.Failed(active.operationId)
+                    }
+                },
+                onFailure = {
+                    val refreshed = reread?.getOrNull()
+                    if (refreshed != null && stateMachine.replaceCurrent(refreshed.selectedModel)) {
+                        visibleManagerSnapshot = refreshed
+                        catalogMutationAvailable = true
+                    } else {
+                        visibleManagerSnapshot = null
+                        catalogMutationAvailable = false
+                        check(stateMachine.makeUnavailable()) {
+                            "A storage cleanup refresh can fail closed only while no import is active"
+                        }
+                    }
+                    storageCleanupState = ModelStorageCleanupState.Failed(active.operationId)
+                },
+            )
+            activeStorageCleanup = null
+        }
+        publishState()
+    }
+
+    /** Must be called only while [lifecycleLock] is held. */
+    private fun hasActiveManagerOperationLocked(): Boolean =
+        activeImport != null || activeSelection != null || activeDeletion != null ||
+            activeStorageCleanup != null
+
     private fun finishActiveImport(active: ActiveImport) {
         synchronized(lifecycleLock) {
             if (activeImport === active) activeImport = null
@@ -488,7 +585,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         }
     }
 
-    /** Publishes one coherent import/catalog/selection/deletion snapshot from one main-thread post. */
+    /** Publishes one coherent manager snapshot from one main-thread post. */
     private fun publishState() {
         if (!publishScheduled.compareAndSet(false, true)) return
         val accepted = mainHandler.post {
@@ -537,6 +634,17 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         }
     }
 
+    private fun logStorageCleanupFailure(active: ActiveStorageCleanup, error: Throwable) {
+        val message =
+            "Model storage cleanup failure: operation=${active.operationId} type=${error.javaClass.name}"
+        val debuggable = applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        if (debuggable) {
+            Log.e(TAG, message, error)
+        } else {
+            Log.e(TAG, message)
+        }
+    }
+
     private data class ActiveSelection(
         val operationId: Long,
         val modelId: String,
@@ -546,6 +654,8 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         val operationId: Long,
         val modelId: String,
     )
+
+    private data class ActiveStorageCleanup(val operationId: Long)
 
     private inner class ActiveImport(
         val operationId: Long,

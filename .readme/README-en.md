@@ -50,7 +50,7 @@ On-Device AI is the official on-device on-device AI plugin for AutoJs6. It runs 
 - Import a `.litertlm` model package through the Android system picker and keep a verified copy in app-private storage.
 - Create local generation requests from plain-text system, user, and assistant history.
 - Deliver text chunks in order with credit backpressure and publish exactly one completed, failed, or cancelled terminal state.
-- List the currently imported model and expose a new model-list generation after replacement.
+- List and select imported models, delete unselected models, and reclaim unreferenced model files from the manager.
 - Run entirely on-device with a CPU backend, without downloading models or calling a remote inference service.
 
 ******
@@ -114,7 +114,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 
 - Model imports have an 8 GiB hard limit and must leave at least 256 MiB of free space.
 - An application-scoped single-import coordinator keeps ongoing work alive across Activity recreation. A fsynced pending journal supports cold-start recovery and cleanup of stale `.incoming`, `.current`, and `.pending` temporary files. Recovery deletes only a destination created by the current attempt and never published through current metadata; published, current, and historical hash generations are retained.
-- To avoid cross-process races with the isolated `:provider` process, replacement imports retain previous model generations named by SHA-256 hash. These files continue to occupy app-private storage.
+- To avoid cross-process races with the isolated `:provider` process, imports do not automatically delete previous SHA-256-named model generations. The model manager can delete unselected catalog models and reclaim hash-named files no longer referenced by the catalog.
 - At most one generation session is active in the process. Request descriptors are duplicated before asynchronous work and closed under protocol quotas.
 - The provider advertises a 256 KiB context ceiling and a 64 KiB output ceiling. Requests and models may impose lower limits.
 - Streaming uses finite credits and bounded chunks to prevent unbounded buffering or callbacks without backpressure.

@@ -50,7 +50,7 @@ On-Device AI es el plugin oficial de generación de texto con IA local para Auto
 - Importar un paquete de modelo `.litertlm` con el selector del sistema Android y guardar una copia verificada en el almacenamiento privado de la aplicación.
 - Crear solicitudes de generación local con historial system, user y assistant en texto sin formato.
 - Entregar chunks de texto en orden con contrapresión por credits y publicar un solo estado terminal completado, fallido o cancelado.
-- Enumerar el modelo importado actualmente y exponer una nueva generation de lista después de reemplazarlo.
+- Enumerar y seleccionar modelos importados, eliminar modelos no seleccionados y recuperar desde el gestor los archivos de modelos sin referencia.
 - Funcionar completamente en el dispositivo con un backend CPU, sin descargar modelos ni llamar a un servicio de inferencia remoto.
 
 ******
@@ -114,7 +114,7 @@ El plugin no solicita permisos de red ni almacenamiento. Lee el modelo solo medi
 
 - La importación de un modelo tiene un límite estricto de 8 GiB y debe dejar al menos 256 MiB libres.
 - Un coordinador de importación única con alcance de aplicación mantiene el trabajo durante la recreación de Activity. Un pending journal sincronizado con fsync permite la recuperación en arranque frío y limpia los archivos temporales stale `.incoming`, `.current` y `.pending`. La recuperación solo elimina un destination creado por el intento actual y nunca publicado mediante current metadata; se conservan las generaciones publicadas, current e históricas con nombre de hash.
-- Para evitar condiciones de carrera entre procesos con el proceso aislado `:provider`, una importación de reemplazo conserva las generaciones anteriores con nombre de hash SHA-256. Estos archivos continúan ocupando almacenamiento privado de la aplicación.
+- Para evitar condiciones de carrera entre procesos con el proceso aislado `:provider`, las importaciones no eliminan automáticamente las generaciones anteriores con nombre de hash SHA-256. El gestor puede eliminar modelos no seleccionados del catálogo y recuperar archivos con nombre de hash que ya no estén referenciados.
 - Solo una sesión de generación puede estar activa en el proceso. Los descriptores se duplican antes del trabajo asíncrono y se cierran según las cuotas del protocolo.
 - El provider anuncia un máximo de contexto de 256 KiB y un máximo de salida de 64 KiB. Las solicitudes y modelos pueden imponer límites menores.
 - El streaming usa credits finitos y chunks limitados para evitar buffers ilimitados o callbacks sin contrapresión.

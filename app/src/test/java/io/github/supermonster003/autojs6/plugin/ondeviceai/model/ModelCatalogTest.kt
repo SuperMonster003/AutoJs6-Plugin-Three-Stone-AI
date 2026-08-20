@@ -173,6 +173,30 @@ class ModelCatalogTest {
     }
 
     @Test
+    fun unreferencedCleanupTargetsOnlyStrictManagedHashFilesOutsideTheCatalog() {
+        val document = ModelCatalogDocument(4L, entryA.modelId, listOf(entryA))
+        val unmanagedDigest = "33".repeat(32)
+        val unreferenced = "model-$unmanagedDigest.litertlm"
+
+        val candidates = ModelCatalogPolicy.unreferencedModelFileNames(
+            document,
+            listOf(
+                entryA.fileName,
+                unreferenced,
+                unreferenced,
+                "model-${unmanagedDigest.uppercase()}.litertlm",
+                "model-$unmanagedDigest.tmp",
+                ".incoming-00000000-0000-4000-8000-000000000000.tmp",
+                "catalog.json",
+            ),
+        )
+
+        assertEquals(listOf(unreferenced), candidates)
+        assertEquals(4L, document.revision)
+        assertEquals(listOf(entryA), document.entries)
+    }
+
+    @Test
     fun prefixCollisionFailsClosed() {
         val collisionDigest = digestA.take(32) + "33".repeat(16)
         assertThrows(IllegalArgumentException::class.java) {

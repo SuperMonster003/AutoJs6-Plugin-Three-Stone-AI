@@ -26,6 +26,7 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportStag
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelSelectionState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelStorageCleanupState
 
 class ModelManagerActivity : Activity() {
     private lateinit var importCoordinator: ModelImportCoordinator
@@ -35,12 +36,14 @@ class ModelManagerActivity : Activity() {
     private lateinit var cancelImportButton: Button
     private lateinit var progress: ProgressBar
     private lateinit var catalogSummary: TextView
+    private lateinit var cleanupStorageButton: Button
     private lateinit var catalogRows: LinearLayout
     private var copyableModelId: String? = null
     private var cancellableOperationId: Long? = null
     private var lastNotifiedImportOperationId = 0L
     private var lastNotifiedSelectionOperationId = 0L
     private var lastNotifiedDeletionOperationId = 0L
+    private var lastNotifiedStorageCleanupOperationId = 0L
     private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
     private var renderedManagerView: ModelManagerViewState? = null
 
@@ -55,6 +58,8 @@ class ModelManagerActivity : Activity() {
                 restored.getLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID)
             lastNotifiedDeletionOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_DELETION_OPERATION_ID)
+            lastNotifiedStorageCleanupOperationId =
+                restored.getLong(STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID)
         }
         setContentView(createContentView())
     }
@@ -73,6 +78,10 @@ class ModelManagerActivity : Activity() {
         outState.putLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID, lastNotifiedImportOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID, lastNotifiedSelectionOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_DELETION_OPERATION_ID, lastNotifiedDeletionOperationId)
+        outState.putLong(
+            STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID,
+            lastNotifiedStorageCleanupOperationId,
+        )
         outState.putString(STATE_PROCESS_SESSION_TOKEN, importCoordinator.processSessionToken)
         super.onSaveInstanceState(outState)
     }
@@ -135,6 +144,12 @@ class ModelManagerActivity : Activity() {
                 setPadding(0, dp(24), 0, dp(8))
             }
             addView(catalogSummary, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            cleanupStorageButton = Button(context).apply {
+                text = getString(R.string.button_cleanup_storage)
+                isEnabled = false
+                setOnClickListener { cleanUnreferencedStorage() }
+            }
+            addView(cleanupStorageButton)
             catalogRows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
             addView(catalogRows, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
@@ -237,12 +252,43 @@ class ModelManagerActivity : Activity() {
             is ModelDeletionState.Deleting,
             -> Unit
         }
+        when (val cleanup = state.storageCleanup) {
+            is ModelStorageCleanupState.Succeeded -> notifyStorageCleanupOnce(
+                operationId = cleanup.operationId,
+                message = if (cleanup.removedFileCount == 0) {
+                    getString(R.string.model_cleanup_empty)
+                } else {
+                    getString(
+                        R.string.model_cleanup_succeeded,
+                        cleanup.removedFileCount,
+                        Formatter.formatFileSize(this, cleanup.releasedBytes),
+                    )
+                },
+                duration = Toast.LENGTH_SHORT,
+            )
+            is ModelStorageCleanupState.Failed -> notifyStorageCleanupOnce(
+                operationId = cleanup.operationId,
+                message = getString(R.string.model_cleanup_failed),
+                duration = Toast.LENGTH_LONG,
+            )
+            ModelStorageCleanupState.Idle,
+            is ModelStorageCleanupState.Cleaning,
+            -> Unit
+        }
     }
 
     private fun renderManagerCatalog(state: ModelManagerState) {
         if (!::catalogRows.isInitialized) return
         val view = ModelManagerPresentation.managerView(state)
         if (view.catalogMutationBusy) importButton.isEnabled = false
+        cleanupStorageButton.isEnabled = view.cleanupEnabled
+        cleanupStorageButton.text = getString(
+            if (view.cleanupInProgress) {
+                R.string.model_cleanup_in_progress
+            } else {
+                R.string.button_cleanup_storage
+            },
+        )
         if (view == renderedManagerView) return
         renderedManagerView = view
         catalogSummary.text = when (view.availability) {
@@ -333,6 +379,11 @@ class ModelManagerActivity : Activity() {
         if (!accepted && after.snapshot?.selectedModelId == modelId) {
             Toast.makeText(this, R.string.model_delete_selected_blocked, Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun cleanUnreferencedStorage() {
+        importCoordinator.beginStorageCleanup()
+        renderManagerState(importCoordinator.managerState())
     }
 
     private fun showCurrent(model: ImportedModel?) {
@@ -447,11 +498,19 @@ class ModelManagerActivity : Activity() {
         Toast.makeText(this, message, duration).show()
     }
 
+    private fun notifyStorageCleanupOnce(operationId: Long, message: CharSequence, duration: Int) {
+        if (operationId <= lastNotifiedStorageCleanupOperationId) return
+        lastNotifiedStorageCleanupOperationId = operationId
+        Toast.makeText(this, message, duration).show()
+    }
+
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
         const val STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID = "lastNotifiedImportOperationId"
         const val STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID = "lastNotifiedSelectionOperationId"
         const val STATE_LAST_NOTIFIED_DELETION_OPERATION_ID = "lastNotifiedDeletionOperationId"
+        const val STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID =
+            "lastNotifiedStorageCleanupOperationId"
         const val STATE_PROCESS_SESSION_TOKEN = "processSessionToken"
         const val PROGRESS_MAX = 10_000
     }

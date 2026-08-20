@@ -3,6 +3,7 @@
     <string name="app_name">裝置端 AI</string>
     <string name="button_copy_model_id">複製模型 ID</string>
     <string name="button_cancel_import">取消匯入</string>
+    <string name="button_cleanup_storage">清理未引用檔案</string>
     <string name="button_import_model">匯入 .litertlm 模型</string>
     <string name="button_delete_model">刪除模型</string>
     <string name="import_cancelled">模型匯入已取消</string>
@@ -27,6 +28,10 @@
     <string name="model_catalog_unavailable">模型目錄無法使用</string>
     <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
     <string name="model_catalog_summary">已匯入模型: %1$d - 總儲存空間用量: %2$s</string>
+    <string name="model_cleanup_empty">未發現未引用的模型檔案</string>
+    <string name="model_cleanup_failed">儲存空間清理失敗</string>
+    <string name="model_cleanup_in_progress">正在清理未引用檔案…</string>
+    <string name="model_cleanup_succeeded">儲存空間清理完成: 已刪除 %1$d 個檔案, 釋放 %2$s</string>
     <string name="model_none">尚未設定模型</string>
     <string name="model_delete_confirm_title">刪除模型?</string>
     <string name="model_delete_confirm_message">確定刪除模型「%1$s」嗎? 此操作無法復原.</string>

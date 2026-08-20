@@ -132,6 +132,20 @@ internal object ModelCatalogPolicy {
         return ModelCatalogDeletion(updated, target)
     }
 
+    /** Selects only managed hash files that are not referenced by the authoritative catalog. */
+    fun unreferencedModelFileNames(
+        document: ModelCatalogDocument,
+        fileNames: Collection<String>,
+    ): List<String> {
+        val referenced = normalize(document).entries.mapTo(hashSetOf(), ModelCatalogEntry::fileName)
+        return fileNames.asSequence()
+            .distinct()
+            .filter(FILE_NAME::matches)
+            .filterNot(referenced::contains)
+            .sorted()
+            .toList()
+    }
+
     /** Changes only when fields exposed by model listing change. */
     fun listingGeneration(
         document: ModelCatalogDocument,

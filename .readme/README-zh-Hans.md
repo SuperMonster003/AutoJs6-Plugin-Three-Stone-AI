@@ -50,7 +50,7 @@ On-Device AI (设备端 AI) 是 AutoJs6 的官方设备端 AI 文本生成插件
 - 通过 Android 系统文件选择器导入 `.litertlm` 模型包, 并将验证后的副本保存到应用私有存储.
 - 使用纯文本 system, user 和 assistant 历史创建本地生成请求.
 - 通过 credit 背压按序传送文本 chunk, 并只发布一个完成, 错误或取消终态.
-- 列出当前已导入模型, 并在导入替换后为宿主提供新的模型列表 generation.
+- 列出并选择已导入模型, 删除未选中模型, 并在管理界面一键回收未引用模型文件.
 - 完全在设备端以 CPU backend 运行, 不下载模型, 不调用远程推理服务.
 
 ******
@@ -114,7 +114,7 @@ required host build: 5270
 
 - 模型导入硬上限为 8 GiB, 且导入后至少保留 256 MiB 可用空间.
 - 应用级单导入协调器使 Activity 重建不会中断正在进行的导入. Fsync pending journal 支持冷启动恢复并清理 stale `.incoming`, `.current` 和 `.pending` 临时文件. 恢复只会删除本次尝试新建且从未由 current metadata 发布的 destination, 已发布或 current 模型及历史 hash 代际均会保留.
-- 为避免与独立 `:provider` 进程发生竞态, 替换导入后仍会保留先前以 SHA-256 hash 命名的模型代际. 这些文件会继续占用应用私有存储.
+- 为避免与独立 `:provider` 进程发生竞态, 导入时不会自动删除先前以 SHA-256 hash 命名的模型代际. 模型管理界面可删除未选中的 catalog 模型, 并回收不再由 catalog 引用的 hash 命名文件.
 - 同一进程最多有一个活动生成会话. 请求描述符会在异步处理前复制并按协议配额关闭.
 - Provider 声明的上下文上限为 256 KiB, 输出上限为 64 KiB, 请求和模型还可施加更低上限.
 - 流式输出使用有限 credit 和有界 chunk, 防止无限制缓冲或无背压回调.

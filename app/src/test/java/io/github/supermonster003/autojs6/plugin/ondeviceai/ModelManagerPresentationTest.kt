@@ -11,6 +11,7 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportStat
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerSnapshot
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelSelectionState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelStorageCleanupState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -95,6 +96,8 @@ class ModelManagerPresentationTest {
         assertTrue(ready.rows.isEmpty())
         assertEquals(0L, ready.totalSizeBytes)
         assertFalse(ready.catalogMutationBusy)
+        assertTrue(ready.cleanupEnabled)
+        assertFalse(ready.cleanupInProgress)
     }
 
     @Test
@@ -120,6 +123,7 @@ class ModelManagerPresentationTest {
         assertTrue(view.rows.all { it.deletionEnabled })
         assertEquals(21L, view.totalSizeBytes)
         assertFalse(view.catalogMutationBusy)
+        assertTrue(view.cleanupEnabled)
     }
 
     @Test
@@ -140,6 +144,7 @@ class ModelManagerPresentationTest {
         assertTrue(view.rows.none { it.selectionEnabled })
         assertTrue(view.rows.none { it.deletionEnabled })
         assertTrue(view.catalogMutationBusy)
+        assertFalse(view.cleanupEnabled)
 
         val importing = ModelManagerPresentation.managerView(
             ModelManagerState(
@@ -151,6 +156,7 @@ class ModelManagerPresentationTest {
         assertTrue(importing.rows.none { it.selectionEnabled })
         assertTrue(importing.rows.none { it.deletionEnabled })
         assertFalse(importing.catalogMutationBusy)
+        assertFalse(importing.cleanupEnabled)
     }
 
     @Test
@@ -172,6 +178,30 @@ class ModelManagerPresentationTest {
         assertTrue(view.rows.none { it.selectionEnabled })
         assertTrue(view.rows.none { it.deletionEnabled })
         assertTrue(view.catalogMutationBusy)
+        assertFalse(view.cleanupEnabled)
+    }
+
+    @Test
+    fun storageCleanupDisablesAllManagerMutationsWithoutChangingSelection() {
+        val entryA = entry("11", "A", 8L)
+        val entryB = entry("22", "B", 13L)
+        val snapshot = snapshot(entryA.modelId, listOf(entryA, entryB))
+
+        val view = ModelManagerPresentation.managerView(
+            ModelManagerState(
+                importState = ModelImportState.Ready(snapshot.selectedModel),
+                snapshot = snapshot,
+                selection = ModelSelectionState.Idle,
+                storageCleanup = ModelStorageCleanupState.Cleaning(10L),
+            ),
+        )
+
+        assertEquals(listOf(true, false), view.rows.map { it.selected })
+        assertTrue(view.rows.none { it.selectionEnabled })
+        assertTrue(view.rows.none { it.deletionEnabled })
+        assertTrue(view.catalogMutationBusy)
+        assertFalse(view.cleanupEnabled)
+        assertTrue(view.cleanupInProgress)
     }
 
     private fun snapshot(

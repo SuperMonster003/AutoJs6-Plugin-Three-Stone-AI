@@ -4,6 +4,7 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDeletionSt
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelSelectionState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelStorageCleanupState
 
 internal data class ModelManagerRow(
     val modelId: String,
@@ -25,6 +26,8 @@ internal data class ModelManagerViewState(
     val totalSizeBytes: Long,
     val availability: ModelCatalogAvailability,
     val catalogMutationBusy: Boolean,
+    val cleanupEnabled: Boolean,
+    val cleanupInProgress: Boolean,
 )
 
 internal object ModelManagerPresentation {
@@ -52,7 +55,8 @@ internal object ModelManagerPresentation {
         }
         val selectionBusy = state.selection is ModelSelectionState.Selecting
         val deletionBusy = state.deletion is ModelDeletionState.Deleting
-        val catalogMutationBusy = selectionBusy || deletionBusy
+        val cleanupBusy = state.storageCleanup is ModelStorageCleanupState.Cleaning
+        val catalogMutationBusy = selectionBusy || deletionBusy || cleanupBusy
         val mutationEnabled = snapshot != null && importAllowsMutation && !catalogMutationBusy && !importInFlight
         val selectedModelId = (state.selection as? ModelSelectionState.Selecting)?.modelId
             ?: snapshot?.selectedModelId
@@ -74,6 +78,8 @@ internal object ModelManagerPresentation {
                 else -> ModelCatalogAvailability.UNAVAILABLE
             },
             catalogMutationBusy = catalogMutationBusy,
+            cleanupEnabled = mutationEnabled,
+            cleanupInProgress = cleanupBusy,
         )
     }
 }

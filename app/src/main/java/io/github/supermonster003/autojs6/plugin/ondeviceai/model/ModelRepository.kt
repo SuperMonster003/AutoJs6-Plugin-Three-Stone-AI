@@ -30,6 +30,12 @@ internal data class ModelDeletionResult(
     val snapshot: ModelManagerSnapshot,
 )
 
+internal data class ModelStorageCleanupResult(
+    val removedFileCount: Int,
+    val releasedBytes: Long,
+    val snapshot: ModelManagerSnapshot,
+)
+
 /** A defensive, read-only view of every managed model and the atomically selected model ID. */
 internal class ModelManagerSnapshot private constructor(
     models: List<ImportedModel>,
@@ -137,6 +143,40 @@ internal class ModelRepository(context: Context) {
         )
     }
 
+    /** Deletes only hash-named model files that the authoritative catalog does not reference. */
+    @Synchronized
+    fun cleanUnreferencedModelFiles(): ModelStorageCleanupResult {
+        val catalog = readAuthoritativeManagerCatalog()
+        val directoryEntries = directory.listFiles()
+            ?: throw IllegalStateException("Private model storage cannot be listed")
+        require(directoryEntries.size <= MAXIMUM_MODEL_DIRECTORY_ENTRIES) {
+            "Private model storage contains too many entries for bounded cleanup"
+        }
+        val entriesByName = directoryEntries.associateBy(File::getName)
+        val candidates = ModelCatalogPolicy.unreferencedModelFileNames(
+            document = catalog,
+            fileNames = entriesByName.keys,
+        ).map { name -> checkNotNull(entriesByName[name]) }
+        candidates.forEach(::requireSafeRegularFile)
+        val releasedBytes = candidates.fold(0L) { total, candidate ->
+            Math.addExact(total, candidate.length())
+        }
+
+        candidates.forEach { candidate ->
+            requireSafeRegularFile(candidate)
+            require(candidate.delete() || !candidate.exists()) {
+                "Unreferenced model file cannot be deleted"
+            }
+        }
+        if (candidates.isNotEmpty()) syncDirectory()
+        check(candidates.none(File::exists)) { "Cleaned model file is still present" }
+        return ModelStorageCleanupResult(
+            removedFileCount = candidates.size,
+            releasedBytes = releasedBytes,
+            snapshot = catalog.toManagerSnapshot(),
+        )
+    }
+
     /**
      * Called exactly once by the process-local model-manager coordinator before it accepts imports.
      * The provider process never invokes recovery, so an active provider cannot clean old generations.
@@ -145,7 +185,7 @@ internal class ModelRepository(context: Context) {
     fun recoverInterruptedImportFromManagerColdStart() {
         ensureDirectory()
         val entries = directory.listFiles().orEmpty()
-        require(entries.size <= MAXIMUM_RECOVERY_DIRECTORY_ENTRIES) {
+        require(entries.size <= MAXIMUM_MODEL_DIRECTORY_ENTRIES) {
             "Private model storage contains too many entries for bounded recovery"
         }
         var directoryChanged = false
@@ -589,7 +629,7 @@ internal class ModelRepository(context: Context) {
         const val CATALOG_FILE_NAME = "catalog.json"
         const val LEGACY_METADATA_FILE_NAME = "current.json"
         const val PENDING_MARKER_FILE_NAME = ".pending-model.json"
-        const val MAXIMUM_RECOVERY_DIRECTORY_ENTRIES = 16_384
+        const val MAXIMUM_MODEL_DIRECTORY_ENTRIES = 16_384
         private const val TRANSACTION_ID_PATTERN =
             "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
         val RECOVERABLE_TEMP_FILE = Regex("^\\.(?:incoming|current|catalog|pending)-$TRANSACTION_ID_PATTERN\\.tmp$")

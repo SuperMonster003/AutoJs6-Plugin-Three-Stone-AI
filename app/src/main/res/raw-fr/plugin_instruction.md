@@ -1,8 +1,32 @@
-# Génération de texte IA AutoJs6
+# IA locale AutoJs6
 
 Ce plugin importe un paquet de modèle `.litertlm` local via Android Storage Access Framework (SAF), le copie dans le stockage privé de cette application et exécute une génération LiteRT-LM uniquement sur CPU avec un historique en texte brut et une sortie texte en streaming.
 
 Le plugin exige la build hôte AutoJs6 5270 ou ultérieure et Android API 24 ou ultérieur.
+
+## Démarrage rapide (recommandé)
+
+Avec AutoJs6 build 5276 ou ultérieur, appelez le plugin directement via le module global `ai`. `plugin: true` sélectionne ce plugin ; si un seul modèle est importé, l'ID de modèle peut être omis.
+
+```javascript
+ai.ask("Hello", { plugin: true }).then((text) => {
+    console.log(text);
+});
+```
+
+Énumérez les modèles importés ou épinglez-en un explicitement avec `plugin: { modelId: "..." }` :
+
+```javascript
+ai.models({ plugin: true }).then((models) => {
+    models.forEach((m) => console.log(m.modelId, m.displayName));
+});
+```
+
+`ai.chat` et `ai.stream` acceptent la même option `plugin`. Si le plugin n'est pas installé, désactivé dans le Centre de plugins ou sans modèle importé, la promesse est rejetée avec un code clair : `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND` ou `MODEL_AMBIGUOUS`.
+
+## Avancé : accès Binder brut
+
+Les sections suivantes montrent le chemin protocolaire de bas niveau sans le module `ai`. La plupart des scripts n'en ont pas besoin.
 
 ## Exemple d'utilisation
 

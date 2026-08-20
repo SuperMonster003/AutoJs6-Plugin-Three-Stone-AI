@@ -1,8 +1,32 @@
-# توليد النص بالذكاء الاصطناعي في AutoJs6
+# الذكاء الاصطناعي المحلي في AutoJs6
 
 يستورد هذا الملحق حزمة نموذج `.litertlm` محلية واحدة عبر Android Storage Access Framework (SAF), وينسخها إلى مساحة التطبيق الخاصة, ويشغل توليد LiteRT-LM على CPU فقط مع سجل بنص عادي وإخراج نص عبر streaming.
 
 يتطلب الملحق build 5270 أو أحدث من مضيف AutoJs6 و Android API 24 أو أحدث.
+
+## بداية سريعة (موصى بها)
+
+مع AutoJs6 بنية 5276 او احدث, استدع الاضافة مباشرة عبر الوحدة العامة `ai`. يختار `plugin: true` هذه الاضافة; وعند وجود نموذج واحد مستورد يمكن حذف معرف النموذج.
+
+```javascript
+ai.ask("Hello", { plugin: true }).then((text) => {
+    console.log(text);
+});
+```
+
+عدد النماذج المستوردة او ثبت نموذجا صراحة عبر `plugin: { modelId: "..." }`:
+
+```javascript
+ai.models({ plugin: true }).then((models) => {
+    models.forEach((m) => console.log(m.modelId, m.displayName));
+});
+```
+
+يقبل `ai.chat` و `ai.stream` خيار `plugin` نفسه. عند عدم تثبيت الاضافة او تعطيلها في مركز الاضافات او عدم وجود نموذج, يرفض الوعد برمز خطا واضح مثل `PROVIDER_NOT_FOUND` او `PROVIDER_DISABLED` او `MODEL_NOT_FOUND` او `MODEL_AMBIGUOUS`.
+
+## متقدم: الوصول المباشر الى Binder
+
+تعرض الاقسام التالية مسار البروتوكول منخفض المستوى دون وحدة `ai`. معظم السكربتات لا تحتاجه.
 
 ## مثال الاستخدام
 

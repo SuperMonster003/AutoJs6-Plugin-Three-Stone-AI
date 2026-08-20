@@ -1,8 +1,32 @@
-# AutoJs6 AI 텍스트 생성
+# AutoJs6 온디바이스 AI
 
 이 플러그인은 Android Storage Access Framework (SAF)로 로컬 `.litertlm` 모델 패키지를 가져와 앱 전용 저장소에 복사합니다. CPU-only LiteRT-LM으로 일반 텍스트 기록을 처리하고 텍스트를 스트리밍 출력합니다.
 
 AutoJs6 호스트 build 5270 이상과 Android API 24 이상이 필요합니다.
+
+## 빠른 시작 (권장)
+
+AutoJs6 빌드 5276 이상에서는 전역 `ai` 모듈을 통해 이 플러그인을 직접 호출할 수 있습니다. `plugin: true`로 이 플러그인을 선택하며, 모델이 하나만 있으면 모델 ID를 생략할 수 있습니다.
+
+```javascript
+ai.ask("Hello", { plugin: true }).then((text) => {
+    console.log(text);
+});
+```
+
+가져온 모델을 열거하거나 `plugin: { modelId: "..." }`로 명시적으로 고정할 수 있습니다:
+
+```javascript
+ai.models({ plugin: true }).then((models) => {
+    models.forEach((m) => console.log(m.modelId, m.displayName));
+});
+```
+
+`ai.chat`과 `ai.stream`도 동일한 `plugin` 옵션을 받습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 Promise는 `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND`, `MODEL_AMBIGUOUS` 같은 명확한 오류 코드로 거부됩니다.
+
+## 고급: 원시 Binder 접근
+
+다음 섹션은 `ai` 모듈을 거치지 않는 저수준 프로토콜 경로를 보여줍니다. 대부분의 스크립트에는 필요하지 않습니다.
 
 ## 사용 예제
 

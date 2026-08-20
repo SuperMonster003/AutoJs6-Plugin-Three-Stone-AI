@@ -1,8 +1,32 @@
-# AutoJs6 AI 文本生成
+# AutoJs6 设备端 AI
 
 此插件通过 Android Storage Access Framework (SAF) 导入一个本地 `.litertlm` 模型包, 将其复制到应用私有存储, 并使用 CPU-only LiteRT-LM 根据纯文本历史生成流式纯文本.
 
 插件需要 AutoJs6 宿主构建版本 5270 或更高版本, 以及 Android API 24 或更高版本.
+
+## 快速开始 (推荐)
+
+在 AutoJs6 构建 5276 及以上版本中, 可直接通过全局 `ai` 模块调用本插件. `plugin: true` 即选择本插件; 只导入一个模型时可省略模型 ID.
+
+```javascript
+ai.ask("Hello", { plugin: true }).then((text) => {
+    console.log(text);
+});
+```
+
+枚举已导入模型, 或通过 `plugin: { modelId: "..." }` 显式固定模型:
+
+```javascript
+ai.models({ plugin: true }).then((models) => {
+    models.forEach((m) => console.log(m.modelId, m.displayName));
+});
+```
+
+`ai.chat` 与 `ai.stream` 接受相同的 `plugin` 选项. 插件未安装, 未在插件中心启用或未导入模型时, Promise 会以明确的错误码拒绝, 如 `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND` 或 `MODEL_AMBIGUOUS`.
+
+## 高级: 原始 Binder 访问
+
+以下章节展示不经过 `ai` 模块的底层协议路径. 绝大多数脚本无需使用.
 
 ## 使用示例
 

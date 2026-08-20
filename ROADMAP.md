@@ -28,7 +28,7 @@
 
 ### 品牌与文档 (v1.1.0)
 
-- [ ] 插件品牌与运行时标识统一为 On-Device AI (设备端 AI): 应用名, 包名, 组件类, 发现 action, plugin/provider/engine ID, 协议 API, 构建产物及文档全部同步.
+- [x] 插件品牌与运行时标识统一为 On-Device AI (设备端 AI): 应用名, 包名, 组件类, 发现 action, plugin/provider/engine ID, 协议 API, 构建产物及文档全部同步.
 - [x] 插件说明改为 "快速开始 (ai 模块) + 高级 (原始 Binder)" 双层结构, 10 语言同步.
 - [x] README/CHANGELOG 与宿主文档同步更新, 移除 "实验性" 表述.
 

@@ -40,7 +40,7 @@
 - [x] 存储回收: 清理历史保留的旧模型代际 (替换导入后遗留的 hash 命名文件), 提供 "一键清理未引用文件" 操作.
 - [x] 模型重命名: 允许修改 displayName 并同步到 `listModels` 与模型管理界面 (modelId 保持不变).
 - [x] 导入前预检: 打开系统选择器前检查可用空间, 并在界面上显示预计占用, 避免复制到一半才失败.
-- [ ] 生成参数透传: 支持 temperature / topK / topP / maxTokens 等基础采样参数, 从 `ai.ask` options 一路传到 LiteRT-LM Engine.
+- [x] 生成参数透传: 支持 temperature / topK / topP / maxTokens 等基础采样参数, 从 `ai.ask` options 一路传到 LiteRT-LM Engine.
 
 ## 中期 (v1.3+)
 

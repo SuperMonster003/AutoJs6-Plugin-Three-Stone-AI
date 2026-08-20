@@ -17,7 +17,7 @@
 
 ###### 2026/08/08
 
-* `機能` Plugin ID と engine が `ai-text-generation`, provider ID が `autojs6.local.text`, variant が `default` の端末内 AI Text Generation プロトコル V1 provider
+* `機能` Plugin ID と engine が `on-device-ai`, provider ID が `autojs6.on-device-ai`, variant が `default` の端末内 On-Device AI プロトコル V1 provider
 * `機能` System, user, assistant 履歴と credit 制御ストリーミングに対応する CPU-only LiteRT-LM プレーンテキスト生成
 * `機能` 8 GiB 上限, 空き容量予約, SHA-256, fsync, 原子的な有効化を備えた `.litertlm` のアプリ専用領域への SAF インポート
 * `機能` 単一アクティブセッション, 制限付き I/O, descriptor quota, キャンセル, timeout, 単一終端状態, 同一署名 AutoJs6 呼び出し元検証

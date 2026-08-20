@@ -17,7 +17,7 @@
 
 ###### 2026/08/08
 
-* `Функция` Локальный provider протокола AI Text Generation V1 с ID и движком `ai-text-generation`, provider ID `autojs6.local.text` и вариантом `default`
+* `Функция` Локальный provider протокола On-Device AI V1 с ID и движком `on-device-ai`, provider ID `autojs6.on-device-ai` и вариантом `default`
 * `Функция` Генерация обычного текста LiteRT-LM только на CPU с историей system, user и assistant и потоком под управлением credits
 * `Функция` Импорт `.litertlm` через SAF в закрытое хранилище с пределом 8 GiB, резервом места, SHA-256, fsync и атомарной активацией
 * `Функция` Один активный сеанс, ограниченный I/O, квоты дескрипторов, отмена, timeout, одно конечное состояние и проверка вызывающего AutoJs6 с той же подписью

@@ -8,7 +8,7 @@
 
 ###### 2026/08/20
 
-* `新增` 外掛名稱調整為 On-Device AI (裝置端 AI), 明確定位為 AutoJs6 官方裝置端 AI 外掛
+* `新增` 外掛品牌與執行階段識別統一為 On-Device AI (裝置端 AI), 同步應用程式名稱, 套件名稱, 元件名稱, 探索識別, 協定 API, 建置產物及文件
 * `新增` 適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 的 `plugin: true` 簡寫選擇器及 `ai.models` 模型列舉
 * `優化` 更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致
 * `優化` 重寫 ROADMAP 為可逐項勾選的功能路線圖
@@ -17,7 +17,7 @@
 
 ###### 2026/08/08
 
-* `新增` AI Text Generation 協定 V1 裝置端 provider, 外掛 ID 和引擎為 `ai-text-generation`, provider ID 為 `autojs6.local.text`, 變體為 `default`
+* `新增` On-Device AI 協定 V1 裝置端 provider, 外掛 ID 和引擎為 `on-device-ai`, provider ID 為 `autojs6.on-device-ai`, 變體為 `default`
 * `新增` CPU-only LiteRT-LM 純文字生成, 支援 system, user 和 assistant 歷史及 credit 背壓串流輸出
 * `新增` 透過 SAF 匯入 `.litertlm` 到應用程式私人儲存空間, 包含 8 GiB 上限, 空間預留, SHA-256, fsync 和原子啟用
 * `新增` 單一作用中工作階段, 有界 I/O, descriptor 配額, 取消, 逾時, 唯一終態及同簽章 AutoJs6 呼叫端核驗

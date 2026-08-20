@@ -30,6 +30,6 @@
     <string name="model_selection_failed">Échec de la sélection du modèle</string>
     <string name="model_selection_succeeded">Modèle sélectionné</string>
     <string name="model_status_format">Modèle: %1$s\nTaille: %2$s\nSHA-256: %3$s\nID du modèle: %4$s</string>
-    <string name="plugin_description">Génération de texte IA locale avec des modèles LiteRT-LM sur l'appareil</string>
+    <string name="plugin_description">Génération de texte IA locale avec des modèles LiteRT-LM sur l\'appareil</string>
     <string name="screen_description">Choisissez un modèle LiteRT-LM local. Le fichier est copié dans le stockage privé de l\'application et jamais envoyé</string>
 </resources>

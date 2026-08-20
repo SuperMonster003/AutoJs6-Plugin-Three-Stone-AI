@@ -8,7 +8,7 @@
     "v1.1.0": {
       "released_date": "2026/08/20",
       "feature": [
-        "Plugin renamed to On-Device AI, positioned as the official on-device AI plugin for AutoJs6",
+        "Plugin brand and runtime identity standardized as On-Device AI across display names, package and component names, discovery identifiers, protocol API, build artifacts, and documentation",
         "Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing"
       ],
       "improvement": [
@@ -19,7 +19,7 @@
     "v1.0.0": {
       "released_date": "2026/08/08",
       "feature": [
-        "On-device AI Text Generation protocol V1 provider with plugin ID and engine `ai-text-generation`, provider ID `autojs6.local.text`, and variant `default`",
+        "On-Device AI protocol V1 provider running entirely on device, with plugin ID and engine `on-device-ai`, provider ID `autojs6.on-device-ai`, and variant `default`",
         "CPU-only LiteRT-LM plain-text generation with system, user, and assistant history plus credit-backed streaming",
         "SAF import of `.litertlm` into app-private storage with an 8 GiB limit, free-space reserve, SHA-256, fsync, and atomic activation",
         "One active session, bounded I/O, descriptor quotas, cancellation, timeout, one terminal state, and same-signature AutoJs6 caller verification",

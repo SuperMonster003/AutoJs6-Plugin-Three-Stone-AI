@@ -19,7 +19,7 @@
     <string name="import_stage_publishing">Publishing model</string>
     <string name="import_stage_validating">Validating source</string>
     <string name="import_succeeded">Model imported</string>
-    <string name="model_id_clipboard_label">AI text model ID</string>
+    <string name="model_id_clipboard_label">on-device AI model ID</string>
     <string name="model_id_copied">Model ID copied</string>
     <string name="model_catalog_empty">No imported models</string>
     <string name="model_catalog_loading">Loading model catalog</string>
@@ -30,6 +30,6 @@
     <string name="model_selection_failed">Model selection failed</string>
     <string name="model_selection_succeeded">Model selected</string>
     <string name="model_status_format">Model: %1$s\nSize: %2$s\nSHA-256: %3$s\nModel ID: %4$s</string>
-    <string name="plugin_description">On-device AI text generation with local LiteRT-LM models</string>
+    <string name="plugin_description">On-device on-device AI with local LiteRT-LM models</string>
     <string name="screen_description">Choose a local LiteRT-LM model. The file is copied into private app storage and is never uploaded</string>
 </resources>

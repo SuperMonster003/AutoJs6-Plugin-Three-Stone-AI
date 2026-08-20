@@ -1,12 +1,12 @@
 {
-  "repo_url": "https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation",
-  "repo_slug": "SuperMonster003/AutoJs6-Plugin-AI-Text-Generation",
+  "repo_url": "https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI",
+  "repo_slug": "SuperMonster003/AutoJs6-Plugin-On-Device-AI",
   "docs_autojs6_url": "https://docs.autojs6.com",
   "upstream_url": "https://github.com/google-ai-edge/LiteRT-LM",
-  "plugin_action": "org.autojs.plugin.AI_TEXT_GENERATION",
-  "plugin_id": "ai-text-generation",
-  "protocol_provider_id": "autojs6.local.text",
-  "plugin_engine": "ai-text-generation",
+  "plugin_action": "org.autojs.plugin.ON_DEVICE_AI",
+  "plugin_id": "on-device-ai",
+  "protocol_provider_id": "autojs6.on-device-ai",
+  "plugin_engine": "on-device-ai",
   "plugin_variant": "default",
   "protocol_version": "V1",
   "required_host_build": "5270",
@@ -15,5 +15,5 @@
   "package_format": ".litertlm",
   "runtime_dependency": "LiteRT-LM 0.15.0",
   "supported_abis": "arm64-v8a, x86_64, universal",
-  "local_aars": "common-plugin-api.aar\nprotocol-wire-api.aar\nai-common-api.aar\nai-text-generation-api.aar"
+  "local_aars": "common-plugin-api.aar\nprotocol-wire-api.aar\nai-common-api.aar\non-device-ai-api.aar"
 }

@@ -36,10 +36,10 @@ Para usar otro modelo, copie su Model ID desde la pantalla de gestión de modelo
 
 ```javascript
 var PLUGIN_PACKAGE =
-    "io.github.supermonster003.autojs6.plugin.ai.text";
+    "io.github.supermonster003.autojs6.plugin.ondeviceai";
 
 var SERVICE_CLASS =
-    PLUGIN_PACKAGE + ".provider.AiTextProviderService";
+    PLUGIN_PACKAGE + ".provider.OnDeviceAiProviderService";
 
 // 对应本次模型 SHA-256 的前 32 位
 var MODEL_ID =
@@ -49,12 +49,12 @@ var PROMPT =
     "请用中文列出三条 Android 自动化脚本执行危险操作前应增加确认步骤的理由。每条一句话。";
 
 var TextApi =
-    Packages.org.autojs.plugin.ai.text.api;
+    Packages.org.autojs.plugin.ondeviceai.api;
 
 var CommonApi =
     Packages.org.autojs.plugin.ai.common.api;
 
-var AiTextCodec = TextApi.AiTextCodec.INSTANCE;
+var OnDeviceAiCodec = TextApi.OnDeviceAiCodec.INSTANCE;
 var AiCommonCodec = CommonApi.AiCommonCodec.INSTANCE;
 
 var TimeUnit = java.util.concurrent.TimeUnit;
@@ -112,12 +112,12 @@ function closeDescriptors(fds) {
 }
 
 var textCallback = new JavaAdapter(
-    TextApi.IAiTextCallback.Stub,
+    TextApi.IOnDeviceAiCallback.Stub,
     {
         onStarted: function (raw) {
             try {
                 var started =
-                    AiTextCodec.decodeSessionStarted(raw);
+                    OnDeviceAiCodec.decodeSessionStarted(raw);
 
                 console.log(
                     "会话已启动: " + started.getSessionId()
@@ -130,7 +130,7 @@ var textCallback = new JavaAdapter(
         onChunk: function (raw) {
             try {
                 var chunk =
-                    AiTextCodec.decodeTextChunk(raw);
+                    OnDeviceAiCodec.decodeTextChunk(raw);
 
                 console.log(
                     "chunk[" + chunk.getSequence() + "]: " +
@@ -160,7 +160,7 @@ var textCallback = new JavaAdapter(
 
                 try {
                     var result =
-                        AiTextCodec.decodeCompletionResult(raw);
+                        OnDeviceAiCodec.decodeCompletionResult(raw);
 
                     var bytes =
                         result.getOutput().getInlineBytes();
@@ -203,7 +203,7 @@ var connection = new JavaAdapter(
         onServiceConnected: function (name, binder) {
             try {
                 providerRef.set(
-                    TextApi.IAiTextProvider.Stub.asInterface(binder)
+                    TextApi.IOnDeviceAiProvider.Stub.asInterface(binder)
                 );
             } catch (e) {
                 bindError.set(
@@ -262,7 +262,7 @@ try {
     );
 
     if (!bound) {
-        throw new Error("无法绑定 AI Text Generation 插件");
+        throw new Error("无法绑定 On-Device AI 插件");
     }
 
     if (!connected.await(10, TimeUnit.SECONDS)) {
@@ -316,10 +316,10 @@ try {
         java.util.Collections.singletonList("streaming")
     );
 
-    var request = new TextApi.AiTextRequest(
+    var request = new TextApi.OnDeviceAiRequest(
         java.util.UUID.randomUUID().toString(),
         new CommonApi.AiProtocolVersion(1, 0),
-        "autojs6.local.text",
+        "autojs6.on-device-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
         options,
@@ -334,7 +334,7 @@ try {
 
     // openSession 会立即开始模型生成
     session = provider.openSession(
-        AiTextCodec.encodeTextRequest(request),
+        OnDeviceAiCodec.encodeTextRequest(request),
         noDescriptors,
         textCallback
     );

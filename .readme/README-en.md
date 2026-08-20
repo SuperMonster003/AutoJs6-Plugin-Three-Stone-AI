@@ -2,15 +2,15 @@
 
 <div align="center">
   <p>
-    <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
+    <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/app/src/main/res/mipmap/ic_launcher_on_device_ai.png?raw=true" alt="on-device-ai-ic-launcher" border="0" width="128" />
   </p>
 
   <p>On-device AI plugin. Streams text locally with LiteRT-LM, no network required</p>
 
   <p>
-    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?label=Release"/></a>
-    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/issues"><img alt="GitHub closed issues" src="https://img.shields.io/github/issues/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?color=A24232&label=Issues"/></a>
-    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/LICENSE"><img alt="GitHub License" src="https://img.shields.io/github/license/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?color=534BAE&label=License"/></a>
+    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-On-Device-AI?label=Release"/></a>
+    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/issues"><img alt="GitHub closed issues" src="https://img.shields.io/github/issues/SuperMonster003/AutoJs6-Plugin-On-Device-AI?color=A24232&label=Issues"/></a>
+    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/LICENSE"><img alt="GitHub License" src="https://img.shields.io/github/license/SuperMonster003/AutoJs6-Plugin-On-Device-AI?color=534BAE&label=License"/></a>
   </p>
 </div>
 
@@ -22,16 +22,16 @@
 
 The current README.md supports the following languages:
 
-- [简体中文 [zh-Hans]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-zh-Hans.md)
-- [繁體中文 (香港) [zh-Hant-HK]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-zh-Hant-HK.md)
-- [繁體中文 (台灣) [zh-Hant-TW]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-zh-Hant-TW.md)
+- [简体中文 [zh-Hans]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-zh-Hans.md)
+- [繁體中文 (香港) [zh-Hant-HK]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-zh-Hant-HK.md)
+- [繁體中文 (台灣) [zh-Hant-TW]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-zh-Hant-TW.md)
 - English [en] # current
-- [Français [fr]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-fr.md)
-- [Español [es]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-es.md)
-- [日本語 [ja]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-ja.md)
-- [한국어 [ko]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-ko.md)
-- [Русский [ru]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-ru.md)
-- [العربية [ar]](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/.readme/README-ar.md)
+- [Français [fr]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-fr.md)
+- [Español [es]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-es.md)
+- [日本語 [ja]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-ja.md)
+- [한국어 [ko]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-ko.md)
+- [Русский [ru]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-ru.md)
+- [العربية [ar]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-ar.md)
 
 ******
 
@@ -39,7 +39,7 @@ The current README.md supports the following languages:
 
 ******
 
-On-Device AI is the official on-device AI text generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on the CPU, accepts a plain-text message history, and returns plain text through a controlled streaming session. All inference happens locally: no network access and no data upload.
+On-Device AI is the official on-device on-device AI plugin for AutoJs6. It runs user-imported LiteRT-LM models on the CPU, accepts a plain-text message history, and returns plain text through a controlled streaming session. All inference happens locally: no network access and no data upload.
 
 ******
 
@@ -77,10 +77,10 @@ runtime: LiteRT-LM 0.15.0
 The host discovers and calls the plugin with the following identities:
 
 ```text
-service action: org.autojs.plugin.AI_TEXT_GENERATION
-plugin id: ai-text-generation
-protocol provider id: autojs6.local.text
-engine: ai-text-generation
+service action: org.autojs.plugin.ON_DEVICE_AI
+plugin id: on-device-ai
+protocol provider id: autojs6.on-device-ai
+engine: on-device-ai
 variant: default
 protocol: V1
 required host build: 5270
@@ -139,7 +139,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 
 The roadmap is organized around deliverable user-facing features, each independently checkable
 
-- [View ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
+- [View ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/ROADMAP.md)
 
 ******
 
@@ -151,7 +151,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ###### 2026/08/20
 
-* `Feature` Plugin renamed to On-Device AI, positioned as the official on-device AI plugin for AutoJs6
+* `Feature` Plugin brand and runtime identity standardized as On-Device AI across display names, package and component names, discovery identifiers, protocol API, build artifacts, and documentation
 * `Feature` Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing
 * `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
@@ -160,7 +160,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ###### 2026/08/08
 
-* `Feature` On-device AI Text Generation protocol V1 provider with plugin ID and engine `ai-text-generation`, provider ID `autojs6.local.text`, and variant `default`
+* `Feature` On-Device AI protocol V1 provider running entirely on device, with plugin ID and engine `on-device-ai`, provider ID `autojs6.on-device-ai`, and variant `default`
 * `Feature` CPU-only LiteRT-LM plain-text generation with system, user, and assistant history plus credit-backed streaming
 * `Feature` SAF import of `.litertlm` into app-private storage with an 8 GiB limit, free-space reserve, SHA-256, fsync, and atomic activation
 * `Feature` One active session, bounded I/O, descriptor quotas, cancellation, timeout, one terminal state, and same-signature AutoJs6 caller verification
@@ -173,7 +173,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ##### For more releases
 
-* [CHANGELOG-en.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/assets/doc/CHANGELOG-en.md)
+* [CHANGELOG-en.md](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/app/src/main/assets/doc/CHANGELOG-en.md)
 
 ******
 
@@ -199,7 +199,7 @@ The protocol ABI is supplied by repository-local AARs in `libs`:
 common-plugin-api.aar
 protocol-wire-api.aar
 ai-common-api.aar
-ai-text-generation-api.aar
+on-device-ai-api.aar
 ```
 
 The runtime uses LiteRT-LM 0.15.0 from Maven. Release builds retain LiteRT-LM runtime classes and produce two ABI APKs plus one universal APK.

@@ -8,7 +8,7 @@
 
 ###### 2026/08/20
 
-* `新增` 插件名称调整为 On-Device AI (设备端 AI), 明确定位为 AutoJs6 官方设备端 AI 插件
+* `新增` 插件品牌与运行时标识统一为 On-Device AI (设备端 AI), 同步应用名, 包名, 组件名, 发现标识, 协议 API, 构建产物及文档
 * `新增` 适配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 的 `plugin: true` 简写选择器及 `ai.models` 模型枚举
 * `优化` 更新插件描述, 使用说明及 10 种语言的 README, 与宿主 `ai.*` 本地插件路由的正式化保持一致
 * `优化` 重写 ROADMAP 为可逐项勾选的功能路线图
@@ -17,7 +17,7 @@
 
 ###### 2026/08/08
 
-* `新增` AI Text Generation 协议 V1 设备端 provider, 插件 ID 和引擎为 `ai-text-generation`, provider ID 为 `autojs6.local.text`, 变体为 `default`
+* `新增` On-Device AI 协议 V1 设备端 provider, 插件 ID 和引擎为 `on-device-ai`, provider ID 为 `autojs6.on-device-ai`, 变体为 `default`
 * `新增` CPU-only LiteRT-LM 纯文本生成, 支持 system, user 和 assistant 历史及 credit 背压流式输出
 * `新增` 通过 SAF 导入 `.litertlm` 到应用私有存储, 包含 8 GiB 上限, 空间预留, SHA-256, fsync 和原子激活
 * `新增` 单活动会话, 有界 I/O, descriptor 配额, 取消, 超时, 唯一终态及同签名 AutoJs6 调用方核验

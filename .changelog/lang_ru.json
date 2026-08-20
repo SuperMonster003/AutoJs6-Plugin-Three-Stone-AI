@@ -19,7 +19,7 @@
     "v1.0.0": {
       "released_date": "2026/08/08",
       "feature": [
-        "Локальный provider протокола AI Text Generation V1 с ID и движком `ai-text-generation`, provider ID `autojs6.local.text` и вариантом `default`",
+        "Локальный provider протокола On-Device AI V1 с ID и движком `on-device-ai`, provider ID `autojs6.on-device-ai` и вариантом `default`",
         "Генерация обычного текста LiteRT-LM только на CPU с историей system, user и assistant и потоком под управлением credits",
         "Импорт `.litertlm` через SAF в закрытое хранилище с пределом 8 GiB, резервом места, SHA-256, fsync и атомарной активацией",
         "Один активный сеанс, ограниченный I/O, квоты дескрипторов, отмена, timeout, одно конечное состояние и проверка вызывающего AutoJs6 с той же подписью",

@@ -1,6 +1,6 @@
 # On-Device AI 插件路线图
 
-本插件是 AutoJs6 的官方设备端 AI 插件 (原名 AI Text Generation), 目标是把设备端 AI 推理能力以最低的脚本使用成本融入 AutoJs6:
+本插件是 AutoJs6 的官方设备端 AI 插件, 目标是把设备端 AI 推理能力以最低的脚本使用成本融入 AutoJs6:
 脚本一行 `ai.ask("...", { plugin: true })` 即可在本地模型上完成推理, 不联网, 不上传数据.
 
 路线图按可交付的用户功能组织. 每一项都是一个可独立勾选, 可独立验收的功能; 勾选标准就是 "功能在真机上可用".
@@ -10,7 +10,7 @@
 
 ### 插件本体 (v1.0.0)
 
-- [x] AI Text Generation 协议 V1 设备端 provider: 独立 `:provider` 进程, CPU-only LiteRT-LM 0.15.0, `text/plain` 输入输出, credit 背压流式.
+- [x] On-Device AI 协议 V1 设备端 provider: 独立 `:provider` 进程, CPU-only LiteRT-LM 0.15.0, `text/plain` 输入输出, credit 背压流式.
 - [x] SAF 导入 `.litertlm` 模型: 流式 SHA-256 校验, 8 GiB 上限, 原子发布, 断点恢复, 导入进度与精确取消.
 - [x] 多模型 catalog: 稳定 modelId (SHA 派生), 幂等重复导入, 分页 `listModels`, 模型管理界面查看/选择/复制 ID.
 - [x] 会话安全: 单活动会话, 超时, 取消, Binder death 处理, 宿主包名/UID/签名核验.
@@ -24,11 +24,11 @@
 - [x] 插件未安装 / 未启用 / 无模型时的明确错误: `PROVIDER_NOT_FOUND` / `PROVIDER_DISABLED` / `MODEL_NOT_FOUND`, 错误消息附带解决指引.
 - [x] 插件路由接入插件中心启用开关: 在插件中心停用插件后, 脚本调用收到 `PROVIDER_DISABLED` 而不是静默绑定.
 - [x] 宿主 "AI 服务设置" 页提供本地 AI 插件入口: 已安装时跳插件模型管理页, 未安装时跳插件中心.
-- [x] 插件中心识别本插件: INFO 服务入列, engine `ai-text-generation` 关联 provider action, 插件设置页可跳转插件启动页.
+- [x] 插件中心识别本插件: INFO 服务入列, engine `on-device-ai` 关联 provider action, 插件设置页可跳转插件启动页.
 
 ### 品牌与文档 (v1.1.0)
 
-- [x] 插件更名为 On-Device AI (设备端 AI), 更新 11 语言应用名与描述.
+- [ ] 插件品牌与运行时标识统一为 On-Device AI (设备端 AI): 应用名, 包名, 组件类, 发现 action, plugin/provider/engine ID, 协议 API, 构建产物及文档全部同步.
 - [x] 插件说明改为 "快速开始 (ai 模块) + 高级 (原始 Binder)" 双层结构, 10 语言同步.
 - [x] README/CHANGELOG 与宿主文档同步更新, 移除 "实验性" 表述.
 

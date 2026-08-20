@@ -19,7 +19,7 @@
     "v1.0.0": {
       "released_date": "2026/08/08",
       "feature": [
-        "플러그인 ID 및 엔진 `ai-text-generation`, provider ID `autojs6.local.text`, 변형 `default`인 기기 내 AI Text Generation 프로토콜 V1 provider",
+        "플러그인 ID 및 엔진 `on-device-ai`, provider ID `autojs6.on-device-ai`, 변형 `default`인 기기 내 On-Device AI 프로토콜 V1 provider",
         "System, user 및 assistant 기록과 credit 제어 스트리밍을 지원하는 CPU-only LiteRT-LM 일반 텍스트 생성",
         "8 GiB 상한, 여유 공간 예약, SHA-256, fsync 및 원자적 활성화를 포함한 `.litertlm`의 앱 전용 저장소 SAF 가져오기",
         "단일 활성 세션, 제한된 I/O, descriptor quota, 취소, timeout, 단일 종료 상태 및 동일 서명 AutoJs6 호출자 검증",

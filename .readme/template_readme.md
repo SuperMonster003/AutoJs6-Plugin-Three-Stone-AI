@@ -2,7 +2,7 @@
 
 <div align="center">
   <p>
-    <img src="{{ repo_url }}/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
+    <img src="{{ repo_url }}/blob/master/app/src/main/res/mipmap/ic_launcher_on_device_ai.png?raw=true" alt="on-device-ai-ic-launcher" border="0" width="128" />
   </p>
 
   <p>{{ text_plugin_synopsis }}</p>

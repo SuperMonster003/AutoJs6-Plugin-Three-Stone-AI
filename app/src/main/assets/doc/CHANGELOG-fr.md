@@ -17,7 +17,7 @@
 
 ###### 2026/08/08
 
-* `Fonction` Provider sur l'appareil pour le protocole AI Text Generation V1 avec ID et moteur `ai-text-generation`, provider ID `autojs6.local.text` et variante `default`
+* `Fonction` Provider sur l'appareil pour le protocole On-Device AI V1 avec ID et moteur `on-device-ai`, provider ID `autojs6.on-device-ai` et variante `default`
 * `Fonction` Génération de texte brut LiteRT-LM sur CPU avec historique system, user et assistant et streaming contrôlé par credits
 * `Fonction` Import SAF de `.litertlm` dans le stockage privé avec limite de 8 GiB, réserve d'espace, SHA-256, fsync et activation atomique
 * `Fonction` Une session active, I/O bornées, quotas de descripteurs, annulation, timeout, un état terminal et vérification de l'appelant AutoJs6 avec la même signature

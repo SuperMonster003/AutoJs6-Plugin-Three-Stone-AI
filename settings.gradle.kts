@@ -1,6 +1,6 @@
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-rootProject.name = "autojs6-plugin-ai-text-generation"
+rootProject.name = "autojs6-plugin-on-device-ai"
 
 pluginManagement {
     repositories {

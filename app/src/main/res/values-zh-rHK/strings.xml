@@ -6,6 +6,7 @@
     <string name="button_cleanup_storage">清理未引用檔案</string>
     <string name="button_import_model">匯入 .litertlm 模型</string>
     <string name="button_delete_model">刪除模型</string>
+    <string name="button_rename_model">重新命名</string>
     <string name="import_cancelled">模型匯入已取消</string>
     <string name="import_cancelling">正在取消模型匯入</string>
     <string name="import_failed">模型匯入失敗</string>
@@ -38,6 +39,11 @@
     <string name="model_delete_selected_blocked">無法刪除目前選取的模型. 請先選擇其他模型.</string>
     <string name="model_deletion_failed">刪除模型失敗</string>
     <string name="model_deletion_succeeded">模型已刪除</string>
+    <string name="model_rename_title">重新命名模型</string>
+    <string name="model_rename_message">輸入新的顯示名稱. 模型 ID 同檔案唔會改變.</string>
+    <string name="model_rename_invalid">請輸入非空白嘅單行名稱, 最多 256 個 UTF-8 位元組.</string>
+    <string name="model_rename_failed">模型重新命名失敗</string>
+    <string name="model_rename_succeeded">模型已重新命名</string>
     <string name="model_selection_failed">選擇模型失敗</string>
     <string name="model_selection_succeeded">已選擇模型</string>
     <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s</string>

@@ -173,6 +173,61 @@ class ModelCatalogTest {
     }
 
     @Test
+    fun renamingChangesOnlyDisplayNameRevisionAndListingGeneration() {
+        val original = ModelCatalogPolicy.normalize(
+            ModelCatalogDocument(9L, entryA.modelId, listOf(entryA, entryB)),
+        )
+        val originalGeneration = listingGeneration(original)
+
+        val update = ModelCatalogPolicy.rename(original, entryA.modelId, "  Friendly model  ")
+        val renamed = update.document.entries.single { it.modelId == entryA.modelId }
+
+        assertTrue(update.changed)
+        assertEquals("Friendly model", update.model.displayName)
+        assertEquals("Friendly model", renamed.displayName)
+        assertEquals(entryA.modelId, renamed.modelId)
+        assertEquals(entryA.fileName, renamed.fileName)
+        assertEquals(entryA.sha256, renamed.sha256)
+        assertEquals(entryA.sizeBytes, renamed.sizeBytes)
+        assertEquals(entryA.importedAtMillis, renamed.importedAtMillis)
+        assertEquals(entryA.modelId, update.document.selectedModelId)
+        assertEquals(entryB, update.document.entries.single { it.modelId == entryB.modelId })
+        assertEquals(10L, update.document.revision)
+        assertNotEquals(originalGeneration, listingGeneration(update.document))
+        assertEquals(entryA.displayName, original.entries.single { it.modelId == entryA.modelId }.displayName)
+    }
+
+    @Test
+    fun equivalentRenameIsIdempotentAndInvalidNamesLeaveCatalogUntouched() {
+        val original = ModelCatalogPolicy.normalize(
+            ModelCatalogDocument(9L, entryA.modelId, listOf(entryA, entryB)),
+        )
+        val originalBytes = ModelCatalogCodec.encode(original)
+
+        val unchanged = ModelCatalogPolicy.rename(original, entryA.modelId, "  ${entryA.displayName}  ")
+
+        assertFalse(unchanged.changed)
+        assertEquals(9L, unchanged.document.revision)
+        assertTrue(originalBytes.contentEquals(ModelCatalogCodec.encode(unchanged.document)))
+        listOf(
+            "",
+            "   ",
+            "line\nbreak",
+            "line\u2028break",
+            "a".repeat(257),
+            "\uD800",
+        ).forEach { invalid ->
+            assertThrows(IllegalArgumentException::class.java) {
+                ModelCatalogPolicy.rename(original, entryA.modelId, invalid)
+            }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelCatalogPolicy.rename(original, "litertlm.${"ff".repeat(16)}", "Valid")
+        }
+        assertTrue(originalBytes.contentEquals(ModelCatalogCodec.encode(original)))
+    }
+
+    @Test
     fun unreferencedCleanupTargetsOnlyStrictManagedHashFilesOutsideTheCatalog() {
         val document = ModelCatalogDocument(4L, entryA.modelId, listOf(entryA))
         val unmanagedDigest = "33".repeat(32)

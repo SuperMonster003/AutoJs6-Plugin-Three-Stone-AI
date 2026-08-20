@@ -31,6 +31,21 @@ internal sealed interface ModelDeletionState {
     data class Failed(val operationId: Long, val modelId: String) : ModelDeletionState
 }
 
+internal sealed interface ModelRenameState {
+    data object Idle : ModelRenameState
+    data class Renaming(
+        val operationId: Long,
+        val modelId: String,
+        val displayName: String,
+    ) : ModelRenameState
+    data class Succeeded(
+        val operationId: Long,
+        val modelId: String,
+        val displayName: String,
+    ) : ModelRenameState
+    data class Failed(val operationId: Long, val modelId: String) : ModelRenameState
+}
+
 internal sealed interface ModelStorageCleanupState {
     data object Idle : ModelStorageCleanupState
     data class Cleaning(val operationId: Long) : ModelStorageCleanupState
@@ -52,6 +67,7 @@ internal data class ModelManagerState(
     val snapshot: ModelManagerSnapshot?,
     val selection: ModelSelectionState,
     val deletion: ModelDeletionState = ModelDeletionState.Idle,
+    val rename: ModelRenameState = ModelRenameState.Idle,
     val storageCleanup: ModelStorageCleanupState = ModelStorageCleanupState.Idle,
 )
 
@@ -79,13 +95,16 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     private var activeImport: ActiveImport? = null
     private var activeSelection: ActiveSelection? = null
     private var activeDeletion: ActiveDeletion? = null
+    private var activeRename: ActiveRename? = null
     private var activeStorageCleanup: ActiveStorageCleanup? = null
     private var nextSelectionOperationId = 1L
     private var nextDeletionOperationId = 1L
+    private var nextRenameOperationId = 1L
     private var nextStorageCleanupOperationId = 1L
     private var visibleManagerSnapshot: ModelManagerSnapshot? = null
     private var selectionState: ModelSelectionState = ModelSelectionState.Idle
     private var deletionState: ModelDeletionState = ModelDeletionState.Idle
+    private var renameState: ModelRenameState = ModelRenameState.Idle
     private var storageCleanupState: ModelStorageCleanupState = ModelStorageCleanupState.Idle
     private var catalogMutationAvailable = false
     val processSessionToken: String = UUID.randomUUID().toString()
@@ -167,6 +186,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             snapshot = visibleManagerSnapshot,
             selection = selectionState,
             deletion = deletionState,
+            rename = renameState,
             storageCleanup = storageCleanupState,
         )
     }
@@ -188,6 +208,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 activeSelection = operation
                 selectionState = ModelSelectionState.Selecting(operationId, modelId)
                 deletionState = ModelDeletionState.Idle
+                renameState = ModelRenameState.Idle
                 storageCleanupState = ModelStorageCleanupState.Idle
             }
         }
@@ -221,6 +242,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 activeDeletion = operation
                 selectionState = ModelSelectionState.Idle
                 deletionState = ModelDeletionState.Deleting(operationId, modelId)
+                renameState = ModelRenameState.Idle
                 storageCleanupState = ModelStorageCleanupState.Idle
             }
         }
@@ -233,6 +255,42 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 if (activeDeletion === active) {
                     activeDeletion = null
                     deletionState = ModelDeletionState.Failed(active.operationId, active.modelId)
+                }
+            }
+            publishState()
+        }
+        return true
+    }
+
+    /** Renames only a model in the last coherent snapshot while retaining its stable model ID. */
+    fun beginRename(modelId: String, displayName: String): Boolean {
+        val normalizedName = runCatching {
+            ModelDisplayNamePolicy.normalizeUserInput(displayName)
+        }.getOrNull() ?: return false
+        val active = synchronized(lifecycleLock) {
+            if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
+            val snapshot = visibleManagerSnapshot ?: return false
+            if (snapshot.models.none { it.modelId == modelId }) return false
+            check(nextRenameOperationId > 0L) { "Model rename operation IDs are exhausted" }
+            val operationId = nextRenameOperationId
+            nextRenameOperationId = if (operationId == Long.MAX_VALUE) 0L else operationId + 1L
+            ActiveRename(operationId, modelId, normalizedName).also { operation ->
+                activeRename = operation
+                selectionState = ModelSelectionState.Idle
+                deletionState = ModelDeletionState.Idle
+                renameState = ModelRenameState.Renaming(operationId, modelId, normalizedName)
+                storageCleanupState = ModelStorageCleanupState.Idle
+            }
+        }
+        publishState()
+        try {
+            executor.execute { executeRename(active) }
+        } catch (error: RejectedExecutionException) {
+            logRenameFailure(active, error)
+            synchronized(lifecycleLock) {
+                if (activeRename === active) {
+                    activeRename = null
+                    renameState = ModelRenameState.Failed(active.operationId, active.modelId)
                 }
             }
             publishState()
@@ -254,6 +312,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 activeStorageCleanup = operation
                 selectionState = ModelSelectionState.Idle
                 deletionState = ModelDeletionState.Idle
+                renameState = ModelRenameState.Idle
                 storageCleanupState = ModelStorageCleanupState.Cleaning(operationId)
             }
         }
@@ -295,6 +354,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             activeImport = operation
             selectionState = ModelSelectionState.Idle
             deletionState = ModelDeletionState.Idle
+            renameState = ModelRenameState.Idle
             storageCleanupState = ModelStorageCleanupState.Idle
             operation
         }
@@ -505,6 +565,56 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         publishState()
     }
 
+    private fun executeRename(active: ActiveRename) {
+        val result = runCatching {
+            repository.renameModel(active.modelId, active.displayName).also { snapshot ->
+                check(snapshot.models.single { it.modelId == active.modelId }.displayName == active.displayName) {
+                    "Renamed model display name is not authoritative"
+                }
+            }
+        }
+        result.exceptionOrNull()?.let { error -> logRenameFailure(active, error) }
+        val reread = if (result.isFailure) runCatching { repository.managerSnapshot() } else null
+        reread?.exceptionOrNull()?.let { error -> logRenameFailure(active, error) }
+        synchronized(lifecycleLock) {
+            if (activeRename !== active) return
+            result.fold(
+                onSuccess = { snapshot ->
+                    if (stateMachine.replaceCurrent(snapshot.selectedModel)) {
+                        visibleManagerSnapshot = snapshot
+                        catalogMutationAvailable = true
+                        renameState = ModelRenameState.Succeeded(
+                            operationId = active.operationId,
+                            modelId = active.modelId,
+                            displayName = active.displayName,
+                        )
+                    } else {
+                        visibleManagerSnapshot = null
+                        catalogMutationAvailable = false
+                        stateMachine.makeUnavailable()
+                        renameState = ModelRenameState.Failed(active.operationId, active.modelId)
+                    }
+                },
+                onFailure = {
+                    val refreshed = reread?.getOrNull()
+                    if (refreshed != null && stateMachine.replaceCurrent(refreshed.selectedModel)) {
+                        visibleManagerSnapshot = refreshed
+                        catalogMutationAvailable = true
+                    } else {
+                        visibleManagerSnapshot = null
+                        catalogMutationAvailable = false
+                        check(stateMachine.makeUnavailable()) {
+                            "A rename refresh can fail closed only while no import is active"
+                        }
+                    }
+                    renameState = ModelRenameState.Failed(active.operationId, active.modelId)
+                },
+            )
+            activeRename = null
+        }
+        publishState()
+    }
+
     private fun executeStorageCleanup(active: ActiveStorageCleanup) {
         val result = runCatching { repository.cleanUnreferencedModelFiles() }
         result.exceptionOrNull()?.let { error -> logStorageCleanupFailure(active, error) }
@@ -552,7 +662,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     /** Must be called only while [lifecycleLock] is held. */
     private fun hasActiveManagerOperationLocked(): Boolean =
         activeImport != null || activeSelection != null || activeDeletion != null ||
-            activeStorageCleanup != null
+            activeRename != null || activeStorageCleanup != null
 
     private fun finishActiveImport(active: ActiveImport) {
         synchronized(lifecycleLock) {
@@ -634,6 +744,17 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         }
     }
 
+    private fun logRenameFailure(active: ActiveRename, error: Throwable) {
+        val message =
+            "Model rename failure: operation=${active.operationId} type=${error.javaClass.name}"
+        val debuggable = applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        if (debuggable) {
+            Log.e(TAG, message, error)
+        } else {
+            Log.e(TAG, message)
+        }
+    }
+
     private fun logStorageCleanupFailure(active: ActiveStorageCleanup, error: Throwable) {
         val message =
             "Model storage cleanup failure: operation=${active.operationId} type=${error.javaClass.name}"
@@ -653,6 +774,12 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     private data class ActiveDeletion(
         val operationId: Long,
         val modelId: String,
+    )
+
+    private data class ActiveRename(
+        val operationId: Long,
+        val modelId: String,
+        val displayName: String,
     )
 
     private data class ActiveStorageCleanup(val operationId: Long)

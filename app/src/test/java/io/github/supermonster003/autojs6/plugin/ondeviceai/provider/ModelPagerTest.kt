@@ -74,7 +74,9 @@ class ModelPagerTest {
         val fresh = pager.page(request(pageSize = 1))
         snapshot = catalog(entryA.copy(displayName = "renamed"), entryB, entryC)
         assertThrows(IllegalArgumentException::class.java) { pager.page(request(1, fresh.nextPageToken)) }
-        assertNotEquals(first.listingGeneration, pager.page(request(1)).listingGeneration)
+        val renamedPage = pager.page(request(1))
+        assertNotEquals(first.listingGeneration, renamedPage.listingGeneration)
+        assertEquals("renamed", renamedPage.models.single().displayName)
     }
 
     @Test

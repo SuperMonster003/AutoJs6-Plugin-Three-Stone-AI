@@ -7,10 +7,13 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputFilter
+import android.text.InputType
 import android.text.format.Formatter
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.RadioButton
@@ -19,12 +22,14 @@ import android.widget.TextView
 import android.widget.Toast
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDeletionState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDisplayNamePolicy
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportFailureReason
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportProgress
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportStage
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelRenameState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelSelectionState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelStorageCleanupState
 
@@ -43,6 +48,7 @@ class ModelManagerActivity : Activity() {
     private var lastNotifiedImportOperationId = 0L
     private var lastNotifiedSelectionOperationId = 0L
     private var lastNotifiedDeletionOperationId = 0L
+    private var lastNotifiedRenameOperationId = 0L
     private var lastNotifiedStorageCleanupOperationId = 0L
     private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
     private var renderedManagerView: ModelManagerViewState? = null
@@ -58,6 +64,8 @@ class ModelManagerActivity : Activity() {
                 restored.getLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID)
             lastNotifiedDeletionOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_DELETION_OPERATION_ID)
+            lastNotifiedRenameOperationId =
+                restored.getLong(STATE_LAST_NOTIFIED_RENAME_OPERATION_ID)
             lastNotifiedStorageCleanupOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID)
         }
@@ -78,6 +86,7 @@ class ModelManagerActivity : Activity() {
         outState.putLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID, lastNotifiedImportOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID, lastNotifiedSelectionOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_DELETION_OPERATION_ID, lastNotifiedDeletionOperationId)
+        outState.putLong(STATE_LAST_NOTIFIED_RENAME_OPERATION_ID, lastNotifiedRenameOperationId)
         outState.putLong(
             STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID,
             lastNotifiedStorageCleanupOperationId,
@@ -252,6 +261,21 @@ class ModelManagerActivity : Activity() {
             is ModelDeletionState.Deleting,
             -> Unit
         }
+        when (val rename = state.rename) {
+            is ModelRenameState.Succeeded -> notifyRenameOnce(
+                rename.operationId,
+                R.string.model_rename_succeeded,
+                Toast.LENGTH_SHORT,
+            )
+            is ModelRenameState.Failed -> notifyRenameOnce(
+                rename.operationId,
+                R.string.model_rename_failed,
+                Toast.LENGTH_LONG,
+            )
+            ModelRenameState.Idle,
+            is ModelRenameState.Renaming,
+            -> Unit
+        }
         when (val cleanup = state.storageCleanup) {
             is ModelStorageCleanupState.Succeeded -> notifyStorageCleanupOnce(
                 operationId = cleanup.operationId,
@@ -332,9 +356,21 @@ class ModelManagerActivity : Activity() {
                 isEnabled = row.deletionEnabled
                 setOnClickListener { confirmModelDeletion(row) }
             }
+            val renameButton = Button(this).apply {
+                text = getString(R.string.button_rename_model)
+                isEnabled = row.renameEnabled
+                setOnClickListener { confirmModelRename(row) }
+            }
             catalogRow.addView(
                 selectionButton,
                 LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+            )
+            catalogRow.addView(
+                renameButton,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
             )
             catalogRow.addView(
                 deleteButton,
@@ -350,6 +386,39 @@ class ModelManagerActivity : Activity() {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                 ),
             )
+        }
+    }
+
+    private fun confirmModelRename(row: ModelManagerRow) {
+        val input = EditText(this).apply {
+            setText(row.displayName)
+            selectAll()
+            isSingleLine = true
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            filters = arrayOf(InputFilter.LengthFilter(ModelDisplayNamePolicy.MAXIMUM_UTF8_BYTES))
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.model_rename_title)
+            .setMessage(R.string.model_rename_message)
+            .setView(input)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.button_rename_model) { _, _ ->
+                renameModel(row.modelId, input.text.toString())
+            }
+            .show()
+    }
+
+    private fun renameModel(modelId: String, requestedName: String) {
+        val displayName = runCatching {
+            ModelDisplayNamePolicy.normalizeUserInput(requestedName)
+        }.getOrElse {
+            Toast.makeText(this, R.string.model_rename_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+        val accepted = importCoordinator.beginRename(modelId, displayName)
+        renderManagerState(importCoordinator.managerState())
+        if (!accepted) {
+            Toast.makeText(this, R.string.model_rename_failed, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -498,6 +567,12 @@ class ModelManagerActivity : Activity() {
         Toast.makeText(this, message, duration).show()
     }
 
+    private fun notifyRenameOnce(operationId: Long, message: Int, duration: Int) {
+        if (operationId <= lastNotifiedRenameOperationId) return
+        lastNotifiedRenameOperationId = operationId
+        Toast.makeText(this, message, duration).show()
+    }
+
     private fun notifyStorageCleanupOnce(operationId: Long, message: CharSequence, duration: Int) {
         if (operationId <= lastNotifiedStorageCleanupOperationId) return
         lastNotifiedStorageCleanupOperationId = operationId
@@ -509,6 +584,7 @@ class ModelManagerActivity : Activity() {
         const val STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID = "lastNotifiedImportOperationId"
         const val STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID = "lastNotifiedSelectionOperationId"
         const val STATE_LAST_NOTIFIED_DELETION_OPERATION_ID = "lastNotifiedDeletionOperationId"
+        const val STATE_LAST_NOTIFIED_RENAME_OPERATION_ID = "lastNotifiedRenameOperationId"
         const val STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID =
             "lastNotifiedStorageCleanupOperationId"
         const val STATE_PROCESS_SESSION_TOKEN = "processSessionToken"

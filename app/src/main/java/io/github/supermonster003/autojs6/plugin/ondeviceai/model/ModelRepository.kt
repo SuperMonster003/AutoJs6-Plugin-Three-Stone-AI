@@ -93,6 +93,18 @@ internal class ModelRepository(context: Context) {
         return update.document.toManagerSnapshot()
     }
 
+    /** Atomically changes only the catalog display name of an existing model. */
+    @Synchronized
+    fun renameModel(modelId: String, displayName: String): ModelManagerSnapshot {
+        val update = ModelCatalogPolicy.rename(
+            document = readAuthoritativeManagerCatalog(),
+            modelId = modelId,
+            displayName = displayName,
+        )
+        if (update.changed) publishCatalogExactly(update.document)
+        return update.document.toManagerSnapshot()
+    }
+
     /**
      * Removes one unselected immutable generation and durably releases its private-storage file.
      * The catalog is published first so a crash can leave only an unreferenced file, never a

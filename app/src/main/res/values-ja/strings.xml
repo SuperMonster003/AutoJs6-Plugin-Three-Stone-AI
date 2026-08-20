@@ -6,6 +6,7 @@
     <string name="button_cleanup_storage">未参照ファイルをクリーンアップ</string>
     <string name="button_import_model">.litertlm モデルをインポート</string>
     <string name="button_delete_model">モデルを削除</string>
+    <string name="button_rename_model">名前を変更</string>
     <string name="import_cancelled">モデルのインポートをキャンセルしました</string>
     <string name="import_cancelling">モデルのインポートをキャンセル中</string>
     <string name="import_failed">モデルのインポートに失敗</string>
@@ -38,6 +39,11 @@
     <string name="model_delete_selected_blocked">選択中のモデルは削除できません。先に別のモデルを選択してください。</string>
     <string name="model_deletion_failed">モデルの削除に失敗しました</string>
     <string name="model_deletion_succeeded">モデルを削除しました</string>
+    <string name="model_rename_title">モデル名を変更</string>
+    <string name="model_rename_message">新しい表示名を入力してください。モデル ID とファイルは変更されません。</string>
+    <string name="model_rename_invalid">空でない 1 行の名前を入力してください。UTF-8 で 256 バイトまでです。</string>
+    <string name="model_rename_failed">モデル名の変更に失敗しました</string>
+    <string name="model_rename_succeeded">モデル名を変更しました</string>
     <string name="model_selection_failed">モデルの選択に失敗しました</string>
     <string name="model_selection_succeeded">モデルを選択しました</string>
     <string name="model_status_format">モデル: %1$s\nサイズ: %2$s\nSHA-256: %3$s\nモデル ID: %4$s</string>

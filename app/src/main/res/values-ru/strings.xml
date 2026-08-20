@@ -6,6 +6,7 @@
     <string name="button_cleanup_storage">Очистить файлы без ссылок</string>
     <string name="button_import_model">Импорт модели .litertlm</string>
     <string name="button_delete_model">Удалить модель</string>
+    <string name="button_rename_model">Переименовать</string>
     <string name="import_cancelled">Импорт модели отменён</string>
     <string name="import_cancelling">Отмена импорта модели</string>
     <string name="import_failed">Не удалось импортировать модель</string>
@@ -38,6 +39,11 @@
     <string name="model_delete_selected_blocked">Выбранную модель нельзя удалить. Сначала выберите другую модель.</string>
     <string name="model_deletion_failed">Не удалось удалить модель</string>
     <string name="model_deletion_succeeded">Модель удалена</string>
+    <string name="model_rename_title">Переименовать модель</string>
+    <string name="model_rename_message">Введите новое отображаемое имя. ID модели и файл не изменятся.</string>
+    <string name="model_rename_invalid">Введите непустое однострочное имя длиной не более 256 байт в UTF-8.</string>
+    <string name="model_rename_failed">Не удалось переименовать модель</string>
+    <string name="model_rename_succeeded">Модель переименована</string>
     <string name="model_selection_failed">Не удалось выбрать модель</string>
     <string name="model_selection_succeeded">Модель выбрана</string>
     <string name="model_status_format">Модель: %1$s\nРазмер: %2$s\nSHA-256: %3$s\nID модели: %4$s</string>

@@ -10,6 +10,7 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportPoli
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerSnapshot
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelRenameState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelSelectionState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelStorageCleanupState
 import org.junit.Assert.assertEquals
@@ -120,6 +121,7 @@ class ModelManagerPresentationTest {
         assertEquals(listOf(8L, 13L), view.rows.map { it.sizeBytes })
         assertEquals(listOf(true, false), view.rows.map { it.selected })
         assertTrue(view.rows.all { it.selectionEnabled })
+        assertTrue(view.rows.all { it.renameEnabled })
         assertTrue(view.rows.all { it.deletionEnabled })
         assertEquals(21L, view.totalSizeBytes)
         assertFalse(view.catalogMutationBusy)
@@ -142,6 +144,7 @@ class ModelManagerPresentationTest {
 
         assertEquals(listOf(false, true), view.rows.map { it.selected })
         assertTrue(view.rows.none { it.selectionEnabled })
+        assertTrue(view.rows.none { it.renameEnabled })
         assertTrue(view.rows.none { it.deletionEnabled })
         assertTrue(view.catalogMutationBusy)
         assertFalse(view.cleanupEnabled)
@@ -154,6 +157,7 @@ class ModelManagerPresentationTest {
             ),
         )
         assertTrue(importing.rows.none { it.selectionEnabled })
+        assertTrue(importing.rows.none { it.renameEnabled })
         assertTrue(importing.rows.none { it.deletionEnabled })
         assertFalse(importing.catalogMutationBusy)
         assertFalse(importing.cleanupEnabled)
@@ -176,6 +180,7 @@ class ModelManagerPresentationTest {
 
         assertEquals(listOf(true, false), view.rows.map { it.selected })
         assertTrue(view.rows.none { it.selectionEnabled })
+        assertTrue(view.rows.none { it.renameEnabled })
         assertTrue(view.rows.none { it.deletionEnabled })
         assertTrue(view.catalogMutationBusy)
         assertFalse(view.cleanupEnabled)
@@ -198,10 +203,34 @@ class ModelManagerPresentationTest {
 
         assertEquals(listOf(true, false), view.rows.map { it.selected })
         assertTrue(view.rows.none { it.selectionEnabled })
+        assertTrue(view.rows.none { it.renameEnabled })
         assertTrue(view.rows.none { it.deletionEnabled })
         assertTrue(view.catalogMutationBusy)
         assertFalse(view.cleanupEnabled)
         assertTrue(view.cleanupInProgress)
+    }
+
+    @Test
+    fun pendingRenameKeepsCommittedNameVisibleAndDisablesEveryMutation() {
+        val entryA = entry("11", "A", 8L)
+        val entryB = entry("22", "B", 13L)
+        val snapshot = snapshot(entryA.modelId, listOf(entryA, entryB))
+
+        val view = ModelManagerPresentation.managerView(
+            ModelManagerState(
+                importState = ModelImportState.Ready(snapshot.selectedModel),
+                snapshot = snapshot,
+                selection = ModelSelectionState.Idle,
+                rename = ModelRenameState.Renaming(11L, entryA.modelId, "Renamed"),
+            ),
+        )
+
+        assertEquals(listOf("A", "B"), view.rows.map { it.displayName })
+        assertTrue(view.rows.none { it.selectionEnabled })
+        assertTrue(view.rows.none { it.renameEnabled })
+        assertTrue(view.rows.none { it.deletionEnabled })
+        assertTrue(view.catalogMutationBusy)
+        assertFalse(view.cleanupEnabled)
     }
 
     private fun snapshot(

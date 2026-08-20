@@ -2,8 +2,6 @@ package io.github.supermonster003.autojs6.plugin.ondeviceai.model
 
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
-import java.nio.CharBuffer
-import java.nio.charset.CodingErrorAction
 import java.security.MessageDigest
 
 internal data class ModelCatalogEntry(
@@ -132,6 +130,31 @@ internal object ModelCatalogPolicy {
         return ModelCatalogDeletion(updated, target)
     }
 
+    /** Changes only a catalog display name; stable identity and immutable file metadata remain. */
+    fun rename(
+        document: ModelCatalogDocument,
+        modelId: String,
+        displayName: String,
+    ): ModelCatalogUpdate {
+        val current = normalize(document)
+        val target = current.entries.singleOrNull { it.modelId == modelId }
+            ?: throw IllegalArgumentException("Renamed model is not present in the catalog")
+        val normalizedName = ModelDisplayNamePolicy.normalizeUserInput(displayName)
+        if (target.displayName == normalizedName) {
+            return ModelCatalogUpdate(current, target, changed = false)
+        }
+        val renamed = target.copy(displayName = normalizedName)
+        val updated = normalize(
+            current.copy(
+                revision = Math.addExact(current.revision, 1L),
+                entries = current.entries.map { entry ->
+                    if (entry.modelId == modelId) renamed else entry
+                },
+            ),
+        )
+        return ModelCatalogUpdate(updated, renamed, changed = true)
+    }
+
     /** Selects only managed hash files that are not referenced by the authoritative catalog. */
     fun unreferencedModelFileNames(
         document: ModelCatalogDocument,
@@ -181,16 +204,7 @@ internal object ModelCatalogPolicy {
         require(FILE_NAME.matches(entry.fileName) && entry.fileName == "model-${entry.sha256}.litertlm") {
             "Model catalog file does not match its digest"
         }
-        val displayNameBytes = runCatching {
-            Charsets.UTF_8.newEncoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-                .encode(CharBuffer.wrap(entry.displayName))
-                .remaining()
-        }.getOrElse { throw IllegalArgumentException("Model catalog display name is invalid", it) }
-        require(displayNameBytes in 1..256) {
-            "Model catalog display name is invalid"
-        }
+        ModelDisplayNamePolicy.requireCatalogValue(entry.displayName)
         require(entry.sizeBytes in 1L..ModelImportPolicy.MAXIMUM_MODEL_BYTES) {
             "Model catalog size is invalid"
         }

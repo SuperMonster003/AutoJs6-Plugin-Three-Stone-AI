@@ -6,6 +6,7 @@
     <string name="button_cleanup_storage">Clean unreferenced files</string>
     <string name="button_import_model">Import .litertlm model</string>
     <string name="button_delete_model">Delete model</string>
+    <string name="button_rename_model">Rename</string>
     <string name="import_cancelled">Model import cancelled</string>
     <string name="import_cancelling">Cancelling model import</string>
     <string name="import_failed">Model import failed</string>
@@ -38,6 +39,11 @@
     <string name="model_delete_selected_blocked">The selected model cannot be deleted. Select another model first.</string>
     <string name="model_deletion_failed">Model deletion failed</string>
     <string name="model_deletion_succeeded">Model deleted</string>
+    <string name="model_rename_title">Rename model</string>
+    <string name="model_rename_message">Enter a new display name. The model ID and file will not change.</string>
+    <string name="model_rename_invalid">Enter a non-empty, single-line name up to 256 UTF-8 bytes.</string>
+    <string name="model_rename_failed">Model rename failed</string>
+    <string name="model_rename_succeeded">Model renamed</string>
     <string name="model_selection_failed">Model selection failed</string>
     <string name="model_selection_succeeded">Model selected</string>
     <string name="model_status_format">Model: %1$s\nSize: %2$s\nSHA-256: %3$s\nModel ID: %4$s</string>

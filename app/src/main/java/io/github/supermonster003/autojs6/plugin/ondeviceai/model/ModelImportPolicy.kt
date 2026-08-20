@@ -7,7 +7,6 @@ internal object ModelImportPolicy {
     const val RESERVED_FREE_BYTES = 256L * 1024L * 1024L
     const val MAXIMUM_SOURCE_DISPLAY_NAME_CHARS = 1_024
     const val LITERTLM_MAGIC_BYTES = 8
-    private const val MAXIMUM_DISPLAY_NAME_BYTES = 256
     private val LITERTLM_MAGIC = "LITERTLM".toByteArray(StandardCharsets.US_ASCII)
     private val SHA_256 = Regex("^[0-9a-f]{64}$")
 
@@ -57,7 +56,7 @@ internal object ModelImportPolicy {
             val codePoint = Character.codePointAt(normalized, end)
             val text = String(Character.toChars(codePoint))
             val encoded = text.toByteArray(StandardCharsets.UTF_8).size
-            if (bytes + encoded > MAXIMUM_DISPLAY_NAME_BYTES) break
+            if (bytes + encoded > ModelDisplayNamePolicy.MAXIMUM_UTF8_BYTES) break
             bytes += encoded
             end += Character.charCount(codePoint)
         }

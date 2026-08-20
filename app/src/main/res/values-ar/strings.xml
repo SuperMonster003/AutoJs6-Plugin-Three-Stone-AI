@@ -6,6 +6,7 @@
     <string name="button_cleanup_storage">تنظيف الملفات غير المرجعية</string>
     <string name="button_import_model">استيراد نموذج .litertlm</string>
     <string name="button_delete_model">حذف النموذج</string>
+    <string name="button_rename_model">إعادة التسمية</string>
     <string name="import_cancelled">تم إلغاء استيراد النموذج</string>
     <string name="import_cancelling">جار إلغاء استيراد النموذج</string>
     <string name="import_failed">فشل استيراد النموذج</string>
@@ -38,6 +39,11 @@
     <string name="model_delete_selected_blocked">لا يمكن حذف النموذج المحدد. اختر نموذجا آخر أولا.</string>
     <string name="model_deletion_failed">فشل حذف النموذج</string>
     <string name="model_deletion_succeeded">تم حذف النموذج</string>
+    <string name="model_rename_title">إعادة تسمية النموذج</string>
+    <string name="model_rename_message">أدخل اسم عرض جديدا. لن يتغير معرف النموذج أو الملف.</string>
+    <string name="model_rename_invalid">أدخل اسما غير فارغ من سطر واحد لا يتجاوز 256 بايت UTF-8.</string>
+    <string name="model_rename_failed">فشل تغيير اسم النموذج</string>
+    <string name="model_rename_succeeded">تم تغيير اسم النموذج</string>
     <string name="model_selection_failed">فشل اختيار النموذج</string>
     <string name="model_selection_succeeded">تم اختيار النموذج</string>
     <string name="model_status_format">النموذج: %1$s\nالحجم: %2$s\nSHA-256: %3$s\nمعرف النموذج: %4$s</string>

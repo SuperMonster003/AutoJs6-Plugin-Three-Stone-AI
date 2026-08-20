@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>Local AI text generation plugin. Stream plain text on-device with LiteRT-LM</p>
+  <p>On-device AI plugin. Streams text locally with LiteRT-LM, no network required</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?label=Release"/></a>
@@ -39,7 +39,7 @@ The current README.md supports the following languages:
 
 ******
 
-AI Text Generation is an independent on-device provider for version 1 of the AutoJs6 AI Text Generation protocol. It runs a user-imported LiteRT-LM model on CPU, accepts plain-text message history, and returns plain text through a controlled streaming session.
+On-Device AI is the official on-device AI text generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on the CPU, accepts a plain-text message history, and returns plain text through a controlled streaming session. All inference happens locally: no network access and no data upload.
 
 ******
 
@@ -96,7 +96,7 @@ Host build 5270 or later is required. Releases include arm64-v8a, x86_64, univer
 
 ******
 
-> AutoJs6 now provides explicit public production routes for `ai.ask(..., { plugin: ... })`, prompt-only `ai.chat(..., { plugin: ... })`, and `ai.stream(..., { plugin: ... })`, with exact component/provider/model selection and no cloud fallback. Real-plugin/model public ask has L3 device evidence; deterministic fake-provider stream and chat have L2 Android evidence. Installing the plugin alone still does not redirect legacy `ai.*`; scripts must pass the explicit plugin selector and use an imported modelId. Real-model chat/stream and device-side active cancellation remain non-blocking evidence debt.
+> In AutoJs6 (build 5276 and later), `ai.ask`, `ai.chat`, and `ai.stream` support the local plugin route: pass `plugin: true` to select this plugin, and the model ID may be omitted when only one model is imported; `ai.models({ plugin: true })` lists imported models. When the plugin is not installed, not enabled in Plugin Center, or has no imported model, scripts receive a clear error message. A fully pinned `plugin: { component, providerId, modelId }` selector is also supported.
 
 ******
 
@@ -137,7 +137,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 
 ******
 
-The roadmap contains 28 checkable product outcomes: 14 complete and 14 open. D3 remains current because transactional catalog migration is still open. Model-management and atomic-selection L2 is complete at plugin production `98d438e`, focused tests `a6bc0e3`, 18 JVM XML reports and 57 tests with 0 failures/errors/skipped (focused 7+7+1+5), and successful `lintDebug` plus Debug/Release assemblies: 105 tasks on the full run and a successful final incremental rerun. Host test `6495079ea` and its 622-task build passed. On QV710AF65F/API 31/arm64-v8a, the exact real Activity changed A to B and B survived force-stop/restart; before and after, Binder exposed the same two exact models and generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916`, and `planExact` resolved both. The three APK hashes, shared signer, and cleanup receipts are frozen in ROADMAP. The fixtures were two 8-byte listing-only files; no `openSession`, LiteRT-LM/native path, real model, or old active generation ran. Old-session safety therefore rests on request-time path pinning, no file mutation during selection, and JVM policy tests, not real-generation evidence.
+The roadmap is organized around deliverable user-facing features, each independently checkable
 
 - [View ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 
@@ -146,6 +146,15 @@ The roadmap contains 28 checkable product outcomes: 14 complete and 14 open. D3 
 ### Release history
 
 ******
+
+# v1.1.0
+
+###### 2026/08/20
+
+* `Feature` Plugin renamed to On-Device AI, positioned as the official on-device AI plugin for AutoJs6
+* `Feature` Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing
+* `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
+* `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 
 # v1.0.0
 

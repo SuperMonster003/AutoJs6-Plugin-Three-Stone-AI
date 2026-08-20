@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>ملحق محلي لتوليد النص بالذكاء الاصطناعي. بث نص عادي على الجهاز باستخدام LiteRT-LM</p>
+  <p>اضافة ذكاء اصطناعي محلية. توليد نص متدفق على الجهاز عبر LiteRT-LM دون شبكة</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?label=Release"/></a>
@@ -39,7 +39,7 @@
 
 ******
 
-AI Text Generation هو provider مستقل على الجهاز للإصدار 1 من بروتوكول AI Text Generation في AutoJs6. يشغل نموذج LiteRT-LM استورده المستخدم على CPU, ويقبل سجل رسائل بنص عادي, ويعيد نصا عاديا عبر جلسة streaming مضبوطة.
+On-Device AI هي اضافة AutoJs6 الرسمية لتوليد النص بالذكاء الاصطناعي على الجهاز. تشغل نماذج LiteRT-LM المستوردة من المستخدم على المعالج, وتستقبل سجل رسائل نصية عادية, وتعيد نصا عاديا عبر جلسة بث متحكم بها. تتم جميع العمليات محليا: دون وصول للشبكة ودون رفع اي بيانات.
 
 ******
 
@@ -96,7 +96,7 @@ required host build: 5270
 
 ******
 
-> يوفر AutoJs6 الآن مسارات production عامة وصريحة لـ `ai.ask(..., { plugin: ... })` و`ai.chat(..., { plugin: ... })` المقيد بـ prompt واحد و`ai.stream(..., { plugin: ... })`، مع تثبيت exact component/provider/model ومن دون cloud fallback. يملك public ask مع plugin/model حقيقيين دليلا L3 على جهاز، بينما يملك stream/chat مع fake provider حتمي دليلا Android من المستوى L2. لا يؤدي تثبيت plugin وحده إلى تحويل سلوك `ai.*` القديم؛ يجب أن يمرر script اختيار plugin الصريح وmodelId مستوردا. يبقى chat/stream بنموذج حقيقي وactive cancel على الجهاز دينا غير حاجب للأدلة.
+> في AutoJs6 (البنية 5276 وما بعدها) تدعم `ai.ask` و `ai.chat` و `ai.stream` مسار الاضافة المحلية: مرر `plugin: true` لاختيار هذه الاضافة, ويمكن حذف معرف النموذج عند وجود نموذج واحد; كما تعدد `ai.models({ plugin: true })` النماذج المستوردة. عند عدم تثبيت الاضافة او تعطيلها في مركز الاضافات او عدم وجود نموذج, تتلقى السكربتات خطا واضحا. كما يدعم المحدد الصريح `plugin: { component, providerId, modelId }`.
 
 ******
 
@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-تحتوي خارطة الطريق على 28 نتيجة منتج قابلة للتحقق: اكتملت 14 وبقيت 14 مفتوحة. تظل D3 هي المرحلة الحالية لأن الترحيل الذري للـ catalog ما زال مفتوحا. اكتمل دليل L2 لإدارة النماذج والاختيار الذري عبر plugin production `98d438e` وfocused tests `a6bc0e3` و18 تقرير XML للـ JVM و57 tests بلا failures/errors/skipped (المركزة 7+7+1+5)، إضافة إلى نجاح `lintDebug` وbuilds للـ Debug/Release: 105 tasks في البناء الكامل وإعادة incremental أخيرة ناجحة. نجح host test `6495079ea` والبناء المرتبط به ذي 622 tasks. على QV710AF65F/API 31/arm64-v8a بدلت Activity الحقيقية A إلى B وبقي B محددا بعد force-stop/restart؛ عرض Binder قبل وبعد النموذجين exact نفسيهما وgeneration `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916`، وحل `planExact` كليهما. ثُبتت hashes لملفات APK الثلاثة وsigner المشترك وإيصالات التنظيف في ROADMAP. كانت fixtures ملفين listing فقط بحجم 8-byte؛ لم يُشغّل `openSession` أو مسار LiteRT-LM/native أو نموذج حقيقي أو generation قديمة نشطة. لذلك تستند سلامة الجلسات القديمة إلى تثبيت المسار وقت الطلب وعدم تغيير ملفات النموذج أثناء الاختيار وJVM policy tests، لا إلى دليل توليد حقيقي.
+خارطة الطريق منظمة حول ميزات قابلة للتسليم للمستخدم, وكل بند قابل للتحقق على حدة
 
 - [عرض ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 
@@ -146,6 +146,15 @@ required host build: 5270
 ### سجل الإصدارات
 
 ******
+
+# v1.1.0
+
+###### 2026/08/20
+
+* `ميزة` اعادة تسمية الاضافة الى On-Device AI وتحديد موقعها كاضافة الذكاء الاصطناعي المحلية الرسمية لـ AutoJs6
+* `ميزة` التوافق مع المحدد المختصر `plugin: true` لـ `ai.ask`/`ai.chat`/`ai.stream` وتعداد النماذج `ai.models` في AutoJs6
+* `تحسين` تحديث وصف الاضافة والتعليمات و README بعشر لغات بما يتوافق مع اضفاء الطابع الرسمي على مسار الاضافة المحلية `ai.*`
+* `تحسين` اعادة كتابة ROADMAP كخارطة طريق للميزات ببنود قابلة للتحقق كل على حدة
 
 # v1.0.0
 

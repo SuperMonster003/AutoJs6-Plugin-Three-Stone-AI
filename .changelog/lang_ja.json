@@ -5,6 +5,17 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.1.0": {
+      "released_date": "2026/08/20",
+      "feature": [
+        "プラグイン名を On-Device AI (オンデバイス AI) に変更し, AutoJs6 公式オンデバイス AI プラグインとして位置付け",
+        "AutoJs6 の `ai.ask`/`ai.chat`/`ai.stream` における `plugin: true` 短縮セレクターと `ai.models` モデル列挙に対応"
+      ],
+      "improvement": [
+        "プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合",
+        "ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成"
+      ]
+    },
     "v1.0.0": {
       "released_date": "2026/08/08",
       "feature": [

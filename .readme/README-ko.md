@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>로컬 AI 텍스트 생성 플러그인. LiteRT-LM으로 기기 내 일반 텍스트 스트리밍 생성</p>
+  <p>온디바이스 AI 플러그인. LiteRT-LM으로 로컬 기기에서 텍스트를 스트리밍 생성, 네트워크 불필요</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?label=Release"/></a>
@@ -39,7 +39,7 @@
 
 ******
 
-AI Text Generation은 AutoJs6 AI Text Generation 프로토콜 V1을 위한 독립 기기 내 provider입니다. 사용자가 가져온 LiteRT-LM 모델을 CPU에서 실행하고 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트를 반환합니다.
+On-Device AI (온디바이스 AI)는 AutoJs6의 공식 온디바이스 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 CPU에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트를 반환합니다. 모든 추론은 로컬에서 이루어지며 네트워크 접근이나 데이터 업로드가 없습니다.
 
 ******
 
@@ -96,7 +96,7 @@ required host build: 5270
 
 ******
 
-> AutoJs6에는 exact component/provider/model을 고정하고 cloud fallback을 하지 않는 명시적 public production route인 `ai.ask(..., { plugin: ... })`, prompt-only `ai.chat(..., { plugin: ... })`, `ai.stream(..., { plugin: ... })`가 구현되어 있습니다. 실제 plugin/model public ask에는 L3 기기 증거가 있고 deterministic fake-provider stream/chat에는 L2 Android 증거가 있습니다. plugin 설치만으로 기존 `ai.*`가 전환되지는 않으며 script가 명시적 plugin selector와 import한 modelId를 전달해야 합니다. 실제 모델 chat/stream과 기기 active cancel은 비차단 증거 부채로 남습니다.
+> AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`은 로컬 플러그인 경로를 지원합니다: `plugin: true`를 전달하면 이 플러그인이 선택되고, 모델이 하나뿐인 경우 모델 ID를 생략할 수 있습니다. `ai.models({ plugin: true })`로 가져온 모델을 열거할 수 있습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 스크립트에 명확한 오류가 전달됩니다. `plugin: { component, providerId, modelId }`로 명시적 고정도 가능합니다.
 
 ******
 
@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-Roadmap에는 확인 가능한 28개 제품 outcome이 있으며 14개가 완료되고 14개가 열려 있습니다. Transactional catalog migration이 아직 열려 있어 D3는 계속 현재 단계입니다. 모델 관리 및 원자적 선택 L2는 Plugin production `98d438e`, focused tests `a6bc0e3`, JVM 18 XML과 57 tests 및 0 failures/errors/skipped(focused 7+7+1+5), `lintDebug`와 Debug/Release build로 확인했습니다. 전체 build는 105 tasks였고 마지막 incremental rerun도 성공했으며 Host test `6495079ea`와 관련 622-task build도 통과했습니다. QV710AF65F/API 31/arm64-v8a에서 실제 Activity가 A에서 B로 전환했고 force-stop/restart 후에도 B가 선택된 상태였습니다. 전후 Binder는 동일한 두 exact model과 generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916`을 노출했고 `planExact`는 둘 다 해석했습니다. 세 APK hash, 공통 signer와 cleanup receipt는 ROADMAP에 고정했습니다. Fixture는 두 개의 8-byte listing file뿐이며 `openSession`, LiteRT-LM/native, 실제 모델 또는 이전 active generation은 실행하지 않았습니다. 이전 세션 안전성은 request-time path pinning, 선택 시 모델 파일 무변경, JVM policy tests에 근거하며 실제 생성 증거가 아닙니다.
+로드맵은 제공 가능한 사용자 기능 단위로 구성되며 각 항목은 개별적으로 체크하고 검수할 수 있습니다
 
 - [ROADMAP.md 보기](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 
@@ -146,6 +146,15 @@ Roadmap에는 확인 가능한 28개 제품 outcome이 있으며 14개가 완료
 ### 릴리스 기록
 
 ******
+
+# v1.1.0
+
+###### 2026/08/20
+
+* `기능` 플러그인 이름을 On-Device AI (온디바이스 AI)로 변경하고 AutoJs6 공식 온디바이스 AI 플러그인으로 자리매김
+* `기능` AutoJs6 `ai.ask`/`ai.chat`/`ai.stream`의 `plugin: true` 축약 선택자 및 `ai.models` 모델 열거 지원
+* `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신
+* `개선` ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성
 
 # v1.0.0
 

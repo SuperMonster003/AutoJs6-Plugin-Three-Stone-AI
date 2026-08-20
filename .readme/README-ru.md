@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>Локальный плагин генерации текста ИИ. Потоковая генерация обычного текста на устройстве с LiteRT-LM</p>
+  <p>Плагин локального ИИ. Потоковая генерация текста на устройстве через LiteRT-LM, без сети</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?label=Release"/></a>
@@ -39,7 +39,7 @@
 
 ******
 
-AI Text Generation является независимым provider на устройстве для версии 1 протокола AI Text Generation в AutoJs6. Он запускает импортированную пользователем модель LiteRT-LM на CPU, принимает историю сообщений в обычном тексте и возвращает текст через управляемый потоковый сеанс.
+On-Device AI — официальный плагин AutoJs6 для генерации текста ИИ на устройстве. Он выполняет импортированные пользователем модели LiteRT-LM на CPU, принимает историю сообщений в виде обычного текста и возвращает обычный текст через управляемую потоковую сессию. Все вычисления выполняются локально: без доступа к сети и без передачи данных.
 
 ******
 
@@ -96,7 +96,7 @@ required host build: 5270
 
 ******
 
-> AutoJs6 теперь предоставляет явные публичные production-маршруты `ai.ask(..., { plugin: ... })`, prompt-only `ai.chat(..., { plugin: ... })` и `ai.stream(..., { plugin: ... })` с точным выбором component/provider/model и без cloud fallback. Public ask с реальным plugin/model имеет L3-подтверждение на устройстве; stream и chat с детерминированным fake provider имеют Android-подтверждение L2. Одна лишь установка plugin по-прежнему не перенаправляет прежний `ai.*`: script должен передать явный plugin selector и импортированный modelId. Chat/stream с реальной моделью и активная отмена на устройстве остаются неблокирующим долгом по доказательствам.
+> В AutoJs6 (сборка 5276 и новее) `ai.ask`, `ai.chat` и `ai.stream` поддерживают маршрут локального плагина: передайте `plugin: true`, чтобы выбрать этот плагин; при единственной модели идентификатор модели можно опустить. `ai.models({ plugin: true })` перечисляет импортированные модели. Если плагин не установлен, отключен в Центре плагинов или модель не импортирована, скрипт получает понятную ошибку. Поддерживается и явное закрепление через `plugin: { component, providerId, modelId }`.
 
 ******
 
@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-Roadmap содержит 28 проверяемых продуктовых результатов: 14 завершены и 14 открыты. D3 остаётся текущим этапом, поскольку транзакционная миграция catalog ещё открыта. L2 для управления моделями и атомарного выбора подтверждён production plugin `98d438e`, focused tests `a6bc0e3`, 18 XML-отчётами JVM и 57 tests без failures/errors/skipped (focused 7+7+1+5), а также успешными `lintDebug` и сборками Debug/Release: 105 tasks в полной сборке и успешный финальный incremental rerun. Host test `6495079ea` и связанная сборка из 622 tasks прошли. На QV710AF65F/API 31/arm64-v8a реальная Activity переключила A на B, и B осталась выбранной после force-stop/restart; Binder до и после показывал те же две exact models и generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916`, а `planExact` находил обе. Hashes трёх APK, общий signer и receipts очистки закреплены в ROADMAP. Fixtures — только два 8-byte listing-файла; `openSession`, путь LiteRT-LM/native, реальная модель и старая активная generation не запускались. Безопасность старых сеансов основана на фиксации пути при запросе, отсутствии изменения файлов при выборе и JVM policy tests, а не на доказательстве реальной генерации.
+Дорожная карта организована вокруг доставляемых пользовательских функций, каждая проверяется отдельно
 
 - [Открыть ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 
@@ -146,6 +146,15 @@ Roadmap содержит 28 проверяемых продуктовых рез
 ### История выпусков
 
 ******
+
+# v1.1.0
+
+###### 2026/08/20
+
+* `Функция` Плагин переименован в On-Device AI и позиционируется как официальный локальный ИИ-плагин AutoJs6
+* `Функция` Совместимость с сокращенным селектором `plugin: true` для `ai.ask`/`ai.chat`/`ai.stream` и перечислением моделей `ai.models` в AutoJs6
+* `Улучшение` Обновлены описание плагина, инструкция и README на 10 языках в соответствии с формализованным маршрутом `ai.*` локального плагина
+* `Улучшение` ROADMAP переписан как дорожная карта функций с независимо проверяемыми пунктами
 
 # v1.0.0
 

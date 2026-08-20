@@ -4,6 +4,15 @@
 
 ******
 
+# v1.1.0
+
+###### 2026/08/20
+
+* `Función` Plugin renombrado a On-Device AI, posicionado como el plugin oficial de IA local de AutoJs6
+* `Función` Compatible con el selector abreviado `plugin: true` de `ai.ask`/`ai.chat`/`ai.stream` y la enumeración de modelos `ai.models` de AutoJs6
+* `Mejora` Descripción del plugin, instrucciones y README en 10 idiomas actualizados conforme a la formalización de la ruta de plugin local `ai.*`
+* `Mejora` ROADMAP reescrito como hoja de ruta de funciones con elementos verificables individualmente
+
 # v1.0.0
 
 ###### 2026/08/08

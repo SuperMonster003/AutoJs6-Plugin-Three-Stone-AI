@@ -1,11 +1,11 @@
 {
   "$name": "Français",
   "text_current_lowercase": "actuel",
-  "text_plugin_synopsis": "Plugin local de génération de texte IA. Diffusion de texte brut sur l'appareil avec LiteRT-LM",
+  "text_plugin_synopsis": "Plugin IA locale. Génère du texte en streaming sur l'appareil avec LiteRT-LM, sans réseau",
   "h3_languages_with_ascii": "Langues",
   "p_languages_all_supported_for_readme": "Le fichier README.md actuel prend en charge les langues suivantes",
   "h3_introduction": "Introduction",
-  "p_introduction": "AI Text Generation est un provider autonome sur l'appareil pour la version 1 du protocole AI Text Generation d'AutoJs6. Il exécute sur CPU un modèle LiteRT-LM importé par l'utilisateur, accepte un historique de messages en texte brut et renvoie du texte brut dans une session de streaming contrôlée.",
+  "p_introduction": "On-Device AI est le plugin officiel de génération de texte IA locale pour AutoJs6. Il exécute sur le CPU les modèles LiteRT-LM importés par l'utilisateur, accepte un historique de messages en texte brut et renvoie du texte brut via une session de streaming contrôlée. Toute l'inférence se fait localement : aucun accès réseau, aucune donnée envoyée.",
   "h3_functions": "Fonctions",
   "features": [
     "Importer un paquet de modèle `.litertlm` avec le sélecteur système Android et conserver une copie vérifiée dans le stockage privé de l'application.",
@@ -21,7 +21,7 @@
   "p_plugin_scope": "Le plugin déclare une exécution ON_DEVICE et le mode credential NONE. Il déclare seulement la capacité `streaming` et des entrées et sorties `text/plain`.",
   "p_plugin_packaging": "La build hôte {{ required_host_build }} ou ultérieure est requise. Les versions incluent les variantes APK {{ supported_abis }}.",
   "h3_host_integration_status": "État de l'intégration hôte",
-  "p_host_integration_status": "AutoJs6 fournit désormais des routes de production publiques explicites pour `ai.ask(..., { plugin: ... })`, `ai.chat(..., { plugin: ... })` limité au prompt et `ai.stream(..., { plugin: ... })`, avec sélection exacte du composant/provider/modèle et sans repli cloud. Le public ask avec plugin/modèle réel dispose d'une preuve L3 sur appareil ; stream et chat avec provider factice déterministe disposent d'une preuve Android L2. Installer le plugin ne redirige toujours pas le comportement `ai.*` historique : le script doit fournir le sélecteur explicite et un modelId importé. Chat/stream avec modèle réel et l'annulation active sur appareil restent une dette de preuve non bloquante.",
+  "p_host_integration_status": "Dans AutoJs6 (build 5276 et ultérieur), `ai.ask`, `ai.chat` et `ai.stream` prennent en charge la route de plugin local : passez `plugin: true` pour sélectionner ce plugin, et l'ID de modèle peut être omis lorsqu'un seul modèle est importé ; `ai.models({ plugin: true })` énumère les modèles importés. Si le plugin n'est pas installé, désactivé dans le Centre de plugins ou sans modèle, les scripts reçoivent une erreur claire. Le sélecteur explicite `plugin: { component, providerId, modelId }` reste pris en charge.",
   "h3_security": "Sécurité et confidentialité",
   "p_security": "Le plugin ne demande aucune permission réseau ou de stockage. Il lit le modèle uniquement avec un URI accordé par le sélecteur système, calcule SHA-256 pendant la copie vers le dossier privé `files/models`, appelle fsync et l'active par remplacement atomique du pointer dans ce dossier. Les services vérifient aussi le nom du paquet AutoJs6, le propriétaire de l'UID appelant et les signatures correspondantes.",
   "h3_security_limits": "Limites opérationnelles",
@@ -42,7 +42,7 @@
     "Aucun backend GPU ou NPU n'est déclaré. L'extension `.litertlm` seule ne garantit pas que le runtime LiteRT-LM actuel puisse charger le modèle."
   ],
   "h3_roadmap": "Feuille de route",
-  "p_roadmap": "La feuille de route contient 28 résultats vérifiables : 14 terminés et 14 ouverts. D3 reste l'étape actuelle car la migration transactionnelle du catalog est toujours ouverte. Le niveau L2 de gestion et de sélection atomique est validé par la production plugin `98d438e`, les tests ciblés `a6bc0e3`, 18 rapports XML JVM et 57 tests sans failure/error/skip (ciblés 7+7+1+5), ainsi que `lintDebug` et les builds Debug/Release : 105 tasks pour le build complet et une dernière relance incrémentale réussie. Le test hôte `6495079ea` et son build de 622 tasks ont réussi. Sur QV710AF65F/API 31/arm64-v8a, la véritable Activity a basculé A vers B et B est resté sélectionné après force-stop/restart ; avant et après, Binder exposait les mêmes deux modèles exacts et la generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916`, et `planExact` résolvait les deux. Les hashes des trois APK, leur signer commun et les reçus de nettoyage sont figés dans ROADMAP. Les fixtures étaient deux fichiers de listing de 8 octets ; aucun `openSession`, chemin LiteRT-LM/native, modèle réel ou ancienne generation active n'a été exécuté. La sécurité des anciennes sessions repose donc sur le chemin fixé à la requête, l'absence de mutation des fichiers lors de la sélection et les tests de policy JVM, et non sur une preuve de génération réelle.",
+  "p_roadmap": "La feuille de route est organisée en fonctionnalités livrables, chacune vérifiable séparément",
   "text_link_roadmap": "Consulter ROADMAP.md",
   "h3_release_history": "Historique des versions",
   "h5_for_more_release_history": "Autres versions",

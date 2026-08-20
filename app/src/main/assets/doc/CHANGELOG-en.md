@@ -4,6 +4,15 @@
 
 ******
 
+# v1.1.0
+
+###### 2026/08/20
+
+* `Feature` Plugin renamed to On-Device AI, positioned as the official on-device AI plugin for AutoJs6
+* `Feature` Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing
+* `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
+* `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
+
 # v1.0.0
 
 ###### 2026/08/08

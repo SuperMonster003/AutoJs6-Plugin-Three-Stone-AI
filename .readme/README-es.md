@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>Plugin local de generación de texto con IA. Transmisión de texto sin formato en el dispositivo con LiteRT-LM</p>
+  <p>Plugin de IA local. Genera texto en streaming en el dispositivo con LiteRT-LM, sin red</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?label=Release"/></a>
@@ -39,7 +39,7 @@ El README.md actual admite los siguientes idiomas:
 
 ******
 
-AI Text Generation es un provider independiente en el dispositivo para la versión 1 del protocolo AI Text Generation de AutoJs6. Ejecuta en CPU un modelo LiteRT-LM importado por el usuario, acepta historial de mensajes de texto sin formato y devuelve texto sin formato mediante una sesión de streaming controlada.
+On-Device AI es el plugin oficial de generación de texto con IA local para AutoJs6. Ejecuta en la CPU los modelos LiteRT-LM importados por el usuario, acepta un historial de mensajes de texto plano y devuelve texto plano mediante una sesión de streaming controlada. Toda la inferencia ocurre localmente: sin acceso a la red y sin subir datos.
 
 ******
 
@@ -96,7 +96,7 @@ Se requiere la build 5270 o posterior del host. Las versiones incluyen variantes
 
 ******
 
-> AutoJs6 ya ofrece rutas públicas de producción explícitas para `ai.ask(..., { plugin: ... })`, `ai.chat(..., { plugin: ... })` limitado al prompt y `ai.stream(..., { plugin: ... })`, con selección exacta de componente/provider/modelo y sin fallback a la nube. El public ask con plugin/modelo real tiene evidencia L3 en dispositivo; stream y chat con provider falso determinista tienen evidencia Android L2. Instalar el plugin por sí solo no redirige el comportamiento `ai.*` heredado: el script debe pasar el selector explícito y un modelId importado. Chat/stream con modelo real y la cancelación activa en dispositivo quedan como deuda de evidencia no bloqueante.
+> En AutoJs6 (compilación 5276 y posteriores), `ai.ask`, `ai.chat` y `ai.stream` admiten la ruta de plugin local: pase `plugin: true` para seleccionar este plugin, y el ID de modelo puede omitirse cuando solo hay un modelo importado; `ai.models({ plugin: true })` enumera los modelos importados. Si el plugin no está instalado, no está habilitado en el Centro de plugins o no tiene modelo, los scripts reciben un error claro. También se admite el selector explícito `plugin: { component, providerId, modelId }`.
 
 ******
 
@@ -137,7 +137,7 @@ El plugin no solicita permisos de red ni almacenamiento. Lee el modelo solo medi
 
 ******
 
-La hoja de ruta contiene 28 resultados verificables: 14 completos y 14 abiertos. D3 sigue siendo la etapa actual porque la migración transaccional del catálogo continúa abierta. El L2 de gestión y selección atómica quedó validado por la producción del plugin `98d438e`, las pruebas enfocadas `a6bc0e3`, 18 informes XML JVM y 57 tests sin failures/errors/skipped (enfocados 7+7+1+5), además de `lintDebug` y los builds Debug/Release: 105 tasks en el build completo y una repetición incremental final correcta. El test host `6495079ea` y su build de 622 tasks pasaron. En QV710AF65F/API 31/arm64-v8a, la Activity real cambió A por B y B siguió seleccionado tras force-stop/restart; antes y después, Binder mostró los mismos dos modelos exactos y la generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916`, y `planExact` resolvió ambos. Los hashes de los tres APK, el signer común y los recibos de limpieza están fijados en ROADMAP. Los fixtures fueron dos archivos de listing de 8 bytes; no se ejecutó `openSession`, la ruta LiteRT-LM/native, un modelo real ni una generation activa anterior. La seguridad de sesiones antiguas se basa en fijar la ruta al recibir la solicitud, no modificar archivos durante la selección y las pruebas de policy JVM, no en evidencia de generación real.
+La hoja de ruta se organiza en funciones entregables para el usuario, cada una verificable por separado
 
 - [Ver ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 
@@ -146,6 +146,15 @@ La hoja de ruta contiene 28 resultados verificables: 14 completos y 14 abiertos.
 ### Historial de versiones
 
 ******
+
+# v1.1.0
+
+###### 2026/08/20
+
+* `Función` Plugin renombrado a On-Device AI, posicionado como el plugin oficial de IA local de AutoJs6
+* `Función` Compatible con el selector abreviado `plugin: true` de `ai.ask`/`ai.chat`/`ai.stream` y la enumeración de modelos `ai.models` de AutoJs6
+* `Mejora` Descripción del plugin, instrucciones y README en 10 idiomas actualizados conforme a la formalización de la ruta de plugin local `ai.*`
+* `Mejora` ROADMAP reescrito como hoja de ruta de funciones con elementos verificables individualmente
 
 # v1.0.0
 

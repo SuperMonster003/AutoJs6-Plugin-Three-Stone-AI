@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>ローカル AI テキスト生成プラグイン. LiteRT-LM で端末上のプレーンテキストをストリーミング生成</p>
+  <p>オンデバイス AI プラグイン. LiteRT-LM によりローカル端末でテキストをストリーミング生成, ネットワーク不要</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?label=Release"/></a>
@@ -39,7 +39,7 @@
 
 ******
 
-AI Text Generation は AutoJs6 AI Text Generation プロトコル V1 の独立した端末内 provider です. ユーザーがインポートした LiteRT-LM モデルを CPU で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストを返します.
+On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを CPU 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません.
 
 ******
 
@@ -96,7 +96,7 @@ required host build: 5270
 
 ******
 
-> AutoJs6 には、exact component/provider/model を固定し cloud fallback を行わない明示的な public production route として、`ai.ask(..., { plugin: ... })`、prompt-only の `ai.chat(..., { plugin: ... })`、`ai.stream(..., { plugin: ... })` が実装済みです。実 plugin/model の public ask には L3 の実機証拠があり、deterministic fake-provider の stream/chat には L2 の Android 証拠があります。plugin をインストールするだけでは従来の `ai.*` は切り替わらず、script は明示的な plugin selector と import 済み modelId を指定する必要があります。実モデル chat/stream と実機での能動 cancel は非ブロッキングの証拠債務です。
+> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応: `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です.
 
 ******
 
@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-Roadmap には確認可能な product outcome が 28 個あり、14 個が完了、14 個が未完了です。Transactional catalog migration が未完了のため、D3 は引き続き現在の段階です。モデル管理と原子的選択の L2 は、Plugin production `98d438e`、focused tests `a6bc0e3`、JVM 18 XML・57 tests・0 failures/errors/skipped（focused 7+7+1+5）、および `lintDebug` と Debug/Release build で確認しました。完全 build は 105 tasks、最後の incremental rerun も成功し、Host test `6495079ea` と関連する 622-task build も通過しました。QV710AF65F/API 31/arm64-v8a では、実際の Activity で A から B に切り替え、force-stop/restart 後も B が選択済みでした。前後の Binder は同じ 2 個の exact model と generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916` を公開し、`planExact` は両方を解決しました。3 APK の hash、共通 signer、cleanup receipt は ROADMAP に固定しています。Fixture は 2 個の 8-byte listing file のみで、`openSession`、LiteRT-LM/native、実モデル、旧 active generation は実行していません。旧セッションの安全性は request-time の path pin、選択時にモデルファイルを変更しないこと、JVM policy tests に基づき、実生成の証拠ではありません。
+ロードマップは提供可能なユーザー向け機能を単位に構成され, 各項目は個別にチェックと検収が可能です
 
 - [ROADMAP.md を表示](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 
@@ -146,6 +146,15 @@ Roadmap には確認可能な product outcome が 28 個あり、14 個が完了
 ### リリース履歴
 
 ******
+
+# v1.1.0
+
+###### 2026/08/20
+
+* `機能` プラグイン名を On-Device AI (オンデバイス AI) に変更し, AutoJs6 公式オンデバイス AI プラグインとして位置付け
+* `機能` AutoJs6 の `ai.ask`/`ai.chat`/`ai.stream` における `plugin: true` 短縮セレクターと `ai.models` モデル列挙に対応
+* `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合
+* `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 
 # v1.0.0
 

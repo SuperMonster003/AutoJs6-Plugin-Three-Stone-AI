@@ -5,6 +5,17 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "相依性",
   "$data": {
+    "v1.1.0": {
+      "released_date": "2026/08/20",
+      "feature": [
+        "外掛名稱調整為 On-Device AI (裝置端 AI), 明確定位為 AutoJs6 官方裝置端 AI 外掛",
+        "適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 的 `plugin: true` 簡寫選擇器及 `ai.models` 模型列舉"
+      ],
+      "improvement": [
+        "更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致",
+        "重寫 ROADMAP 為可逐項勾選的功能路線圖"
+      ]
+    },
     "v1.0.0": {
       "released_date": "2026/08/08",
       "feature": [

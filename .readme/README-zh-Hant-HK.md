@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/app/src/main/res/mipmap/ic_launcher_ai.png?raw=true" alt="ai-text-generation-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>本地 AI 文字生成插件. 使用 LiteRT-LM 在裝置端串流生成純文字</p>
+  <p>裝置端 AI 插件. 使用 LiteRT-LM 喺本地裝置串流生成文本, 無需聯網</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation?label=Release"/></a>
@@ -39,7 +39,7 @@
 
 ******
 
-AI Text Generation 是 AutoJs6 的獨立 AI Text Generation 協議 V1 裝置端 provider. 它在 CPU 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段傳回純文字.
+On-Device AI (裝置端 AI) 係 AutoJs6 嘅官方裝置端 AI 文本生成插件. 佢喺 CPU 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本. 全部推理喺本地完成, 唔聯網, 唔上傳任何數據.
 
 ******
 
@@ -96,7 +96,7 @@ required host build: 5270
 
 ******
 
-> AutoJs6 現已提供明確 public production route：`ai.ask(..., { plugin: ... })`、prompt-only `ai.chat(..., { plugin: ... })` 及 `ai.stream(..., { plugin: ... })`，嚴格選擇 exact component/provider/model 且不作 cloud fallback。真實插件/模型 public ask 已有 L3 實機證據，deterministic fake-provider stream/chat 已有 L2 Android 證據。只安裝插件仍不會切換 legacy `ai.*`；script 必須傳入明確 plugin selector 並使用已匯入的 modelId。真實模型 chat/stream 與實機主動取消保留為非阻塞證據債務。
+> AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由: 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件.
 
 ******
 
@@ -137,7 +137,7 @@ required host build: 5270
 
 ******
 
-路線圖包含 28 個可勾選產品結果，已完成 14 項、開放 14 項；transactional catalog migration 仍開放，因此 D3 仍是目前階段。模型管理與原子選擇 L2 已由 Plugin 生產實作 `98d438e`、focused tests `a6bc0e3`、18 份 JVM XML 共 57 tests 且 0 failures/errors/skipped（focused 7+7+1+5），以及 `lintDebug`、Debug/Release build 證明；首次完整 build 105 tasks，最終增量重跑亦成功。Host test `6495079ea` 及相關 622-task build 通過。QV710AF65F/API 31/arm64-v8a 上，真實 Activity 將 A 切換為 B，force-stop/restart 後 B 仍被選中；Binder 前後的兩個 exact model 和 generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916` 不變，`planExact` 對兩者均命中。三份 APK hash、共同 signer 和清理回執已凍結於 ROADMAP。Fixture 只有兩個 8-byte listing 檔案，沒有調用 `openSession`、LiteRT-LM/native、真實模型或舊活動 generation；舊工作階段安全只由 request-time 路徑固定、選擇不改動模型檔案及 JVM policy tests 支持，不提升為真實生成證據。
+路線圖按可交付嘅用戶功能組織, 每項均可單獨勾選同驗收
 
 - [查看 ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-AI-Text-Generation/blob/master/ROADMAP.md)
 
@@ -146,6 +146,15 @@ required host build: 5270
 ### 版本歷史
 
 ******
+
+# v1.1.0
+
+###### 2026/08/20
+
+* `新增` 插件名稱調整為 On-Device AI (裝置端 AI), 明確定位為 AutoJs6 官方裝置端 AI 插件
+* `新增` 適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 嘅 `plugin: true` 簡寫選擇器及 `ai.models` 模型枚舉
+* `優化` 更新插件描述, 使用說明及 10 種語言嘅 README, 與宿主 `ai.*` 本機插件路由嘅正式化保持一致
+* `優化` 重寫 ROADMAP 為可逐項勾選嘅功能路線圖
 
 # v1.0.0
 

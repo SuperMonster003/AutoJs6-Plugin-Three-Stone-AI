@@ -5,6 +5,17 @@
   "changelog_label_improvement": "개선",
   "changelog_label_dependency": "의존성",
   "$data": {
+    "v1.1.0": {
+      "released_date": "2026/08/20",
+      "feature": [
+        "플러그인 이름을 On-Device AI (온디바이스 AI)로 변경하고 AutoJs6 공식 온디바이스 AI 플러그인으로 자리매김",
+        "AutoJs6 `ai.ask`/`ai.chat`/`ai.stream`의 `plugin: true` 축약 선택자 및 `ai.models` 모델 열거 지원"
+      ],
+      "improvement": [
+        "플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신",
+        "ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성"
+      ]
+    },
     "v1.0.0": {
       "released_date": "2026/08/08",
       "feature": [

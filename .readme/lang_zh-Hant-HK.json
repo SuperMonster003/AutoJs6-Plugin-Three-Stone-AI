@@ -1,11 +1,11 @@
 {
   "$name": "繁體中文 (香港)",
   "text_current_lowercase": "目前",
-  "text_plugin_synopsis": "本地 AI 文字生成插件. 使用 LiteRT-LM 在裝置端串流生成純文字",
+  "text_plugin_synopsis": "裝置端 AI 插件. 使用 LiteRT-LM 喺本地裝置串流生成文本, 無需聯網",
   "h3_languages_with_ascii": "語言",
   "p_languages_all_supported_for_readme": "目前 README.md 支援以下語言",
   "h3_introduction": "簡介",
-  "p_introduction": "AI Text Generation 是 AutoJs6 的獨立 AI Text Generation 協議 V1 裝置端 provider. 它在 CPU 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段傳回純文字.",
+  "p_introduction": "On-Device AI (裝置端 AI) 係 AutoJs6 嘅官方裝置端 AI 文本生成插件. 佢喺 CPU 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本. 全部推理喺本地完成, 唔聯網, 唔上傳任何數據.",
   "h3_functions": "功能",
   "features": [
     "透過 Android 系統檔案選擇器匯入 `.litertlm` 模型套件, 並將驗證後的副本儲存到應用程式私人儲存空間.",
@@ -21,7 +21,7 @@
   "p_plugin_scope": "插件宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它只宣告 `streaming` 能力及 `text/plain` 輸入輸出.",
   "p_plugin_packaging": "需要主程式構建版本 {{ required_host_build }} 或更高版本. 發佈產物包含 {{ supported_abis }} APK.",
   "h3_host_integration_status": "主程式整合狀態",
-  "p_host_integration_status": "AutoJs6 現已提供明確 public production route：`ai.ask(..., { plugin: ... })`、prompt-only `ai.chat(..., { plugin: ... })` 及 `ai.stream(..., { plugin: ... })`，嚴格選擇 exact component/provider/model 且不作 cloud fallback。真實插件/模型 public ask 已有 L3 實機證據，deterministic fake-provider stream/chat 已有 L2 Android 證據。只安裝插件仍不會切換 legacy `ai.*`；script 必須傳入明確 plugin selector 並使用已匯入的 modelId。真實模型 chat/stream 與實機主動取消保留為非阻塞證據債務。",
+  "p_host_integration_status": "AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由: 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件.",
   "h3_security": "安全性和私隱",
   "p_security": "插件不要求網絡或儲存權限. 模型只透過系統檔案選擇器授予的 URI 讀取, 以串流 SHA-256 校驗和 fsync 寫入應用程式私人 `files/models` 目錄, 再透過同目錄原子 pointer 替換啟用. Provider 服務亦會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬及雙方簽名.",
   "h3_security_limits": "執行限制",
@@ -42,7 +42,7 @@
     "不宣告 GPU 或 NPU backend. `.litertlm` 副檔名本身不保證模型可由目前 LiteRT-LM runtime 載入."
   ],
   "h3_roadmap": "路線圖",
-  "p_roadmap": "路線圖包含 28 個可勾選產品結果，已完成 14 項、開放 14 項；transactional catalog migration 仍開放，因此 D3 仍是目前階段。模型管理與原子選擇 L2 已由 Plugin 生產實作 `98d438e`、focused tests `a6bc0e3`、18 份 JVM XML 共 57 tests 且 0 failures/errors/skipped（focused 7+7+1+5），以及 `lintDebug`、Debug/Release build 證明；首次完整 build 105 tasks，最終增量重跑亦成功。Host test `6495079ea` 及相關 622-task build 通過。QV710AF65F/API 31/arm64-v8a 上，真實 Activity 將 A 切換為 B，force-stop/restart 後 B 仍被選中；Binder 前後的兩個 exact model 和 generation `litertlm-catalog-v2-08e6ec0aff29d234cbdf6acb07be8916` 不變，`planExact` 對兩者均命中。三份 APK hash、共同 signer 和清理回執已凍結於 ROADMAP。Fixture 只有兩個 8-byte listing 檔案，沒有調用 `openSession`、LiteRT-LM/native、真實模型或舊活動 generation；舊工作階段安全只由 request-time 路徑固定、選擇不改動模型檔案及 JVM policy tests 支持，不提升為真實生成證據。",
+  "p_roadmap": "路線圖按可交付嘅用戶功能組織, 每項均可單獨勾選同驗收",
   "text_link_roadmap": "查看 ROADMAP.md",
   "h3_release_history": "版本歷史",
   "h5_for_more_release_history": "更多版本",

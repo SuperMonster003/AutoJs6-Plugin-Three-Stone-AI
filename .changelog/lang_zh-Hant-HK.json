@@ -5,6 +5,17 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "依賴",
   "$data": {
+    "v1.1.0": {
+      "released_date": "2026/08/20",
+      "feature": [
+        "插件名稱調整為 On-Device AI (裝置端 AI), 明確定位為 AutoJs6 官方裝置端 AI 插件",
+        "適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 嘅 `plugin: true` 簡寫選擇器及 `ai.models` 模型枚舉"
+      ],
+      "improvement": [
+        "更新插件描述, 使用說明及 10 種語言嘅 README, 與宿主 `ai.*` 本機插件路由嘅正式化保持一致",
+        "重寫 ROADMAP 為可逐項勾選嘅功能路線圖"
+      ]
+    },
     "v1.0.0": {
       "released_date": "2026/08/08",
       "feature": [

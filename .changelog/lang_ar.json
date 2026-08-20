@@ -5,6 +5,17 @@
   "changelog_label_improvement": "تحسين",
   "changelog_label_dependency": "تبعية",
   "$data": {
+    "v1.1.0": {
+      "released_date": "2026/08/20",
+      "feature": [
+        "اعادة تسمية الاضافة الى On-Device AI وتحديد موقعها كاضافة الذكاء الاصطناعي المحلية الرسمية لـ AutoJs6",
+        "التوافق مع المحدد المختصر `plugin: true` لـ `ai.ask`/`ai.chat`/`ai.stream` وتعداد النماذج `ai.models` في AutoJs6"
+      ],
+      "improvement": [
+        "تحديث وصف الاضافة والتعليمات و README بعشر لغات بما يتوافق مع اضفاء الطابع الرسمي على مسار الاضافة المحلية `ai.*`",
+        "اعادة كتابة ROADMAP كخارطة طريق للميزات ببنود قابلة للتحقق كل على حدة"
+      ]
+    },
     "v1.0.0": {
       "released_date": "2026/08/08",
       "feature": [

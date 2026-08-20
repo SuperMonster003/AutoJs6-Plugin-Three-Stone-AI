@@ -2,7 +2,7 @@
 
 このプラグインは Android Storage Access Framework (SAF) からローカル `.litertlm` モデルパッケージをインポートし, アプリ専用ストレージへコピーします. CPU-only LiteRT-LM でプレーンテキスト履歴を処理し, テキストをストリーミング出力します.
 
-AutoJs6 ホスト build 5270 以降と Android API 24 以降が必要です.
+AutoJs6 ホスト build 5276 以降と Android API 24 以降が必要です.
 
 ## クイックスタート (推奨)
 
@@ -12,6 +12,18 @@ AutoJs6 ビルド 5276 以降では, グローバル `ai` モジュールから�
 ai.ask("Hello", { plugin: true }).then((text) => {
     console.log(text);
 });
+```
+
+同じ options object で sampling と出力長を制御できます:
+
+```javascript
+ai.ask("Hello", {
+    plugin: true,
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.9,
+    maxTokens: 256,
+}).then((text) => console.log(text));
 ```
 
 インポート済みモデルの列挙や, `plugin: { modelId: "..." }` による明示指定も可能です:
@@ -308,17 +320,20 @@ try {
         false,  // structured JSON
         false,  // usage
         4096,   // 最大输出字节
-        null,   // 不设置 token 上限
+        java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming")
+        java.util.Collections.singletonList("streaming"),
+        java.lang.Double.valueOf("0.7"), // temperature
+        java.lang.Integer.valueOf("40"), // topK
+        java.lang.Double.valueOf("0.9")  // topP
     );
 
     var request = new TextApi.OnDeviceAiRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 0),
+        new CommonApi.AiProtocolVersion(1, 1),
         "autojs6.on-device-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
@@ -390,7 +405,7 @@ try {
 
 - モデルのインポート上限は 8 GiB で, 完了後に 256 MiB 以上の空き容量が必要です.
 - コンテキスト上限は 256 KiB, 出力上限は 64 KiB で, 同時に有効な生成セッションは 1 つだけです.
-- Provider は token 数の上限を宣言しません. `maximumOutputTokens` を設定するリクエストは非対応です.
+- `maxTokens` (direct protocol では `maximumOutputTokens`) は 1 から 2,147,483,647 までで, usage reporting なしで適用されます. `temperature` は有限かつ 0 以上, `topK` は正, `topP` は 0 から 1 の有限値である必要があります.
 - 宣言する機能は streaming と `text/plain` だけです. Reasoning, tools, structured JSON, usage は非対応です.
 - ネットワーク権限とストレージ権限は要求しません.
 - 同じ署名の AutoJs6 ホストだけが provider サービスを bind できます.

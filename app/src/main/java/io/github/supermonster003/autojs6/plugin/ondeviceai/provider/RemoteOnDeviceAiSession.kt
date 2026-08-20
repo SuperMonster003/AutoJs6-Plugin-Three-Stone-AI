@@ -198,7 +198,7 @@ internal class RemoteOnDeviceAiSession(
         val options = request.options
         if (
             options.includeReasoning || options.structuredJson || options.reportUsage ||
-            options.maximumOutputTokens != null || options.maximumToolRounds != 0 ||
+            options.maximumToolRounds != 0 ||
             options.responseMimeType != OnDeviceAiMimeType.PLAIN || options.responseSchema != null ||
             request.tools.isNotEmpty() ||
             options.requiredCapabilityIds.any { it != OnDeviceAiCapabilityId.STREAMING } ||

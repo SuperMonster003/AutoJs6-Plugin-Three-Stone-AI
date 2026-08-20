@@ -9,7 +9,8 @@
       "released_date": "2026/08/20",
       "feature": [
         "Плагин переименован в On-Device AI и позиционируется как официальный локальный ИИ-плагин AutoJs6",
-        "Совместимость с сокращенным селектором `plugin: true` для `ai.ask`/`ai.chat`/`ai.stream` и перечислением моделей `ai.models` в AutoJs6"
+        "Совместимость с сокращенным селектором `plugin: true` для `ai.ask`/`ai.chat`/`ai.stream` и перечислением моделей `ai.models` в AutoJs6",
+        "Передача `temperature`, `topK`, `topP` и `maxTokens` через протокол On-Device AI 1.1 в параметры sampling и ограничения выходных tokens LiteRT-LM"
       ],
       "improvement": [
         "Обновлены описание плагина, инструкция и README на 10 языках в соответствии с формализованным маршрутом `ai.*` локального плагина",

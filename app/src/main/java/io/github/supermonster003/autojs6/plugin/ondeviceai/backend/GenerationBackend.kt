@@ -13,10 +13,23 @@ internal data class GenerationMessage(
     val textParts: List<String>,
 )
 
+internal data class GenerationSamplingOptions(
+    val temperature: Double,
+    val topK: Int,
+    val topP: Double,
+) {
+    init {
+        require(temperature.isFinite() && temperature >= 0.0)
+        require(topK > 0)
+        require(topP.isFinite() && topP in 0.0..1.0)
+    }
+}
+
 internal data class GenerationRequest(
     val history: List<GenerationMessage>,
     val prompt: GenerationMessage,
     val maximumOutputTokens: Int?,
+    val samplingOptions: GenerationSamplingOptions?,
 )
 
 internal interface GenerationListener {

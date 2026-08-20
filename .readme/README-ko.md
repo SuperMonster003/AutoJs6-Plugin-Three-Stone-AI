@@ -50,6 +50,7 @@ On-Device AI (온디바이스 AI)는 AutoJs6의 공식 온디바이스 AI 텍스
 - Android 시스템 선택기로 `.litertlm` 모델 패키지를 가져오고 검증된 복사본을 앱 전용 저장소에 보관합니다.
 - 시스템 선택기를 열기 전에 비공개 저장 공간을 사전 확인하고, 현재 가져오기 예산과 비공개 사본의 예상 사용량을 표시하며, 복사 전에 선택한 파일을 다시 확인합니다.
 - 일반 텍스트 system, user 및 assistant 기록으로 로컬 생성 요청을 만듭니다.
+- AutoJs6 `ai.ask`, `ai.chat`, `ai.stream`의 `temperature`, `topK`, `topP`, `maxTokens`를 LiteRT-LM까지 전달합니다.
 - credit 역압력으로 텍스트 chunk를 순서대로 전달하고 완료, 실패 또는 취소 중 하나의 종료 상태만 게시합니다.
 - 가져온 모델을 나열하고 선택하고 이름을 변경하며, 선택되지 않은 모델을 삭제하고 관리 화면에서 참조되지 않은 모델 파일을 회수합니다.
 - 모델 다운로드나 원격 추론 서비스 없이 CPU backend로 완전히 기기 내에서 실행합니다.
@@ -83,13 +84,13 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1
-required host build: 5270
+protocol: V1.1
+required host build: 5276
 ```
 
 플러그인은 ON_DEVICE 실행과 NONE credential 모드를 선언합니다. `streaming` 기능과 `text/plain` 입출력만 선언합니다.
 
-호스트 build 5270 이상이 필요합니다. 릴리스에는 arm64-v8a, x86_64, universal APK 변형이 포함됩니다.
+호스트 build 5276 이상이 필요합니다. 릴리스에는 arm64-v8a, x86_64, universal APK 변형이 포함됩니다.
 
 ******
 
@@ -118,6 +119,7 @@ required host build: 5270
 - 분리된 `:provider` 프로세스와의 프로세스 간 경쟁을 피하기 위해 가져오기 중에는 이전 SHA-256 hash 이름 모델 세대를 자동 삭제하지 않습니다. 모델 관리 화면에서 선택되지 않은 catalog 모델을 삭제하고 catalog에서 더 이상 참조하지 않는 hash 이름 파일을 회수할 수 있습니다.
 - 프로세스에서 활성 생성 세션은 최대 1개입니다. 요청 descriptor는 비동기 작업 전에 복제되고 프로토콜 quota에 따라 닫힙니다.
 - Provider가 선언하는 컨텍스트 상한은 256 KiB, 출력 상한은 64 KiB입니다. 요청과 모델은 더 낮은 상한을 적용할 수 있습니다.
+- `maxTokens`는 1부터 2,147,483,647까지의 정수입니다. `temperature`는 유한한 0 이상의 값, `topK`는 양의 정수, `topP`는 0부터 1까지의 유한한 값이어야 합니다. 세 sampling 설정을 모두 생략하면 모델/엔진 기본값을 유지하고, 일부만 지정하면 생략된 항목을 LiteRT-LM 기준값 `topK: 1`, `topP: 0.95`, `temperature: 1`로 채웁니다.
 - 스트리밍은 유한 credit과 제한된 chunk를 사용해 무제한 버퍼 또는 역압력 없는 callback을 방지합니다.
 - 취소, 세션 닫기 및 timeout은 결과 게시를 중단하고 하나의 종료 상태로 요청을 끝냅니다.
 
@@ -154,6 +156,7 @@ required host build: 5270
 
 * `기능` 플러그인 이름을 On-Device AI (온디바이스 AI)로 변경하고 AutoJs6 공식 온디바이스 AI 플러그인으로 자리매김
 * `기능` AutoJs6 `ai.ask`/`ai.chat`/`ai.stream`의 `plugin: true` 축약 선택자 및 `ai.models` 모델 열거 지원
+* `기능` On-Device AI 프로토콜 1.1을 통해 `temperature`, `topK`, `topP`, `maxTokens`를 LiteRT-LM sampling 및 출력 token 제어까지 전달
 * `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신
 * `개선` ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성
 

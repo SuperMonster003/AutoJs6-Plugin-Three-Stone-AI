@@ -50,6 +50,7 @@ On-Device AI (裝置端 AI) 是 AutoJs6 的官方裝置端 AI 文字生成外掛
 - 透過 Android 系統檔案選擇器匯入 `.litertlm` 模型套件, 並將驗證後的副本儲存到應用程式私人儲存空間.
 - 開啟系統檔案選擇器前預檢私人儲存空間, 顯示目前匯入預算與私人副本預計占用, 並在複製前再次檢查所選檔案.
 - 使用純文字 system, user 和 assistant 歷史建立本機生成請求.
+- 將 AutoJs6 `ai.ask`, `ai.chat` 和 `ai.stream` 的 `temperature`, `topK`, `topP` 與 `maxTokens` 傳遞到 LiteRT-LM.
 - 透過 credit 背壓依序傳送文字 chunk, 並只發布一個完成, 錯誤或取消終態.
 - 列出, 選取及重新命名已匯入模型, 刪除未選取模型, 並在管理介面一鍵回收未參照模型檔案.
 - 完全在裝置端以 CPU backend 執行, 不下載模型, 不呼叫遠端推論服務.
@@ -83,13 +84,13 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1
-required host build: 5270
+protocol: V1.1
+required host build: 5276
 ```
 
 外掛宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它只宣告 `streaming` 能力及 `text/plain` 輸入輸出.
 
-需要主程式建置版本 5270 或更高版本. 發布產物包含 arm64-v8a, x86_64, universal APK.
+需要主程式建置版本 5276 或更高版本. 發布產物包含 arm64-v8a, x86_64, universal APK.
 
 ******
 
@@ -118,6 +119,7 @@ required host build: 5270
 - 為避免與獨立 `:provider` 程序發生競態, 匯入時不會自動刪除先前以 SHA-256 hash 命名的模型代次. 模型管理介面可刪除未選取的 catalog 模型, 並回收不再由 catalog 參照的 hash 命名檔案.
 - 同一程序最多有一個作用中生成工作階段. 請求描述元會在非同步處理前複製並依協定配額關閉.
 - Provider 宣告的內容上限為 256 KiB, 輸出上限為 64 KiB, 請求和模型也可施加更低上限.
+- `maxTokens` 接受 1 至 2,147,483,647 的整數. `temperature` 必須為非負有限數, `topK` 必須為正整數, `topP` 必須為 0 至 1 的有限數. 三項取樣參數全部省略時保留模型或引擎預設值; 部分覆寫時, 未設定項使用 LiteRT-LM 基準 `topK: 1`, `topP: 0.95`, `temperature: 1`.
 - 串流輸出使用有限 credit 和有界 chunk, 防止無限制緩衝或無背壓回呼.
 - 取消, 工作階段關閉和逾時會停止結果發布, 並透過唯一終態結束請求.
 
@@ -154,6 +156,7 @@ required host build: 5270
 
 * `新增` 外掛品牌與執行階段識別統一為 On-Device AI (裝置端 AI), 同步應用程式名稱, 套件名稱, 元件名稱, 探索識別, 協定 API, 建置產物及文件
 * `新增` 適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 的 `plugin: true` 簡寫選擇器及 `ai.models` 模型列舉
+* `新增` 透過 On-Device AI 協定 1.1 將 `temperature`, `topK`, `topP` 與 `maxTokens` 傳遞至 LiteRT-LM 取樣及輸出 token 控制
 * `優化` 更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致
 * `優化` 重寫 ROADMAP 為可逐項勾選的功能路線圖
 

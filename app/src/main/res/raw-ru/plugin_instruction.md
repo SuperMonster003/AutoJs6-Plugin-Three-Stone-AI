@@ -2,7 +2,7 @@
 
 Этот плагин импортирует один локальный пакет модели `.litertlm` через Android Storage Access Framework (SAF), копирует его в закрытое хранилище приложения и выполняет генерацию LiteRT-LM только на CPU с историей в обычном тексте и потоковым текстовым выводом.
 
-Плагину требуется build хоста AutoJs6 5270 или новее и Android API 24 или новее.
+Плагину требуется build хоста AutoJs6 5276 или новее и Android API 24 или новее.
 
 ## Быстрый старт (рекомендуется)
 
@@ -12,6 +12,18 @@
 ai.ask("Hello", { plugin: true }).then((text) => {
     console.log(text);
 });
+```
+
+Параметры sampling и длина вывода задаются в том же объекте options:
+
+```javascript
+ai.ask("Hello", {
+    plugin: true,
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.9,
+    maxTokens: 256,
+}).then((text) => console.log(text));
 ```
 
 Перечисление импортированных моделей или явное закрепление через `plugin: { modelId: "..." }`:
@@ -308,17 +320,20 @@ try {
         false,  // structured JSON
         false,  // usage
         4096,   // 最大输出字节
-        null,   // 不设置 token 上限
+        java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming")
+        java.util.Collections.singletonList("streaming"),
+        java.lang.Double.valueOf("0.7"), // temperature
+        java.lang.Integer.valueOf("40"), // topK
+        java.lang.Double.valueOf("0.9")  // topP
     );
 
     var request = new TextApi.OnDeviceAiRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 0),
+        new CommonApi.AiProtocolVersion(1, 1),
         "autojs6.on-device-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
@@ -390,7 +405,7 @@ try {
 
 - Импорт модели ограничен 8 GiB и должен оставить не менее 256 MiB свободного места.
 - Контекст ограничен 256 KiB, вывод 64 KiB, одновременно активен только один сеанс генерации.
-- Provider не объявляет предел количества tokens, поэтому запросы с `maximumOutputTokens` не поддерживаются.
+- `maxTokens` (или `maximumOutputTokens` в прямом протоколе) принимает значения от 1 до 2 147 483 647 и применяется без обязательного отчёта usage. `temperature` должен быть конечным и неотрицательным, `topK` положительным, а `topP` конечным от 0 до 1.
 - Объявлены только streaming и `text/plain`. Reasoning, tools, structured JSON и usage не поддерживаются.
 - Плагин не запрашивает разрешения сети или хранилища.
 - Только хост AutoJs6 с той же подписью может привязаться к службе provider.

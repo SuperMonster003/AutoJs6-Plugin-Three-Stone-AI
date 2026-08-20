@@ -2,6 +2,7 @@ package io.github.supermonster003.autojs6.plugin.ondeviceai.provider
 
 import io.github.supermonster003.autojs6.plugin.ondeviceai.OnDeviceAiPlugin
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationRole
+import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationSamplingOptions
 import org.autojs.plugin.ai.common.api.AiPayloadReference
 import org.autojs.plugin.ondeviceai.api.AiContentPart
 import org.autojs.plugin.ondeviceai.api.AiGenerationOptions
@@ -11,6 +12,7 @@ import org.autojs.plugin.ondeviceai.api.OnDeviceAiMimeType
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiProtocol
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiRequest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -42,7 +44,48 @@ class PromptPlannerTest {
         assertThrows(IllegalArgumentException::class.java) { PromptPlanner.plan(request, materialized) }
     }
 
-    private fun request(roles: List<Int>): OnDeviceAiRequest = OnDeviceAiRequest(
+    @Test
+    fun mapsExactGenerationOptionsAndCompletesPartialSamplerWithStableDefaults() {
+        val exactRequest = request(
+            roles = listOf(AiMessageRole.USER),
+            maximumOutputTokens = 512,
+            temperature = 0.75,
+            topK = 32,
+            topP = 0.9,
+        )
+        val exact = PromptPlanner.plan(
+            exactRequest,
+            MaterializedRequest(listOf(MaterializedMessage(AiMessageRole.USER, listOf("text"))), 4L),
+        )
+        assertEquals(512, exact.maximumOutputTokens)
+        assertEquals(GenerationSamplingOptions(0.75, 32, 0.9), exact.samplingOptions)
+
+        val partialRequest = request(
+            roles = listOf(AiMessageRole.USER),
+            temperature = 0.25,
+        )
+        val partial = PromptPlanner.plan(
+            partialRequest,
+            MaterializedRequest(listOf(MaterializedMessage(AiMessageRole.USER, listOf("text"))), 4L),
+        )
+        assertEquals(GenerationSamplingOptions(0.25, 1, 0.95), partial.samplingOptions)
+
+        val defaultsRequest = request(listOf(AiMessageRole.USER))
+        val defaults = PromptPlanner.plan(
+            defaultsRequest,
+            MaterializedRequest(listOf(MaterializedMessage(AiMessageRole.USER, listOf("text"))), 4L),
+        )
+        assertNull(defaults.maximumOutputTokens)
+        assertNull(defaults.samplingOptions)
+    }
+
+    private fun request(
+        roles: List<Int>,
+        maximumOutputTokens: Long? = null,
+        temperature: Double? = null,
+        topK: Int? = null,
+        topP: Double? = null,
+    ): OnDeviceAiRequest = OnDeviceAiRequest(
         requestId = "request-1",
         protocolVersion = OnDeviceAiProtocol.HOST_PROTOCOL_RANGE.maximum,
         providerId = OnDeviceAiPlugin.PROVIDER_ID,
@@ -69,8 +112,12 @@ class PromptPlannerTest {
             structuredJson = false,
             reportUsage = false,
             maximumOutputBytes = OnDeviceAiPlugin.MAXIMUM_OUTPUT_BYTES,
+            maximumOutputTokens = maximumOutputTokens,
             maximumToolRounds = 0,
             timeoutMillis = 30_000L,
+            temperature = temperature,
+            topK = topK,
+            topP = topP,
         ),
     )
 }

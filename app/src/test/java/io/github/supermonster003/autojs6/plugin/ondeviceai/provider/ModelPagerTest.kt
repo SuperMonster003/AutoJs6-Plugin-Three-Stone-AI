@@ -4,9 +4,9 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.OnDeviceAiPlugin
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelCatalogDocument
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelCatalogEntry
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportPolicy
-import org.autojs.plugin.ai.common.api.AiProtocolVersion
 import org.autojs.plugin.ondeviceai.api.AiModelListRequest
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiCapabilityId
+import org.autojs.plugin.ondeviceai.api.OnDeviceAiProtocol
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
@@ -131,7 +131,7 @@ class ModelPagerTest {
     )
 
     private fun request(pageSize: Int, pageToken: String? = null) = AiModelListRequest(
-        protocolVersion = AiProtocolVersion(1, 0),
+        protocolVersion = OnDeviceAiProtocol.HOST_PROTOCOL_RANGE.maximum,
         pageSize = pageSize,
         pageToken = pageToken,
     )

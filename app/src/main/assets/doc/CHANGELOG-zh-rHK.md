@@ -10,6 +10,7 @@
 
 * `新增` 插件品牌與運行時標識統一為 On-Device AI (裝置端 AI), 同步應用名, 包名, 組件名, 發現標識, 協議 API, 構建產物及文檔
 * `新增` 適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 嘅 `plugin: true` 簡寫選擇器及 `ai.models` 模型枚舉
+* `新增` 經 On-Device AI 協議 1.1 將 `temperature`, `topK`, `topP` 同 `maxTokens` 傳遞至 LiteRT-LM 採樣及輸出 token 控制
 * `優化` 更新插件描述, 使用說明及 10 種語言嘅 README, 與宿主 `ai.*` 本機插件路由嘅正式化保持一致
 * `優化` 重寫 ROADMAP 為可逐項勾選嘅功能路線圖
 

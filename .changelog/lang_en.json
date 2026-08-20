@@ -9,7 +9,8 @@
       "released_date": "2026/08/20",
       "feature": [
         "Plugin brand and runtime identity standardized as On-Device AI across display names, package and component names, discovery identifiers, protocol API, build artifacts, and documentation",
-        "Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing"
+        "Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing",
+        "Forwarded `temperature`, `topK`, `topP`, and `maxTokens` through On-Device AI protocol 1.1 to LiteRT-LM sampling and output-token controls"
       ],
       "improvement": [
         "Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route",

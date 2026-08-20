@@ -9,6 +9,7 @@ import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
+import com.google.ai.edge.litertlm.SamplerConfig
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -50,6 +51,7 @@ internal class LiteRtLmGenerationBackend(
                 val localConversation = localEngine.createConversation(
                     ConversationConfig(
                         initialMessages = request.history.map(::toLiteRtMessage),
+                        samplerConfig = request.samplingOptions?.toLiteRtSamplerConfig(),
                         automaticToolCalling = false,
                         maxOutputToken = request.maximumOutputTokens,
                     ),
@@ -120,3 +122,9 @@ internal class LiteRtLmGenerationBackend(
         }
     }
 }
+
+internal fun GenerationSamplingOptions.toLiteRtSamplerConfig() = SamplerConfig(
+    topK = topK,
+    topP = topP,
+    temperature = temperature,
+)

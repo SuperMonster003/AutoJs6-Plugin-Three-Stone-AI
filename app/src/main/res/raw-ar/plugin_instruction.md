@@ -2,7 +2,7 @@
 
 يستورد هذا الملحق حزمة نموذج `.litertlm` محلية واحدة عبر Android Storage Access Framework (SAF), وينسخها إلى مساحة التطبيق الخاصة, ويشغل توليد LiteRT-LM على CPU فقط مع سجل بنص عادي وإخراج نص عبر streaming.
 
-يتطلب الملحق build 5270 أو أحدث من مضيف AutoJs6 و Android API 24 أو أحدث.
+يتطلب الملحق build 5276 أو أحدث من مضيف AutoJs6 و Android API 24 أو أحدث.
 
 ## بداية سريعة (موصى بها)
 
@@ -12,6 +12,18 @@
 ai.ask("Hello", { plugin: true }).then((text) => {
     console.log(text);
 });
+```
+
+يمكن التحكم في sampling وطول الإخراج من كائن options نفسه:
+
+```javascript
+ai.ask("Hello", {
+    plugin: true,
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.9,
+    maxTokens: 256,
+}).then((text) => console.log(text));
 ```
 
 عدد النماذج المستوردة او ثبت نموذجا صراحة عبر `plugin: { modelId: "..." }`:
@@ -308,17 +320,20 @@ try {
         false,  // structured JSON
         false,  // usage
         4096,   // 最大输出字节
-        null,   // 不设置 token 上限
+        java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming")
+        java.util.Collections.singletonList("streaming"),
+        java.lang.Double.valueOf("0.7"), // temperature
+        java.lang.Integer.valueOf("40"), // topK
+        java.lang.Double.valueOf("0.9")  // topP
     );
 
     var request = new TextApi.OnDeviceAiRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 0),
+        new CommonApi.AiProtocolVersion(1, 1),
         "autojs6.on-device-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
@@ -390,7 +405,7 @@ try {
 
 - يقتصر استيراد النموذج على 8 GiB ويجب أن يترك 256 MiB على الأقل من المساحة الحرة.
 - يقتصر السياق على 256 KiB والإخراج على 64 KiB ويمكن تنشيط جلسة توليد واحدة فقط.
-- لا يعلن provider حدا لعدد tokens, ولذلك لا تدعم الطلبات التي تضبط `maximumOutputTokens`.
+- يقبل `maxTokens` (او `maximumOutputTokens` في البروتوكول المباشر) من 1 إلى 2,147,483,647 ويطبق دون اشتراط تقارير usage. يجب أن تكون `temperature` محدودة وغير سالبة و `topK` موجبة و `topP` محدودة بين 0 و1.
 - يعلن streaming و `text/plain` فقط. لا يدعم reasoning أو tools أو structured JSON أو usage.
 - لا يطلب الملحق إذن الشبكة أو التخزين.
 - لا يمكن ربط خدمة provider إلا من مضيف AutoJs6 ذي التوقيع نفسه.

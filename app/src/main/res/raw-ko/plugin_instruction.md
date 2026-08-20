@@ -2,7 +2,7 @@
 
 이 플러그인은 Android Storage Access Framework (SAF)로 로컬 `.litertlm` 모델 패키지를 가져와 앱 전용 저장소에 복사합니다. CPU-only LiteRT-LM으로 일반 텍스트 기록을 처리하고 텍스트를 스트리밍 출력합니다.
 
-AutoJs6 호스트 build 5270 이상과 Android API 24 이상이 필요합니다.
+AutoJs6 호스트 build 5276 이상과 Android API 24 이상이 필요합니다.
 
 ## 빠른 시작 (권장)
 
@@ -12,6 +12,18 @@ AutoJs6 빌드 5276 이상에서는 전역 `ai` 모듈을 통해 이 플러그�
 ai.ask("Hello", { plugin: true }).then((text) => {
     console.log(text);
 });
+```
+
+같은 options 객체에서 sampling과 출력 길이를 제어할 수 있습니다:
+
+```javascript
+ai.ask("Hello", {
+    plugin: true,
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.9,
+    maxTokens: 256,
+}).then((text) => console.log(text));
 ```
 
 가져온 모델을 열거하거나 `plugin: { modelId: "..." }`로 명시적으로 고정할 수 있습니다:
@@ -308,17 +320,20 @@ try {
         false,  // structured JSON
         false,  // usage
         4096,   // 最大输出字节
-        null,   // 不设置 token 上限
+        java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming")
+        java.util.Collections.singletonList("streaming"),
+        java.lang.Double.valueOf("0.7"), // temperature
+        java.lang.Integer.valueOf("40"), // topK
+        java.lang.Double.valueOf("0.9")  // topP
     );
 
     var request = new TextApi.OnDeviceAiRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 0),
+        new CommonApi.AiProtocolVersion(1, 1),
         "autojs6.on-device-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
@@ -390,7 +405,7 @@ try {
 
 - 모델 가져오기 상한은 8 GiB이며 완료 후 최소 256 MiB의 여유 공간이 필요합니다.
 - 컨텍스트 상한은 256 KiB, 출력 상한은 64 KiB이며 동시에 활성화할 수 있는 생성 세션은 1개입니다.
-- Provider는 token 수 상한을 선언하지 않습니다. `maximumOutputTokens`를 설정하는 요청은 지원하지 않습니다.
+- `maxTokens`(직접 protocol에서는 `maximumOutputTokens`)는 1부터 2,147,483,647까지이며 usage reporting 없이 적용됩니다. `temperature`는 유한한 0 이상의 값, `topK`는 양수, `topP`는 0부터 1까지의 유한한 값이어야 합니다.
 - Streaming과 `text/plain`만 선언합니다. Reasoning, tools, structured JSON 및 usage는 지원하지 않습니다.
 - 네트워크 또는 저장소 권한을 요청하지 않습니다.
 - 동일한 서명의 AutoJs6 호스트만 provider 서비스에 bind할 수 있습니다.

@@ -2,7 +2,7 @@
 
 This plugin imports one local `.litertlm` model package through the Android Storage Access Framework (SAF), copies it into app-private storage, and runs CPU-only LiteRT-LM generation with plain-text history and streaming text output.
 
-The plugin requires AutoJs6 host build 5270 or later and Android API 24 or later.
+The plugin requires AutoJs6 host build 5276 or later and Android API 24 or later.
 
 ## Quick start (recommended)
 
@@ -12,6 +12,18 @@ With AutoJs6 build 5276 or later, call the plugin directly through the global `a
 ai.ask("Hello", { plugin: true }).then((text) => {
     console.log(text);
 });
+```
+
+Sampling and output length can be controlled from the same options object:
+
+```javascript
+ai.ask("Hello", {
+    plugin: true,
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.9,
+    maxTokens: 256,
+}).then((text) => console.log(text));
 ```
 
 List imported models, or pin one explicitly with `plugin: { modelId: "..." }`:
@@ -308,17 +320,20 @@ try {
         false,  // structured JSON
         false,  // usage
         4096,   // 最大输出字节
-        null,   // 不设置 token 上限
+        java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming")
+        java.util.Collections.singletonList("streaming"),
+        java.lang.Double.valueOf("0.7"), // temperature
+        java.lang.Integer.valueOf("40"), // topK
+        java.lang.Double.valueOf("0.9")  // topP
     );
 
     var request = new TextApi.OnDeviceAiRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 0),
+        new CommonApi.AiProtocolVersion(1, 1),
         "autojs6.on-device-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
@@ -390,7 +405,7 @@ Safety and operational limits:
 
 - Model import is limited to 8 GiB and must leave at least 256 MiB of free space.
 - Context is limited to 256 KiB, output is limited to 64 KiB, and only one generation session may be active.
-- The provider declares no token-count ceiling, so requests that set `maximumOutputTokens` are unsupported.
+- `maxTokens` (or raw-protocol `maximumOutputTokens`) accepts 1 through 2,147,483,647 and is enforced without requiring usage reporting. `temperature` must be finite and non-negative, `topK` positive, and `topP` finite from 0 through 1.
 - Only streaming and `text/plain` are declared. Reasoning, tools, structured JSON, and usage are unsupported.
 - The plugin requests no network or storage permission.
 - Only the same-signature AutoJs6 host may bind the provider service.

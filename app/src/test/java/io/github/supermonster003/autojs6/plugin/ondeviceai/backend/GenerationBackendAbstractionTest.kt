@@ -16,6 +16,7 @@ class GenerationBackendAbstractionTest {
                 history = emptyList(),
                 prompt = GenerationMessage(GenerationRole.USER, listOf("prompt")),
                 maximumOutputTokens = null,
+                samplingOptions = null,
             ),
             object : GenerationListener {
                 override fun onTextDelta(text: String) {

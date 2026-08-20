@@ -3,7 +3,9 @@ package io.github.supermonster003.autojs6.plugin.ondeviceai.provider
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationMessage
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationRequest
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationRole
+import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationSamplingOptions
 import org.autojs.plugin.ondeviceai.api.AiMessageRole
+import org.autojs.plugin.ondeviceai.api.OnDeviceAiSamplingDefaults
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiRequest
 
 internal object PromptPlanner {
@@ -21,11 +23,24 @@ internal object PromptPlanner {
             )
         }
         require(messages.last().role == GenerationRole.USER) { "The final AI message must be a user message" }
-        val maximumTokens = request.options.maximumOutputTokens?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt()
+        val options = request.options
+        val maximumTokens = options.maximumOutputTokens?.toInt()
+        val samplingOptions = if (
+            options.temperature == null && options.topK == null && options.topP == null
+        ) {
+            null
+        } else {
+            GenerationSamplingOptions(
+                temperature = options.temperature ?: OnDeviceAiSamplingDefaults.TEMPERATURE,
+                topK = options.topK ?: OnDeviceAiSamplingDefaults.TOP_K,
+                topP = options.topP ?: OnDeviceAiSamplingDefaults.TOP_P,
+            )
+        }
         return GenerationRequest(
             history = messages.dropLast(1),
             prompt = messages.last(),
             maximumOutputTokens = maximumTokens,
+            samplingOptions = samplingOptions,
         )
     }
 }

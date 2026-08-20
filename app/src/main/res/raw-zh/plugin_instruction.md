@@ -2,7 +2,7 @@
 
 此插件通过 Android Storage Access Framework (SAF) 导入一个本地 `.litertlm` 模型包, 将其复制到应用私有存储, 并使用 CPU-only LiteRT-LM 根据纯文本历史生成流式纯文本.
 
-插件需要 AutoJs6 宿主构建版本 5270 或更高版本, 以及 Android API 24 或更高版本.
+插件需要 AutoJs6 宿主构建版本 5276 或更高版本, 以及 Android API 24 或更高版本.
 
 ## 快速开始 (推荐)
 
@@ -12,6 +12,18 @@
 ai.ask("Hello", { plugin: true }).then((text) => {
     console.log(text);
 });
+```
+
+可在同一个 options 对象中控制采样和输出长度:
+
+```javascript
+ai.ask("Hello", {
+    plugin: true,
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.9,
+    maxTokens: 256,
+}).then((text) => console.log(text));
 ```
 
 枚举已导入模型, 或通过 `plugin: { modelId: "..." }` 显式固定模型:
@@ -308,17 +320,20 @@ try {
         false,  // structured JSON
         false,  // usage
         4096,   // 最大输出字节
-        null,   // 不设置 token 上限
+        java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming")
+        java.util.Collections.singletonList("streaming"),
+        java.lang.Double.valueOf("0.7"), // temperature
+        java.lang.Integer.valueOf("40"), // topK
+        java.lang.Double.valueOf("0.9")  // topP
     );
 
     var request = new TextApi.OnDeviceAiRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 0),
+        new CommonApi.AiProtocolVersion(1, 1),
         "autojs6.on-device-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
@@ -390,7 +405,7 @@ try {
 
 - 模型导入上限为 8 GiB, 完成后必须至少保留 256 MiB 可用空间.
 - 上下文上限为 256 KiB, 输出上限为 64 KiB, 同一时间仅允许一个生成会话.
-- Provider 不声明 token 数量上限, 因此不支持设置 `maximumOutputTokens` 的请求.
+- `maxTokens` (原始协议字段为 `maximumOutputTokens`) 接受 1 至 2,147,483,647, 且无需 usage 上报即可执行. `temperature` 必须为非负有限数, `topK` 必须为正数, `topP` 必须为 0 至 1 的有限数.
 - 仅声明 streaming 和 `text/plain`. 不支持 reasoning, tools, structured JSON 和 usage.
 - 插件不请求网络或存储权限.
 - 仅允许同签名 AutoJs6 宿主绑定 provider 服务.

@@ -50,6 +50,7 @@ On-Device AI is the official on-device on-device AI plugin for AutoJs6. It runs 
 - Import a `.litertlm` model package through the Android system picker and keep a verified copy in app-private storage.
 - Preflight private storage before opening the picker, show the current import budget and estimated private-copy footprint, and recheck the selected file before copying.
 - Create local generation requests from plain-text system, user, and assistant history.
+- Forward `temperature`, `topK`, `topP`, and `maxTokens` from AutoJs6 `ai.ask`, `ai.chat`, and `ai.stream` to LiteRT-LM.
 - Deliver text chunks in order with credit backpressure and publish exactly one completed, failed, or cancelled terminal state.
 - List, select, and rename imported models, delete unselected models, and reclaim unreferenced model files from the manager.
 - Run entirely on-device with a CPU backend, without downloading models or calling a remote inference service.
@@ -83,13 +84,13 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1
-required host build: 5270
+protocol: V1.1
+required host build: 5276
 ```
 
 The plugin declares ON_DEVICE execution and the NONE credential mode. It declares only the `streaming` capability and `text/plain` input and output.
 
-Host build 5270 or later is required. Releases include arm64-v8a, x86_64, universal APK variants.
+Host build 5276 or later is required. Releases include arm64-v8a, x86_64, universal APK variants.
 
 ******
 
@@ -118,6 +119,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 - To avoid cross-process races with the isolated `:provider` process, imports do not automatically delete previous SHA-256-named model generations. The model manager can delete unselected catalog models and reclaim hash-named files no longer referenced by the catalog.
 - At most one generation session is active in the process. Request descriptors are duplicated before asynchronous work and closed under protocol quotas.
 - The provider advertises a 256 KiB context ceiling and a 64 KiB output ceiling. Requests and models may impose lower limits.
+- `maxTokens` accepts integers from 1 through 2,147,483,647. `temperature` must be finite and non-negative, `topK` a positive integer, and `topP` finite from 0 through 1. Leaving all three sampling controls unset preserves model/engine defaults; a partial override fills the omitted controls with the LiteRT-LM baseline `topK: 1`, `topP: 0.95`, and `temperature: 1`.
 - Streaming uses finite credits and bounded chunks to prevent unbounded buffering or callbacks without backpressure.
 - Cancellation, session close, and timeout stop result publication and finish the request through one terminal state.
 
@@ -154,6 +156,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 * `Feature` Plugin brand and runtime identity standardized as On-Device AI across display names, package and component names, discovery identifiers, protocol API, build artifacts, and documentation
 * `Feature` Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing
+* `Feature` Forwarded `temperature`, `topK`, `topP`, and `maxTokens` through On-Device AI protocol 1.1 to LiteRT-LM sampling and output-token controls
 * `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 

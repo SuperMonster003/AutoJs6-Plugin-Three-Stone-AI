@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AI Text Generation</string>
+    <string name="app_name">온디바이스 AI</string>
     <string name="button_copy_model_id">모델 ID 복사</string>
     <string name="button_cancel_import">가져오기 취소</string>
     <string name="button_import_model">.litertlm 모델 가져오기</string>
@@ -30,6 +30,6 @@
     <string name="model_selection_failed">모델 선택에 실패했습니다</string>
     <string name="model_selection_succeeded">모델을 선택했습니다</string>
     <string name="model_status_format">모델: %1$s\n크기: %2$s\nSHA-256: %3$s\n모델 ID: %4$s</string>
-    <string name="plugin_description">기기 내 LiteRT-LM 텍스트 생성 provider</string>
+    <string name="plugin_description">로컬 LiteRT-LM 모델을 사용하는 온디바이스 AI 텍스트 생성</string>
     <string name="screen_description">로컬 LiteRT-LM 모델을 선택합니다. 파일은 앱 전용 저장소에 복사되며 업로드되지 않습니다</string>
 </resources>

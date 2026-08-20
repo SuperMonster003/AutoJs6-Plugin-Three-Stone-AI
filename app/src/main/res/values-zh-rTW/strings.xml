@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AI Text Generation</string>
+    <string name="app_name">裝置端 AI</string>
     <string name="button_copy_model_id">複製模型 ID</string>
     <string name="button_cancel_import">取消匯入</string>
     <string name="button_import_model">匯入 .litertlm 模型</string>
@@ -30,6 +30,6 @@
     <string name="model_selection_failed">選取模型失敗</string>
     <string name="model_selection_succeeded">已選取模型</string>
     <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s</string>
-    <string name="plugin_description">裝置端 LiteRT-LM 文字生成 provider</string>
+    <string name="plugin_description">使用本地 LiteRT-LM 模型的裝置端 AI 文字生成</string>
     <string name="screen_description">選擇本機 LiteRT-LM 模型. 檔案會複製到應用程式私人儲存空間且絕不會上傳</string>
 </resources>

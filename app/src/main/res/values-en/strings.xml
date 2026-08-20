@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AI Text Generation</string>
+    <string name="app_name">On-Device AI</string>
     <string name="button_copy_model_id">Copy model ID</string>
     <string name="button_cancel_import">Cancel import</string>
     <string name="button_import_model">Import .litertlm model</string>
@@ -30,6 +30,6 @@
     <string name="model_selection_failed">Model selection failed</string>
     <string name="model_selection_succeeded">Model selected</string>
     <string name="model_status_format">Model: %1$s\nSize: %2$s\nSHA-256: %3$s\nModel ID: %4$s</string>
-    <string name="plugin_description">On-device LiteRT-LM text generation provider</string>
+    <string name="plugin_description">On-device AI text generation with local LiteRT-LM models</string>
     <string name="screen_description">Choose a local LiteRT-LM model. The file is copied into private app storage and is never uploaded</string>
 </resources>

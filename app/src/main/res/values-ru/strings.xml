@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AI Text Generation</string>
+    <string name="app_name">ИИ на устройстве</string>
     <string name="button_copy_model_id">Копировать ID модели</string>
     <string name="button_cancel_import">Отменить импорт</string>
     <string name="button_import_model">Импорт модели .litertlm</string>
@@ -30,6 +30,6 @@
     <string name="model_selection_failed">Не удалось выбрать модель</string>
     <string name="model_selection_succeeded">Модель выбрана</string>
     <string name="model_status_format">Модель: %1$s\nРазмер: %2$s\nSHA-256: %3$s\nID модели: %4$s</string>
-    <string name="plugin_description">Provider генерации текста LiteRT-LM на устройстве</string>
+    <string name="plugin_description">Генерация текста ИИ на устройстве с локальными моделями LiteRT-LM</string>
     <string name="screen_description">Выберите локальную модель LiteRT-LM. Файл копируется в закрытое хранилище приложения и никогда не отправляется</string>
 </resources>

@@ -3,6 +3,7 @@
     <string name="app_name">裝置端 AI</string>
     <string name="button_copy_model_id">複製模型 ID</string>
     <string name="button_cancel_import">取消匯入</string>
+    <string name="button_check_model">檢查模型</string>
     <string name="button_cleanup_storage">清理未引用檔案</string>
     <string name="button_import_model">匯入 .litertlm 模型</string>
     <string name="button_delete_model">刪除模型</string>
@@ -20,6 +21,7 @@
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: 已處理 %2$s</string>
     <string name="import_stage_copying">正在複製並驗證模型</string>
+    <string name="import_stage_checking_compatibility">正在檢查 LiteRT-LM 相容性</string>
     <string name="import_stage_publishing">正在發佈模型</string>
     <string name="import_stage_validating">正在驗證來源</string>
     <string name="import_storage_preflight_ready">匯入預檢: 目前可用 %1$s; 最多可新增 %2$s; 保留 %3$s 可用空間. 私人副本預計佔用同所選檔案大小相近.</string>
@@ -30,7 +32,7 @@
     <string name="model_catalog_empty">尚未匯入模型</string>
     <string name="model_catalog_loading">正在載入模型目錄</string>
     <string name="model_catalog_unavailable">模型目錄無法使用</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s\n狀態: %4$s</string>
     <string name="model_catalog_summary">已匯入模型: %1$d - 總儲存空間用量: %2$s</string>
     <string name="model_cleanup_empty">未發現未引用的模型檔案</string>
     <string name="model_cleanup_failed">儲存空間清理失敗</string>
@@ -42,6 +44,13 @@
     <string name="model_delete_selected_blocked">無法刪除目前選取的模型. 請先選擇其他模型.</string>
     <string name="model_deletion_failed">刪除模型失敗</string>
     <string name="model_deletion_succeeded">模型已刪除</string>
+    <string name="model_health_available">可用</string>
+    <string name="model_health_check_available">模型檢查通過: 可用</string>
+    <string name="model_health_check_failed">無法儲存模型檢查結果, 請重試.</string>
+    <string name="model_health_check_incompatible">模型檢查完成: 與目前裝置或運行環境不相容</string>
+    <string name="model_health_checking">正在檢查相容性…</string>
+    <string name="model_health_incompatible">不相容</string>
+    <string name="model_health_not_checked">未檢查</string>
     <string name="model_rename_title">重新命名模型</string>
     <string name="model_rename_message">輸入新的顯示名稱. 模型 ID 同檔案唔會改變.</string>
     <string name="model_rename_invalid">請輸入非空白嘅單行名稱, 最多 256 個 UTF-8 位元組.</string>
@@ -49,7 +58,8 @@
     <string name="model_rename_succeeded">模型已重新命名</string>
     <string name="model_selection_failed">選擇模型失敗</string>
     <string name="model_selection_succeeded">已選擇模型</string>
-    <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s</string>
+    <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s\n狀態: %5$s</string>
+    <string name="option_check_after_import">匯入後檢查相容性 (初始化模型一次並立即關閉)</string>
     <string name="plugin_description">使用本地 LiteRT-LM 模型嘅裝置端 AI 文本生成</string>
     <string name="screen_description">選擇本地 LiteRT-LM 模型. 檔案會複製到應用程式私人儲存空間且絕不會上傳</string>
 </resources>

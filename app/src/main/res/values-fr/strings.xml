@@ -3,6 +3,7 @@
     <string name="app_name">IA locale</string>
     <string name="button_copy_model_id">Copier l\'ID du modèle</string>
     <string name="button_cancel_import">Annuler l\'import</string>
+    <string name="button_check_model">Vérifier le modèle</string>
     <string name="button_cleanup_storage">Nettoyer les fichiers non référencés</string>
     <string name="button_import_model">Importer un modèle .litertlm</string>
     <string name="button_delete_model">Supprimer le modèle</string>
@@ -20,6 +21,7 @@
     <string name="import_progress_known">%1$s : %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s : %2$s traités</string>
     <string name="import_stage_copying">Copie et vérification du modèle</string>
+    <string name="import_stage_checking_compatibility">Vérification de la compatibilité LiteRT-LM</string>
     <string name="import_stage_publishing">Publication du modèle</string>
     <string name="import_stage_validating">Validation de la source</string>
     <string name="import_storage_preflight_ready">Contrôle avant import : %1$s disponibles ; jusqu’à %2$s peuvent être ajoutés ; %3$s restent réservés. La copie privée occupe environ la taille du fichier sélectionné.</string>
@@ -30,7 +32,7 @@
     <string name="model_catalog_empty">Aucun modèle importé</string>
     <string name="model_catalog_loading">Chargement du catalogue de modèles</string>
     <string name="model_catalog_unavailable">Catalogue de modèles indisponible</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s\nÉtat: %4$s</string>
     <string name="model_catalog_summary">Modèles importés : %1$d - Stockage total : %2$s</string>
     <string name="model_cleanup_empty">Aucun fichier de modèle non référencé</string>
     <string name="model_cleanup_failed">Échec du nettoyage du stockage</string>
@@ -42,6 +44,13 @@
     <string name="model_delete_selected_blocked">Le modèle sélectionné ne peut pas être supprimé. Sélectionnez d’abord un autre modèle.</string>
     <string name="model_deletion_failed">Échec de la suppression du modèle</string>
     <string name="model_deletion_succeeded">Modèle supprimé</string>
+    <string name="model_health_available">Disponible</string>
+    <string name="model_health_check_available">Vérification réussie: disponible</string>
+    <string name="model_health_check_failed">Impossible d’enregistrer le résultat de la vérification. Réessayez.</string>
+    <string name="model_health_check_incompatible">Vérification terminée: incompatible avec cet appareil ou cet environnement d’exécution</string>
+    <string name="model_health_checking">Vérification de la compatibilité…</string>
+    <string name="model_health_incompatible">Incompatible</string>
+    <string name="model_health_not_checked">Non vérifié</string>
     <string name="model_rename_title">Renommer le modèle</string>
     <string name="model_rename_message">Saisissez un nouveau nom d’affichage. L’ID du modèle et le fichier ne changeront pas.</string>
     <string name="model_rename_invalid">Saisissez un nom non vide sur une seule ligne, de 256 octets UTF-8 maximum.</string>
@@ -49,7 +58,8 @@
     <string name="model_rename_succeeded">Modèle renommé</string>
     <string name="model_selection_failed">Échec de la sélection du modèle</string>
     <string name="model_selection_succeeded">Modèle sélectionné</string>
-    <string name="model_status_format">Modèle: %1$s\nTaille: %2$s\nSHA-256: %3$s\nID du modèle: %4$s</string>
+    <string name="model_status_format">Modèle: %1$s\nTaille: %2$s\nSHA-256: %3$s\nID du modèle: %4$s\nÉtat: %5$s</string>
+    <string name="option_check_after_import">Vérifier la compatibilité après l’import (initialise puis ferme le modèle une fois)</string>
     <string name="plugin_description">Génération de texte IA locale avec des modèles LiteRT-LM sur l\'appareil</string>
     <string name="screen_description">Choisissez un modèle LiteRT-LM local. Le fichier est copié dans le stockage privé de l\'application et jamais envoyé</string>
 </resources>

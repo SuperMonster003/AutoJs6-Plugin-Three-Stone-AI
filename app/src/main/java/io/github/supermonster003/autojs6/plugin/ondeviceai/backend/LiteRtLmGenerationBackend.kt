@@ -1,12 +1,10 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai.backend
 
-import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
-import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.SamplerConfig
@@ -39,15 +37,7 @@ internal class LiteRtLmGenerationBackend(
             synchronized(nativeLifecycleLock) {
                 if (closed.get() || cancelled.get()) return
                 val localEngineLease = engineCache.acquire(modelSha256) {
-                    Engine(
-                        EngineConfig(
-                            modelPath = modelPath,
-                            backend = Backend.CPU(
-                                threadCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 8),
-                            ),
-                            cacheDir = cacheDirectory.absolutePath,
-                        ),
-                    ).also { created ->
+                    LiteRtLmEngineFactory.create(modelPath, cacheDirectory).also { created ->
                         try {
                             created.initialize()
                         } catch (error: Throwable) {

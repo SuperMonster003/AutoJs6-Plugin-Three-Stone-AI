@@ -3,6 +3,7 @@
     <string name="app_name">设备端 AI</string>
     <string name="button_copy_model_id">复制模型 ID</string>
     <string name="button_cancel_import">取消导入</string>
+    <string name="button_check_model">检查模型</string>
     <string name="button_cleanup_storage">清理未引用文件</string>
     <string name="button_import_model">导入 .litertlm 模型</string>
     <string name="button_delete_model">删除模型</string>
@@ -20,6 +21,7 @@
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: 已处理 %2$s</string>
     <string name="import_stage_copying">正在复制并校验模型</string>
+    <string name="import_stage_checking_compatibility">正在检查 LiteRT-LM 兼容性</string>
     <string name="import_stage_publishing">正在发布模型</string>
     <string name="import_stage_validating">正在验证来源</string>
     <string name="import_storage_preflight_ready">导入预检: 当前可用 %1$s; 最多可新增 %2$s; 保留 %3$s 可用空间. 私有副本预计占用与所选文件大小相近.</string>
@@ -30,7 +32,7 @@
     <string name="model_catalog_empty">尚未导入模型</string>
     <string name="model_catalog_loading">正在加载模型目录</string>
     <string name="model_catalog_unavailable">模型目录不可用</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s\n状态: %4$s</string>
     <string name="model_catalog_summary">已导入模型: %1$d - 总占用: %2$s</string>
     <string name="model_cleanup_empty">未发现未引用的模型文件</string>
     <string name="model_cleanup_failed">存储清理失败</string>
@@ -42,6 +44,13 @@
     <string name="model_delete_selected_blocked">无法删除当前选中的模型. 请先选择其他模型.</string>
     <string name="model_deletion_failed">模型删除失败</string>
     <string name="model_deletion_succeeded">模型已删除</string>
+    <string name="model_health_available">可用</string>
+    <string name="model_health_check_available">模型检查通过: 可用</string>
+    <string name="model_health_check_failed">无法保存模型检查结果, 请重试.</string>
+    <string name="model_health_check_incompatible">模型检查完成: 与当前设备或运行时不兼容</string>
+    <string name="model_health_checking">正在检查兼容性…</string>
+    <string name="model_health_incompatible">不兼容</string>
+    <string name="model_health_not_checked">未检查</string>
     <string name="model_rename_title">重命名模型</string>
     <string name="model_rename_message">输入新的显示名称. 模型 ID 和文件不会改变.</string>
     <string name="model_rename_invalid">请输入非空的单行名称, 最多 256 个 UTF-8 字节.</string>
@@ -49,7 +58,8 @@
     <string name="model_rename_succeeded">模型已重命名</string>
     <string name="model_selection_failed">模型选择失败</string>
     <string name="model_selection_succeeded">模型已选择</string>
-    <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s</string>
+    <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s\n状态: %5$s</string>
+    <string name="option_check_after_import">导入后检查兼容性 (初始化模型一次并立即关闭)</string>
     <string name="plugin_description">使用本地 LiteRT-LM 模型的设备端 AI 文本生成</string>
     <string name="screen_description">选择本地 LiteRT-LM 模型. 文件将复制到应用私有存储且绝不会上传</string>
 </resources>

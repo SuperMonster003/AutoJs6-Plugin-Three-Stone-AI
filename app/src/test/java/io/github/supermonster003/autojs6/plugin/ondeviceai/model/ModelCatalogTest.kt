@@ -14,15 +14,43 @@ class ModelCatalogTest {
     private val entryB = entry(digestB, "B")
 
     @Test
-    fun schemaTwoRoundTripsStrictlyAndLegacySchemaOneDecodesOnlyAsMigrationSource() {
+    fun schemaThreeRoundTripsStrictlyAndLegacySchemaOneDecodesOnlyAsMigrationSource() {
         val document = ModelCatalogDocument(7L, entryA.modelId, listOf(entryB, entryA))
         val decoded = ModelCatalogCodec.decode(ModelCatalogCodec.encode(document))
         assertEquals(listOf(entryA.modelId, entryB.modelId), decoded.entries.map { it.modelId })
         assertThrows(IllegalArgumentException::class.java) {
             ModelCatalogCodec.decode(ModelCatalogCodec.encode(document).toString(Charsets.UTF_8)
-                .replace("\"schema\":2", "\"schema\":1").toByteArray())
+                .replace("\"schema\":3", "\"schema\":1").toByteArray())
         }
         assertEquals(entryA, ModelCatalogCodec.decodeLegacyCurrent(legacy(entryA)))
+    }
+
+    @Test
+    fun schemaTwoMigratesToUncheckedHealthWhileSchemaThreeRequiresAStatus() {
+        val schemaTwo = schemaTwo(ModelCatalogDocument(5L, entryA.modelId, listOf(entryB, entryA)))
+        val migrated = ModelCatalogCodec.decode(schemaTwo)
+
+        assertEquals(ModelHealthStatus.NOT_CHECKED, migrated.entries[0].healthStatus)
+        assertEquals(ModelHealthStatus.NOT_CHECKED, migrated.entries[1].healthStatus)
+        val schemaThree = ModelCatalogCodec.encode(migrated).toString(Charsets.UTF_8)
+        assertTrue(schemaThree.contains("\"schema\":3"))
+        assertEquals(2, "\"healthStatus\":\"not_checked\"".toRegex().findAll(schemaThree).count())
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelCatalogCodec.decode(
+                schemaThree.replace("\"schema\":3", "\"schema\":2").toByteArray(),
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelCatalogCodec.decode(
+                schemaThree.replace(",\"healthStatus\":\"not_checked\"", "").toByteArray(),
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelCatalogCodec.decode(
+                schemaThree.replace("\"not_checked\"", "\"unknown\"").toByteArray(),
+            )
+        }
     }
 
     @Test
@@ -56,19 +84,70 @@ class ModelCatalogTest {
 
     @Test
     fun duplicateDigestSelectsExistingWithoutChangingMetadataOrListingGeneration() {
-        val original = ModelCatalogDocument(3L, null, listOf(entryA))
+        val checkedEntry = entryA.copy(healthStatus = ModelHealthStatus.AVAILABLE)
+        val original = ModelCatalogDocument(3L, null, listOf(checkedEntry))
         val generation = listingGeneration(original)
         val duplicate = entryA.copy(displayName = "replacement", importedAtMillis = 999L)
         val update = ModelCatalogPolicy.integrateImport(original, duplicate)
         assertTrue(update.changed)
-        assertEquals(entryA, update.model)
-        assertEquals(listOf(entryA), update.document.entries)
+        assertEquals(checkedEntry, update.model)
+        assertEquals(listOf(checkedEntry), update.document.entries)
         assertEquals(4L, update.document.revision)
         assertEquals(generation, listingGeneration(update.document))
 
         val noOp = ModelCatalogPolicy.integrateImport(update.document, duplicate)
         assertFalse(noOp.changed)
         assertEquals(4L, noOp.document.revision)
+    }
+
+    @Test
+    fun completedHealthChecksChangeOnlyStatusAndRevisionNotProviderListing() {
+        val original = ModelCatalogDocument(9L, entryA.modelId, listOf(entryA, entryB))
+        val generation = listingGeneration(original)
+
+        val available = ModelCatalogPolicy.recordHealthStatus(
+            original,
+            entryA.modelId,
+            ModelHealthStatus.AVAILABLE,
+        )
+
+        assertTrue(available.changed)
+        assertEquals(ModelHealthStatus.AVAILABLE, available.model.healthStatus)
+        assertEquals(10L, available.document.revision)
+        assertEquals(generation, listingGeneration(available.document))
+        assertEquals(entryB, available.document.entries.single { it.modelId == entryB.modelId })
+
+        val repeated = ModelCatalogPolicy.recordHealthStatus(
+            available.document,
+            entryA.modelId,
+            ModelHealthStatus.AVAILABLE,
+        )
+        assertFalse(repeated.changed)
+        assertEquals(10L, repeated.document.revision)
+
+        val incompatible = ModelCatalogPolicy.recordHealthStatus(
+            repeated.document,
+            entryA.modelId,
+            ModelHealthStatus.INCOMPATIBLE,
+        )
+        assertEquals(ModelHealthStatus.INCOMPATIBLE, incompatible.model.healthStatus)
+        assertEquals(11L, incompatible.document.revision)
+        assertEquals(generation, listingGeneration(incompatible.document))
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelCatalogPolicy.recordHealthStatus(
+                incompatible.document,
+                entryA.modelId,
+                ModelHealthStatus.NOT_CHECKED,
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelCatalogPolicy.recordHealthStatus(
+                incompatible.document,
+                "litertlm.${"ff".repeat(16)}",
+                ModelHealthStatus.AVAILABLE,
+            )
+        }
     }
 
     @Test
@@ -274,6 +353,20 @@ class ModelCatalogTest {
     private fun legacy(entry: ModelCatalogEntry): ByteArray =
         """{"schema":1,"modelId":"${entry.modelId}","displayName":"${entry.displayName}","fileName":"${entry.fileName}","sizeBytes":${entry.sizeBytes},"sha256":"${entry.sha256}","importedAtMillis":${entry.importedAtMillis}}"""
             .toByteArray(Charsets.UTF_8)
+
+    private fun schemaTwo(document: ModelCatalogDocument): ByteArray {
+        val selected = document.selectedModelId?.let { "\"$it\"" } ?: "null"
+        val entries = document.entries.joinToString(",", "[", "]") { entry ->
+            "{\"modelId\":\"${entry.modelId}\"," +
+                "\"displayName\":\"${entry.displayName}\"," +
+                "\"fileName\":\"${entry.fileName}\"," +
+                "\"sizeBytes\":${entry.sizeBytes}," +
+                "\"sha256\":\"${entry.sha256}\"," +
+                "\"importedAtMillis\":${entry.importedAtMillis}}"
+        }
+        return ("{\"schema\":2,\"revision\":${document.revision}," +
+            "\"selectedModelId\":$selected,\"entries\":$entries}").toByteArray()
+    }
 
     private fun listingGeneration(
         document: ModelCatalogDocument,

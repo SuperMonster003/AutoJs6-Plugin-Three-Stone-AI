@@ -11,9 +11,10 @@ internal object ModelCatalogCodec {
     const val MAXIMUM_CATALOG_BYTES = 256 * 1024
     const val MAXIMUM_LEGACY_BYTES = 64 * 1024
     private val CATALOG_KEYS = setOf("schema", "revision", "selectedModelId", "entries")
-    private val ENTRY_KEYS = setOf(
+    private val ENTRY_KEYS_V2 = setOf(
         "modelId", "displayName", "fileName", "sizeBytes", "sha256", "importedAtMillis",
     )
+    private val ENTRY_KEYS_V3 = ENTRY_KEYS_V2 + "healthStatus"
     private val LEGACY_KEYS = setOf(
         "schema", "modelId", "displayName", "fileName", "sizeBytes", "sha256", "importedAtMillis",
     )
@@ -28,7 +29,8 @@ internal object ModelCatalogCodec {
                 "\"fileName\":${quote(entry.fileName)}," +
                 "\"sizeBytes\":${entry.sizeBytes}," +
                 "\"sha256\":${quote(entry.sha256)}," +
-                "\"importedAtMillis\":${entry.importedAtMillis}" +
+                "\"importedAtMillis\":${entry.importedAtMillis}," +
+                "\"healthStatus\":${quote(entry.healthStatus.serializedValue)}" +
                 "}"
         }
         return ("{" +
@@ -48,7 +50,7 @@ internal object ModelCatalogCodec {
         var revision: Long? = null
         var selectedModelId: String? = null
         var selectedSeen = false
-        var entries: List<ModelCatalogEntry>? = null
+        var entries: List<DecodedCatalogEntry>? = null
         val keys = linkedSetOf<String>()
         reader.use {
             require(reader.peek() == JsonToken.BEGIN_OBJECT) { "Model catalog must be an object" }
@@ -57,7 +59,7 @@ internal object ModelCatalogCodec {
                 val name = reader.nextName()
                 require(name in CATALOG_KEYS && keys.add(name)) { "Model catalog keys are invalid" }
                 when (name) {
-                    "schema" -> schema = reader.nextExactInt(ModelCatalogPolicy.SCHEMA, "Model catalog schema")
+                    "schema" -> schema = reader.nextSupportedCatalogSchema()
                     "revision" -> revision = reader.nextStrictLong("Model catalog revision")
                     "selectedModelId" -> {
                         selectedSeen = true
@@ -74,14 +76,21 @@ internal object ModelCatalogCodec {
             reader.endObject()
             require(reader.peek() == JsonToken.END_DOCUMENT) { "Model catalog has trailing data" }
         }
-        require(keys == CATALOG_KEYS && schema == ModelCatalogPolicy.SCHEMA && selectedSeen) {
+        require(keys == CATALOG_KEYS && selectedSeen) {
             "Model catalog is incomplete"
+        }
+        val resolvedSchema = requireNotNull(schema)
+        val decodedEntries = requireNotNull(entries)
+        decodedEntries.forEach { decoded ->
+            require(decoded.healthStatusSeen == (resolvedSchema == ModelCatalogPolicy.SCHEMA)) {
+                "Model catalog entry does not match its schema"
+            }
         }
         return ModelCatalogPolicy.normalize(
             ModelCatalogDocument(
                 revision = requireNotNull(revision),
                 selectedModelId = selectedModelId,
-                entries = requireNotNull(entries),
+                entries = decodedEntries.map(DecodedCatalogEntry::entry),
             ),
         )
     }
@@ -127,9 +136,14 @@ internal object ModelCatalogCodec {
         ).also(ModelCatalogPolicy::requireValidEntry)
     }
 
-    private fun JsonReader.readEntries(): List<ModelCatalogEntry> {
+    private data class DecodedCatalogEntry(
+        val entry: ModelCatalogEntry,
+        val healthStatusSeen: Boolean,
+    )
+
+    private fun JsonReader.readEntries(): List<DecodedCatalogEntry> {
         require(peek() == JsonToken.BEGIN_ARRAY) { "Model catalog entries must be an array" }
-        val result = ArrayList<ModelCatalogEntry>()
+        val result = ArrayList<DecodedCatalogEntry>()
         beginArray()
         while (hasNext()) {
             require(result.size < ModelCatalogPolicy.MAXIMUM_ENTRIES) { "Model catalog contains too many entries" }
@@ -139,7 +153,7 @@ internal object ModelCatalogCodec {
         return result
     }
 
-    private fun JsonReader.readEntry(): ModelCatalogEntry {
+    private fun JsonReader.readEntry(): DecodedCatalogEntry {
         require(peek() == JsonToken.BEGIN_OBJECT) { "Model catalog entry must be an object" }
         var modelId: String? = null
         var displayName: String? = null
@@ -147,11 +161,13 @@ internal object ModelCatalogCodec {
         var sizeBytes: Long? = null
         var sha256: String? = null
         var importedAtMillis: Long? = null
+        var healthStatus = ModelHealthStatus.NOT_CHECKED
+        var healthStatusSeen = false
         val keys = linkedSetOf<String>()
         beginObject()
         while (hasNext()) {
             val name = nextName()
-            require(name in ENTRY_KEYS && keys.add(name)) { "Model catalog entry keys are invalid" }
+            require(name in ENTRY_KEYS_V3 && keys.add(name)) { "Model catalog entry keys are invalid" }
             when (name) {
                 "modelId" -> modelId = nextStrictString("Model catalog ID")
                 "displayName" -> displayName = nextStrictString("Model catalog display name")
@@ -159,17 +175,27 @@ internal object ModelCatalogCodec {
                 "sizeBytes" -> sizeBytes = nextStrictLong("Model catalog size")
                 "sha256" -> sha256 = nextStrictString("Model catalog digest")
                 "importedAtMillis" -> importedAtMillis = nextStrictLong("Model catalog import time")
+                "healthStatus" -> {
+                    healthStatusSeen = true
+                    healthStatus = ModelHealthStatus.fromSerializedValue(
+                        nextStrictString("Model health status"),
+                    )
+                }
             }
         }
         endObject()
-        require(keys == ENTRY_KEYS) { "Model catalog entry is incomplete" }
-        return ModelCatalogEntry(
-            modelId = requireNotNull(modelId),
-            displayName = requireNotNull(displayName),
-            fileName = requireNotNull(fileName),
-            sizeBytes = requireNotNull(sizeBytes),
-            sha256 = requireNotNull(sha256),
-            importedAtMillis = requireNotNull(importedAtMillis),
+        require(keys.containsAll(ENTRY_KEYS_V2)) { "Model catalog entry is incomplete" }
+        return DecodedCatalogEntry(
+            entry = ModelCatalogEntry(
+                modelId = requireNotNull(modelId),
+                displayName = requireNotNull(displayName),
+                fileName = requireNotNull(fileName),
+                sizeBytes = requireNotNull(sizeBytes),
+                sha256 = requireNotNull(sha256),
+                importedAtMillis = requireNotNull(importedAtMillis),
+                healthStatus = healthStatus,
+            ),
+            healthStatusSeen = healthStatusSeen,
         )
     }
 
@@ -198,6 +224,15 @@ internal object ModelCatalogCodec {
         val value = nextStrictLong(label)
         require(value == expected.toLong()) { "$label is unsupported" }
         return expected
+    }
+
+    private fun JsonReader.nextSupportedCatalogSchema(): Int {
+        val value = nextStrictLong("Model catalog schema")
+        require(
+            value == ModelCatalogPolicy.PREVIOUS_SCHEMA.toLong() ||
+                value == ModelCatalogPolicy.SCHEMA.toLong(),
+        ) { "Model catalog schema is unsupported" }
+        return value.toInt()
     }
 
     private fun quote(value: String): String = buildString {

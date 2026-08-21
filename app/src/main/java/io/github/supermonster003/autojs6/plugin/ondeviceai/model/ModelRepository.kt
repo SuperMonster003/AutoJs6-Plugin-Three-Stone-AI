@@ -20,6 +20,7 @@ internal data class ImportedModel(
     val sizeBytes: Long,
     val sha256: String,
     val importedAtMillis: Long,
+    val healthStatus: ModelHealthStatus = ModelHealthStatus.NOT_CHECKED,
 ) {
     val listingGeneration: String
         get() = "litertlm-${sha256.take(32)}"
@@ -100,6 +101,18 @@ internal class ModelRepository(context: Context) {
             document = readAuthoritativeManagerCatalog(),
             modelId = modelId,
             displayName = displayName,
+        )
+        if (update.changed) publishCatalogExactly(update.document)
+        return update.document.toManagerSnapshot()
+    }
+
+    /** Atomically persists the terminal result of one LiteRT-LM Engine initialization probe. */
+    @Synchronized
+    fun recordHealthStatus(modelId: String, status: ModelHealthStatus): ModelManagerSnapshot {
+        val update = ModelCatalogPolicy.recordHealthStatus(
+            document = readAuthoritativeManagerCatalog(),
+            modelId = modelId,
+            status = status,
         )
         if (update.changed) publishCatalogExactly(update.document)
         return update.document.toManagerSnapshot()
@@ -426,6 +439,7 @@ internal class ModelRepository(context: Context) {
         sizeBytes = sizeBytes,
         sha256 = sha256,
         importedAtMillis = importedAtMillis,
+        healthStatus = healthStatus,
     )
 
     private fun ModelCatalogDocument.toManagerSnapshot(): ModelManagerSnapshot =

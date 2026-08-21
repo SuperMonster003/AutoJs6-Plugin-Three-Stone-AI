@@ -4,6 +4,7 @@ internal enum class ModelImportStage {
     VALIDATING,
     COPYING,
     PUBLISHING,
+    CHECKING_COMPATIBILITY,
 }
 
 internal data class ModelImportProgress(

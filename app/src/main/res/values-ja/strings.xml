@@ -3,6 +3,7 @@
     <string name="app_name">オンデバイス AI</string>
     <string name="button_copy_model_id">モデル ID をコピー</string>
     <string name="button_cancel_import">インポートをキャンセル</string>
+    <string name="button_check_model">モデルをチェック</string>
     <string name="button_cleanup_storage">未参照ファイルをクリーンアップ</string>
     <string name="button_import_model">.litertlm モデルをインポート</string>
     <string name="button_delete_model">モデルを削除</string>
@@ -20,6 +21,7 @@
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: %2$s 処理済み</string>
     <string name="import_stage_copying">モデルをコピーして検証中</string>
+    <string name="import_stage_checking_compatibility">LiteRT-LM の互換性を確認中</string>
     <string name="import_stage_publishing">モデルを公開中</string>
     <string name="import_stage_validating">ソースを検証中</string>
     <string name="import_storage_preflight_ready">インポート事前確認: 空き容量 %1$s、現在追加可能な上限 %2$s、予約領域 %3$s。プライベートコピーは選択ファイルとほぼ同じ容量を使用します。</string>
@@ -30,7 +32,7 @@
     <string name="model_catalog_empty">インポート済みのモデルはありません</string>
     <string name="model_catalog_loading">モデルカタログを読み込んでいます</string>
     <string name="model_catalog_unavailable">モデルカタログを利用できません</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s\n状態: %4$s</string>
     <string name="model_catalog_summary">インポート済みモデル: %1$d - 合計使用容量: %2$s</string>
     <string name="model_cleanup_empty">未参照のモデルファイルはありません</string>
     <string name="model_cleanup_failed">ストレージのクリーンアップに失敗しました</string>
@@ -42,6 +44,13 @@
     <string name="model_delete_selected_blocked">選択中のモデルは削除できません。先に別のモデルを選択してください。</string>
     <string name="model_deletion_failed">モデルの削除に失敗しました</string>
     <string name="model_deletion_succeeded">モデルを削除しました</string>
+    <string name="model_health_available">利用可能</string>
+    <string name="model_health_check_available">モデルチェック成功: 利用可能</string>
+    <string name="model_health_check_failed">モデルチェック結果を保存できませんでした。再試行してください。</string>
+    <string name="model_health_check_incompatible">モデルチェック完了: このデバイスまたはランタイムと互換性がありません</string>
+    <string name="model_health_checking">互換性を確認中…</string>
+    <string name="model_health_incompatible">互換性なし</string>
+    <string name="model_health_not_checked">未チェック</string>
     <string name="model_rename_title">モデル名を変更</string>
     <string name="model_rename_message">新しい表示名を入力してください。モデル ID とファイルは変更されません。</string>
     <string name="model_rename_invalid">空でない 1 行の名前を入力してください。UTF-8 で 256 バイトまでです。</string>
@@ -49,7 +58,8 @@
     <string name="model_rename_succeeded">モデル名を変更しました</string>
     <string name="model_selection_failed">モデルの選択に失敗しました</string>
     <string name="model_selection_succeeded">モデルを選択しました</string>
-    <string name="model_status_format">モデル: %1$s\nサイズ: %2$s\nSHA-256: %3$s\nモデル ID: %4$s</string>
+    <string name="model_status_format">モデル: %1$s\nサイズ: %2$s\nSHA-256: %3$s\nモデル ID: %4$s\n状態: %5$s</string>
+    <string name="option_check_after_import">インポート後に互換性を確認 (モデルを一度初期化してすぐに閉じます)</string>
     <string name="plugin_description">ローカル LiteRT-LM モデルによるオンデバイス AI テキスト生成</string>
     <string name="screen_description">ローカル LiteRT-LM モデルを選択します. ファイルはアプリ専用ストレージにコピーされ, アップロードされません</string>
 </resources>

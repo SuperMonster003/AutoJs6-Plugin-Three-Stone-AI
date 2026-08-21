@@ -11,7 +11,24 @@ internal data class ModelCatalogEntry(
     val sizeBytes: Long,
     val sha256: String,
     val importedAtMillis: Long,
+    val healthStatus: ModelHealthStatus = ModelHealthStatus.NOT_CHECKED,
 )
+
+internal enum class ModelHealthStatus(val serializedValue: String) {
+    NOT_CHECKED("not_checked"),
+    AVAILABLE("available"),
+    INCOMPATIBLE("incompatible"),
+    ;
+
+    val isChecked: Boolean
+        get() = this != NOT_CHECKED
+
+    companion object {
+        fun fromSerializedValue(value: String): ModelHealthStatus = entries.singleOrNull {
+            it.serializedValue == value
+        } ?: throw IllegalArgumentException("Model health status is invalid")
+    }
+}
 
 internal data class ModelCatalogDocument(
     val revision: Long,
@@ -31,7 +48,8 @@ internal data class ModelCatalogDeletion(
 )
 
 internal object ModelCatalogPolicy {
-    const val SCHEMA = 2
+    const val SCHEMA = 3
+    const val PREVIOUS_SCHEMA = 2
     const val MAXIMUM_ENTRIES = 100
     private val SHA_256 = Regex("^[0-9a-f]{64}$")
     private val MODEL_ID = Regex("^litertlm\\.([0-9a-f]{32})$")
@@ -153,6 +171,31 @@ internal object ModelCatalogPolicy {
             ),
         )
         return ModelCatalogUpdate(updated, renamed, changed = true)
+    }
+
+    /** Records only a completed initialization probe; model identity and listing stay unchanged. */
+    fun recordHealthStatus(
+        document: ModelCatalogDocument,
+        modelId: String,
+        status: ModelHealthStatus,
+    ): ModelCatalogUpdate {
+        require(status.isChecked) { "Only a completed model health check can be recorded" }
+        val current = normalize(document)
+        val target = current.entries.singleOrNull { it.modelId == modelId }
+            ?: throw IllegalArgumentException("Checked model is not present in the catalog")
+        if (target.healthStatus == status) {
+            return ModelCatalogUpdate(current, target, changed = false)
+        }
+        val checked = target.copy(healthStatus = status)
+        val updated = normalize(
+            current.copy(
+                revision = Math.addExact(current.revision, 1L),
+                entries = current.entries.map { entry ->
+                    if (entry.modelId == modelId) checked else entry
+                },
+            ),
+        )
+        return ModelCatalogUpdate(updated, checked, changed = true)
     }
 
     /** Selects only managed hash files that are not referenced by the authoritative catalog. */

@@ -3,6 +3,7 @@
     <string name="app_name">On-Device AI</string>
     <string name="button_copy_model_id">Copy model ID</string>
     <string name="button_cancel_import">Cancel import</string>
+    <string name="button_check_model">Check model</string>
     <string name="button_cleanup_storage">Clean unreferenced files</string>
     <string name="button_import_model">Import .litertlm model</string>
     <string name="button_delete_model">Delete model</string>
@@ -20,6 +21,7 @@
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: %2$s processed</string>
     <string name="import_stage_copying">Copying and verifying model</string>
+    <string name="import_stage_checking_compatibility">Checking LiteRT-LM compatibility</string>
     <string name="import_stage_publishing">Publishing model</string>
     <string name="import_stage_validating">Validating source</string>
     <string name="import_storage_preflight_ready">Import preflight: %1$s available; up to %2$s can be added now; %3$s remains reserved. The private copy uses approximately the selected file size.</string>
@@ -30,7 +32,7 @@
     <string name="model_catalog_empty">No imported models</string>
     <string name="model_catalog_loading">Loading model catalog</string>
     <string name="model_catalog_unavailable">Model catalog is unavailable</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s\nStatus: %4$s</string>
     <string name="model_catalog_summary">Imported models: %1$d - Total storage: %2$s</string>
     <string name="model_cleanup_empty">No unreferenced model files found</string>
     <string name="model_cleanup_failed">Storage cleanup failed</string>
@@ -42,6 +44,13 @@
     <string name="model_delete_selected_blocked">The selected model cannot be deleted. Select another model first.</string>
     <string name="model_deletion_failed">Model deletion failed</string>
     <string name="model_deletion_succeeded">Model deleted</string>
+    <string name="model_health_available">Available</string>
+    <string name="model_health_check_available">Model check passed: available</string>
+    <string name="model_health_check_failed">Model check could not be saved. Try again.</string>
+    <string name="model_health_check_incompatible">Model check completed: incompatible with this device or runtime</string>
+    <string name="model_health_checking">Checking compatibility…</string>
+    <string name="model_health_incompatible">Incompatible</string>
+    <string name="model_health_not_checked">Not checked</string>
     <string name="model_rename_title">Rename model</string>
     <string name="model_rename_message">Enter a new display name. The model ID and file will not change.</string>
     <string name="model_rename_invalid">Enter a non-empty, single-line name up to 256 UTF-8 bytes.</string>
@@ -49,7 +58,8 @@
     <string name="model_rename_succeeded">Model renamed</string>
     <string name="model_selection_failed">Model selection failed</string>
     <string name="model_selection_succeeded">Model selected</string>
-    <string name="model_status_format">Model: %1$s\nSize: %2$s\nSHA-256: %3$s\nModel ID: %4$s</string>
+    <string name="model_status_format">Model: %1$s\nSize: %2$s\nSHA-256: %3$s\nModel ID: %4$s\nStatus: %5$s</string>
+    <string name="option_check_after_import">Check compatibility after import (initializes and closes the model once)</string>
     <string name="plugin_description">On-device on-device AI with local LiteRT-LM models</string>
     <string name="screen_description">Choose a local LiteRT-LM model. The file is copied into private app storage and is never uploaded</string>
 </resources>

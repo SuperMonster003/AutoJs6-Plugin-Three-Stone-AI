@@ -14,6 +14,7 @@ import android.text.format.Formatter
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -24,6 +25,8 @@ import android.widget.Toast
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDeletionState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDisplayNamePolicy
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelHealthCheckState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelHealthStatus
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportFailureReason
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportProgress
@@ -41,6 +44,7 @@ class ModelManagerActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var copyModelIdButton: Button
     private lateinit var importButton: Button
+    private lateinit var checkAfterImportOption: CheckBox
     private lateinit var importStoragePreflight: TextView
     private lateinit var cancelImportButton: Button
     private lateinit var progress: ProgressBar
@@ -54,6 +58,8 @@ class ModelManagerActivity : Activity() {
     private var lastNotifiedDeletionOperationId = 0L
     private var lastNotifiedRenameOperationId = 0L
     private var lastNotifiedStorageCleanupOperationId = 0L
+    private var lastNotifiedHealthCheckOperationId = 0L
+    private var checkAfterImport = true
     private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
     private var renderedManagerView: ModelManagerViewState? = null
     private var importStateAllowsPicker = false
@@ -63,6 +69,11 @@ class ModelManagerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         importCoordinator = ModelImportCoordinator.get(applicationContext)
+        checkAfterImport = savedInstanceState?.getBoolean(STATE_CHECK_AFTER_IMPORT)
+            ?: getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE).getBoolean(
+                PREFERENCE_CHECK_AFTER_IMPORT,
+                true,
+            )
         savedInstanceState?.takeIf { restored ->
             restored.getString(STATE_PROCESS_SESSION_TOKEN) == importCoordinator.processSessionToken
         }?.let { restored ->
@@ -75,6 +86,8 @@ class ModelManagerActivity : Activity() {
                 restored.getLong(STATE_LAST_NOTIFIED_RENAME_OPERATION_ID)
             lastNotifiedStorageCleanupOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID)
+            lastNotifiedHealthCheckOperationId =
+                restored.getLong(STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID)
         }
         setContentView(createContentView())
     }
@@ -98,6 +111,11 @@ class ModelManagerActivity : Activity() {
             STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID,
             lastNotifiedStorageCleanupOperationId,
         )
+        outState.putLong(
+            STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID,
+            lastNotifiedHealthCheckOperationId,
+        )
+        outState.putBoolean(STATE_CHECK_AFTER_IMPORT, checkAfterImportOption.isChecked)
         outState.putString(STATE_PROCESS_SESSION_TOKEN, importCoordinator.processSessionToken)
         super.onSaveInstanceState(outState)
     }
@@ -154,6 +172,18 @@ class ModelManagerActivity : Activity() {
                 setOnClickListener { openModelPicker() }
             }
             addView(importButton)
+            checkAfterImportOption = CheckBox(context).apply {
+                text = getString(R.string.option_check_after_import)
+                isChecked = checkAfterImport
+                setOnCheckedChangeListener { _, checked ->
+                    checkAfterImport = checked
+                    getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE)
+                        .edit()
+                        .putBoolean(PREFERENCE_CHECK_AFTER_IMPORT, checked)
+                        .apply()
+                }
+            }
+            addView(checkAfterImportOption)
             importStoragePreflight = TextView(context).apply {
                 textSize = 14f
                 setPadding(0, dp(8), 0, 0)
@@ -204,7 +234,7 @@ class ModelManagerActivity : Activity() {
     }
 
     private fun importModel(uri: Uri, grantedFlags: Int) {
-        importCoordinator.beginImport(uri, grantedFlags)
+        importCoordinator.beginImport(uri, grantedFlags, checkAfterImportOption.isChecked)
         renderManagerState(importCoordinator.managerState())
     }
 
@@ -327,6 +357,29 @@ class ModelManagerActivity : Activity() {
             is ModelStorageCleanupState.Cleaning,
             -> Unit
         }
+        when (val healthCheck = state.healthCheck) {
+            is ModelHealthCheckState.Succeeded -> notifyHealthCheckOnce(
+                operationId = healthCheck.operationId,
+                message = when (healthCheck.status) {
+                    ModelHealthStatus.AVAILABLE -> R.string.model_health_check_available
+                    ModelHealthStatus.INCOMPATIBLE -> R.string.model_health_check_incompatible
+                    ModelHealthStatus.NOT_CHECKED -> error("A completed health check must be terminal")
+                },
+                duration = if (healthCheck.status == ModelHealthStatus.AVAILABLE) {
+                    Toast.LENGTH_SHORT
+                } else {
+                    Toast.LENGTH_LONG
+                },
+            )
+            is ModelHealthCheckState.Failed -> notifyHealthCheckOnce(
+                operationId = healthCheck.operationId,
+                message = R.string.model_health_check_failed,
+                duration = Toast.LENGTH_LONG,
+            )
+            ModelHealthCheckState.Idle,
+            is ModelHealthCheckState.Checking,
+            -> Unit
+        }
     }
 
     private fun renderManagerCatalog(state: ModelManagerState) {
@@ -361,8 +414,7 @@ class ModelManagerActivity : Activity() {
         catalogRows.removeAllViews()
         view.rows.forEach { row ->
             val catalogRow = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
+                orientation = LinearLayout.VERTICAL
             }
             val selectionButton = RadioButton(this).apply {
                 text = getString(
@@ -370,6 +422,13 @@ class ModelManagerActivity : Activity() {
                     row.displayName,
                     Formatter.formatFileSize(this@ModelManagerActivity, row.sizeBytes),
                     row.modelId,
+                    getString(
+                        if (row.healthCheckInProgress) {
+                            R.string.model_health_checking
+                        } else {
+                            healthStatusText(row.healthStatus)
+                        },
+                    ),
                 )
                 isChecked = row.selected
                 isEnabled = row.selectionEnabled
@@ -380,6 +439,21 @@ class ModelManagerActivity : Activity() {
                     importCoordinator.beginSelection(row.modelId)
                     renderManagerState(importCoordinator.managerState())
                 }
+            }
+            val actionRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            }
+            val healthCheckButton = Button(this).apply {
+                text = getString(
+                    if (row.healthCheckInProgress) {
+                        R.string.model_health_checking
+                    } else {
+                        R.string.button_check_model
+                    },
+                )
+                isEnabled = row.healthCheckEnabled
+                setOnClickListener { checkModel(row.modelId) }
             }
             val deleteButton = Button(this).apply {
                 text = getString(R.string.button_delete_model)
@@ -393,19 +467,36 @@ class ModelManagerActivity : Activity() {
             }
             catalogRow.addView(
                 selectionButton,
-                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
             )
-            catalogRow.addView(
+            actionRow.addView(
+                healthCheckButton,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+            actionRow.addView(
                 renameButton,
                 LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                 ),
             )
-            catalogRow.addView(
+            actionRow.addView(
                 deleteButton,
                 LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+            catalogRow.addView(
+                actionRow,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                 ),
             )
@@ -416,6 +507,14 @@ class ModelManagerActivity : Activity() {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                 ),
             )
+        }
+    }
+
+    private fun checkModel(modelId: String) {
+        val accepted = importCoordinator.beginHealthCheck(modelId)
+        renderManagerState(importCoordinator.managerState())
+        if (!accepted) {
+            Toast.makeText(this, R.string.model_health_check_failed, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -496,7 +595,14 @@ class ModelManagerActivity : Activity() {
             Formatter.formatFileSize(this, model.sizeBytes),
             model.sha256,
             model.modelId,
+            getString(healthStatusText(model.healthStatus)),
         )
+    }
+
+    private fun healthStatusText(status: ModelHealthStatus): Int = when (status) {
+        ModelHealthStatus.NOT_CHECKED -> R.string.model_health_not_checked
+        ModelHealthStatus.AVAILABLE -> R.string.model_health_available
+        ModelHealthStatus.INCOMPATIBLE -> R.string.model_health_incompatible
     }
 
     private fun updateModelActions(model: ImportedModel?) {
@@ -531,6 +637,7 @@ class ModelManagerActivity : Activity() {
                 ModelImportStage.VALIDATING -> R.string.import_stage_validating
                 ModelImportStage.COPYING -> R.string.import_stage_copying
                 ModelImportStage.PUBLISHING -> R.string.import_stage_publishing
+                ModelImportStage.CHECKING_COMPATIBILITY -> R.string.import_stage_checking_compatibility
             },
         )
         val totalBytes = value.totalBytes?.takeIf { value.processedBytes <= it }
@@ -567,6 +674,7 @@ class ModelManagerActivity : Activity() {
         progress.visibility = if (inProgress) View.VISIBLE else View.GONE
         cancelImportButton.visibility = if (cancelOperationId == null) View.GONE else View.VISIBLE
         cancelImportButton.isEnabled = cancelOperationId != null
+        checkAfterImportOption.isEnabled = !inProgress
         importStateAllowsPicker = importEnabled
         updateImportButtonEnabled()
     }
@@ -638,6 +746,12 @@ class ModelManagerActivity : Activity() {
         Toast.makeText(this, message, duration).show()
     }
 
+    private fun notifyHealthCheckOnce(operationId: Long, message: Int, duration: Int) {
+        if (operationId <= lastNotifiedHealthCheckOperationId) return
+        lastNotifiedHealthCheckOperationId = operationId
+        Toast.makeText(this, message, duration).show()
+    }
+
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
         const val STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID = "lastNotifiedImportOperationId"
@@ -646,6 +760,11 @@ class ModelManagerActivity : Activity() {
         const val STATE_LAST_NOTIFIED_RENAME_OPERATION_ID = "lastNotifiedRenameOperationId"
         const val STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID =
             "lastNotifiedStorageCleanupOperationId"
+        const val STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID =
+            "lastNotifiedHealthCheckOperationId"
+        const val STATE_CHECK_AFTER_IMPORT = "checkAfterImport"
+        const val PREFERENCES_NAME = "model-manager"
+        const val PREFERENCE_CHECK_AFTER_IMPORT = "checkAfterImport"
         const val STATE_PROCESS_SESSION_TOKEN = "processSessionToken"
         const val PROGRESS_MAX = 10_000
     }

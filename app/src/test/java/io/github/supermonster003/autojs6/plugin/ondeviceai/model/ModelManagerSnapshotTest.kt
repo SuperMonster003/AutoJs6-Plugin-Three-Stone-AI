@@ -9,7 +9,7 @@ class ModelManagerSnapshotTest {
     @Test
     fun exposesSortedRowsSelectedModelAndExactTotalThroughDefensiveList() {
         val entryA = entry("11", "A", 8L)
-        val entryB = entry("22", "B", 13L)
+        val entryB = entry("22", "B", 13L).copy(healthStatus = ModelHealthStatus.AVAILABLE)
         val sourceEntries = mutableListOf(entryB, entryA)
         val snapshot = ModelManagerSnapshot.from(
             ModelCatalogDocument(4L, entryB.modelId, sourceEntries),
@@ -21,6 +21,10 @@ class ModelManagerSnapshotTest {
         assertEquals(entryB.modelId, snapshot.selectedModel?.modelId)
         assertEquals(21L, snapshot.totalSizeBytes)
         assertEquals(listOf(8L, 13L), snapshot.models.map { it.sizeBytes })
+        assertEquals(
+            listOf(ModelHealthStatus.NOT_CHECKED, ModelHealthStatus.AVAILABLE),
+            snapshot.models.map { it.healthStatus },
+        )
 
         sourceEntries.clear()
         assertEquals(2, snapshot.models.size)
@@ -49,5 +53,6 @@ class ModelManagerSnapshotTest {
         sizeBytes = entry.sizeBytes,
         sha256 = entry.sha256,
         importedAtMillis = entry.importedAtMillis,
+        healthStatus = entry.healthStatus,
     )
 }

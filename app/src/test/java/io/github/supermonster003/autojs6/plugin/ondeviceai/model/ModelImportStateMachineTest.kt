@@ -133,9 +133,19 @@ class ModelImportStateMachineTest {
                 ModelImportProgress(ModelImportStage.PUBLISHING, processedBytes = 24L, totalBytes = 24L),
             ),
         )
+        assertTrue(
+            state.updateProgress(
+                operationId,
+                ModelImportProgress(
+                    ModelImportStage.CHECKING_COMPATIBILITY,
+                    processedBytes = 24L,
+                    totalBytes = 24L,
+                ),
+            ),
+        )
 
         val running = state.snapshot() as ModelImportState.Running
-        assertEquals(ModelImportStage.PUBLISHING, running.progress.stage)
+        assertEquals(ModelImportStage.CHECKING_COMPATIBILITY, running.progress.stage)
         assertEquals(24L, running.progress.processedBytes)
         assertEquals(24L, running.progress.totalBytes)
     }

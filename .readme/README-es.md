@@ -52,6 +52,7 @@ On-Device AI es el plugin oficial de generación de texto con IA local para Auto
 - Crear solicitudes de generación local con historial system, user y assistant en texto sin formato.
 - Transferir `temperature`, `topK`, `topP` y `maxTokens` desde `ai.ask`, `ai.chat` y `ai.stream` de AutoJs6 hasta LiteRT-LM.
 - Reutilizar el Engine inicializado según el SHA-256 del modelo para evitar arranques en frío repetidos en solicitudes consecutivas al mismo modelo.
+- Inicializar opcionalmente cada modelo importado una vez, conservar su estado Disponible/Incompatible y repetir la comprobación desde el gestor de modelos.
 - Entregar chunks de texto en orden con contrapresión por credits y publicar un solo estado terminal completado, fallido o cancelado.
 - Enumerar, seleccionar y renombrar modelos importados, eliminar modelos no seleccionados y recuperar desde el gestor los archivos de modelos sin referencia.
 - Funcionar completamente en el dispositivo con un backend CPU, sin descargar modelos ni llamar a un servicio de inferencia remoto.
@@ -120,6 +121,7 @@ El plugin no solicita permisos de red ni almacenamiento. Lee el modelo solo medi
 - Para evitar condiciones de carrera entre procesos con el proceso aislado `:provider`, las importaciones no eliminan automáticamente las generaciones anteriores con nombre de hash SHA-256. El gestor puede eliminar modelos no seleccionados del catálogo y recuperar archivos con nombre de hash que ya no estén referenciados.
 - Solo una sesión de generación puede estar activa en el proceso. Los descriptores se duplican antes del trabajo asíncrono y se cierran según las cuotas del protocolo.
 - El provider conserva como máximo un Engine inicializado. Las solicitudes consecutivas al mismo modelo lo reutilizan; se libera de inmediato al cambiar de modelo, tras cinco minutos de inactividad o, de forma segura, después de la sesión activa cuando Android informa de presión de memoria explícita.
+- La comprobación de un modelo solo demuestra que `Engine.initialize()` funciona en el dispositivo y entorno incluidos actuales; no evalúa la calidad de la salida y puede repetirse tras cambios de dispositivo o entorno.
 - El provider anuncia un máximo de contexto de 256 KiB y un máximo de salida de 64 KiB. Las solicitudes y modelos pueden imponer límites menores.
 - `maxTokens` admite enteros de 1 a 2.147.483.647. `temperature` debe ser finito y no negativo, `topK` un entero positivo y `topP` finito entre 0 y 1. Si se omiten los tres controles de muestreo se conservan los valores del modelo o motor; una sustitución parcial completa los controles omitidos con la base de LiteRT-LM `topK: 1`, `topP: 0.95` y `temperature: 1`.
 - El streaming usa credits finitos y chunks limitados para evitar buffers ilimitados o callbacks sin contrapresión.

@@ -3,6 +3,7 @@
     <string name="app_name">ИИ на устройстве</string>
     <string name="button_copy_model_id">Копировать ID модели</string>
     <string name="button_cancel_import">Отменить импорт</string>
+    <string name="button_check_model">Проверить модель</string>
     <string name="button_cleanup_storage">Очистить файлы без ссылок</string>
     <string name="button_import_model">Импорт модели .litertlm</string>
     <string name="button_delete_model">Удалить модель</string>
@@ -20,6 +21,7 @@
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: обработано %2$s</string>
     <string name="import_stage_copying">Копирование и проверка модели</string>
+    <string name="import_stage_checking_compatibility">Проверка совместимости с LiteRT-LM</string>
     <string name="import_stage_publishing">Публикация модели</string>
     <string name="import_stage_validating">Проверка источника</string>
     <string name="import_storage_preflight_ready">Проверка перед импортом: доступно %1$s; сейчас можно добавить до %2$s; %3$s остаётся в резерве. Закрытая копия занимает примерно столько же, сколько выбранный файл.</string>
@@ -30,7 +32,7 @@
     <string name="model_catalog_empty">Нет импортированных моделей</string>
     <string name="model_catalog_loading">Загрузка каталога моделей</string>
     <string name="model_catalog_unavailable">Каталог моделей недоступен</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s\nСтатус: %4$s</string>
     <string name="model_catalog_summary">Импортировано моделей: %1$d - Всего занято: %2$s</string>
     <string name="model_cleanup_empty">Файлы моделей без ссылок не найдены</string>
     <string name="model_cleanup_failed">Не удалось очистить хранилище</string>
@@ -42,6 +44,13 @@
     <string name="model_delete_selected_blocked">Выбранную модель нельзя удалить. Сначала выберите другую модель.</string>
     <string name="model_deletion_failed">Не удалось удалить модель</string>
     <string name="model_deletion_succeeded">Модель удалена</string>
+    <string name="model_health_available">Доступна</string>
+    <string name="model_health_check_available">Проверка модели пройдена: доступна</string>
+    <string name="model_health_check_failed">Не удалось сохранить результат проверки модели. Повторите попытку.</string>
+    <string name="model_health_check_incompatible">Проверка модели завершена: несовместима с этим устройством или средой выполнения</string>
+    <string name="model_health_checking">Проверка совместимости…</string>
+    <string name="model_health_incompatible">Несовместима</string>
+    <string name="model_health_not_checked">Не проверена</string>
     <string name="model_rename_title">Переименовать модель</string>
     <string name="model_rename_message">Введите новое отображаемое имя. ID модели и файл не изменятся.</string>
     <string name="model_rename_invalid">Введите непустое однострочное имя длиной не более 256 байт в UTF-8.</string>
@@ -49,7 +58,8 @@
     <string name="model_rename_succeeded">Модель переименована</string>
     <string name="model_selection_failed">Не удалось выбрать модель</string>
     <string name="model_selection_succeeded">Модель выбрана</string>
-    <string name="model_status_format">Модель: %1$s\nРазмер: %2$s\nSHA-256: %3$s\nID модели: %4$s</string>
+    <string name="model_status_format">Модель: %1$s\nРазмер: %2$s\nSHA-256: %3$s\nID модели: %4$s\nСтатус: %5$s</string>
+    <string name="option_check_after_import">Проверять совместимость после импорта (однократно инициализирует и закрывает модель)</string>
     <string name="plugin_description">Генерация текста ИИ на устройстве с локальными моделями LiteRT-LM</string>
     <string name="screen_description">Выберите локальную модель LiteRT-LM. Файл копируется в закрытое хранилище приложения и никогда не отправляется</string>
 </resources>

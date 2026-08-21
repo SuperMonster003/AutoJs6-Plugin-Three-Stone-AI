@@ -1,6 +1,8 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDeletionState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelHealthCheckState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelHealthStatus
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelRenameState
@@ -12,6 +14,9 @@ internal data class ModelManagerRow(
     val displayName: String,
     val sizeBytes: Long,
     val selected: Boolean,
+    val healthStatus: ModelHealthStatus,
+    val healthCheckInProgress: Boolean,
+    val healthCheckEnabled: Boolean,
     val selectionEnabled: Boolean,
     val renameEnabled: Boolean,
     val deletionEnabled: Boolean,
@@ -59,10 +64,12 @@ internal object ModelManagerPresentation {
         val deletionBusy = state.deletion is ModelDeletionState.Deleting
         val renameBusy = state.rename is ModelRenameState.Renaming
         val cleanupBusy = state.storageCleanup is ModelStorageCleanupState.Cleaning
-        val catalogMutationBusy = selectionBusy || deletionBusy || renameBusy || cleanupBusy
+        val healthCheckBusy = state.healthCheck is ModelHealthCheckState.Checking
+        val catalogMutationBusy = selectionBusy || deletionBusy || renameBusy || cleanupBusy || healthCheckBusy
         val mutationEnabled = snapshot != null && importAllowsMutation && !catalogMutationBusy && !importInFlight
         val selectedModelId = (state.selection as? ModelSelectionState.Selecting)?.modelId
             ?: snapshot?.selectedModelId
+        val checkedModelId = (state.healthCheck as? ModelHealthCheckState.Checking)?.modelId
         return ModelManagerViewState(
             rows = snapshot?.models.orEmpty().map { model ->
                 ModelManagerRow(
@@ -70,6 +77,9 @@ internal object ModelManagerPresentation {
                     displayName = model.displayName,
                     sizeBytes = model.sizeBytes,
                     selected = model.modelId == selectedModelId,
+                    healthStatus = model.healthStatus,
+                    healthCheckInProgress = model.modelId == checkedModelId,
+                    healthCheckEnabled = mutationEnabled,
                     selectionEnabled = mutationEnabled,
                     renameEnabled = mutationEnabled,
                     deletionEnabled = mutationEnabled,

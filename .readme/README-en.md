@@ -52,6 +52,7 @@ On-Device AI is the official on-device on-device AI plugin for AutoJs6. It runs 
 - Create local generation requests from plain-text system, user, and assistant history.
 - Forward `temperature`, `topK`, `topP`, and `maxTokens` from AutoJs6 `ai.ask`, `ai.chat`, and `ai.stream` to LiteRT-LM.
 - Reuse an initialized Engine by model SHA-256, eliminating repeated cold starts for consecutive requests to the same model.
+- Optionally initialize each imported model once, persist its Available/Incompatible status, and rerun the check from the model manager.
 - Deliver text chunks in order with credit backpressure and publish exactly one completed, failed, or cancelled terminal state.
 - List, select, and rename imported models, delete unselected models, and reclaim unreferenced model files from the manager.
 - Run entirely on-device with a CPU backend, without downloading models or calling a remote inference service.
@@ -120,6 +121,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 - To avoid cross-process races with the isolated `:provider` process, imports do not automatically delete previous SHA-256-named model generations. The model manager can delete unselected catalog models and reclaim hash-named files no longer referenced by the catalog.
 - At most one generation session is active in the process. Request descriptors are duplicated before asynchronous work and closed under protocol quotas.
 - The provider caches at most one initialized Engine. Consecutive requests to the same model reuse it; it is released immediately on a model switch, after five idle minutes, or safely after the active session when Android reports explicit memory pressure.
+- A model health check proves only that `Engine.initialize()` succeeds on the current device and bundled runtime; it does not assess output quality and can be rerun after device or runtime changes.
 - The provider advertises a 256 KiB context ceiling and a 64 KiB output ceiling. Requests and models may impose lower limits.
 - `maxTokens` accepts integers from 1 through 2,147,483,647. `temperature` must be finite and non-negative, `topK` a positive integer, and `topP` finite from 0 through 1. Leaving all three sampling controls unset preserves model/engine defaults; a partial override fills the omitted controls with the LiteRT-LM baseline `topK: 1`, `topP: 0.95`, and `temperature: 1`.
 - Streaming uses finite credits and bounded chunks to prevent unbounded buffering or callbacks without backpressure.

@@ -7,6 +7,9 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.LiteRtLmModelHealthChecker
+import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.ModelHealthChecker
+import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.liteRtLmCacheDirectory
 import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CopyOnWriteArraySet
@@ -62,6 +65,21 @@ internal sealed interface ModelStorageCleanupState {
     data class Failed(val operationId: Long) : ModelStorageCleanupState
 }
 
+internal sealed interface ModelHealthCheckState {
+    data object Idle : ModelHealthCheckState
+    data class Checking(val operationId: Long, val modelId: String) : ModelHealthCheckState
+    data class Succeeded(
+        val operationId: Long,
+        val modelId: String,
+        val status: ModelHealthStatus,
+    ) : ModelHealthCheckState {
+        init {
+            require(status.isChecked) { "A successful health operation must have a terminal status" }
+        }
+    }
+    data class Failed(val operationId: Long, val modelId: String) : ModelHealthCheckState
+}
+
 internal data class ModelManagerState(
     val importState: ModelImportState<ImportedModel>,
     val snapshot: ModelManagerSnapshot?,
@@ -69,6 +87,7 @@ internal data class ModelManagerState(
     val deletion: ModelDeletionState = ModelDeletionState.Idle,
     val rename: ModelRenameState = ModelRenameState.Idle,
     val storageCleanup: ModelStorageCleanupState = ModelStorageCleanupState.Idle,
+    val healthCheck: ModelHealthCheckState = ModelHealthCheckState.Idle,
 )
 
 /**
@@ -86,6 +105,9 @@ internal class ModelImportCoordinator private constructor(context: Context) {
 
     private val applicationContext = context.applicationContext
     private val repository = ModelRepository(applicationContext)
+    private val healthChecker: ModelHealthChecker = LiteRtLmModelHealthChecker(
+        cacheDirectory = liteRtLmCacheDirectory(applicationContext.cacheDir),
+    )
     private val stateMachine = ModelImportStateMachine<ImportedModel>()
     private val observers = CopyOnWriteArraySet<Observer>()
     private val managerObservers = CopyOnWriteArraySet<ManagerObserver>()
@@ -97,15 +119,18 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     private var activeDeletion: ActiveDeletion? = null
     private var activeRename: ActiveRename? = null
     private var activeStorageCleanup: ActiveStorageCleanup? = null
+    private var activeHealthCheck: ActiveHealthCheck? = null
     private var nextSelectionOperationId = 1L
     private var nextDeletionOperationId = 1L
     private var nextRenameOperationId = 1L
     private var nextStorageCleanupOperationId = 1L
+    private var nextHealthCheckOperationId = 1L
     private var visibleManagerSnapshot: ModelManagerSnapshot? = null
     private var selectionState: ModelSelectionState = ModelSelectionState.Idle
     private var deletionState: ModelDeletionState = ModelDeletionState.Idle
     private var renameState: ModelRenameState = ModelRenameState.Idle
     private var storageCleanupState: ModelStorageCleanupState = ModelStorageCleanupState.Idle
+    private var healthCheckState: ModelHealthCheckState = ModelHealthCheckState.Idle
     private var catalogMutationAvailable = false
     val processSessionToken: String = UUID.randomUUID().toString()
     private val executor = Executors.newSingleThreadExecutor { runnable ->
@@ -188,6 +213,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             deletion = deletionState,
             rename = renameState,
             storageCleanup = storageCleanupState,
+            healthCheck = healthCheckState,
         )
     }
 
@@ -210,6 +236,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 deletionState = ModelDeletionState.Idle
                 renameState = ModelRenameState.Idle
                 storageCleanupState = ModelStorageCleanupState.Idle
+                healthCheckState = ModelHealthCheckState.Idle
             }
         }
         publishState()
@@ -244,6 +271,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 deletionState = ModelDeletionState.Deleting(operationId, modelId)
                 renameState = ModelRenameState.Idle
                 storageCleanupState = ModelStorageCleanupState.Idle
+                healthCheckState = ModelHealthCheckState.Idle
             }
         }
         publishState()
@@ -280,6 +308,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 deletionState = ModelDeletionState.Idle
                 renameState = ModelRenameState.Renaming(operationId, modelId, normalizedName)
                 storageCleanupState = ModelStorageCleanupState.Idle
+                healthCheckState = ModelHealthCheckState.Idle
             }
         }
         publishState()
@@ -314,6 +343,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 deletionState = ModelDeletionState.Idle
                 renameState = ModelRenameState.Idle
                 storageCleanupState = ModelStorageCleanupState.Cleaning(operationId)
+                healthCheckState = ModelHealthCheckState.Idle
             }
         }
         publishState()
@@ -332,7 +362,43 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         return true
     }
 
-    fun beginImport(uri: Uri, grantedFlags: Int): Boolean {
+    /** Runs one explicit initialization probe without retaining an Engine in the manager process. */
+    fun beginHealthCheck(modelId: String): Boolean {
+        val active = synchronized(lifecycleLock) {
+            if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
+            val snapshot = visibleManagerSnapshot ?: return false
+            val model = snapshot.models.singleOrNull { it.modelId == modelId } ?: return false
+            check(nextHealthCheckOperationId > 0L) {
+                "Model health-check operation IDs are exhausted"
+            }
+            val operationId = nextHealthCheckOperationId
+            nextHealthCheckOperationId = if (operationId == Long.MAX_VALUE) 0L else operationId + 1L
+            ActiveHealthCheck(operationId, model).also { operation ->
+                activeHealthCheck = operation
+                selectionState = ModelSelectionState.Idle
+                deletionState = ModelDeletionState.Idle
+                renameState = ModelRenameState.Idle
+                storageCleanupState = ModelStorageCleanupState.Idle
+                healthCheckState = ModelHealthCheckState.Checking(operationId, modelId)
+            }
+        }
+        publishState()
+        try {
+            executor.execute { executeHealthCheck(active) }
+        } catch (error: RejectedExecutionException) {
+            logHealthCheckFailure(active, error)
+            synchronized(lifecycleLock) {
+                if (activeHealthCheck === active) {
+                    activeHealthCheck = null
+                    healthCheckState = ModelHealthCheckState.Failed(active.operationId, active.model.modelId)
+                }
+            }
+            publishState()
+        }
+        return true
+    }
+
+    fun beginImport(uri: Uri, grantedFlags: Int, checkAfterImport: Boolean): Boolean {
         val active = synchronized(lifecycleLock) {
             if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
             val operationId = stateMachine.begin() ?: return false
@@ -350,12 +416,14 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 previous = running.previous,
                 persistedReadPermission = persistedReadPermission,
                 control = control,
+                checkAfterImport = checkAfterImport,
             )
             activeImport = operation
             selectionState = ModelSelectionState.Idle
             deletionState = ModelDeletionState.Idle
             renameState = ModelRenameState.Idle
             storageCleanupState = ModelStorageCleanupState.Idle
+            healthCheckState = ModelHealthCheckState.Idle
             operation
         }
         publishState()
@@ -411,6 +479,31 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         try {
             active.control.ensureActive()
             imported = repository.importFrom(active.uri, active.control)
+            if (active.checkAfterImport) {
+                val publishedModel = checkNotNull(imported)
+                active.control.reportProgress(
+                    ModelImportProgress(
+                        stage = ModelImportStage.CHECKING_COMPATIBILITY,
+                        processedBytes = publishedModel.sizeBytes,
+                        totalBytes = publishedModel.sizeBytes,
+                    ),
+                )
+                val healthStatus = probeModelHealth(
+                    operationId = active.operationId,
+                    model = publishedModel,
+                )
+                runCatching {
+                    repository.recordHealthStatus(publishedModel.modelId, healthStatus)
+                }.onSuccess { checkedSnapshot ->
+                    imported = checkedSnapshot.models.single { it.modelId == publishedModel.modelId }
+                }.onFailure { error ->
+                    logHealthStatusPersistenceFailure(
+                        operationId = active.operationId,
+                        modelId = publishedModel.modelId,
+                        error = error,
+                    )
+                }
+            }
         } catch (error: Throwable) {
             importFailure = error
         } finally {
@@ -659,10 +752,75 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         publishState()
     }
 
+    private fun executeHealthCheck(active: ActiveHealthCheck) {
+        val status = probeModelHealth(active.operationId, active.model)
+        val result = runCatching {
+            repository.recordHealthStatus(active.model.modelId, status).also { snapshot ->
+                check(snapshot.models.single { it.modelId == active.model.modelId }.healthStatus == status) {
+                    "Model health status is not authoritative"
+                }
+            }
+        }
+        result.exceptionOrNull()?.let { error -> logHealthCheckFailure(active, error) }
+        val reread = if (result.isFailure) runCatching { repository.managerSnapshot() } else null
+        reread?.exceptionOrNull()?.let { error -> logHealthCheckFailure(active, error) }
+        synchronized(lifecycleLock) {
+            if (activeHealthCheck !== active) return
+            result.fold(
+                onSuccess = { snapshot ->
+                    if (stateMachine.replaceCurrent(snapshot.selectedModel)) {
+                        visibleManagerSnapshot = snapshot
+                        catalogMutationAvailable = true
+                        healthCheckState = ModelHealthCheckState.Succeeded(
+                            operationId = active.operationId,
+                            modelId = active.model.modelId,
+                            status = status,
+                        )
+                    } else {
+                        visibleManagerSnapshot = null
+                        catalogMutationAvailable = false
+                        stateMachine.makeUnavailable()
+                        healthCheckState = ModelHealthCheckState.Failed(
+                            active.operationId,
+                            active.model.modelId,
+                        )
+                    }
+                },
+                onFailure = {
+                    val refreshed = reread?.getOrNull()
+                    if (refreshed != null && stateMachine.replaceCurrent(refreshed.selectedModel)) {
+                        visibleManagerSnapshot = refreshed
+                        catalogMutationAvailable = true
+                    } else {
+                        visibleManagerSnapshot = null
+                        catalogMutationAvailable = false
+                        check(stateMachine.makeUnavailable()) {
+                            "A health-check refresh can fail closed only while no import is active"
+                        }
+                    }
+                    healthCheckState = ModelHealthCheckState.Failed(
+                        active.operationId,
+                        active.model.modelId,
+                    )
+                },
+            )
+            activeHealthCheck = null
+        }
+        publishState()
+    }
+
+    private fun probeModelHealth(operationId: Long, model: ImportedModel): ModelHealthStatus = try {
+        healthChecker.requireInitializable(model)
+        ModelHealthStatus.AVAILABLE
+    } catch (error: Throwable) {
+        logHealthProbeFailure(operationId, model.modelId, error)
+        ModelHealthStatus.INCOMPATIBLE
+    }
+
     /** Must be called only while [lifecycleLock] is held. */
     private fun hasActiveManagerOperationLocked(): Boolean =
         activeImport != null || activeSelection != null || activeDeletion != null ||
-            activeRename != null || activeStorageCleanup != null
+            activeRename != null || activeStorageCleanup != null || activeHealthCheck != null
 
     private fun finishActiveImport(active: ActiveImport) {
         synchronized(lifecycleLock) {
@@ -766,6 +924,43 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         }
     }
 
+    private fun logHealthProbeFailure(operationId: Long, modelId: String, error: Throwable) {
+        logHealthFailure(
+            "Model initialization probe reported incompatible: operation=$operationId " +
+                "model=$modelId type=${error.javaClass.name}",
+            error,
+        )
+    }
+
+    private fun logHealthStatusPersistenceFailure(
+        operationId: Long,
+        modelId: String,
+        error: Throwable,
+    ) {
+        logHealthFailure(
+            "Model health status persistence failed: operation=$operationId " +
+                "model=$modelId type=${error.javaClass.name}",
+            error,
+        )
+    }
+
+    private fun logHealthCheckFailure(active: ActiveHealthCheck, error: Throwable) {
+        logHealthFailure(
+            "Model health check failed: operation=${active.operationId} " +
+                "model=${active.model.modelId} type=${error.javaClass.name}",
+            error,
+        )
+    }
+
+    private fun logHealthFailure(message: String, error: Throwable) {
+        val debuggable = applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        if (debuggable) {
+            Log.w(TAG, message, error)
+        } else {
+            Log.w(TAG, message)
+        }
+    }
+
     private data class ActiveSelection(
         val operationId: Long,
         val modelId: String,
@@ -784,12 +979,18 @@ internal class ModelImportCoordinator private constructor(context: Context) {
 
     private data class ActiveStorageCleanup(val operationId: Long)
 
+    private data class ActiveHealthCheck(
+        val operationId: Long,
+        val model: ImportedModel,
+    )
+
     private inner class ActiveImport(
         val operationId: Long,
         val uri: Uri,
         val previous: ImportedModel?,
         private val persistedReadPermission: Boolean,
         val control: ModelImportOperationControl,
+        val checkAfterImport: Boolean,
     ) {
         private val worker = AtomicReference<Thread?>()
         private val finalized = AtomicBoolean(false)

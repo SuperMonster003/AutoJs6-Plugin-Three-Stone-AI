@@ -3,6 +3,7 @@
     <string name="app_name">IA local</string>
     <string name="button_copy_model_id">Copiar ID del modelo</string>
     <string name="button_cancel_import">Cancelar importación</string>
+    <string name="button_check_model">Comprobar modelo</string>
     <string name="button_cleanup_storage">Limpiar archivos sin referencia</string>
     <string name="button_import_model">Importar modelo .litertlm</string>
     <string name="button_delete_model">Eliminar modelo</string>
@@ -20,6 +21,7 @@
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: %2$s procesados</string>
     <string name="import_stage_copying">Copiando y verificando el modelo</string>
+    <string name="import_stage_checking_compatibility">Comprobando la compatibilidad con LiteRT-LM</string>
     <string name="import_stage_publishing">Publicando el modelo</string>
     <string name="import_stage_validating">Validando el origen</string>
     <string name="import_storage_preflight_ready">Comprobación previa: %1$s disponibles; ahora se pueden añadir hasta %2$s; se reservan %3$s. La copia privada ocupa aproximadamente el tamaño del archivo seleccionado.</string>
@@ -30,7 +32,7 @@
     <string name="model_catalog_empty">No hay modelos importados</string>
     <string name="model_catalog_loading">Cargando catálogo de modelos</string>
     <string name="model_catalog_unavailable">El catálogo de modelos no está disponible</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s\nEstado: %4$s</string>
     <string name="model_catalog_summary">Modelos importados: %1$d - Almacenamiento total: %2$s</string>
     <string name="model_cleanup_empty">No se encontraron archivos de modelos sin referencia</string>
     <string name="model_cleanup_failed">Error al limpiar el almacenamiento</string>
@@ -42,6 +44,13 @@
     <string name="model_delete_selected_blocked">No se puede eliminar el modelo seleccionado. Seleccione primero otro modelo.</string>
     <string name="model_deletion_failed">Error al eliminar el modelo</string>
     <string name="model_deletion_succeeded">Modelo eliminado</string>
+    <string name="model_health_available">Disponible</string>
+    <string name="model_health_check_available">Comprobación superada: disponible</string>
+    <string name="model_health_check_failed">No se pudo guardar el resultado de la comprobación. Inténtalo de nuevo.</string>
+    <string name="model_health_check_incompatible">Comprobación completada: incompatible con este dispositivo o entorno de ejecución</string>
+    <string name="model_health_checking">Comprobando compatibilidad…</string>
+    <string name="model_health_incompatible">Incompatible</string>
+    <string name="model_health_not_checked">Sin comprobar</string>
     <string name="model_rename_title">Renombrar modelo</string>
     <string name="model_rename_message">Introduce un nuevo nombre para mostrar. El ID y el archivo del modelo no cambiarán.</string>
     <string name="model_rename_invalid">Introduce un nombre no vacío de una sola línea de hasta 256 bytes UTF-8.</string>
@@ -49,7 +58,8 @@
     <string name="model_rename_succeeded">Modelo renombrado</string>
     <string name="model_selection_failed">Error al seleccionar el modelo</string>
     <string name="model_selection_succeeded">Modelo seleccionado</string>
-    <string name="model_status_format">Modelo: %1$s\nTamaño: %2$s\nSHA-256: %3$s\nID del modelo: %4$s</string>
+    <string name="model_status_format">Modelo: %1$s\nTamaño: %2$s\nSHA-256: %3$s\nID del modelo: %4$s\nEstado: %5$s</string>
+    <string name="option_check_after_import">Comprobar la compatibilidad después de importar (inicializa y cierra el modelo una vez)</string>
     <string name="plugin_description">Generación de texto con IA local mediante modelos LiteRT-LM en el dispositivo</string>
     <string name="screen_description">Elige un modelo LiteRT-LM local. El archivo se copia al almacenamiento privado de la aplicación y nunca se sube</string>
 </resources>

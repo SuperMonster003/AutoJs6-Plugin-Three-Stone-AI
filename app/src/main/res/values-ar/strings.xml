@@ -3,6 +3,7 @@
     <string name="app_name">الذكاء الاصطناعي المحلي</string>
     <string name="button_copy_model_id">نسخ معرف النموذج</string>
     <string name="button_cancel_import">إلغاء الاستيراد</string>
+    <string name="button_check_model">فحص النموذج</string>
     <string name="button_cleanup_storage">تنظيف الملفات غير المرجعية</string>
     <string name="button_import_model">استيراد نموذج .litertlm</string>
     <string name="button_delete_model">حذف النموذج</string>
@@ -20,6 +21,7 @@
     <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="import_progress_unknown">%1$s: تمت معالجة %2$s</string>
     <string name="import_stage_copying">جار نسخ النموذج والتحقق منه</string>
+    <string name="import_stage_checking_compatibility">جارٍ التحقق من توافق LiteRT-LM</string>
     <string name="import_stage_publishing">جار نشر النموذج</string>
     <string name="import_stage_validating">جار التحقق من المصدر</string>
     <string name="import_storage_preflight_ready">فحص ما قبل الاستيراد: يتوفر %1$s؛ يمكن إضافة ما يصل إلى %2$s الآن؛ يبقى %3$s احتياطيا. تستخدم النسخة الخاصة مساحة تقارب حجم الملف المحدد.</string>
@@ -30,7 +32,7 @@
     <string name="model_catalog_empty">لا توجد نماذج مستوردة</string>
     <string name="model_catalog_loading">جارٍ تحميل كتالوج النماذج</string>
     <string name="model_catalog_unavailable">كتالوج النماذج غير متاح</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s</string>
+    <string name="model_catalog_item">%1$s - %2$s\n%3$s\nالحالة: %4$s</string>
     <string name="model_catalog_summary">النماذج المستوردة: %1$d - إجمالي مساحة التخزين: %2$s</string>
     <string name="model_cleanup_empty">لم يتم العثور على ملفات نماذج غير مرجعية</string>
     <string name="model_cleanup_failed">فشل تنظيف مساحة التخزين</string>
@@ -42,6 +44,13 @@
     <string name="model_delete_selected_blocked">لا يمكن حذف النموذج المحدد. اختر نموذجا آخر أولا.</string>
     <string name="model_deletion_failed">فشل حذف النموذج</string>
     <string name="model_deletion_succeeded">تم حذف النموذج</string>
+    <string name="model_health_available">متاح</string>
+    <string name="model_health_check_available">نجح فحص النموذج: متاح</string>
+    <string name="model_health_check_failed">تعذّر حفظ نتيجة فحص النموذج. حاول مرة أخرى.</string>
+    <string name="model_health_check_incompatible">اكتمل فحص النموذج: غير متوافق مع هذا الجهاز أو بيئة التشغيل</string>
+    <string name="model_health_checking">جارٍ التحقق من التوافق…</string>
+    <string name="model_health_incompatible">غير متوافق</string>
+    <string name="model_health_not_checked">لم يتم فحصه</string>
     <string name="model_rename_title">إعادة تسمية النموذج</string>
     <string name="model_rename_message">أدخل اسم عرض جديدا. لن يتغير معرف النموذج أو الملف.</string>
     <string name="model_rename_invalid">أدخل اسما غير فارغ من سطر واحد لا يتجاوز 256 بايت UTF-8.</string>
@@ -49,7 +58,8 @@
     <string name="model_rename_succeeded">تم تغيير اسم النموذج</string>
     <string name="model_selection_failed">فشل اختيار النموذج</string>
     <string name="model_selection_succeeded">تم اختيار النموذج</string>
-    <string name="model_status_format">النموذج: %1$s\nالحجم: %2$s\nSHA-256: %3$s\nمعرف النموذج: %4$s</string>
+    <string name="model_status_format">النموذج: %1$s\nالحجم: %2$s\nSHA-256: %3$s\nمعرف النموذج: %4$s\nالحالة: %5$s</string>
+    <string name="option_check_after_import">تحقق من التوافق بعد الاستيراد (تهيئة النموذج مرة واحدة ثم إغلاقه)</string>
     <string name="plugin_description">توليد نص بالذكاء الاصطناعي على الجهاز بنماذج LiteRT-LM محلية</string>
     <string name="screen_description">اختر نموذج LiteRT-LM محليا. ينسخ الملف إلى مساحة التطبيق الخاصة ولا يرفع أبدا</string>
 </resources>

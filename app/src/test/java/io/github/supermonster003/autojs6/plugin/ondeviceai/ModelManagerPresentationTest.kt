@@ -4,6 +4,8 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelCatalogDocument
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelCatalogEntry
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDeletionState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelHealthCheckState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelHealthStatus
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportFailureReason
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportProgress
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportPolicy
@@ -103,8 +105,8 @@ class ModelManagerPresentationTest {
 
     @Test
     fun readyCatalogExposesSelectedRowsExactSizesAndEnabledSelection() {
-        val entryA = entry("11", "A", 8L)
-        val entryB = entry("22", "B", 13L)
+        val entryA = entry("11", "A", 8L, ModelHealthStatus.AVAILABLE)
+        val entryB = entry("22", "B", 13L, ModelHealthStatus.INCOMPATIBLE)
         val snapshot = snapshot(entryA.modelId, listOf(entryB, entryA))
 
         val view = ModelManagerPresentation.managerView(
@@ -120,6 +122,12 @@ class ModelManagerPresentationTest {
         assertEquals(listOf("A", "B"), view.rows.map { it.displayName })
         assertEquals(listOf(8L, 13L), view.rows.map { it.sizeBytes })
         assertEquals(listOf(true, false), view.rows.map { it.selected })
+        assertEquals(
+            listOf(ModelHealthStatus.AVAILABLE, ModelHealthStatus.INCOMPATIBLE),
+            view.rows.map { it.healthStatus },
+        )
+        assertTrue(view.rows.none { it.healthCheckInProgress })
+        assertTrue(view.rows.all { it.healthCheckEnabled })
         assertTrue(view.rows.all { it.selectionEnabled })
         assertTrue(view.rows.all { it.renameEnabled })
         assertTrue(view.rows.all { it.deletionEnabled })
@@ -143,6 +151,7 @@ class ModelManagerPresentationTest {
         )
 
         assertEquals(listOf(false, true), view.rows.map { it.selected })
+        assertTrue(view.rows.none { it.healthCheckEnabled })
         assertTrue(view.rows.none { it.selectionEnabled })
         assertTrue(view.rows.none { it.renameEnabled })
         assertTrue(view.rows.none { it.deletionEnabled })
@@ -156,6 +165,7 @@ class ModelManagerPresentationTest {
                 selection = ModelSelectionState.Idle,
             ),
         )
+        assertTrue(importing.rows.none { it.healthCheckEnabled })
         assertTrue(importing.rows.none { it.selectionEnabled })
         assertTrue(importing.rows.none { it.renameEnabled })
         assertTrue(importing.rows.none { it.deletionEnabled })
@@ -165,8 +175,8 @@ class ModelManagerPresentationTest {
 
     @Test
     fun pendingDeletionKeepsSelectionStableAndDisablesEveryCatalogMutation() {
-        val entryA = entry("11", "A", 8L)
-        val entryB = entry("22", "B", 13L)
+        val entryA = entry("11", "A", 8L, ModelHealthStatus.AVAILABLE)
+        val entryB = entry("22", "B", 13L, ModelHealthStatus.INCOMPATIBLE)
         val snapshot = snapshot(entryA.modelId, listOf(entryA, entryB))
 
         val view = ModelManagerPresentation.managerView(
@@ -179,6 +189,7 @@ class ModelManagerPresentationTest {
         )
 
         assertEquals(listOf(true, false), view.rows.map { it.selected })
+        assertTrue(view.rows.none { it.healthCheckEnabled })
         assertTrue(view.rows.none { it.selectionEnabled })
         assertTrue(view.rows.none { it.renameEnabled })
         assertTrue(view.rows.none { it.deletionEnabled })
@@ -202,6 +213,7 @@ class ModelManagerPresentationTest {
         )
 
         assertEquals(listOf(true, false), view.rows.map { it.selected })
+        assertTrue(view.rows.none { it.healthCheckEnabled })
         assertTrue(view.rows.none { it.selectionEnabled })
         assertTrue(view.rows.none { it.renameEnabled })
         assertTrue(view.rows.none { it.deletionEnabled })
@@ -226,6 +238,35 @@ class ModelManagerPresentationTest {
         )
 
         assertEquals(listOf("A", "B"), view.rows.map { it.displayName })
+        assertTrue(view.rows.none { it.healthCheckEnabled })
+        assertTrue(view.rows.none { it.selectionEnabled })
+        assertTrue(view.rows.none { it.renameEnabled })
+        assertTrue(view.rows.none { it.deletionEnabled })
+        assertTrue(view.catalogMutationBusy)
+        assertFalse(view.cleanupEnabled)
+    }
+
+    @Test
+    fun pendingHealthCheckMarksOnlyItsModelAndDisablesEveryCatalogMutation() {
+        val entryA = entry("11", "A", 8L, ModelHealthStatus.AVAILABLE)
+        val entryB = entry("22", "B", 13L)
+        val snapshot = snapshot(entryA.modelId, listOf(entryA, entryB))
+
+        val view = ModelManagerPresentation.managerView(
+            ModelManagerState(
+                importState = ModelImportState.Ready(snapshot.selectedModel),
+                snapshot = snapshot,
+                selection = ModelSelectionState.Idle,
+                healthCheck = ModelHealthCheckState.Checking(12L, entryB.modelId),
+            ),
+        )
+
+        assertEquals(listOf(false, true), view.rows.map { it.healthCheckInProgress })
+        assertEquals(
+            listOf(ModelHealthStatus.AVAILABLE, ModelHealthStatus.NOT_CHECKED),
+            view.rows.map { it.healthStatus },
+        )
+        assertTrue(view.rows.none { it.healthCheckEnabled })
         assertTrue(view.rows.none { it.selectionEnabled })
         assertTrue(view.rows.none { it.renameEnabled })
         assertTrue(view.rows.none { it.deletionEnabled })
@@ -241,7 +282,12 @@ class ModelManagerPresentationTest {
         ::importedModel,
     )
 
-    private fun entry(byte: String, displayName: String, sizeBytes: Long): ModelCatalogEntry {
+    private fun entry(
+        byte: String,
+        displayName: String,
+        sizeBytes: Long,
+        healthStatus: ModelHealthStatus = ModelHealthStatus.NOT_CHECKED,
+    ): ModelCatalogEntry {
         val digest = byte.repeat(32)
         return ModelCatalogEntry(
             modelId = ModelImportPolicy.stableModelId(digest),
@@ -250,6 +296,7 @@ class ModelManagerPresentationTest {
             sizeBytes = sizeBytes,
             sha256 = digest,
             importedAtMillis = 1L,
+            healthStatus = healthStatus,
         )
     }
 
@@ -260,5 +307,6 @@ class ModelManagerPresentationTest {
         sizeBytes = entry.sizeBytes,
         sha256 = entry.sha256,
         importedAtMillis = entry.importedAtMillis,
+        healthStatus = entry.healthStatus,
     )
 }

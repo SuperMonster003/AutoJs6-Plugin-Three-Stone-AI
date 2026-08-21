@@ -381,12 +381,14 @@ try {
         java.util.Arrays.asList("streaming", "usage"),
         java.lang.Double.valueOf("0.7"), // temperature
         java.lang.Integer.valueOf("40"), // topK
-        java.lang.Double.valueOf("0.9")  // topP
+        java.lang.Double.valueOf("0.9"), // topP
+        false,  // persistent session
+        "cpu"   // explicit backend profile
     );
 
     var request = new TextApi.OnDeviceAiRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 1),
+        new CommonApi.AiProtocolVersion(1, 3),
         "autojs6.on-device-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),

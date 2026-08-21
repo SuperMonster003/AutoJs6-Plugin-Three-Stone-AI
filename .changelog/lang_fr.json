@@ -18,6 +18,7 @@
         "Téléchargement direct de modèles LiteRT Community épinglés vers un emplacement SAF choisi, avec progression, annulation précise, nettoyage, vérification de l'en-tête LiteRT-LM, de la taille et du SHA-256, puis import direct"
       ],
       "fix": [
+        "Correction de l’exemple Binder de bas niveau dans les instructions localisées en 10 langues, qui appelait encore le constructeur `AiGenerationOptions` à 14 arguments du protocole 1.1 et échouait avec l’API du protocole 1.3",
         "Correction du gestionnaire de modèles qui conservait les couleurs de texte du thème clair en mode sombre système, rendant le texte, les cases à cocher et les lignes de modèles illisibles sur l’arrière-plan sombre"
       ],
       "improvement": [

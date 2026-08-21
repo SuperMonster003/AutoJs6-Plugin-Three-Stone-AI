@@ -48,7 +48,7 @@
 
 - [x] Engine 复用: 以 model SHA 为键缓存已初始化 Engine, 消除同模型连续请求的重复冷启动; 模型切换/内存压力/空闲超时时释放.
 - [x] 模型自检: 导入完成后可选执行一次 `Engine.initialize()` 健康检查, 在模型管理界面标记 "可用/不兼容", 避免脚本调用时才发现模型加载失败.
-- [ ] system prompt 支持: 插件协议已接受 system 角色, 打通宿主 `ai.ask(messages, { plugin })` 的多消息传入 (system + user).
+- [x] system prompt 支持: 插件协议已接受 system 角色, 打通宿主 `ai.ask(messages, { plugin })` 的多消息传入 (system + user).
 - [ ] 生成统计: 返回 tokens/耗时等基础 usage 信息, 填充 `ai.chat` 响应的 `usage` 字段.
 - [ ] 宿主 d.ts 与文档: 为 `ai.*` 补充 TypeScript 声明与 docs.autojs6.com 文档页 (含 plugin 路由完整示例).
 

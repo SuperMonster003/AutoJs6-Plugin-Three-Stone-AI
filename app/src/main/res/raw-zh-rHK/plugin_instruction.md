@@ -4,6 +4,10 @@
 
 插件需要 AutoJs6 主程式構建版本 5276 或更高版本, 以及 Android API 24 或更高版本.
 
+## 取得模型
+
+打開插件模型管理頁並點擊 **下載建議模型**, 即可選擇固定版本嘅 LiteRT Community 模型同任何可寫入 SAF 儲存位置. 插件會顯示進度, 並喺開放 **匯入已下載模型** 前驗證 LiteRT-LM 檔案頭, 精確字節數同 SHA-256. 推理從來唔使用網絡. 下載嘅外部檔案同匯入後嘅應用程式私人副本會分別佔用空間; 如果 Android 喺下載途中終止進程, 請手動刪除可能殘留嘅外部殘缺檔案.
+
 ## 快速開始 (推薦)
 
 喺 AutoJs6 構建 5276 及以上版本中, 可直接通過全局 `ai` 模塊調用本插件. `plugin: true` 即選擇本插件; 只導入一個模型時可省略模型 ID.
@@ -85,7 +89,7 @@ ai.models({ plugin: true }).then((models) => {
 
 ## 使用範例
 
-以下完整 Rhino 腳本以 **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** 模型為例. 此固定版本的 SHA-256 為 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此匯入後的模型 ID 為 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下載檔案可能名為 `model.litertlm`, 檔案名稱不影響模型 ID. 匯入後, 可使用插件說明頁右上角的複製操作複製整個腳本. 請將其作為一般 AutoJs6 Rhino 腳本執行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可嘗試其他請求.
+以下完整 Rhino 腳本以 **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** 模型為例. 此固定版本的 SHA-256 為 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此匯入後的模型 ID 為 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下載檔案可能名為 `gemma-4-E2B-it.litertlm`, 檔案名稱不影響模型 ID. 匯入後, 可使用插件說明頁右上角的複製操作複製整個腳本. 請將其作為一般 AutoJs6 Rhino 腳本執行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可嘗試其他請求.
 
 使用其他模型時, 請從模型管理頁複製該模型的 Model ID, 並替換腳本中的 `MODEL_ID`. 請勿沿用範例值.
 
@@ -471,6 +475,6 @@ try {
 - 宣告 streaming, usage, persistent session, structured JSON, `text/plain` 同 `application/json`. 唔支援 reasoning 同 tools.
 - 響應 schema 必須係 JSON 對象且唔超過 64 KiB; 可用關鍵字以目前內置 LiteRT-LM/LLGuidance 運行時為準. 插件會嚴格解析同驗證完整結構化輸出, 因此應為整個 JSON 值預留足夠嘅 `maxTokens`.
 - Usage token 數來自 LiteRT-LM Conversation 嘅 KV cache 同 decode 計數, 唔會用字符數估算. `durationMillis` 只量度插件生成調用, 唔包括宿主發現, 綁定, 模型枚舉同分發時間.
-- 插件不要求網絡或儲存權限.
+- 插件只為用戶明確發起嘅建議模型下載要求 `INTERNET` 權限, 唔要求廣泛儲存權限. 推理從來唔使用網絡; SAF 只授予對用戶所選來源或目標嘅存取.
 - 僅允許同簽名 AutoJs6 主程式綁定 provider 服務.
 - 為保證跨進程安全, 會保留先前以 SHA-256 hash 命名的模型代次, 它們會繼續佔用應用程式私人儲存空間.

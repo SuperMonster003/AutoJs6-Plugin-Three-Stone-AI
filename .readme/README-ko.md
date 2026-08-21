@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/app/src/main/res/mipmap/ic_launcher_on_device_ai.png?raw=true" alt="on-device-ai-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>온디바이스 AI 플러그인. LiteRT-LM으로 로컬 기기에서 텍스트를 스트리밍 생성, 네트워크 불필요</p>
+  <p>온디바이스 AI 플러그인. LiteRT-LM 추론은 항상 로컬이며 모델 다운로드는 명시적입니다</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-On-Device-AI?label=Release"/></a>
@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI (온디바이스 AI)는 AutoJs6의 공식 온디바이스 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 모든 추론은 로컬에서 이루어지며 네트워크 접근이나 데이터 업로드가 없습니다.
+On-Device AI (온디바이스 AI)는 AutoJs6의 공식 온디바이스 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 모든 추론은 네트워크 접근이나 데이터 업로드 없이 로컬에서 이루어지며, 네트워크는 사용자가 권장 모델 다운로드를 명시적으로 시작할 때만 사용됩니다.
 
 ******
 
@@ -48,6 +48,7 @@ On-Device AI (온디바이스 AI)는 AutoJs6의 공식 온디바이스 AI 텍스
 ******
 
 - Android 시스템 선택기로 `.litertlm` 모델 패키지를 가져오고 검증된 복사본을 앱 전용 저장소에 보관합니다.
+- 고정 버전이며 인증이 필요 없는 LiteRT Community 모델을 사용자가 선택한 SAF 위치로 직접 다운로드하고 진행률, 취소, 불완전 파일 정리, 정확한 크기와 SHA-256 검증을 제공합니다.
 - 시스템 선택기를 열기 전에 비공개 저장 공간을 사전 확인하고, 현재 가져오기 예산과 비공개 사본의 예상 사용량을 표시하며, 복사 전에 선택한 파일을 다시 확인합니다.
 - 일반 텍스트 system, user 및 assistant 기록으로 로컬 생성 요청을 만듭니다.
 - AutoJs6 `ai.ask`, `ai.chat`, `ai.stream`의 `temperature`, `topK`, `topP`, `maxTokens`를 LiteRT-LM까지 전달합니다.
@@ -111,7 +112,7 @@ required host build: 5276
 
 ******
 
-네트워크 또는 저장소 권한을 요청하지 않습니다. 시스템 선택기가 허용한 URI로만 모델을 읽고 SHA-256을 계산하며 앱 전용 `files/models`로 복사한 뒤 fsync하고 같은 디렉터리의 pointer를 원자적으로 교체해 활성화합니다. Provider 서비스는 AutoJs6 패키지 이름, 호출 UID 소유권 및 양쪽 서명 일치도 검증합니다.
+사용자가 시작한 권장 모델 다운로드에만 `INTERNET` 권한을 요청하며 광범위한 저장소 권한은 요청하지 않습니다. 다운로드는 변경 불가능한 HTTPS 리비전, 고정 크기와 SHA-256을 사용하고 선택한 SAF 위치에만 쓰며 LiteRT-LM 헤더, 크기, 다이제스트, flush, fsync가 모두 통과해야 완료됩니다. 가져오기는 계속 선택기 URI만 읽고 검증 사본을 `files/models`에 써서 원자적으로 활성화합니다. Provider는 AutoJs6 패키지, UID, 서명도 검증합니다.
 
 ******
 
@@ -120,6 +121,7 @@ required host build: 5276
 ******
 
 - 모델 가져오기에는 8 GiB의 엄격한 상한이 있고 완료 후 최소 256 MiB의 여유 공간이 필요합니다.
+- 앱 프로세스에서는 다운로드 하나만 실행됩니다. Activity 재생성 후에도 진행률과 취소 소유권을 유지하며 취소 또는 실패 시 대상을 삭제하거나 비웁니다. 프로세스가 종료되면 외부의 불완전 문서가 남을 수 있어 직접 삭제해야 합니다.
 - Application scope 단일 가져오기 coordinator가 Activity 재생성 중에도 작업을 유지합니다. Fsync된 pending journal로 콜드 스타트 복구와 stale `.incoming`, `.current`, `.pending` 임시 파일 cleanup을 수행합니다. 복구는 현재 시도가 새로 만들고 current metadata로 게시한 적 없는 destination만 삭제하며 게시됨, current 및 이전 hash 세대는 보존합니다.
 - 분리된 `:provider` 프로세스와의 프로세스 간 경쟁을 피하기 위해 가져오기 중에는 이전 SHA-256 hash 이름 모델 세대를 자동 삭제하지 않습니다. 모델 관리 화면에서 선택되지 않은 catalog 모델을 삭제하고 catalog에서 더 이상 참조하지 않는 hash 이름 파일을 회수할 수 있습니다.
 - 프로세스에서 활성 생성 세션은 최대 1개입니다. 요청 descriptor는 비동기 작업 전에 복제되고 프로토콜 quota에 따라 닫힙니다.
@@ -141,7 +143,7 @@ required host build: 5276
 
 - Reasoning 및 tools는 선언하지 않습니다.
 - Tool 역할 메시지, tool schema, tool call 및 tool result를 받지 않습니다.
-- 네트워크 모델 검색, 모델 다운로드, cloud 추론 또는 credential 흐름이 없습니다.
+- 네트워크 모델 검색, 임의 URL 다운로드, cloud 추론 또는 credential 흐름은 없으며 고정된 내장 권장 카탈로그만 다운로드할 수 있습니다.
 - NPU 추론은 선언하지 않습니다. profile은 `npu-runtime-not-packaged` 사유의 `unavailable`로 검색됩니다. GPU는 `libOpenCL.so`를 로드할 수 있을 때만 선언되며 `.litertlm` 확장자만으로 모델 초기화를 보장하지 않습니다.
 
 ******
@@ -171,6 +173,7 @@ required host build: 5276
 * `기능` On-Device AI 프로토콜 1.2 영구 세션과 AutoJs6 `ai.session` 여러 턴 Conversation 재사용을 추가하여 이전 기록 재전송 제거
 * `기능` AutoJs6 `structuredJson`과 `responseSchema`를 통한 LiteRT-LM 네이티브 JSON Schema 제약 디코딩을 추가하고 단일 호출, 스트리밍, 영구 세션 및 완성 JSON의 엄격한 검증을 지원
 * `기능` 프로토콜 1.3과 AutoJs6 생성 옵션을 통한 명시적 `cpu`, `gpu`, `npu` backend profile, 기기 호환성 보고, 모델/profile별 캐시 격리 및 사용 불가 profile의 CPU fallback 금지; GPU는 OpenCL 로드 검사 성공 후에만 선언하고 NPU는 EAP runtime 미포함으로 사용 불가 유지
+* `기능` 고정 LiteRT Community 모델을 사용자가 선택한 SAF 위치로 직접 다운로드하고 진행률, 정확한 취소, 불완전 파일 정리, LiteRT-LM 헤더 및 정확한 크기/SHA-256 검증, 다운로드 후 직접 가져오기를 지원
 * `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신
 * `개선` ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성
 

@@ -1,14 +1,15 @@
 {
   "$name": "繁體中文 (香港)",
   "text_current_lowercase": "目前",
-  "text_plugin_synopsis": "裝置端 AI 插件. 使用 LiteRT-LM 喺本地裝置串流生成文本, 無需聯網",
+  "text_plugin_synopsis": "裝置端 AI 插件. LiteRT-LM 推理始終喺本地; 建議模型下載只由用戶明確發起",
   "h3_languages_with_ascii": "語言",
   "p_languages_all_supported_for_readme": "目前 README.md 支援以下語言",
   "h3_introduction": "簡介",
-  "p_introduction": "On-Device AI (裝置端 AI) 係 AutoJs6 嘅官方裝置端 AI 文本生成插件. 佢喺顯式選擇嘅 CPU 或相容 GPU backend 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本或受 schema 約束嘅 JSON 文本. 全部推理喺本地完成, 唔聯網, 唔上傳任何數據.",
+  "p_introduction": "On-Device AI (裝置端 AI) 係 AutoJs6 嘅官方裝置端 AI 文本生成插件. 佢喺顯式選擇嘅 CPU 或相容 GPU backend 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本或受 schema 約束嘅 JSON 文本. 全部推理喺本地完成, 唔聯網亦唔上傳任何數據; 只有用戶明確下載建議模型時先會連網.",
   "h3_functions": "功能",
   "features": [
     "透過 Android 系統檔案選擇器匯入 `.litertlm` 模型套件, 並將驗證後的副本儲存到應用程式私人儲存空間.",
+    "將固定版本且毋須登入嘅 LiteRT Community 建議模型直接下載到用戶選擇嘅 SAF 位置, 支援進度, 取消, 殘缺檔案清理及精確大小同 SHA-256 驗證.",
     "開啟系統檔案選擇器前預檢私人儲存空間, 顯示目前匯入預算同私人副本預計佔用, 並喺複製前再次檢查所選檔案.",
     "使用純文字 system, user 和 assistant 歷史建立本地生成請求.",
     "將 AutoJs6 `ai.ask`, `ai.chat` 和 `ai.stream` 嘅 `temperature`, `topK`, `topP` 同 `maxTokens` 傳遞到 LiteRT-LM.",
@@ -30,10 +31,11 @@
   "h3_host_integration_status": "主程式整合狀態",
   "p_host_integration_status": "AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由. `ai.session({ plugin: true })` 可建立持久多輪 Conversation, 後續 `ask`, `chat` 同 `stream` 調用只發送新嘅用戶提示詞. `ai.ask(messages, { plugin: true })` 會按順序保留純文字 `system`, `user` 同 `assistant` 消息, 而最後一條消息必須係 `user`. `ai.chat` 會喺 `usage` 回傳精確 token 數, 並喺 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會喺完成前發送同一份累計 usage. 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型同 `backendProfiles`. 生成選項接受 `backend: 'cpu' | 'gpu' | 'npu'`; 不可用 profile 會明確失敗, 絕不回退 CPU. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件. `responseSchema` 會隱式啟用結構化輸出; 只設定 `structuredJson: true` 時使用預設嘅對象根 schema. `ai.ask` 同 `ai.chat().text` 仍然返回 JSON 文本, 串流 delta 係未完整嘅 JSON 片段, 持久會話就會喺所有輪次固定使用同一 schema 同 backend.",
   "h3_security": "安全性和私隱",
-  "p_security": "插件不要求網絡或儲存權限. 模型只透過系統檔案選擇器授予的 URI 讀取, 以串流 SHA-256 校驗和 fsync 寫入應用程式私人 `files/models` 目錄, 再透過同目錄原子 pointer 替換啟用. Provider 服務亦會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬及雙方簽名.",
+  "p_security": "插件只為用戶主動發起嘅建議模型下載要求 `INTERNET` 權限, 唔要求廣泛儲存權限. 目錄下載使用不可變 HTTPS 版本及固定字節數同 SHA-256, 只寫入用戶選擇嘅 SAF 位置; LiteRT-LM 檔案頭, 大小, 摘要, flush 同 fsync 全部通過後先算完成. 匯入仍只讀取系統選擇器授予嘅 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. Provider 服務亦會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬及雙方簽名.",
   "h3_security_limits": "執行限制",
   "security_limits": [
     "模型匯入硬上限為 8 GiB, 且匯入後至少保留 256 MiB 可用空間.",
+    "應用程式進程內一次只運行一個模型下載. Activity 重建會保留進度同取消歸屬; 取消或失敗會刪除新建目標, 唔支援刪除時就截斷清空. 進程被終止仍可能留下外部殘缺檔案, 用戶應手動刪除.",
     "應用程式級單匯入協調器使 Activity 重建不會中斷正在進行的匯入. Fsync pending journal 支援冷啟動復原並清理 stale `.incoming`, `.current` 和 `.pending` 暫存檔案. 復原只會刪除本次嘗試新建且從未由 current metadata 發佈的 destination, 已發佈或 current 模型及歷史 hash 代次均會保留.",
     "為避免與獨立 `:provider` 進程發生競態, 匯入時唔會自動刪除先前以 SHA-256 hash 命名嘅模型代次. 模型管理介面可刪除未選取嘅 catalog 模型, 並回收唔再由 catalog 引用嘅 hash 命名檔案.",
     "同一進程最多有一個活動生成工作階段. 請求描述符會在非同步處理前複製並按協議配額關閉.",
@@ -51,7 +53,7 @@
   "unsupported_capabilities": [
     "不宣告 reasoning 或 tools 能力.",
     "不接受 tool 角色訊息, tool schema, tool call 或 tool result.",
-    "不提供連網模型發現, 模型下載, 雲端推理或 credential 流程.",
+    "不提供連網模型發現, 任意 URL 下載, 雲端推理或 credential 流程; 只可下載內置目錄中固定版本嘅建議模型.",
     "不宣告 NPU 推理可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 只喺 `libOpenCL.so` 可載入時宣告, 而 `.litertlm` 副檔名本身仍不保證模型初始化成功."
   ],
   "h3_roadmap": "路線圖",

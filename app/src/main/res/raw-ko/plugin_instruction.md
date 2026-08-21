@@ -4,6 +4,10 @@
 
 AutoJs6 호스트 build 5276 이상과 Android API 24 이상이 필요합니다.
 
+## 모델 받기
+
+모델 관리 화면에서 **권장 모델 다운로드**를 누르고 고정된 LiteRT Community 모델과 쓰기 가능한 SAF 저장 위치를 선택합니다. 진행률을 표시하고 LiteRT-LM 헤더, 정확한 바이트 수, SHA-256을 검증한 뒤 **다운로드한 모델 가져오기**를 활성화합니다. 추론은 네트워크를 사용하지 않습니다. 외부 파일과 가져온 앱 전용 사본은 각각 공간을 차지하며, 다운로드 중 Android가 프로세스를 종료하면 불완전한 외부 문서를 직접 삭제해야 합니다.
+
 ## 빠른 시작 (권장)
 
 AutoJs6 빌드 5276 이상에서는 전역 `ai` 모듈을 통해 이 플러그인을 직접 호출할 수 있습니다. `plugin: true`로 이 플러그인을 선택하며, 모델이 하나만 있으면 모델 ID를 생략할 수 있습니다.
@@ -85,7 +89,7 @@ ai.models({ plugin: true }).then((models) => {
 
 ## 사용 예제
 
-아래의 전체 Rhino 스크립트는 **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** 모델을 예제로 사용합니다. 이 고정 다운로드의 SHA-256은 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`이므로 가져온 모델 ID는 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`입니다. 다운로드 파일 이름이 `model.litertlm`이어도 모델 ID에는 영향을 주지 않습니다. 모델을 가져온 뒤 플러그인 설명 화면 오른쪽 위의 복사 작업으로 전체 스크립트를 복사하십시오. Node.js 모드가 아닌 일반 AutoJs6 Rhino 스크립트로 실행하십시오. 다른 요청을 시험하려면 `PROMPT`만 변경하십시오.
+아래의 전체 Rhino 스크립트는 **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** 모델을 예제로 사용합니다. 이 고정 다운로드의 SHA-256은 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`이므로 가져온 모델 ID는 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`입니다. 다운로드 파일 이름이 `gemma-4-E2B-it.litertlm`이어도 모델 ID에는 영향을 주지 않습니다. 모델을 가져온 뒤 플러그인 설명 화면 오른쪽 위의 복사 작업으로 전체 스크립트를 복사하십시오. Node.js 모드가 아닌 일반 AutoJs6 Rhino 스크립트로 실행하십시오. 다른 요청을 시험하려면 `PROMPT`만 변경하십시오.
 
 다른 모델을 사용할 때는 모델 관리 화면에서 해당 모델의 Model ID를 복사하여 스크립트의 `MODEL_ID`를 바꾸십시오. 예제 값을 그대로 사용하지 마십시오.
 
@@ -471,6 +475,6 @@ try {
 - Streaming, usage, 영구 세션, structured JSON, `text/plain`, `application/json`을 선언합니다. Reasoning 및 tools는 지원하지 않습니다.
 - 응답 schema는 64 KiB 이하의 JSON object여야 하며 지원 keyword는 포함된 LiteRT-LM/LLGuidance 런타임 구현을 따릅니다. 완성된 구조화 출력은 엄격히 parse 및 검증하므로 전체 JSON 값에 충분한 `maxTokens`를 확보해야 합니다.
 - Usage token 수는 LiteRT-LM Conversation의 KV cache 및 decode 카운터에서 가져오며 문자 수로 추정하지 않습니다. `durationMillis`는 공급자 생성 호출만 측정하고 호스트 탐색, 바인딩, 모델 열거 및 디스패치 시간은 제외합니다.
-- 네트워크 또는 저장소 권한을 요청하지 않습니다.
+- 명시적인 권장 모델 다운로드에만 `INTERNET` 권한을 요청하며 광범위한 저장소 권한은 요청하지 않습니다. 추론은 네트워크를 사용하지 않고 SAF는 선택한 원본 또는 대상만 허용합니다.
 - 동일한 서명의 AutoJs6 호스트만 provider 서비스에 bind할 수 있습니다.
 - 프로세스 간 안전을 위해 이전 SHA-256 hash 이름 모델 세대를 보존합니다. 이 파일들은 앱 전용 저장소를 계속 사용합니다.

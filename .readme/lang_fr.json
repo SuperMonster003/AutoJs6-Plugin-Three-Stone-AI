@@ -1,14 +1,15 @@
 {
   "$name": "Français",
   "text_current_lowercase": "actuel",
-  "text_plugin_synopsis": "Plugin IA locale. Génère du texte en streaming sur l'appareil avec LiteRT-LM, sans réseau",
+  "text_plugin_synopsis": "Plugin IA locale. L'inférence LiteRT-LM reste locale; les téléchargements sont déclenchés explicitement",
   "h3_languages_with_ascii": "Langues",
   "p_languages_all_supported_for_readme": "Le fichier README.md actuel prend en charge les langues suivantes",
   "h3_introduction": "Introduction",
-  "p_introduction": "On-Device AI est le plugin officiel de génération de texte IA locale pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Toute l'inférence se fait localement : aucun accès réseau, aucune donnée envoyée.",
+  "p_introduction": "On-Device AI est le plugin officiel de génération de texte IA locale pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Toute l'inférence se fait localement, sans réseau ni envoi de données; le réseau n'est utilisé que lorsque l'utilisateur télécharge explicitement un modèle recommandé.",
   "h3_functions": "Fonctions",
   "features": [
     "Importer un paquet de modèle `.litertlm` avec le sélecteur système Android et conserver une copie vérifiée dans le stockage privé de l'application.",
+    "Télécharger un modèle LiteRT Community épinglé et sans authentification vers un emplacement SAF choisi par l'utilisateur, avec progression, annulation, nettoyage et vérification exacte de la taille et du SHA-256.",
     "Contrôler le stockage privé avant d’ouvrir le sélecteur, afficher le budget d’import actuel et l’espace estimé de la copie privée, puis revérifier le fichier sélectionné avant la copie.",
     "Créer des requêtes de génération locale avec un historique system, user et assistant en texte brut.",
     "Transmettre `temperature`, `topK`, `topP` et `maxTokens` depuis `ai.ask`, `ai.chat` et `ai.stream` d'AutoJs6 jusqu'à LiteRT-LM.",
@@ -30,10 +31,11 @@
   "h3_host_integration_status": "État de l'intégration hôte",
   "p_host_integration_status": "Dans AutoJs6 (build 5276 et ultérieur), `ai.ask`, `ai.chat` et `ai.stream` prennent en charge la route de plugin local. `ai.session({ plugin: true })` crée une Conversation multi-tour persistante dont les appels `ask`, `chat` et `stream` suivants envoient uniquement le nouveau prompt utilisateur. `ai.ask(messages, { plugin: true })` conserve dans l'ordre les messages texte de rôles `system`, `user` et `assistant`, et le dernier message doit avoir le rôle `user`. `ai.chat` renvoie les nombres exacts de tokens dans `usage` et la durée mesurée dans `usage.raw.durationMillis` ; `ai.stream` émet le même usage cumulatif avant la fin. Passez `plugin: true` pour sélectionner ce plugin, et l'ID de modèle peut être omis lorsqu'un seul modèle est importé ; `ai.models({ plugin: true })` énumère les modèles importés et leurs `backendProfiles`. La génération accepte `backend: 'cpu' | 'gpu' | 'npu'`; un profil indisponible échoue explicitement sans repli CPU. Si le plugin n'est pas installé, désactivé dans le Centre de plugins ou sans modèle, les scripts reçoivent une erreur claire. Le sélecteur explicite `plugin: { component, providerId, modelId }` reste pris en charge. `responseSchema` active implicitement la sortie structurée; `structuredJson: true` sans schema utilise un schema objet-racine par défaut. `ai.ask` et `ai.chat().text` renvoient toujours du texte JSON, les deltas de streaming sont du texte JSON partiel et une session persistante conserve un schema et un backend fixes pour tous ses tours.",
   "h3_security": "Sécurité et confidentialité",
-  "p_security": "Le plugin ne demande aucune permission réseau ou de stockage. Il lit le modèle uniquement avec un URI accordé par le sélecteur système, calcule SHA-256 pendant la copie vers le dossier privé `files/models`, appelle fsync et l'active par remplacement atomique du pointer dans ce dossier. Les services vérifient aussi le nom du paquet AutoJs6, le propriétaire de l'UID appelant et les signatures correspondantes.",
+  "p_security": "Le plugin demande `INTERNET` uniquement pour les téléchargements de modèles recommandés déclenchés par l'utilisateur et aucune permission générale de stockage. Les téléchargements utilisent des révisions HTTPS immuables, une taille et un SHA-256 épinglés, et n'écrivent que dans l'emplacement SAF choisi; en-tête LiteRT-LM, taille, empreinte, flush et fsync doivent tous réussir. L'import lit toujours seulement un URI du sélecteur, écrit une copie vérifiée dans `files/models` et l'active atomiquement. Les services vérifient aussi le paquet AutoJs6, l'UID appelant et les signatures.",
   "h3_security_limits": "Limites opérationnelles",
   "security_limits": [
     "Une importation de modèle est limitée à 8 GiB et doit laisser au moins 256 MiB libres.",
+    "Un seul téléchargement s'exécute dans le processus. La recréation de l'Activity conserve progression et annulation; une annulation ou un échec supprime ou tronque la destination. Un arrêt du processus peut néanmoins laisser un document externe partiel à supprimer manuellement.",
     "Un coordinateur d'import unique à portée application maintient le travail pendant la recréation de Activity. Un pending journal synchronisé par fsync permet la récupération au démarrage à froid et le nettoyage des fichiers temporaires stale `.incoming`, `.current` et `.pending`. La récupération supprime uniquement une destination créée par la tentative actuelle et jamais publiée par current metadata; les générations publiées, current et historiques nommées par hash sont conservées.",
     "Pour éviter les conditions de concurrence interprocessus avec le processus isolé `:provider`, les imports ne suppriment pas automatiquement les générations précédentes nommées par hash SHA-256. Le gestionnaire peut supprimer les modèles non sélectionnés du catalogue et récupérer les fichiers nommés par hash qui ne sont plus référencés.",
     "Une seule session de génération peut être active dans le processus. Les descripteurs sont dupliqués avant le travail asynchrone et fermés selon les quotas du protocole.",
@@ -51,7 +53,7 @@
   "unsupported_capabilities": [
     "Reasoning et tools ne sont pas déclarés.",
     "Les messages de rôle tool, les schemas d'outils, les tool calls et les tool results ne sont pas acceptés.",
-    "Aucune découverte réseau de modèles, aucun téléchargement, aucune inférence cloud et aucun flux credential ne sont fournis.",
+    "Aucune découverte réseau de modèles, aucun téléchargement d'URL arbitraire, aucune inférence cloud et aucun flux credential; seul le catalogue intégré épinglé est téléchargeable.",
     "L'inférence NPU n'est pas déclarée: le profil reste visible comme `unavailable` avec `npu-runtime-not-packaged`. GPU n'est déclaré que si `libOpenCL.so` est chargeable, et l'extension `.litertlm` ne garantit toujours pas l'initialisation du modèle."
   ],
   "h3_roadmap": "Feuille de route",

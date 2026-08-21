@@ -1,14 +1,15 @@
 {
   "$name": "English",
   "text_current_lowercase": "current",
-  "text_plugin_synopsis": "On-device AI plugin. Streams text locally with LiteRT-LM, no network required",
+  "text_plugin_synopsis": "On-device AI plugin. LiteRT-LM inference stays local; optional model downloads are explicit",
   "h3_languages_with_ascii": "Languages",
   "p_languages_all_supported_for_readme": "The current README.md supports the following languages",
   "h3_introduction": "Introduction",
-  "p_introduction": "On-Device AI is the official on-device AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. All inference happens locally: no network access and no data upload.",
+  "p_introduction": "On-Device AI is the official on-device AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. All inference happens locally without network access or data upload; the network is used only when the user explicitly downloads a recommended model.",
   "h3_functions": "Features",
   "features": [
     "Import a `.litertlm` model package through the Android system picker and keep a verified copy in app-private storage.",
+    "Download a pinned, ungated LiteRT Community model directly to a user-selected SAF location with progress, cancellation, incomplete-file cleanup, and exact size and SHA-256 verification.",
     "Preflight private storage before opening the picker, show the current import budget and estimated private-copy footprint, and recheck the selected file before copying.",
     "Create local generation requests from plain-text system, user, and assistant history.",
     "Forward `temperature`, `topK`, `topP`, and `maxTokens` from AutoJs6 `ai.ask`, `ai.chat`, and `ai.stream` to LiteRT-LM.",
@@ -30,10 +31,11 @@
   "h3_host_integration_status": "Host integration status",
   "p_host_integration_status": "In AutoJs6 (build 5276 and later), `ai.ask`, `ai.chat`, and `ai.stream` support the local plugin route. `ai.session({ plugin: true })` creates a persistent multi-turn Conversation whose later `ask`, `chat`, and `stream` calls send only the new user prompt. `ai.ask(messages, { plugin: true })` preserves ordered plain-text `system`, `user`, and `assistant` messages, and the final message must be `user`. `ai.chat` returns exact token counts in `usage` and the measured generation duration in `usage.raw.durationMillis`; `ai.stream` emits the same cumulative usage before completion. Pass `plugin: true` to select this plugin, and the model ID may be omitted when only one model is imported; `ai.models({ plugin: true })` lists imported models and their `backendProfiles`. Generation accepts `backend: 'cpu' | 'gpu' | 'npu'`; unavailable profiles fail explicitly and never fall back to CPU. When the plugin is not installed, not enabled in Plugin Center, or has no imported model, scripts receive a clear error message. A fully pinned `plugin: { component, providerId, modelId }` selector is also supported. `responseSchema` implies structured output; `structuredJson: true` without a schema uses a default object-root schema. `ai.ask` and `ai.chat().text` still return JSON text, streamed deltas are partial JSON text, and a persistent session keeps one fixed schema and backend for every turn.",
   "h3_security": "Security and privacy",
-  "p_security": "The plugin requests no network or storage permission. It reads a model only through a URI granted by the system picker, computes SHA-256 while streaming it into the app-private `files/models` directory, calls fsync, and activates it with an atomic pointer replacement in the same directory. Provider services also verify the AutoJs6 package name, calling UID ownership, and matching signatures.",
+  "p_security": "The plugin requests `INTERNET` only for user-triggered recommended-model downloads and requests no broad storage permission. Catalog downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, and matching signatures.",
   "h3_security_limits": "Operational limits",
   "security_limits": [
     "Model imports have an 8 GiB hard limit and must leave at least 256 MiB of free space.",
+    "Only one model download runs in the app process. Activity recreation retains progress and cancellation ownership; cancellation or failure deletes the newly created destination when supported, otherwise truncates it, while process termination can still leave a partial external document that the user should delete.",
     "An application-scoped single-import coordinator keeps ongoing work alive across Activity recreation. A fsynced pending journal supports cold-start recovery and cleanup of stale `.incoming`, `.current`, and `.pending` temporary files. Recovery deletes only a destination created by the current attempt and never published through current metadata; published, current, and historical hash generations are retained.",
     "To avoid cross-process races with the isolated `:provider` process, imports do not automatically delete previous SHA-256-named model generations. The model manager can delete unselected catalog models and reclaim hash-named files no longer referenced by the catalog.",
     "At most one generation session is active in the process. Request descriptors are duplicated before asynchronous work and closed under protocol quotas.",
@@ -51,7 +53,7 @@
   "unsupported_capabilities": [
     "Reasoning and tools are not declared.",
     "Tool-role messages, tool schemas, tool calls, and tool results are not accepted.",
-    "There is no network model discovery, model download, cloud inference, or credential flow.",
+    "There is no network model discovery, arbitrary-URL download, cloud inference, or credential flow; only the pinned built-in recommendation catalog can be downloaded.",
     "NPU inference is not declared: the profile is discoverable as `unavailable` with `npu-runtime-not-packaged`. GPU is declared only when `libOpenCL.so` is loadable, and a `.litertlm` extension alone still does not guarantee model initialization."
   ],
   "h3_roadmap": "Roadmap",

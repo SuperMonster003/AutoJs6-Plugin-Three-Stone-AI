@@ -4,6 +4,10 @@ Ce plugin importe un paquet de modèle `.litertlm` local via Android Storage Acc
 
 Le plugin exige la build hôte AutoJs6 5276 ou ultérieure et Android API 24 ou ultérieur.
 
+## Obtenir un modèle
+
+Dans le gestionnaire de modèles, touchez **Télécharger un modèle recommandé**, puis choisissez un modèle LiteRT Community épinglé et un emplacement SAF accessible en écriture. La progression est affichée et l'en-tête LiteRT-LM, le nombre exact d'octets et le SHA-256 sont vérifiés avant d'activer **Importer le modèle téléchargé**. L'inférence n'utilise jamais le réseau. Le fichier externe et sa copie privée importée occupent chacun de l'espace; si Android arrête le processus pendant le téléchargement, supprimez manuellement tout document externe partiel.
+
 ## Démarrage rapide (recommandé)
 
 Avec AutoJs6 build 5276 ou ultérieur, appelez le plugin directement via le module global `ai`. `plugin: true` sélectionne ce plugin ; si un seul modèle est importé, l'ID de modèle peut être omis.
@@ -85,7 +89,7 @@ Les sections suivantes montrent le chemin protocolaire de bas niveau sans le mod
 
 ## Exemple d'utilisation
 
-Le script Rhino complet ci-dessous utilise le modèle **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** comme exemple. Ce téléchargement épinglé possède le SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`; son identifiant après import est donc `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. Le fichier téléchargé peut s'appeler `model.litertlm`; son nom n'affecte pas l'identifiant du modèle. Après l'import, utilisez l'action de copie en haut à droite des instructions du plugin pour copier le script entier. Exécutez-le comme un script Rhino AutoJs6 normal, et non en mode Node.js. Modifiez uniquement `PROMPT` pour essayer une autre requête.
+Le script Rhino complet ci-dessous utilise le modèle **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** comme exemple. Ce téléchargement épinglé possède le SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`; son identifiant après import est donc `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. Le fichier téléchargé peut s'appeler `gemma-4-E2B-it.litertlm`; son nom n'affecte pas l'identifiant du modèle. Après l'import, utilisez l'action de copie en haut à droite des instructions du plugin pour copier le script entier. Exécutez-le comme un script Rhino AutoJs6 normal, et non en mode Node.js. Modifiez uniquement `PROMPT` pour essayer une autre requête.
 
 Pour utiliser un autre modèle, copiez son Model ID depuis l'écran de gestion des modèles et remplacez `MODEL_ID` dans le script. Ne réutilisez pas la valeur de l'exemple.
 
@@ -471,6 +475,6 @@ Sécurité et limites opérationnelles:
 - Streaming, usage, les sessions persistantes, structured JSON, `text/plain` et `application/json` sont déclarés. Reasoning et tools ne sont pas pris en charge.
 - Le schema de réponse doit être un objet JSON de 64 KiB au maximum; les mots-clés acceptés sont ceux implémentés par le runtime LiteRT-LM/LLGuidance intégré. La sortie structurée complète est analysée et validée strictement, il faut donc réserver assez de `maxTokens` pour la valeur JSON entière.
 - Les tokens de usage proviennent des compteurs de cache KV et decode de Conversation dans LiteRT-LM, sans estimation par caractères. `durationMillis` mesure la génération du fournisseur et exclut la découverte, la liaison, la liste des modèles et la distribution de l'hôte.
-- Le plugin ne demande aucune permission réseau ou de stockage.
+- Le plugin demande `INTERNET` uniquement pour les téléchargements explicites de modèles recommandés et aucune permission générale de stockage. L'inférence n'utilise jamais le réseau; SAF limite l'accès à la source ou destination choisie.
 - Seul le client AutoJs6 avec la même signature peut lier le service provider.
 - Les générations précédentes nommées par hash SHA-256 sont conservées pour la sécurité interprocessus et continuent d'occuper le stockage privé.

@@ -4,6 +4,10 @@
 
 外掛需要 AutoJs6 主程式建置版本 5276 或更高版本, 以及 Android API 24 或更高版本.
 
+## 取得模型
+
+開啟外掛模型管理頁並點選 **下載推薦模型**, 即可選擇固定版本的 LiteRT Community 模型與任何可寫入 SAF 儲存位置. 外掛會顯示進度, 並在開放 **匯入已下載模型** 前驗證 LiteRT-LM 檔頭, 精確位元組數與 SHA-256. 推論從不使用網路. 下載的外部檔案與匯入後的應用程式私人副本會分別占用空間; 如果 Android 在下載途中終止程序, 請手動刪除可能殘留的外部殘缺檔案.
+
 ## 快速開始 (推薦)
 
 在 AutoJs6 組建 5276 及以上版本中, 可直接透過全域 `ai` 模組呼叫本外掛. `plugin: true` 即選擇本外掛; 只匯入一個模型時可省略模型 ID.
@@ -85,7 +89,7 @@ ai.models({ plugin: true }).then((models) => {
 
 ## 使用範例
 
-以下完整 Rhino 指令碼以 **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** 模型為例. 此固定版本的 SHA-256 為 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此匯入後的模型 ID 為 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下載檔案可能名為 `model.litertlm`, 檔案名稱不影響模型 ID. 匯入後, 可使用外掛說明頁右上角的複製操作複製整個指令碼. 請將其作為一般 AutoJs6 Rhino 指令碼執行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可嘗試其他要求.
+以下完整 Rhino 指令碼以 **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** 模型為例. 此固定版本的 SHA-256 為 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此匯入後的模型 ID 為 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下載檔案可能名為 `gemma-4-E2B-it.litertlm`, 檔案名稱不影響模型 ID. 匯入後, 可使用外掛說明頁右上角的複製操作複製整個指令碼. 請將其作為一般 AutoJs6 Rhino 指令碼執行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可嘗試其他要求.
 
 使用其他模型時, 請從模型管理頁複製該模型的 Model ID, 並取代指令碼中的 `MODEL_ID`. 請勿沿用範例值.
 
@@ -471,6 +475,6 @@ try {
 - 宣告 streaming, usage, persistent session, structured JSON, `text/plain` 與 `application/json`. 不支援 reasoning 與 tools.
 - 回應 schema 必須是 JSON 物件且不超過 64 KiB; 可用關鍵字以目前內建 LiteRT-LM/LLGuidance 執行階段為準. 外掛會嚴格解析並驗證完整結構化輸出, 因此應為整個 JSON 值預留足夠的 `maxTokens`.
 - Usage token 數來自 LiteRT-LM Conversation 的 KV cache 與 decode 計數, 不使用字元數估算. `durationMillis` 只測量外掛生成呼叫, 不包含宿主探索, 綁定, 模型列舉和分派時間.
-- 外掛不要求網路或儲存權限.
+- 外掛僅為使用者明確發起的推薦模型下載要求 `INTERNET` 權限, 不要求廣泛儲存權限. 推論從不使用網路; SAF 僅授予對使用者所選來源或目標的存取.
 - 僅允許同簽章 AutoJs6 主程式綁定 provider 服務.
 - 為保證跨程序安全, 會保留先前以 SHA-256 hash 命名的模型代次, 它們會繼續占用應用程式私人儲存空間.

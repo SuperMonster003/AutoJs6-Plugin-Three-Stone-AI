@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/app/src/main/res/mipmap/ic_launcher_on_device_ai.png?raw=true" alt="on-device-ai-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>Plugin IA locale. Génère du texte en streaming sur l'appareil avec LiteRT-LM, sans réseau</p>
+  <p>Plugin IA locale. L'inférence LiteRT-LM reste locale; les téléchargements sont déclenchés explicitement</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-On-Device-AI?label=Release"/></a>
@@ -39,7 +39,7 @@ Le fichier README.md actuel prend en charge les langues suivantes:
 
 ******
 
-On-Device AI est le plugin officiel de génération de texte IA locale pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Toute l'inférence se fait localement : aucun accès réseau, aucune donnée envoyée.
+On-Device AI est le plugin officiel de génération de texte IA locale pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Toute l'inférence se fait localement, sans réseau ni envoi de données; le réseau n'est utilisé que lorsque l'utilisateur télécharge explicitement un modèle recommandé.
 
 ******
 
@@ -48,6 +48,7 @@ On-Device AI est le plugin officiel de génération de texte IA locale pour Auto
 ******
 
 - Importer un paquet de modèle `.litertlm` avec le sélecteur système Android et conserver une copie vérifiée dans le stockage privé de l'application.
+- Télécharger un modèle LiteRT Community épinglé et sans authentification vers un emplacement SAF choisi par l'utilisateur, avec progression, annulation, nettoyage et vérification exacte de la taille et du SHA-256.
 - Contrôler le stockage privé avant d’ouvrir le sélecteur, afficher le budget d’import actuel et l’espace estimé de la copie privée, puis revérifier le fichier sélectionné avant la copie.
 - Créer des requêtes de génération locale avec un historique system, user et assistant en texte brut.
 - Transmettre `temperature`, `topK`, `topP` et `maxTokens` depuis `ai.ask`, `ai.chat` et `ai.stream` d'AutoJs6 jusqu'à LiteRT-LM.
@@ -111,7 +112,7 @@ La build hôte 5276 ou ultérieure est requise. Les versions incluent les varian
 
 ******
 
-Le plugin ne demande aucune permission réseau ou de stockage. Il lit le modèle uniquement avec un URI accordé par le sélecteur système, calcule SHA-256 pendant la copie vers le dossier privé `files/models`, appelle fsync et l'active par remplacement atomique du pointer dans ce dossier. Les services vérifient aussi le nom du paquet AutoJs6, le propriétaire de l'UID appelant et les signatures correspondantes.
+Le plugin demande `INTERNET` uniquement pour les téléchargements de modèles recommandés déclenchés par l'utilisateur et aucune permission générale de stockage. Les téléchargements utilisent des révisions HTTPS immuables, une taille et un SHA-256 épinglés, et n'écrivent que dans l'emplacement SAF choisi; en-tête LiteRT-LM, taille, empreinte, flush et fsync doivent tous réussir. L'import lit toujours seulement un URI du sélecteur, écrit une copie vérifiée dans `files/models` et l'active atomiquement. Les services vérifient aussi le paquet AutoJs6, l'UID appelant et les signatures.
 
 ******
 
@@ -120,6 +121,7 @@ Le plugin ne demande aucune permission réseau ou de stockage. Il lit le modèle
 ******
 
 - Une importation de modèle est limitée à 8 GiB et doit laisser au moins 256 MiB libres.
+- Un seul téléchargement s'exécute dans le processus. La recréation de l'Activity conserve progression et annulation; une annulation ou un échec supprime ou tronque la destination. Un arrêt du processus peut néanmoins laisser un document externe partiel à supprimer manuellement.
 - Un coordinateur d'import unique à portée application maintient le travail pendant la recréation de Activity. Un pending journal synchronisé par fsync permet la récupération au démarrage à froid et le nettoyage des fichiers temporaires stale `.incoming`, `.current` et `.pending`. La récupération supprime uniquement une destination créée par la tentative actuelle et jamais publiée par current metadata; les générations publiées, current et historiques nommées par hash sont conservées.
 - Pour éviter les conditions de concurrence interprocessus avec le processus isolé `:provider`, les imports ne suppriment pas automatiquement les générations précédentes nommées par hash SHA-256. Le gestionnaire peut supprimer les modèles non sélectionnés du catalogue et récupérer les fichiers nommés par hash qui ne sont plus référencés.
 - Une seule session de génération peut être active dans le processus. Les descripteurs sont dupliqués avant le travail asynchrone et fermés selon les quotas du protocole.
@@ -141,7 +143,7 @@ Le plugin ne demande aucune permission réseau ou de stockage. Il lit le modèle
 
 - Reasoning et tools ne sont pas déclarés.
 - Les messages de rôle tool, les schemas d'outils, les tool calls et les tool results ne sont pas acceptés.
-- Aucune découverte réseau de modèles, aucun téléchargement, aucune inférence cloud et aucun flux credential ne sont fournis.
+- Aucune découverte réseau de modèles, aucun téléchargement d'URL arbitraire, aucune inférence cloud et aucun flux credential; seul le catalogue intégré épinglé est téléchargeable.
 - L'inférence NPU n'est pas déclarée: le profil reste visible comme `unavailable` avec `npu-runtime-not-packaged`. GPU n'est déclaré que si `libOpenCL.so` est chargeable, et l'extension `.litertlm` ne garantit toujours pas l'initialisation du modèle.
 
 ******
@@ -171,6 +173,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Fonction` Sessions persistantes du protocole On-Device AI 1.2 et réutilisation d'une Conversation multi-tour via `ai.session` d'AutoJs6 sans renvoyer l'historique précédent
 * `Fonction` Décodage natif contraint par JSON Schema de LiteRT-LM via `structuredJson` et `responseSchema` d'AutoJs6, pour les appels uniques, le streaming et les sessions persistantes, avec validation stricte du JSON complet
 * `Fonction` Profils backend explicites `cpu`, `gpu` et `npu` via le protocole 1.3 et les options de génération AutoJs6, avec rapport de compatibilité de l'appareil, isolation du cache modèle/profil et aucun repli depuis un profil indisponible; GPU n'est déclaré qu'après une sonde de chargement OpenCL et NPU reste indisponible car son runtime EAP n'est pas intégré
+* `Fonction` Téléchargement direct de modèles LiteRT Community épinglés vers un emplacement SAF choisi, avec progression, annulation précise, nettoyage, vérification de l'en-tête LiteRT-LM, de la taille et du SHA-256, puis import direct
 * `Amélioration` Description du plugin, instructions et README en 10 langues mis à jour pour refléter la formalisation de la route de plugin local `ai.*`
 * `Amélioration` ROADMAP réécrite comme feuille de route de fonctionnalités avec des éléments vérifiables individuellement
 

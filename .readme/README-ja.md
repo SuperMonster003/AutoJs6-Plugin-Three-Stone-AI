@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/app/src/main/res/mipmap/ic_launcher_on_device_ai.png?raw=true" alt="on-device-ai-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>オンデバイス AI プラグイン. LiteRT-LM によりローカル端末でテキストをストリーミング生成, ネットワーク不要</p>
+  <p>オンデバイス AI プラグイン. LiteRT-LM 推論は常にローカルで, モデルのダウンロードは明示操作のみ</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-On-Device-AI?label=Release"/></a>
@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません.
+On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません; ネットワークはユーザーが推奨モデルを明示的にダウンロードするときだけ使用します.
 
 ******
 
@@ -48,6 +48,7 @@ On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI 
 ******
 
 - Android システムピッカーから `.litertlm` モデルパッケージをインポートし, 検証済みコピーをアプリ専用ストレージに保存します.
+- 固定バージョンで認証不要の LiteRT Community モデルをユーザー選択の SAF 保存先へ直接ダウンロードし, 進捗, キャンセル, 不完全ファイルの削除, 正確なサイズと SHA-256 検証を行います.
 - システムピッカーを開く前にプライベートストレージを事前確認し, 現在のインポート予算とプライベートコピーの推定使用量を表示し, コピー前に選択ファイルを再確認します.
 - プレーンテキストの system, user, assistant 履歴からローカル生成リクエストを作成します.
 - AutoJs6 の `ai.ask`, `ai.chat`, `ai.stream` から `temperature`, `topK`, `topP`, `maxTokens` を LiteRT-LM まで渡します.
@@ -111,7 +112,7 @@ required host build: 5276
 
 ******
 
-ネットワーク権限とストレージ権限は要求しません. システムピッカーが許可した URI だけからモデルを読み込み, SHA-256 を計算しながらアプリ専用の `files/models` にコピーし, fsync 後に同じディレクトリの pointer を原子的に置換して有効化します. Provider サービスは AutoJs6 パッケージ名, 呼び出し UID の所有権, 双方の一致する署名も検証します.
+ユーザーが開始する推奨モデルのダウンロードにのみ `INTERNET` 権限を要求し, 広範なストレージ権限は要求しません. ダウンロードは不変 HTTPS リビジョン, 固定サイズと SHA-256 を使い, 選択された SAF 保存先だけへ書き込みます; LiteRT-LM ヘッダー, サイズ, ダイジェスト, flush, fsync がすべて成功するまで完了扱いにしません. インポートは引き続きピッカー URI のみを読み, 検証済みコピーを `files/models` に書いて原子的に有効化します. Provider は AutoJs6 パッケージ, UID, 署名も検証します.
 
 ******
 
@@ -120,6 +121,7 @@ required host build: 5276
 ******
 
 - モデルのインポートには 8 GiB の厳格な上限があり, 完了後に 256 MiB 以上の空き容量が必要です.
+- アプリプロセス内のダウンロードは 1 件だけです. Activity 再作成後も進捗とキャンセル権限を保持し, キャンセルまたは失敗時は保存先を削除または空にします. プロセス終了時には外部の不完全ファイルが残る場合があり, 手動削除が必要です.
 - Application scope の単一インポート coordinator により Activity 再作成中も処理を継続します. Fsync 済み pending journal でコールドスタート復旧と stale な `.incoming`, `.current`, `.pending` 一時ファイルの cleanup を行います. 復旧で削除するのは現在の試行が新規作成し current metadata で一度も公開していない destination だけで, 公開済み, current, 履歴 hash 世代は保持します.
 - 独立した `:provider` プロセスとのプロセス間競合を避けるため, インポート中には以前の SHA-256 hash 名モデル世代を自動削除しません. モデル管理画面では未選択の catalog モデルを削除し, catalog から参照されなくなった hash 名ファイルを回収できます.
 - プロセス内で同時に有効な生成セッションは 1 つだけです. リクエスト記述子は非同期処理前に複製され, プロトコルの quota に従って閉じられます.
@@ -141,7 +143,7 @@ required host build: 5276
 
 - Reasoning と tools は宣言しません.
 - Tool role メッセージ, tool schema, tool call, tool result は受け付けません.
-- ネットワークでのモデル探索, モデルダウンロード, cloud 推論, credential フローはありません.
+- ネットワークでのモデル探索, 任意 URL のダウンロード, cloud 推論, credential フローはありません; ダウンロードできるのは固定された内蔵推奨カタログだけです.
 - NPU 推論は宣言しません. profile は `npu-runtime-not-packaged` 理由付きの `unavailable` として確認できます. GPU は `libOpenCL.so` を読み込める場合だけ宣言され, `.litertlm` 拡張子だけではモデル初期化を保証しません.
 
 ******
@@ -171,6 +173,7 @@ required host build: 5276
 * `機能` On-Device AI プロトコル 1.2 の永続セッションと AutoJs6 `ai.session` による複数ターン Conversation 再利用に対応し, 以前の履歴の再送信を不要化
 * `機能` AutoJs6 の `structuredJson` と `responseSchema` による LiteRT-LM ネイティブ JSON Schema 制約デコードを追加し, 単発呼び出し, ストリーミング, 永続セッションと完成 JSON の厳密な検証に対応
 * `機能` プロトコル 1.3 と AutoJs6 生成オプションで明示的な `cpu`, `gpu`, `npu` backend profile を提供し, デバイス互換性報告, モデル/profile 単位のキャッシュ分離, 使用不可 profile からのフォールバック禁止に対応; GPU は OpenCL ロード検査成功後のみ宣言し, NPU は EAP runtime 未同梱のため使用不可を維持
+* `機能` 固定 LiteRT Community モデルをユーザー選択の SAF 保存先へ直接ダウンロードし, 進捗, 正確なキャンセル, 不完全ファイル削除, LiteRT-LM ヘッダーと正確なサイズ/SHA-256 検証, ダウンロード後の直接インポートに対応
 * `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合
 * `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 

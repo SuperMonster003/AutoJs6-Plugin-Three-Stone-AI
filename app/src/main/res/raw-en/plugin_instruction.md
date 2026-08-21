@@ -4,6 +4,10 @@ This plugin imports one local `.litertlm` model package through the Android Stor
 
 The plugin requires AutoJs6 host build 5276 or later and Android API 24 or later.
 
+## Get a model
+
+Open the plugin model manager and tap **Download recommended model** to choose a pinned LiteRT Community model and any writable SAF save location. The plugin shows progress and verifies the LiteRT-LM header, exact byte count, and SHA-256 before enabling **Import downloaded model**. Inference never uses the network. The downloaded external file and its imported app-private copy occupy space separately; if Android terminates the process mid-download, delete any partial external document manually.
+
 ## Quick start (recommended)
 
 With AutoJs6 build 5276 or later, call the plugin directly through the global `ai` module. `plugin: true` selects this plugin; when exactly one model is imported, the model ID may be omitted.
@@ -85,7 +89,7 @@ The remaining sections show the low-level protocol path without the `ai` module.
 
 ## Usage example
 
-The complete Rhino script below uses the **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** model as its example. This pinned download has SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, so its imported model ID is `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. The downloaded file may be named `model.litertlm`; its file name does not affect the model ID. After importing it, use the copy action in the upper-right corner of the plugin instructions to copy the entire script. Run it as a regular AutoJs6 Rhino script, not in Node.js mode. Change only `PROMPT` to try another request.
+The complete Rhino script below uses the **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** model as its example. This pinned download has SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, so its imported model ID is `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. The downloaded file may be named `gemma-4-E2B-it.litertlm`; its file name does not affect the model ID. After importing it, use the copy action in the upper-right corner of the plugin instructions to copy the entire script. Run it as a regular AutoJs6 Rhino script, not in Node.js mode. Change only `PROMPT` to try another request.
 
 When using another model, copy that model's Model ID from the model management screen and replace `MODEL_ID` in the script. Do not reuse the example value.
 
@@ -471,6 +475,6 @@ Safety and operational limits:
 - Streaming, usage, persistent sessions, structured JSON, `text/plain`, and `application/json` are declared. Reasoning and tools are unsupported.
 - A response schema must be a JSON object no larger than 64 KiB; supported keywords follow the bundled LiteRT-LM/LLGuidance runtime. Completed structured output is parsed and validated strictly, so provide enough `maxTokens` for the entire JSON value.
 - Usage token counts come from LiteRT-LM Conversation KV-cache and decode counters without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, model listing, and dispatch time.
-- The plugin requests no network or storage permission.
+- The plugin requests `INTERNET` only for explicit recommended-model downloads and no broad storage permission. Inference never uses the network; SAF grants access only to the user-selected source or destination.
 - Only the same-signature AutoJs6 host may bind the provider service.
 - Previous model generations named by SHA-256 hash are retained for cross-process safety and continue to occupy app-private storage.

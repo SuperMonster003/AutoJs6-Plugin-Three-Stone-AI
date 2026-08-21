@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/app/src/main/res/mipmap/ic_launcher_on_device_ai.png?raw=true" alt="on-device-ai-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>设备端 AI 插件. 使用 LiteRT-LM 在本地设备流式生成文本, 无需联网</p>
+  <p>设备端 AI 插件. LiteRT-LM 推理始终在本地; 推荐模型下载仅由用户明确发起</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-On-Device-AI?label=Release"/></a>
@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI (设备端 AI) 是 AutoJs6 的官方设备端 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 全部推理在本地完成, 不联网, 不上传任何数据.
+On-Device AI (设备端 AI) 是 AutoJs6 的官方设备端 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 全部推理在本地完成, 不联网也不上传任何数据; 只有用户明确下载推荐模型时才会访问网络.
 
 ******
 
@@ -48,6 +48,7 @@ On-Device AI (设备端 AI) 是 AutoJs6 的官方设备端 AI 文本生成插件
 ******
 
 - 通过 Android 系统文件选择器导入 `.litertlm` 模型包, 并将验证后的副本保存到应用私有存储.
+- 将固定版本且无需登录的 LiteRT Community 推荐模型直接下载到用户选择的 SAF 位置, 支持进度, 取消, 残缺文件清理及精确大小与 SHA-256 校验.
 - 打开系统文件选择器前预检私有存储空间, 显示当前导入预算和私有副本预计占用, 并在复制前再次检查所选文件.
 - 使用纯文本 system, user 和 assistant 历史创建本地生成请求.
 - 将 AutoJs6 `ai.ask`, `ai.chat` 和 `ai.stream` 的 `temperature`, `topK`, `topP` 与 `maxTokens` 透传到 LiteRT-LM.
@@ -111,7 +112,7 @@ required host build: 5276
 
 ******
 
-插件不请求网络或存储权限. 模型只通过系统文件选择器授予的 URI 读取, 以流式 SHA-256 校验和 fsync 写入应用私有 `files/models` 目录, 再通过同目录原子 pointer 替换激活. Provider 服务还会核验 AutoJs6 包名, 调用 UID 归属及双方签名.
+插件仅为用户主动发起的推荐模型下载请求 `INTERNET` 权限, 不请求广泛存储权限. 目录下载使用不可变 HTTPS 版本及固定字节数和 SHA-256, 仅写入用户选择的 SAF 位置; LiteRT-LM 文件头, 大小, 摘要, flush 与 fsync 全部通过后才算完成. 导入仍只读取系统选择器授予的 URI, 将验证副本流式写入应用私有 `files/models` 并原子激活. Provider 服务还会核验 AutoJs6 包名, 调用 UID 归属及双方签名.
 
 ******
 
@@ -120,6 +121,7 @@ required host build: 5276
 ******
 
 - 模型导入硬上限为 8 GiB, 且导入后至少保留 256 MiB 可用空间.
+- 应用进程内一次只运行一个模型下载. Activity 重建会保留进度和取消归属; 取消或失败时会删除新建目标, 不支持删除时将其截断清空. 进程被终止仍可能留下外部残缺文件, 用户应手动删除.
 - 应用级单导入协调器使 Activity 重建不会中断正在进行的导入. Fsync pending journal 支持冷启动恢复并清理 stale `.incoming`, `.current` 和 `.pending` 临时文件. 恢复只会删除本次尝试新建且从未由 current metadata 发布的 destination, 已发布或 current 模型及历史 hash 代际均会保留.
 - 为避免与独立 `:provider` 进程发生竞态, 导入时不会自动删除先前以 SHA-256 hash 命名的模型代际. 模型管理界面可删除未选中的 catalog 模型, 并回收不再由 catalog 引用的 hash 命名文件.
 - 同一进程最多有一个活动生成会话. 请求描述符会在异步处理前复制并按协议配额关闭.
@@ -141,7 +143,7 @@ required host build: 5276
 
 - 不声明 reasoning 或 tools 能力.
 - 不接受 tool 角色消息, tool schema, tool call 或 tool result.
-- 不提供联网模型发现, 模型下载, 云端推理或 credential 流程.
+- 不提供联网模型发现, 任意 URL 下载, 云端推理或 credential 流程; 只能下载内置目录中固定版本的推荐模型.
 - 不声明 NPU 推理可用: profile 可发现但以 `npu-runtime-not-packaged` 标记为 `unavailable`. GPU 仅在 `libOpenCL.so` 可加载时声明, 且 `.litertlm` 扩展名本身仍不保证模型初始化成功.
 
 ******
@@ -171,6 +173,7 @@ required host build: 5276
 * `新增` On-Device AI 协议 1.2 持久会话及 AutoJs6 `ai.session` 多轮 Conversation 复用, 后续轮次无需重传既有历史
 * `新增` 通过 AutoJs6 `structuredJson` 与 `responseSchema` 启用 LiteRT-LM 原生 JSON Schema 约束解码, 支持单次调用, 流式输出和持久会话, 并严格验证完整 JSON
 * `新增` 通过协议 1.3 与 AutoJs6 生成选项提供显式 `cpu`, `gpu` 和 `npu` backend profile, 包含设备兼容性报告, 模型/profile 缓存隔离及不可用 profile 禁止回退; GPU 仅在 OpenCL 加载探测成功后声明, NPU 因未打包 EAP runtime 而保持不可用
+* `新增` 将固定版本的 LiteRT Community 推荐模型直接下载到用户选择的 SAF 位置, 支持进度, 精确取消, 残缺文件清理, LiteRT-LM 文件头与精确大小/SHA-256 校验, 以及下载后直接导入
 * `优化` 更新插件描述, 使用说明及 10 种语言的 README, 与宿主 `ai.*` 本地插件路由的正式化保持一致
 * `优化` 重写 ROADMAP 为可逐项勾选的功能路线图
 

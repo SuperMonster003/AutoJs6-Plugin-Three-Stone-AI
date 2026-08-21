@@ -4,6 +4,10 @@
 
 插件需要 AutoJs6 宿主构建版本 5276 或更高版本, 以及 Android API 24 或更高版本.
 
+## 获取模型
+
+打开插件模型管理页并点击 **下载推荐模型**, 即可选择固定版本的 LiteRT Community 模型及任意可写 SAF 保存位置. 插件显示进度, 并在开放 **导入已下载模型** 前校验 LiteRT-LM 文件头, 精确字节数和 SHA-256. 推理从不使用网络. 下载的外部文件与导入后的应用私有副本会分别占用空间; 如果 Android 在下载途中终止进程, 请手动删除可能残留的外部残缺文件.
+
 ## 快速开始 (推荐)
 
 在 AutoJs6 构建 5276 及以上版本中, 可直接通过全局 `ai` 模块调用本插件. `plugin: true` 即选择本插件; 只导入一个模型时可省略模型 ID.
@@ -85,7 +89,7 @@ ai.models({ plugin: true }).then((models) => {
 
 ## 使用示例
 
-下面的完整 Rhino 脚本以 **[gemma-4-E2B-it-litert-lm.litertlm](https://huggingface.co/DummyTesty/gemmaspark-model/resolve/6408692dd1c97b77147a39ac91b002b4013b9163/model.litertlm?download=true)** 模型为例. 此固定版本的 SHA-256 为 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此导入后的模型 ID 为 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下载文件可能名为 `model.litertlm`, 文件名不影响模型 ID. 导入后, 可使用插件说明页右上角的复制操作复制整个脚本. 请将其作为普通 AutoJs6 Rhino 脚本运行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可尝试其他请求.
+下面的完整 Rhino 脚本以 **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** 模型为例. 此固定版本的 SHA-256 为 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此导入后的模型 ID 为 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下载文件可能名为 `gemma-4-E2B-it.litertlm`, 文件名不影响模型 ID. 导入后, 可使用插件说明页右上角的复制操作复制整个脚本. 请将其作为普通 AutoJs6 Rhino 脚本运行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可尝试其他请求.
 
 使用其他模型时, 请从模型管理页复制该模型的 Model ID, 并替换脚本中的 `MODEL_ID`. 不要沿用示例值.
 
@@ -471,6 +475,6 @@ try {
 - 声明 streaming, usage, persistent session, structured JSON, `text/plain` 和 `application/json`. 不支持 reasoning 与 tools.
 - 响应 schema 必须是 JSON 对象且不超过 64 KiB; 可用关键字以当前内置 LiteRT-LM/LLGuidance 运行时为准. 插件会严格解析并验证完整结构化输出, 因此应为整个 JSON 值预留足够的 `maxTokens`.
 - Usage token 数来自 LiteRT-LM Conversation 的 KV cache 与 decode 计数, 不做字符数估算. `durationMillis` 只测量插件生成调用, 不包含宿主发现, 绑定, 模型枚举和分发时间.
-- 插件不请求网络或存储权限.
+- 插件仅为用户明确发起的推荐模型下载请求 `INTERNET` 权限, 不请求广泛存储权限. 推理从不使用网络; SAF 仅授予对用户所选来源或目标的访问.
 - 仅允许同签名 AutoJs6 宿主绑定 provider 服务.
 - 为保证跨进程安全, 会保留先前以 SHA-256 hash 命名的模型代际, 它们会继续占用应用私有存储.

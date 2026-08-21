@@ -50,7 +50,7 @@
 - [x] 模型自检: 导入完成后可选执行一次 `Engine.initialize()` 健康检查, 在模型管理界面标记 "可用/不兼容", 避免脚本调用时才发现模型加载失败.
 - [x] system prompt 支持: 插件协议已接受 system 角色, 打通宿主 `ai.ask(messages, { plugin })` 的多消息传入 (system + user).
 - [x] 生成统计: 返回 tokens/耗时等基础 usage 信息, 填充 `ai.chat` 响应的 `usage` 字段.
-- [ ] 宿主 d.ts 与文档: 为 `ai.*` 补充 TypeScript 声明与 docs.autojs6.com 文档页 (含 plugin 路由完整示例).
+- [x] 宿主 d.ts 与文档: 为 `ai.*` 补充 TypeScript 声明与 docs.autojs6.com 文档页 (含 plugin 路由完整示例).
 
 ## 远期
 

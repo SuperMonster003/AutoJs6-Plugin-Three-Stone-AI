@@ -10,7 +10,6 @@
     <string name="download_cancelled">모델 다운로드를 취소했습니다.</string>
     <string name="download_cancelling">%1$s 다운로드를 취소하는 중…</string>
     <string name="download_catalog_item">%1$s — %2$s — %3$s</string>
-    <string name="download_catalog_message">고정 버전이며 로그인이 필요 없는 LiteRT Community 모델을 선택하세요. 나중에 가져오면 앱 비공개 저장소에 사본이 하나 더 생성됩니다.</string>
     <string name="download_catalog_title">권장 LiteRT-LM 모델</string>
     <string name="download_cleanup_failed">불완전한 대상 파일을 지우지 못했습니다. 직접 삭제하세요.</string>
     <string name="download_cleanup_truncated">불완전한 내용은 지워졌지만 빈 문서가 남아 있을 수 있습니다.</string>

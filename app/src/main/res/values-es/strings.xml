@@ -10,7 +10,6 @@
     <string name="download_cancelled">Descarga cancelada.</string>
     <string name="download_cancelling">Cancelando la descarga de %1$s…</string>
     <string name="download_catalog_item">%1$s — %2$s — %3$s</string>
-    <string name="download_catalog_message">Selecciona un modelo fijado y sin acceso restringido de LiteRT Community. Al importarlo se creará una segunda copia en el almacenamiento privado de la aplicación.</string>
     <string name="download_catalog_title">Modelos LiteRT-LM recomendados</string>
     <string name="download_cleanup_failed">No se pudo limpiar el destino incompleto. Elimínalo manualmente.</string>
     <string name="download_cleanup_truncated">Se limpió el contenido incompleto, pero puede quedar un documento vacío.</string>

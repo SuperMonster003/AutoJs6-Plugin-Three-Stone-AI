@@ -10,7 +10,6 @@
     <string name="download_cancelled">模型下載已取消.</string>
     <string name="download_cancelling">正在取消 %1$s 下載…</string>
     <string name="download_catalog_item">%1$s — %2$s — %3$s</string>
-    <string name="download_catalog_message">請選擇固定版本且毋須登入的 LiteRT Community 模型. 稍後匯入會在應用程式私人儲存空間建立另一份副本.</string>
     <string name="download_catalog_title">建議的 LiteRT-LM 模型</string>
     <string name="download_cleanup_failed">無法清除未完整的目標檔案, 請手動刪除.</string>
     <string name="download_cleanup_truncated">未完整內容已清空, 但可能仍留有空白文件.</string>

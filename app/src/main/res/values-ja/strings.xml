@@ -10,7 +10,6 @@
     <string name="download_cancelled">モデルのダウンロードをキャンセルしました。</string>
     <string name="download_cancelling">%1$s のダウンロードをキャンセルしています…</string>
     <string name="download_catalog_item">%1$s — %2$s — %3$s</string>
-    <string name="download_catalog_message">固定バージョンで認証不要の LiteRT Community モデルを選択してください。後でインポートすると、アプリの非公開ストレージにもう 1 つコピーが作成されます。</string>
     <string name="download_catalog_title">推奨 LiteRT-LM モデル</string>
     <string name="download_cleanup_failed">不完全な保存先を消去できませんでした。手動で削除してください。</string>
     <string name="download_cleanup_truncated">不完全な内容は消去されましたが、空のドキュメントが残っている場合があります。</string>

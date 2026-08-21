@@ -10,7 +10,6 @@
     <string name="download_cancelled">Загрузка отменена.</string>
     <string name="download_cancelling">Отмена загрузки %1$s…</string>
     <string name="download_catalog_item">%1$s — %2$s — %3$s</string>
-    <string name="download_catalog_message">Выберите закреплённую общедоступную модель LiteRT Community. При последующем импорте будет создана вторая копия в закрытом хранилище приложения.</string>
     <string name="download_catalog_title">Рекомендуемые модели LiteRT-LM</string>
     <string name="download_cleanup_failed">Не удалось очистить неполный файл. Удалите его вручную.</string>
     <string name="download_cleanup_truncated">Неполное содержимое очищено, но пустой документ мог сохраниться.</string>

@@ -10,7 +10,6 @@
     <string name="download_cancelled">ألغي تنزيل النموذج.</string>
     <string name="download_cancelling">جار إلغاء تنزيل %1$s…</string>
     <string name="download_catalog_item">%1$s — %2$s — %3$s</string>
-    <string name="download_catalog_message">اختر نموذج LiteRT Community مثبت الإصدار ولا يتطلب تسجيل الدخول. سيؤدي استيراده لاحقا إلى إنشاء نسخة ثانية في مساحة التطبيق الخاصة.</string>
     <string name="download_catalog_title">نماذج LiteRT-LM الموصى بها</string>
     <string name="download_cleanup_failed">تعذر مسح الوجهة غير المكتملة. احذفها يدويا.</string>
     <string name="download_cleanup_truncated">مسح المحتوى غير المكتمل، لكن قد يبقى مستند فارغ.</string>

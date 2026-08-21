@@ -320,7 +320,6 @@ class ModelManagerActivity : Activity() {
         }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle(R.string.download_catalog_title)
-            .setMessage(R.string.download_catalog_message)
             .setNegativeButton(android.R.string.cancel, null)
             .setItems(labels) { _, index -> confirmRecommendedModel(models[index]) }
             .show()

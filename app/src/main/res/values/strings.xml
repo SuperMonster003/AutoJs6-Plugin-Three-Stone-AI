@@ -17,7 +17,6 @@
     <string name="download_cancelled">Model download cancelled.</string>
     <string name="download_cancelling">Cancelling %1$s download…</string>
     <string name="download_catalog_item">%1$s — %2$s — %3$s</string>
-    <string name="download_catalog_message">Select a pinned, ungated LiteRT Community model. Importing later creates a second copy in private app storage.</string>
     <string name="download_catalog_title">Recommended LiteRT-LM models</string>
     <string name="download_cleanup_failed">The incomplete destination could not be cleared. Delete it manually.</string>
     <string name="download_cleanup_truncated">The incomplete content was cleared, but an empty document may remain.</string>

@@ -52,6 +52,7 @@ On-Device AI (裝置端 AI) 是 AutoJs6 的官方裝置端 AI 文字生成外掛
 - 使用純文字 system, user 和 assistant 歷史建立本機生成請求.
 - 將 AutoJs6 `ai.ask`, `ai.chat` 和 `ai.stream` 的 `temperature`, `topK`, `topP` 與 `maxTokens` 傳遞到 LiteRT-LM.
 - 透過 AutoJs6 `ai.chat().usage` 與串流 usage 事件回傳 LiteRT-LM 精確的輸入, 輸出及總 token 數, 以及外掛端生成耗時.
+- 透過 AutoJs6 `ai.session` 在同一個 LiteRT-LM 原生 Conversation 保留多輪上下文, 後續輪次只傳送新的使用者提示詞.
 - 依模型 SHA-256 重複使用已初始化 Engine, 消除同一模型連續請求的重複冷啟動.
 - 可選擇將每個匯入模型初始化一次, 持久保存其「可用/不相容」狀態, 並可在模型管理介面重新檢查.
 - 透過 credit 背壓依序傳送文字 chunk, 並只發布一個完成, 錯誤或取消終態.
@@ -87,11 +88,11 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1.1
+protocol: V1.2
 required host build: 5276
 ```
 
-外掛宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming` 與 `usage` 能力及 `text/plain` 輸入輸出.
+外掛宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming`, `usage` 與 `persistent-session` 能力及 `text/plain` 輸入輸出.
 
 需要主程式建置版本 5276 或更高版本. 發布產物包含 arm64-v8a, x86_64, universal APK.
 
@@ -101,7 +102,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat` 與 `ai.stream` 支援本機外掛路由. `ai.ask(messages, { plugin: true })` 會依序保留純文字 `system`, `user` 與 `assistant` 訊息, 且最後一則訊息必須為 `user`. `ai.chat` 會在 `usage` 回傳精確 token 數, 並在 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會在完成前傳送同一份累計 usage. 傳入 `plugin: true` 即選擇本外掛, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可列舉已匯入模型. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, 指令碼會收到明確的錯誤提示. 亦可透過 `plugin: { component, providerId, modelId }` 顯式固定元件.
+> AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat` 與 `ai.stream` 支援本機外掛路由. `ai.session({ plugin: true })` 可建立持久多輪 Conversation, 後續 `ask`, `chat` 與 `stream` 呼叫只傳送新的使用者提示詞. `ai.ask(messages, { plugin: true })` 會依序保留純文字 `system`, `user` 與 `assistant` 訊息, 且最後一則訊息必須為 `user`. `ai.chat` 會在 `usage` 回傳精確 token 數, 並在 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會在完成前傳送同一份累計 usage. 傳入 `plugin: true` 即選擇本外掛, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可列舉已匯入模型. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, 指令碼會收到明確的錯誤提示. 亦可透過 `plugin: { component, providerId, modelId }` 顯式固定元件.
 
 ******
 
@@ -127,6 +128,7 @@ required host build: 5276
 - `maxTokens` 接受 1 至 2,147,483,647 的整數. `temperature` 必須為非負有限數, `topK` 必須為正整數, `topP` 必須為 0 至 1 的有限數. 三項取樣參數全部省略時保留模型或引擎預設值; 部分覆寫時, 未設定項使用 LiteRT-LM 基準 `topK: 1`, `topP: 0.95`, `temperature: 1`.
 - 串流輸出使用有限 credit 和有界 chunk, 防止無限制緩衝或無背壓回呼.
 - Usage token 數直接來自 LiteRT-LM Conversation 的 KV cache 與 decode 計數, 不使用字元數估算. `durationMillis` 只測量外掛生成呼叫, 不包含宿主探索, 綁定, 模型列舉和分派時間.
+- 持久 `ai.session` 只允許一個活動輪次, 正常完成後保留原生 Conversation; 取消, 逾時, 生成失敗或顯式關閉後必須重新建立工作階段.
 - 取消, 工作階段關閉和逾時會停止結果發布, 並透過唯一終態結束請求.
 
 ******
@@ -164,6 +166,7 @@ required host build: 5276
 * `新增` 適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 的 `plugin: true` 簡寫選擇器及 `ai.models` 模型列舉
 * `新增` 透過 On-Device AI 協定 1.1 將 `temperature`, `topK`, `topP` 與 `maxTokens` 傳遞至 LiteRT-LM 取樣及輸出 token 控制
 * `新增` 透過 AutoJs6 `ai.chat().usage` 與串流 usage 事件回傳 LiteRT-LM 精確的輸入, 輸出及總 token 數, 以及外掛實測生成耗時
+* `新增` On-Device AI 協定 1.2 持久工作階段及 AutoJs6 `ai.session` 多輪 Conversation 重複使用, 後續輪次無需重傳既有歷史
 * `優化` 更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致
 * `優化` 重寫 ROADMAP 為可逐項勾選的功能路線圖
 

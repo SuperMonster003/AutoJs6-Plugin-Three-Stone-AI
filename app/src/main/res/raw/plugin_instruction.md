@@ -14,6 +14,27 @@ ai.ask("Hello", { plugin: true }).then((text) => {
 });
 ```
 
+For multi-turn context, create one persistent Conversation with `ai.session`. Later turns send only the new user prompt:
+
+```javascript
+ai.session({
+    plugin: true,
+    system: "Keep every answer short.",
+}).then((session) => {
+    return session.ask("Remember this code: Orion")
+        .then(() => session.chat("What code should you remember?"))
+        .then((response) => {
+            console.log(response.text);
+            session.close();
+        }, (error) => {
+            session.close();
+            throw error;
+        });
+});
+```
+
+Only one turn may be active in a session. Always call `session.close()` when finished; cancellation, timeout, or generation failure also closes the entire session.
+
 Sampling and output length can be controlled from the same options object:
 
 ```javascript

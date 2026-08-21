@@ -14,6 +14,27 @@ ai.ask("Hello", { plugin: true }).then((text) => {
 });
 ```
 
+여러 턴의 컨텍스트를 유지하려면 `ai.session`으로 영구 Conversation을 만드십시오. 이후 턴에는 새 사용자 프롬프트만 전송합니다:
+
+```javascript
+ai.session({
+    plugin: true,
+    system: "Keep every answer short.",
+}).then((session) => {
+    return session.ask("Remember this code: Orion")
+        .then(() => session.chat("What code should you remember?"))
+        .then((response) => {
+            console.log(response.text);
+            session.close();
+        }, (error) => {
+            session.close();
+            throw error;
+        });
+});
+```
+
+세션에서는 한 번에 하나의 턴만 활성화할 수 있습니다. 사용 후에는 항상 `session.close()`를 호출하십시오. 취소, timeout 또는 생성 실패도 전체 세션을 닫습니다.
+
 같은 options 객체에서 sampling과 출력 길이를 제어할 수 있습니다:
 
 ```javascript

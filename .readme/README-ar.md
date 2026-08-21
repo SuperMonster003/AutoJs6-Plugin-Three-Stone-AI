@@ -52,6 +52,7 @@ On-Device AI هي اضافة AutoJs6 الرسمية لتوليد النص بال
 - إنشاء طلبات توليد محلية من سجل system و user و assistant بنص عادي.
 - تمرير `temperature` و `topK` و `topP` و `maxTokens` من `ai.ask` و `ai.chat` و `ai.stream` في AutoJs6 إلى LiteRT-LM.
 - إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد لدى المزود عبر `ai.chat().usage` وأحداث usage للبث.
+- الاحتفاظ بسياق متعدد الجولات داخل Conversation أصلي واحد في LiteRT-LM عبر `ai.session` في AutoJs6, مع إرسال طلب المستخدم الجديد فقط في الجولات اللاحقة.
 - إعادة استخدام Engine المهيأ بحسب SHA-256 للنموذج لتجنب تكرار بدء التشغيل البارد في الطلبات المتتالية للنموذج نفسه.
 - تهيئة كل نموذج مستورد مرة واحدة اختياريًا وحفظ حالة متاح/غير متوافق وإعادة الفحص من مدير النماذج.
 - تسليم chunks النص بالترتيب مع ضغط عكسي بواسطة credits ونشر حالة نهائية واحدة فقط من الاكتمال أو الفشل أو الإلغاء.
@@ -87,11 +88,11 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1.1
+protocol: V1.2
 required host build: 5276
 ```
 
-يعلن الملحق تنفيذ ON_DEVICE ووضع credential من نوع NONE. ويعلن قدرتي `streaming` و `usage` مع إدخال وإخراج `text/plain`.
+يعلن الملحق تنفيذ ON_DEVICE ووضع credential من نوع NONE. ويعلن قدرات `streaming` و `usage` و `persistent-session` مع إدخال وإخراج `text/plain`.
 
 يلزم build المضيف 5276 أو أحدث. تتضمن الإصدارات متغيرات APK التالية: arm64-v8a, x86_64, universal.
 
@@ -101,7 +102,7 @@ required host build: 5276
 
 ******
 
-> في AutoJs6 (البنية 5276 وما بعدها) تدعم `ai.ask` و `ai.chat` و `ai.stream` مسار الاضافة المحلية. يحافظ `ai.ask(messages, { plugin: true })` على ترتيب رسائل النص العادي بادوار `system` و `user` و `assistant`, ويجب ان تكون الرسالة الاخيرة بدور `user`. يعيد `ai.chat` أعداد الرموز الدقيقة في `usage` والمدة المقاسة في `usage.raw.durationMillis`; ويرسل `ai.stream` usage التراكمي نفسه قبل الاكتمال. مرر `plugin: true` لاختيار هذه الاضافة, ويمكن حذف معرف النموذج عند وجود نموذج واحد; كما تعدد `ai.models({ plugin: true })` النماذج المستوردة. عند عدم تثبيت الاضافة او تعطيلها في مركز الاضافات او عدم وجود نموذج, تتلقى السكربتات خطا واضحا. كما يدعم المحدد الصريح `plugin: { component, providerId, modelId }`.
+> في AutoJs6 (البنية 5276 وما بعدها) تدعم `ai.ask` و `ai.chat` و `ai.stream` مسار الاضافة المحلية. ينشئ `ai.session({ plugin: true })` جلسة Conversation مستمرة متعددة الجولات, وترسل استدعاءات `ask` و `chat` و `stream` اللاحقة طلب المستخدم الجديد فقط. يحافظ `ai.ask(messages, { plugin: true })` على ترتيب رسائل النص العادي بادوار `system` و `user` و `assistant`, ويجب ان تكون الرسالة الاخيرة بدور `user`. يعيد `ai.chat` أعداد الرموز الدقيقة في `usage` والمدة المقاسة في `usage.raw.durationMillis`; ويرسل `ai.stream` usage التراكمي نفسه قبل الاكتمال. مرر `plugin: true` لاختيار هذه الاضافة, ويمكن حذف معرف النموذج عند وجود نموذج واحد; كما تعدد `ai.models({ plugin: true })` النماذج المستوردة. عند عدم تثبيت الاضافة او تعطيلها في مركز الاضافات او عدم وجود نموذج, تتلقى السكربتات خطا واضحا. كما يدعم المحدد الصريح `plugin: { component, providerId, modelId }`.
 
 ******
 
@@ -127,6 +128,7 @@ required host build: 5276
 - يقبل `maxTokens` أعدادا صحيحة من 1 إلى 2,147,483,647. يجب أن تكون `temperature` محدودة وغير سالبة, وأن يكون `topK` عددا صحيحا موجبا, وأن تكون `topP` محدودة بين 0 و1. يؤدي ترك إعدادات sampling الثلاثة دون ضبط إلى الحفاظ على قيم النموذج أو المحرك; أما الضبط الجزئي فيملأ القيم المحذوفة بخط أساس LiteRT-LM: `topK: 1` و `topP: 0.95` و `temperature: 1`.
 - يستخدم streaming credits محدودة و chunks مقيدة لمنع buffer غير المحدود أو callbacks بلا ضغط عكسي.
 - تأتي أعداد رموز usage مباشرة من عدادات KV cache و decode في Conversation ضمن LiteRT-LM دون تقدير قائم على عدد المحارف. يقيس `durationMillis` استدعاء التوليد في الملحق فقط ولا يشمل اكتشاف المضيف أو الربط أو تعداد النماذج أو التوزيع.
+- تسمح جلسة `ai.session` المستمرة بجولة نشطة واحدة وتحتفظ بالـ Conversation الأصلي بعد الاكتمال الطبيعي, ويجب إنشاؤها من جديد بعد الإلغاء أو timeout أو فشل التوليد أو الإغلاق الصريح.
 - يوقف الإلغاء وإغلاق الجلسة و timeout نشر النتائج وينهي الطلب بحالة نهائية واحدة.
 
 ******
@@ -164,6 +166,7 @@ required host build: 5276
 * `ميزة` التوافق مع المحدد المختصر `plugin: true` لـ `ai.ask`/`ai.chat`/`ai.stream` وتعداد النماذج `ai.models` في AutoJs6
 * `ميزة` تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر بروتوكول On-Device AI 1.1 إلى عناصر تحكم sampling و output tokens في LiteRT-LM
 * `ميزة` إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد المقاسة لدى المزود عبر `ai.chat().usage` وأحداث usage للبث
+* `ميزة` إضافة جلسات مستمرة في بروتوكول On-Device AI 1.2 وإعادة استخدام Conversation متعددة الجولات عبر `ai.session` في AutoJs6 دون إعادة إرسال السجل السابق
 * `تحسين` تحديث وصف الاضافة والتعليمات و README بعشر لغات بما يتوافق مع اضفاء الطابع الرسمي على مسار الاضافة المحلية `ai.*`
 * `تحسين` اعادة كتابة ROADMAP كخارطة طريق للميزات ببنود قابلة للتحقق كل على حدة
 

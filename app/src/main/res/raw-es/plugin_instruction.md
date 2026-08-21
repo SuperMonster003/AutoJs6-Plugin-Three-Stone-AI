@@ -14,6 +14,27 @@ ai.ask("Hello", { plugin: true }).then((text) => {
 });
 ```
 
+Para conservar el contexto de varios turnos, cree una Conversation persistente con `ai.session`. Los turnos posteriores solo envían el nuevo prompt de usuario:
+
+```javascript
+ai.session({
+    plugin: true,
+    system: "Keep every answer short.",
+}).then((session) => {
+    return session.ask("Remember this code: Orion")
+        .then(() => session.chat("What code should you remember?"))
+        .then((response) => {
+            console.log(response.text);
+            session.close();
+        }, (error) => {
+            session.close();
+            throw error;
+        });
+});
+```
+
+Solo puede haber un turno activo por sesión. Llame siempre a `session.close()` al terminar; una cancelación, timeout o error de generación también cierra toda la sesión.
+
 El muestreo y la longitud de salida se controlan desde el mismo objeto de opciones:
 
 ```javascript

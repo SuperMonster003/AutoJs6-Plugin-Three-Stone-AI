@@ -14,6 +14,27 @@ ai.ask("Hello", { plugin: true }).then((text) => {
 });
 ```
 
+للاحتفاظ بسياق متعدد الجولات, أنشئ Conversation مستمرة عبر `ai.session`. ترسل الجولات اللاحقة طلب المستخدم الجديد فقط:
+
+```javascript
+ai.session({
+    plugin: true,
+    system: "Keep every answer short.",
+}).then((session) => {
+    return session.ask("Remember this code: Orion")
+        .then(() => session.chat("What code should you remember?"))
+        .then((response) => {
+            console.log(response.text);
+            session.close();
+        }, (error) => {
+            session.close();
+            throw error;
+        });
+});
+```
+
+تسمح الجلسة بجولة نشطة واحدة فقط. استدع `session.close()` عند الانتهاء; كما يؤدي الإلغاء أو timeout أو فشل التوليد إلى إغلاق الجلسة كاملة.
+
 يمكن التحكم في sampling وطول الإخراج من كائن options نفسه:
 
 ```javascript

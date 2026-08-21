@@ -14,6 +14,27 @@ ai.ask("Hello", { plugin: true }).then((text) => {
 });
 ```
 
+需要多輪上下文時, 使用 `ai.session` 建立一個持久 Conversation. 後續輪次只傳送新的使用者提示詞:
+
+```javascript
+ai.session({
+    plugin: true,
+    system: "Keep every answer short.",
+}).then((session) => {
+    return session.ask("Remember this code: Orion")
+        .then(() => session.chat("What code should you remember?"))
+        .then((response) => {
+            console.log(response.text);
+            session.close();
+        }, (error) => {
+            session.close();
+            throw error;
+        });
+});
+```
+
+同一工作階段一次只允許一個活動輪次. 使用完畢後應呼叫 `session.close()`; 取消, 逾時或生成失敗也會關閉整個工作階段.
+
 可在同一個 options 物件中控制取樣與輸出長度:
 
 ```javascript

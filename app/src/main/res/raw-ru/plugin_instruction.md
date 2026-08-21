@@ -14,6 +14,27 @@ ai.ask("Hello", { plugin: true }).then((text) => {
 });
 ```
 
+Для сохранения многоходового контекста создайте постоянный Conversation через `ai.session`. Следующие ходы передают только новый пользовательский запрос:
+
+```javascript
+ai.session({
+    plugin: true,
+    system: "Keep every answer short.",
+}).then((session) => {
+    return session.ask("Remember this code: Orion")
+        .then(() => session.chat("What code should you remember?"))
+        .then((response) => {
+            console.log(response.text);
+            session.close();
+        }, (error) => {
+            session.close();
+            throw error;
+        });
+});
+```
+
+В сеансе может быть активен только один ход. После использования всегда вызывайте `session.close()`; отмена, timeout или ошибка генерации также закрывают весь сеанс.
+
 Параметры sampling и длина вывода задаются в том же объекте options:
 
 ```javascript

@@ -52,6 +52,7 @@ On-Device AI (裝置端 AI) 係 AutoJs6 嘅官方裝置端 AI 文本生成插件
 - 使用純文字 system, user 和 assistant 歷史建立本地生成請求.
 - 將 AutoJs6 `ai.ask`, `ai.chat` 和 `ai.stream` 嘅 `temperature`, `topK`, `topP` 同 `maxTokens` 傳遞到 LiteRT-LM.
 - 透過 AutoJs6 `ai.chat().usage` 同串流 usage 事件回傳 LiteRT-LM 精確嘅輸入, 輸出及總 token 數, 以及插件端生成耗時.
+- 透過 AutoJs6 `ai.session` 喺同一個 LiteRT-LM 原生 Conversation 保留多輪上下文, 後續輪次只發送新嘅用戶提示詞.
 - 按模型 SHA-256 重用已初始化 Engine, 消除同一模型連續請求嘅重複冷啟動.
 - 可選擇將每個匯入模型初始化一次, 持久保存其「可用/不相容」狀態, 並可喺模型管理介面重新檢查.
 - 透過 credit 背壓按序傳送文字 chunk, 並只發佈一個完成, 錯誤或取消終態.
@@ -87,11 +88,11 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1.1
+protocol: V1.2
 required host build: 5276
 ```
 
-插件宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming` 同 `usage` 能力及 `text/plain` 輸入輸出.
+插件宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming`, `usage` 同 `persistent-session` 能力及 `text/plain` 輸入輸出.
 
 需要主程式構建版本 5276 或更高版本. 發佈產物包含 arm64-v8a, x86_64, universal APK.
 
@@ -101,7 +102,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由. `ai.ask(messages, { plugin: true })` 會按順序保留純文字 `system`, `user` 同 `assistant` 消息, 而最後一條消息必須係 `user`. `ai.chat` 會喺 `usage` 回傳精確 token 數, 並喺 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會喺完成前發送同一份累計 usage. 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件.
+> AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由. `ai.session({ plugin: true })` 可建立持久多輪 Conversation, 後續 `ask`, `chat` 同 `stream` 調用只發送新嘅用戶提示詞. `ai.ask(messages, { plugin: true })` 會按順序保留純文字 `system`, `user` 同 `assistant` 消息, 而最後一條消息必須係 `user`. `ai.chat` 會喺 `usage` 回傳精確 token 數, 並喺 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會喺完成前發送同一份累計 usage. 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件.
 
 ******
 
@@ -127,6 +128,7 @@ required host build: 5276
 - `maxTokens` 接受 1 至 2,147,483,647 嘅整數. `temperature` 必須係非負有限數, `topK` 必須係正整數, `topP` 必須係 0 至 1 嘅有限數. 三項採樣參數全部省略時保留模型或引擎預設值; 部分覆蓋時, 未設定項使用 LiteRT-LM 基線 `topK: 1`, `topP: 0.95`, `temperature: 1`.
 - 串流輸出使用有限 credit 和有界 chunk, 防止無限制緩衝或無背壓回呼.
 - Usage token 數直接來自 LiteRT-LM Conversation 嘅 KV cache 同 decode 計數, 唔會用字符數估算. `durationMillis` 只量度插件生成調用, 唔包括宿主發現, 綁定, 模型枚舉同分發時間.
+- 持久 `ai.session` 只允許一個活動輪次, 正常完成後保留原生 Conversation; 取消, 逾時, 生成失敗或顯式關閉後必須重新建立會話.
 - 取消, 工作階段關閉和逾時會停止結果發佈, 並透過唯一終態結束請求.
 
 ******
@@ -164,6 +166,7 @@ required host build: 5276
 * `新增` 適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 嘅 `plugin: true` 簡寫選擇器及 `ai.models` 模型枚舉
 * `新增` 經 On-Device AI 協議 1.1 將 `temperature`, `topK`, `topP` 同 `maxTokens` 傳遞至 LiteRT-LM 採樣及輸出 token 控制
 * `新增` 透過 AutoJs6 `ai.chat().usage` 同串流 usage 事件回傳 LiteRT-LM 精確嘅輸入, 輸出及總 token 數, 以及插件實測生成耗時
+* `新增` On-Device AI 協議 1.2 持久會話及 AutoJs6 `ai.session` 多輪 Conversation 重用, 後續輪次無需重傳既有歷史
 * `優化` 更新插件描述, 使用說明及 10 種語言嘅 README, 與宿主 `ai.*` 本機插件路由嘅正式化保持一致
 * `優化` 重寫 ROADMAP 為可逐項勾選嘅功能路線圖
 

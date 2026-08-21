@@ -14,6 +14,27 @@ ai.ask("Hello", { plugin: true }).then((text) => {
 });
 ```
 
+複数ターンのコンテキストを保持するには, `ai.session` で永続 Conversation を作成します. 2 ターン目以降は新しいユーザープロンプトだけを送信します:
+
+```javascript
+ai.session({
+    plugin: true,
+    system: "Keep every answer short.",
+}).then((session) => {
+    return session.ask("Remember this code: Orion")
+        .then(() => session.chat("What code should you remember?"))
+        .then((response) => {
+            console.log(response.text);
+            session.close();
+        }, (error) => {
+            session.close();
+            throw error;
+        });
+});
+```
+
+セッションで同時に実行できるターンは 1 つだけです. 使用後は必ず `session.close()` を呼び出してください. キャンセル, timeout, 生成失敗でもセッション全体が終了します.
+
 同じ options object で sampling と出力長を制御できます:
 
 ```javascript

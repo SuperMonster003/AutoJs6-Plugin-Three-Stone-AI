@@ -16,6 +16,7 @@
 * `新增` 通过 AutoJs6 `structuredJson` 与 `responseSchema` 启用 LiteRT-LM 原生 JSON Schema 约束解码, 支持单次调用, 流式输出和持久会话, 并严格验证完整 JSON
 * `新增` 通过协议 1.3 与 AutoJs6 生成选项提供显式 `cpu`, `gpu` 和 `npu` backend profile, 包含设备兼容性报告, 模型/profile 缓存隔离及不可用 profile 禁止回退; GPU 仅在 OpenCL 加载探测成功后声明, NPU 因未打包 EAP runtime 而保持不可用
 * `新增` 将固定版本的 LiteRT Community 推荐模型直接下载到用户选择的 SAF 位置, 支持进度, 精确取消, 残缺文件清理, LiteRT-LM 文件头与精确大小/SHA-256 校验, 以及下载后直接导入
+* `修复` 修复模型管理界面在系统暗色模式下仍使用亮色主题文字, 导致正文, 复选框和模型列表与深色背景对比不足
 * `优化` 更新插件描述, 使用说明及 10 种语言的 README, 与宿主 `ai.*` 本地插件路由的正式化保持一致
 * `优化` 重写 ROADMAP 为可逐项勾选的功能路线图
 

@@ -174,6 +174,7 @@ required host build: 5276
 * `기능` AutoJs6 `structuredJson`과 `responseSchema`를 통한 LiteRT-LM 네이티브 JSON Schema 제약 디코딩을 추가하고 단일 호출, 스트리밍, 영구 세션 및 완성 JSON의 엄격한 검증을 지원
 * `기능` 프로토콜 1.3과 AutoJs6 생성 옵션을 통한 명시적 `cpu`, `gpu`, `npu` backend profile, 기기 호환성 보고, 모델/profile별 캐시 격리 및 사용 불가 profile의 CPU fallback 금지; GPU는 OpenCL 로드 검사 성공 후에만 선언하고 NPU는 EAP runtime 미포함으로 사용 불가 유지
 * `기능` 고정 LiteRT Community 모델을 사용자가 선택한 SAF 위치로 직접 다운로드하고 진행률, 정확한 취소, 불완전 파일 정리, LiteRT-LM 헤더 및 정확한 크기/SHA-256 검증, 다운로드 후 직접 가져오기를 지원
+* `수정` 시스템 다크 모드에서도 모델 관리 화면이 라이트 테마 텍스트 색상을 유지해 본문, 체크박스, 모델 행을 어두운 배경에서 읽을 수 없던 문제 수정
 * `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신
 * `개선` ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성
 

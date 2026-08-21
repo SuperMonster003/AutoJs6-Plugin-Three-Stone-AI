@@ -16,6 +16,7 @@
 * `Feature` Added native LiteRT-LM JSON Schema constrained decoding through AutoJs6 `structuredJson` and `responseSchema`, with single-call, streaming, and persistent-session support plus strict completed-JSON validation
 * `Feature` Explicit `cpu`, `gpu`, and `npu` backend profiles through protocol 1.3 and AutoJs6 generation options, with device compatibility reporting, model/profile cache isolation, and no fallback from unavailable profiles; GPU is declared only after an OpenCL load probe and NPU remains unavailable because its EAP runtime is not packaged
 * `Feature` Direct downloads of pinned LiteRT Community models to a user-selected SAF location, with progress, precise cancellation, incomplete-file cleanup, LiteRT-LM header and exact size/SHA-256 verification, and a download-to-import handoff
+* `Fix` Fixed the model manager retaining light-theme text colors in system dark mode, which made body text, checkboxes, and model rows unreadable against the dark background
 * `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 

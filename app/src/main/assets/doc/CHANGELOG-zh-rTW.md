@@ -13,6 +13,7 @@
 * `新增` 透過 On-Device AI 協定 1.1 將 `temperature`, `topK`, `topP` 與 `maxTokens` 傳遞至 LiteRT-LM 取樣及輸出 token 控制
 * `新增` 透過 AutoJs6 `ai.chat().usage` 與串流 usage 事件回傳 LiteRT-LM 精確的輸入, 輸出及總 token 數, 以及外掛實測生成耗時
 * `新增` On-Device AI 協定 1.2 持久工作階段及 AutoJs6 `ai.session` 多輪 Conversation 重複使用, 後續輪次無需重傳既有歷史
+* `新增` 透過 AutoJs6 `structuredJson` 與 `responseSchema` 啟用 LiteRT-LM 原生 JSON Schema 約束解碼, 支援單次呼叫, 串流輸出及持久工作階段, 並嚴格驗證完整 JSON
 * `優化` 更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致
 * `優化` 重寫 ROADMAP 為可逐項勾選的功能路線圖
 

@@ -1,6 +1,6 @@
 # AutoJs6 オンデバイス AI
 
-このプラグインは Android Storage Access Framework (SAF) からローカル `.litertlm` モデルパッケージをインポートし, アプリ専用ストレージへコピーします. CPU-only LiteRT-LM でプレーンテキスト履歴を処理し, テキストをストリーミング出力します.
+このプラグインは Android Storage Access Framework (SAF) からローカル `.litertlm` モデルパッケージをインポートし, アプリ専用ストレージへコピーします. CPU-only LiteRT-LM でプレーンテキスト履歴を処理し, プレーンテキストまたは schema 制約付き JSON テキストをストリーミング出力します.
 
 AutoJs6 ホスト build 5276 以降と Android API 24 以降が必要です.
 
@@ -45,6 +45,28 @@ ai.ask("Hello", {
     topP: 0.9,
     maxTokens: 256,
 }).then((text) => console.log(text));
+```
+
+`responseSchema` を渡すとネイティブ構造化生成が有効になります (`structuredJson: true` だけで schema を省略すると既定の object-root schema を使用). Promise は引き続き JSON テキストを返すため, 完成した `ai.ask` または `ai.chat().text` の結果だけを parse してください. `ai.stream` の delta は部分的な JSON テキストです. 永続 `ai.session` は全ターンで 1 つの固定 schema を使用します:
+
+```javascript
+let schema = {
+    type: "object",
+    properties: {
+        answer: { type: "string" },
+        ok: { type: "boolean" },
+    },
+    required: [ "answer", "ok" ],
+};
+
+ai.ask("Return answer as OK and ok as true.", {
+    plugin: true,
+    responseSchema: schema,
+    maxTokens: 64,
+}).then((text) => {
+    let value = JSON.parse(text);
+    console.log(value.answer, value.ok);
+});
 ```
 
 インポート済みモデルの列挙や, `plugin: { modelId: "..." }` による明示指定も可能です:
@@ -446,7 +468,8 @@ try {
 - モデルのインポート上限は 8 GiB で, 完了後に 256 MiB 以上の空き容量が必要です.
 - コンテキスト上限は 256 KiB, 出力上限は 64 KiB で, 同時に有効な生成セッションは 1 つだけです.
 - `maxTokens` (direct protocol では `maximumOutputTokens`) は 1 から 2,147,483,647 までで, usage reporting なしで適用されます. `temperature` は有限かつ 0 以上, `topK` は正, `topP` は 0 から 1 の有限値である必要があります.
-- Streaming, usage, `text/plain` を宣言します. Reasoning, tools, structured JSON は非対応です.
+- Streaming, usage, 永続セッション, structured JSON, `text/plain`, `application/json` を宣言します. Reasoning と tools は非対応です.
+- 応答 schema は 64 KiB 以下の JSON object である必要があり, 対応 keyword は同梱 LiteRT-LM/LLGuidance ランタイムの実装に従います. 完成した構造化出力は厳密に parse と検証を行うため, JSON 値全体に十分な `maxTokens` を確保してください.
 - Usage token 数は LiteRT-LM Conversation の KV cache と decode カウンターから取得し, 文字数では推定しません. `durationMillis` はプロバイダー生成呼び出しのみを測定し, ホストの探索, バインド, モデル列挙, ディスパッチ時間を含みません.
 - ネットワーク権限とストレージ権限は要求しません.
 - 同じ署名の AutoJs6 ホストだけが provider サービスを bind できます.

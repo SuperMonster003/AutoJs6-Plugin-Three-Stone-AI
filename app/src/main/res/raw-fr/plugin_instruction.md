@@ -1,6 +1,6 @@
 # IA locale AutoJs6
 
-Ce plugin importe un paquet de modèle `.litertlm` local via Android Storage Access Framework (SAF), le copie dans le stockage privé de cette application et exécute une génération LiteRT-LM uniquement sur CPU avec un historique en texte brut et une sortie texte en streaming.
+Ce plugin importe un paquet de modèle `.litertlm` local via Android Storage Access Framework (SAF), le copie dans le stockage privé de cette application et exécute une génération LiteRT-LM uniquement sur CPU avec un historique en texte brut et une sortie en streaming de texte brut ou JSON contraint par un schema.
 
 Le plugin exige la build hôte AutoJs6 5276 ou ultérieure et Android API 24 ou ultérieur.
 
@@ -45,6 +45,28 @@ ai.ask("Hello", {
     topP: 0.9,
     maxTokens: 256,
 }).then((text) => console.log(text));
+```
+
+Passez `responseSchema` pour activer la génération structurée native (`structuredJson: true` sans schema utilise un schema objet-racine par défaut). La promesse produit toujours du texte JSON; n'analysez donc qu'un résultat `ai.ask` ou `ai.chat().text` complet, car les deltas de `ai.stream` sont du texte JSON partiel. Une `ai.session` persistante conserve un schema fixe pour tous ses tours:
+
+```javascript
+let schema = {
+    type: "object",
+    properties: {
+        answer: { type: "string" },
+        ok: { type: "boolean" },
+    },
+    required: [ "answer", "ok" ],
+};
+
+ai.ask("Return answer as OK and ok as true.", {
+    plugin: true,
+    responseSchema: schema,
+    maxTokens: 64,
+}).then((text) => {
+    let value = JSON.parse(text);
+    console.log(value.answer, value.ok);
+});
 ```
 
 Énumérez les modèles importés ou épinglez-en un explicitement avec `plugin: { modelId: "..." }` :
@@ -446,7 +468,8 @@ Sécurité et limites opérationnelles:
 - Un import de modèle est limité à 8 GiB et doit laisser au moins 256 MiB libres.
 - Le contexte est limité à 256 KiB, la sortie à 64 KiB et une seule session de génération peut être active.
 - `maxTokens` (ou `maximumOutputTokens` dans le protocole direct) accepte de 1 à 2 147 483 647 et s'applique sans exiger de rapport usage. `temperature` doit être fini et positif ou nul, `topK` positif et `topP` fini entre 0 et 1.
-- Streaming, usage et `text/plain` sont déclarés. Reasoning, tools et structured JSON ne sont pas pris en charge.
+- Streaming, usage, les sessions persistantes, structured JSON, `text/plain` et `application/json` sont déclarés. Reasoning et tools ne sont pas pris en charge.
+- Le schema de réponse doit être un objet JSON de 64 KiB au maximum; les mots-clés acceptés sont ceux implémentés par le runtime LiteRT-LM/LLGuidance intégré. La sortie structurée complète est analysée et validée strictement, il faut donc réserver assez de `maxTokens` pour la valeur JSON entière.
 - Les tokens de usage proviennent des compteurs de cache KV et decode de Conversation dans LiteRT-LM, sans estimation par caractères. `durationMillis` mesure la génération du fournisseur et exclut la découverte, la liaison, la liste des modèles et la distribution de l'hôte.
 - Le plugin ne demande aucune permission réseau ou de stockage.
 - Seul le client AutoJs6 avec la même signature peut lier le service provider.

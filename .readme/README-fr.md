@@ -39,7 +39,7 @@ Le fichier README.md actuel prend en charge les langues suivantes:
 
 ******
 
-On-Device AI est le plugin officiel de génération de texte IA locale pour AutoJs6. Il exécute sur le CPU les modèles LiteRT-LM importés par l'utilisateur, accepte un historique de messages en texte brut et renvoie du texte brut via une session de streaming contrôlée. Toute l'inférence se fait localement : aucun accès réseau, aucune donnée envoyée.
+On-Device AI est le plugin officiel de génération de texte IA locale pour AutoJs6. Il exécute sur le CPU les modèles LiteRT-LM importés par l'utilisateur, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Toute l'inférence se fait localement : aucun accès réseau, aucune donnée envoyée.
 
 ******
 
@@ -51,6 +51,7 @@ On-Device AI est le plugin officiel de génération de texte IA locale pour Auto
 - Contrôler le stockage privé avant d’ouvrir le sélecteur, afficher le budget d’import actuel et l’espace estimé de la copie privée, puis revérifier le fichier sélectionné avant la copie.
 - Créer des requêtes de génération locale avec un historique system, user et assistant en texte brut.
 - Transmettre `temperature`, `topK`, `topP` et `maxTokens` depuis `ai.ask`, `ai.chat` et `ai.stream` d'AutoJs6 jusqu'à LiteRT-LM.
+- Contraindre nativement la sortie avec JSON Schema de LiteRT-LM via `structuredJson` et `responseSchema` d'AutoJs6; les valeurs complètes restent du texte JSON pour `JSON.parse`.
 - Rapporter les nombres exacts de tokens d'entrée, de sortie et totaux de LiteRT-LM, ainsi que la durée de génération côté fournisseur, via `ai.chat().usage` et les événements usage du streaming.
 - Conserver le contexte multi-tour dans une seule Conversation native LiteRT-LM via `ai.session` d'AutoJs6, en envoyant uniquement le nouveau prompt utilisateur aux tours suivants.
 - Réutiliser l'Engine initialisé selon le SHA-256 du modèle afin d'éviter un nouveau démarrage à froid pour les requêtes consécutives sur le même modèle.
@@ -69,8 +70,8 @@ La version 1 déclare uniquement le périmètre suivant:
 
 ```text
 model package: .litertlm
-input: text/plain message history
-output: streamed text/plain chunks
+input: text/plain message history plus application/json response schema
+output: streamed text/plain or application/json text chunks
 runtime: LiteRT-LM 0.15.0
 ```
 
@@ -92,7 +93,7 @@ protocol: V1.2
 required host build: 5276
 ```
 
-Le plugin déclare une exécution ON_DEVICE et le mode credential NONE. Il déclare les capacités `streaming`, `usage` et `persistent-session`, avec des entrées et sorties `text/plain`.
+Le plugin déclare une exécution ON_DEVICE et le mode credential NONE. Il déclare les capacités `streaming`, `usage`, `persistent-session` et `structured-json`, accepte des messages `text/plain` et des schemas de réponse `application/json`, et émet du texte `text/plain` ou `application/json`.
 
 La build hôte 5276 ou ultérieure est requise. Les versions incluent les variantes APK arm64-v8a, x86_64, universal.
 
@@ -102,7 +103,7 @@ La build hôte 5276 ou ultérieure est requise. Les versions incluent les varian
 
 ******
 
-> Dans AutoJs6 (build 5276 et ultérieur), `ai.ask`, `ai.chat` et `ai.stream` prennent en charge la route de plugin local. `ai.session({ plugin: true })` crée une Conversation multi-tour persistante dont les appels `ask`, `chat` et `stream` suivants envoient uniquement le nouveau prompt utilisateur. `ai.ask(messages, { plugin: true })` conserve dans l'ordre les messages texte de rôles `system`, `user` et `assistant`, et le dernier message doit avoir le rôle `user`. `ai.chat` renvoie les nombres exacts de tokens dans `usage` et la durée mesurée dans `usage.raw.durationMillis` ; `ai.stream` émet le même usage cumulatif avant la fin. Passez `plugin: true` pour sélectionner ce plugin, et l'ID de modèle peut être omis lorsqu'un seul modèle est importé ; `ai.models({ plugin: true })` énumère les modèles importés. Si le plugin n'est pas installé, désactivé dans le Centre de plugins ou sans modèle, les scripts reçoivent une erreur claire. Le sélecteur explicite `plugin: { component, providerId, modelId }` reste pris en charge.
+> Dans AutoJs6 (build 5276 et ultérieur), `ai.ask`, `ai.chat` et `ai.stream` prennent en charge la route de plugin local. `ai.session({ plugin: true })` crée une Conversation multi-tour persistante dont les appels `ask`, `chat` et `stream` suivants envoient uniquement le nouveau prompt utilisateur. `ai.ask(messages, { plugin: true })` conserve dans l'ordre les messages texte de rôles `system`, `user` et `assistant`, et le dernier message doit avoir le rôle `user`. `ai.chat` renvoie les nombres exacts de tokens dans `usage` et la durée mesurée dans `usage.raw.durationMillis` ; `ai.stream` émet le même usage cumulatif avant la fin. Passez `plugin: true` pour sélectionner ce plugin, et l'ID de modèle peut être omis lorsqu'un seul modèle est importé ; `ai.models({ plugin: true })` énumère les modèles importés. Si le plugin n'est pas installé, désactivé dans le Centre de plugins ou sans modèle, les scripts reçoivent une erreur claire. Le sélecteur explicite `plugin: { component, providerId, modelId }` reste pris en charge. `responseSchema` active implicitement la sortie structurée; `structuredJson: true` sans schema utilise un schema objet-racine par défaut. `ai.ask` et `ai.chat().text` renvoient toujours du texte JSON, les deltas de streaming sont du texte JSON partiel et une session persistante conserve un schema fixe pour tous ses tours.
 
 ******
 
@@ -125,6 +126,7 @@ Le plugin ne demande aucune permission réseau ou de stockage. Il lit le modèle
 - Le provider ne conserve qu'un seul Engine initialisé. Les requêtes consécutives sur le même modèle le réutilisent; il est libéré immédiatement lors d'un changement de modèle, après cinq minutes d'inactivité ou, en toute sécurité, après la session active lorsqu'Android signale explicitement une pression mémoire.
 - La vérification d'un modèle prouve uniquement que `Engine.initialize()` réussit sur l'appareil et le runtime inclus actuels; elle n'évalue pas la qualité de sortie et peut être relancée après un changement d'appareil ou de runtime.
 - Le provider annonce un plafond de contexte de 256 KiB et un plafond de sortie de 64 KiB. Les requêtes et modèles peuvent imposer des limites inférieures.
+- Le schema de réponse doit être un objet JSON de 64 KiB au maximum. Les mots-clés acceptés sont ceux implémentés par le runtime LiteRT-LM/LLGuidance intégré; la sortie complète est analysée et validée strictement, il faut donc réserver assez de `maxTokens` pour la valeur JSON entière.
 - `maxTokens` accepte les entiers de 1 à 2 147 483 647. `temperature` doit être fini et positif ou nul, `topK` un entier positif et `topP` fini entre 0 et 1. Omettre les trois réglages d'échantillonnage conserve les valeurs du modèle ou moteur ; un remplacement partiel complète les réglages omis avec la base LiteRT-LM `topK: 1`, `topP: 0.95` et `temperature: 1`.
 - Le streaming utilise des credits finis et des chunks bornés pour éviter les tampons illimités ou les callbacks sans contre-pression.
 - Les tokens de usage proviennent directement des compteurs de cache KV et decode de Conversation dans LiteRT-LM, sans estimation par caractères. `durationMillis` mesure uniquement la génération du plugin et exclut la découverte, la liaison, la liste des modèles et la distribution de l'hôte.
@@ -137,7 +139,7 @@ Le plugin ne demande aucune permission réseau ou de stockage. Il lit le modèle
 
 ******
 
-- Reasoning, tools et structured JSON ne sont pas déclarés.
+- Reasoning et tools ne sont pas déclarés.
 - Les messages de rôle tool, les schemas d'outils, les tool calls et les tool results ne sont pas acceptés.
 - Aucune découverte réseau de modèles, aucun téléchargement, aucune inférence cloud et aucun flux credential ne sont fournis.
 - Aucun backend GPU ou NPU n'est déclaré. L'extension `.litertlm` seule ne garantit pas que le runtime LiteRT-LM actuel puisse charger le modèle.
@@ -167,6 +169,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Fonction` Transmission de `temperature`, `topK`, `topP` et `maxTokens` par le protocole On-Device AI 1.1 vers les contrôles d'échantillonnage et de tokens de sortie de LiteRT-LM
 * `Fonction` Rapport des nombres exacts de tokens d'entrée, de sortie et totaux de LiteRT-LM, avec la durée de génération mesurée côté fournisseur, via `ai.chat().usage` et les événements usage du streaming
 * `Fonction` Sessions persistantes du protocole On-Device AI 1.2 et réutilisation d'une Conversation multi-tour via `ai.session` d'AutoJs6 sans renvoyer l'historique précédent
+* `Fonction` Décodage natif contraint par JSON Schema de LiteRT-LM via `structuredJson` et `responseSchema` d'AutoJs6, pour les appels uniques, le streaming et les sessions persistantes, avec validation stricte du JSON complet
 * `Amélioration` Description du plugin, instructions et README en 10 langues mis à jour pour refléter la formalisation de la route de plugin local `ai.*`
 * `Amélioration` ROADMAP réécrite comme feuille de route de fonctionnalités avec des éléments vérifiables individuellement
 

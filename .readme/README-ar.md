@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI هي اضافة AutoJs6 الرسمية لتوليد النص بالذكاء الاصطناعي على الجهاز. تشغل نماذج LiteRT-LM المستوردة من المستخدم على المعالج, وتستقبل سجل رسائل نصية عادية, وتعيد نصا عاديا عبر جلسة بث متحكم بها. تتم جميع العمليات محليا: دون وصول للشبكة ودون رفع اي بيانات.
+On-Device AI هي اضافة AutoJs6 الرسمية لتوليد النص بالذكاء الاصطناعي على الجهاز. تشغل نماذج LiteRT-LM المستوردة من المستخدم على المعالج, وتستقبل سجل رسائل نصية عادية, وتعيد نصا عاديا او نص JSON مقيدا بواسطة schema عبر جلسة بث متحكم بها. تتم جميع العمليات محليا: دون وصول للشبكة ودون رفع اي بيانات.
 
 ******
 
@@ -51,6 +51,7 @@ On-Device AI هي اضافة AutoJs6 الرسمية لتوليد النص بال
 - فحص مساحة التطبيق الخاصة قبل فتح منتقي النظام، وعرض ميزانية الاستيراد الحالية والمساحة المتوقعة للنسخة الخاصة، وإعادة فحص الملف المحدد قبل نسخه.
 - إنشاء طلبات توليد محلية من سجل system و user و assistant بنص عادي.
 - تمرير `temperature` و `topK` و `topP` و `maxTokens` من `ai.ask` و `ai.chat` و `ai.stream` في AutoJs6 إلى LiteRT-LM.
+- تقييد الإخراج أصليا باستخدام JSON Schema في LiteRT-LM عبر `structuredJson` و `responseSchema` في AutoJs6; وتظل القيم المكتملة نص JSON صالحا لـ `JSON.parse`.
 - إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد لدى المزود عبر `ai.chat().usage` وأحداث usage للبث.
 - الاحتفاظ بسياق متعدد الجولات داخل Conversation أصلي واحد في LiteRT-LM عبر `ai.session` في AutoJs6, مع إرسال طلب المستخدم الجديد فقط في الجولات اللاحقة.
 - إعادة استخدام Engine المهيأ بحسب SHA-256 للنموذج لتجنب تكرار بدء التشغيل البارد في الطلبات المتتالية للنموذج نفسه.
@@ -69,8 +70,8 @@ On-Device AI هي اضافة AutoJs6 الرسمية لتوليد النص بال
 
 ```text
 model package: .litertlm
-input: text/plain message history
-output: streamed text/plain chunks
+input: text/plain message history plus application/json response schema
+output: streamed text/plain or application/json text chunks
 runtime: LiteRT-LM 0.15.0
 ```
 
@@ -92,7 +93,7 @@ protocol: V1.2
 required host build: 5276
 ```
 
-يعلن الملحق تنفيذ ON_DEVICE ووضع credential من نوع NONE. ويعلن قدرات `streaming` و `usage` و `persistent-session` مع إدخال وإخراج `text/plain`.
+يعلن الملحق تنفيذ ON_DEVICE ووضع credential من نوع NONE. ويعلن قدرات `streaming` و `usage` و `persistent-session` و `structured-json`, ويقبل رسائل `text/plain` و schema استجابة `application/json`, ويخرج نص `text/plain` او `application/json`.
 
 يلزم build المضيف 5276 أو أحدث. تتضمن الإصدارات متغيرات APK التالية: arm64-v8a, x86_64, universal.
 
@@ -102,7 +103,7 @@ required host build: 5276
 
 ******
 
-> في AutoJs6 (البنية 5276 وما بعدها) تدعم `ai.ask` و `ai.chat` و `ai.stream` مسار الاضافة المحلية. ينشئ `ai.session({ plugin: true })` جلسة Conversation مستمرة متعددة الجولات, وترسل استدعاءات `ask` و `chat` و `stream` اللاحقة طلب المستخدم الجديد فقط. يحافظ `ai.ask(messages, { plugin: true })` على ترتيب رسائل النص العادي بادوار `system` و `user` و `assistant`, ويجب ان تكون الرسالة الاخيرة بدور `user`. يعيد `ai.chat` أعداد الرموز الدقيقة في `usage` والمدة المقاسة في `usage.raw.durationMillis`; ويرسل `ai.stream` usage التراكمي نفسه قبل الاكتمال. مرر `plugin: true` لاختيار هذه الاضافة, ويمكن حذف معرف النموذج عند وجود نموذج واحد; كما تعدد `ai.models({ plugin: true })` النماذج المستوردة. عند عدم تثبيت الاضافة او تعطيلها في مركز الاضافات او عدم وجود نموذج, تتلقى السكربتات خطا واضحا. كما يدعم المحدد الصريح `plugin: { component, providerId, modelId }`.
+> في AutoJs6 (البنية 5276 وما بعدها) تدعم `ai.ask` و `ai.chat` و `ai.stream` مسار الاضافة المحلية. ينشئ `ai.session({ plugin: true })` جلسة Conversation مستمرة متعددة الجولات, وترسل استدعاءات `ask` و `chat` و `stream` اللاحقة طلب المستخدم الجديد فقط. يحافظ `ai.ask(messages, { plugin: true })` على ترتيب رسائل النص العادي بادوار `system` و `user` و `assistant`, ويجب ان تكون الرسالة الاخيرة بدور `user`. يعيد `ai.chat` أعداد الرموز الدقيقة في `usage` والمدة المقاسة في `usage.raw.durationMillis`; ويرسل `ai.stream` usage التراكمي نفسه قبل الاكتمال. مرر `plugin: true` لاختيار هذه الاضافة, ويمكن حذف معرف النموذج عند وجود نموذج واحد; كما تعدد `ai.models({ plugin: true })` النماذج المستوردة. عند عدم تثبيت الاضافة او تعطيلها في مركز الاضافات او عدم وجود نموذج, تتلقى السكربتات خطا واضحا. كما يدعم المحدد الصريح `plugin: { component, providerId, modelId }`. يقوم `responseSchema` بتمكين الإخراج المنظم ضمنيا; ويستخدم `structuredJson: true` من دون schema مخططا افتراضيا جذره object. يظل `ai.ask` و `ai.chat().text` يعيدان نص JSON, وتكون delta للبث نص JSON جزئيا, وتستخدم الجلسة المستمرة schema واحدة ثابتة في كل الجولات.
 
 ******
 
@@ -125,6 +126,7 @@ required host build: 5276
 - يحتفظ provider بمحرك Engine مهيأ واحد كحد أقصى. تعيد الطلبات المتتالية للنموذج نفسه استخدامه؛ ويحرر فور تبديل النموذج، أو بعد خمس دقائق من الخمول، أو بأمان بعد انتهاء الجلسة النشطة عندما يبلغ Android صراحة عن ضغط الذاكرة.
 - يثبت فحص النموذج فقط نجاح `Engine.initialize()` على الجهاز الحالي وبيئة التشغيل المضمنة؛ ولا يقيّم جودة المخرجات ويمكن تكراره بعد تغيير الجهاز أو بيئة التشغيل.
 - يعلن provider حد سياق يبلغ 256 KiB وحد إخراج يبلغ 64 KiB. يمكن للطلبات والنماذج فرض حدود أقل.
+- يجب ان تكون schema الاستجابة كائن JSON لا يتجاوز 64 KiB. الكلمات المفتاحية المدعومة هي التي ينفذها runtime LiteRT-LM/LLGuidance المضمن; ويجري تحليل الإخراج المكتمل والتحقق منه بصرامة, لذا يجب تخصيص `maxTokens` كاف للقيمة JSON كاملة.
 - يقبل `maxTokens` أعدادا صحيحة من 1 إلى 2,147,483,647. يجب أن تكون `temperature` محدودة وغير سالبة, وأن يكون `topK` عددا صحيحا موجبا, وأن تكون `topP` محدودة بين 0 و1. يؤدي ترك إعدادات sampling الثلاثة دون ضبط إلى الحفاظ على قيم النموذج أو المحرك; أما الضبط الجزئي فيملأ القيم المحذوفة بخط أساس LiteRT-LM: `topK: 1` و `topP: 0.95` و `temperature: 1`.
 - يستخدم streaming credits محدودة و chunks مقيدة لمنع buffer غير المحدود أو callbacks بلا ضغط عكسي.
 - تأتي أعداد رموز usage مباشرة من عدادات KV cache و decode في Conversation ضمن LiteRT-LM دون تقدير قائم على عدد المحارف. يقيس `durationMillis` استدعاء التوليد في الملحق فقط ولا يشمل اكتشاف المضيف أو الربط أو تعداد النماذج أو التوزيع.
@@ -137,7 +139,7 @@ required host build: 5276
 
 ******
 
-- لا يعلن reasoning أو tools أو structured JSON.
+- لا يعلن reasoning أو tools.
 - لا تقبل رسائل دور tool أو tool schemas أو tool calls أو tool results.
 - لا يوجد اكتشاف نماذج عبر الشبكة أو تنزيل أو استدلال cloud أو تدفق credential.
 - لا يعلن GPU أو NPU backend. امتداد `.litertlm` وحده لا يضمن أن runtime الحالي لـ LiteRT-LM يستطيع تحميل النموذج.
@@ -167,6 +169,7 @@ required host build: 5276
 * `ميزة` تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر بروتوكول On-Device AI 1.1 إلى عناصر تحكم sampling و output tokens في LiteRT-LM
 * `ميزة` إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد المقاسة لدى المزود عبر `ai.chat().usage` وأحداث usage للبث
 * `ميزة` إضافة جلسات مستمرة في بروتوكول On-Device AI 1.2 وإعادة استخدام Conversation متعددة الجولات عبر `ai.session` في AutoJs6 دون إعادة إرسال السجل السابق
+* `ميزة` إضافة فك ترميز LiteRT-LM أصلي مقيد بواسطة JSON Schema عبر `structuredJson` و `responseSchema` في AutoJs6, مع دعم الاستدعاء الواحد والبث والجلسات المستمرة والتحقق الصارم من JSON المكتمل
 * `تحسين` تحديث وصف الاضافة والتعليمات و README بعشر لغات بما يتوافق مع اضفاء الطابع الرسمي على مسار الاضافة المحلية `ai.*`
 * `تحسين` اعادة كتابة ROADMAP كخارطة طريق للميزات ببنود قابلة للتحقق كل على حدة
 

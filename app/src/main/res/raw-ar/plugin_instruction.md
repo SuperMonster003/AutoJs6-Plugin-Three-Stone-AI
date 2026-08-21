@@ -1,6 +1,6 @@
 # الذكاء الاصطناعي المحلي في AutoJs6
 
-يستورد هذا الملحق حزمة نموذج `.litertlm` محلية واحدة عبر Android Storage Access Framework (SAF), وينسخها إلى مساحة التطبيق الخاصة, ويشغل توليد LiteRT-LM على CPU فقط مع سجل بنص عادي وإخراج نص عبر streaming.
+يستورد هذا الملحق حزمة نموذج `.litertlm` محلية واحدة عبر Android Storage Access Framework (SAF), وينسخها إلى مساحة التطبيق الخاصة, ويشغل توليد LiteRT-LM على CPU فقط مع سجل بنص عادي وإخراج نص عادي او JSON مقيد بواسطة schema عبر streaming.
 
 يتطلب الملحق build 5276 أو أحدث من مضيف AutoJs6 و Android API 24 أو أحدث.
 
@@ -45,6 +45,28 @@ ai.ask("Hello", {
     topP: 0.9,
     maxTokens: 256,
 }).then((text) => console.log(text));
+```
+
+مرر `responseSchema` لتمكين التوليد المنظم الأصلي (`structuredJson: true` من دون schema يستخدم مخططا افتراضيا جذره object). يظل Promise يعيد نص JSON, لذلك لا تحلل إلا نتيجة `ai.ask` او `ai.chat().text` مكتملة; اما delta من `ai.stream` فهي نص JSON جزئي. تستخدم `ai.session` المستمرة schema واحدة ثابتة في كل الجولات:
+
+```javascript
+let schema = {
+    type: "object",
+    properties: {
+        answer: { type: "string" },
+        ok: { type: "boolean" },
+    },
+    required: [ "answer", "ok" ],
+};
+
+ai.ask("Return answer as OK and ok as true.", {
+    plugin: true,
+    responseSchema: schema,
+    maxTokens: 64,
+}).then((text) => {
+    let value = JSON.parse(text);
+    console.log(value.answer, value.ok);
+});
 ```
 
 عدد النماذج المستوردة او ثبت نموذجا صراحة عبر `plugin: { modelId: "..." }`:
@@ -446,7 +468,8 @@ try {
 - يقتصر استيراد النموذج على 8 GiB ويجب أن يترك 256 MiB على الأقل من المساحة الحرة.
 - يقتصر السياق على 256 KiB والإخراج على 64 KiB ويمكن تنشيط جلسة توليد واحدة فقط.
 - يقبل `maxTokens` (او `maximumOutputTokens` في البروتوكول المباشر) من 1 إلى 2,147,483,647 ويطبق دون اشتراط تقارير usage. يجب أن تكون `temperature` محدودة وغير سالبة و `topK` موجبة و `topP` محدودة بين 0 و1.
-- يعلن streaming و usage و `text/plain`. لا يدعم reasoning أو tools أو structured JSON.
+- يعلن streaming و usage والجلسات المستمرة و structured JSON و `text/plain` و `application/json`. لا يدعم reasoning او tools.
+- يجب ان تكون schema الاستجابة كائن JSON لا يتجاوز 64 KiB; الكلمات المفتاحية المدعومة هي التي ينفذها runtime LiteRT-LM/LLGuidance المضمن. يجري تحليل الإخراج المنظم المكتمل والتحقق منه بصرامة, لذا يجب تخصيص `maxTokens` كاف للقيمة JSON كاملة.
 - تأتي أعداد رموز usage من عدادات KV cache و decode في Conversation ضمن LiteRT-LM دون تقدير بالمحارف. يقيس `durationMillis` توليد المزود ولا يشمل اكتشاف المضيف أو الربط أو تعداد النماذج أو التوزيع.
 - لا يطلب الملحق إذن الشبكة أو التخزين.
 - لا يمكن ربط خدمة provider إلا من مضيف AutoJs6 ذي التوقيع نفسه.

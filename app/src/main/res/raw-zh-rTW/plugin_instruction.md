@@ -1,6 +1,6 @@
 # AutoJs6 裝置端 AI
 
-此外掛透過 Android Storage Access Framework (SAF) 匯入一個本機 `.litertlm` 模型套件, 將其複製到應用程式私人儲存空間, 並使用 CPU-only LiteRT-LM 根據純文字歷史產生串流純文字.
+此外掛透過 Android Storage Access Framework (SAF) 匯入一個本機 `.litertlm` 模型套件, 將其複製到應用程式私人儲存空間, 並使用 CPU-only LiteRT-LM 根據純文字歷史產生串流純文字或受 schema 約束的 JSON 文字.
 
 外掛需要 AutoJs6 主程式建置版本 5276 或更高版本, 以及 Android API 24 或更高版本.
 
@@ -45,6 +45,28 @@ ai.ask("Hello", {
     topP: 0.9,
     maxTokens: 256,
 }).then((text) => console.log(text));
+```
+
+傳入 `responseSchema` 即可啟用原生結構化生成 (`structuredJson: true` 未提供 schema 時使用預設的物件根 schema). Promise 仍解析為 JSON 文字, 因此只能解析完整的 `ai.ask` 或 `ai.chat().text` 結果; `ai.stream` 的 delta 是未完整的 JSON 文字. 持久 `ai.session` 會在所有輪次固定使用同一 schema:
+
+```javascript
+let schema = {
+    type: "object",
+    properties: {
+        answer: { type: "string" },
+        ok: { type: "boolean" },
+    },
+    required: [ "answer", "ok" ],
+};
+
+ai.ask("Return answer as OK and ok as true.", {
+    plugin: true,
+    responseSchema: schema,
+    maxTokens: 64,
+}).then((text) => {
+    let value = JSON.parse(text);
+    console.log(value.answer, value.ok);
+});
 ```
 
 列舉已匯入模型, 或透過 `plugin: { modelId: "..." }` 顯式固定模型:
@@ -446,7 +468,8 @@ try {
 - 模型匯入上限為 8 GiB, 完成後必須至少保留 256 MiB 可用空間.
 - 內容上限為 256 KiB, 輸出上限為 64 KiB, 同一時間僅允許一個生成工作階段.
 - `maxTokens` (原始協定欄位為 `maximumOutputTokens`) 接受 1 至 2,147,483,647, 且無需 usage 上報即可執行. `temperature` 必須為非負有限數, `topK` 必須為正數, `topP` 必須為 0 至 1 的有限數.
-- 宣告 streaming, usage 與 `text/plain`. 不支援 reasoning, tools 與 structured JSON.
+- 宣告 streaming, usage, persistent session, structured JSON, `text/plain` 與 `application/json`. 不支援 reasoning 與 tools.
+- 回應 schema 必須是 JSON 物件且不超過 64 KiB; 可用關鍵字以目前內建 LiteRT-LM/LLGuidance 執行階段為準. 外掛會嚴格解析並驗證完整結構化輸出, 因此應為整個 JSON 值預留足夠的 `maxTokens`.
 - Usage token 數來自 LiteRT-LM Conversation 的 KV cache 與 decode 計數, 不使用字元數估算. `durationMillis` 只測量外掛生成呼叫, 不包含宿主探索, 綁定, 模型列舉和分派時間.
 - 外掛不要求網路或儲存權限.
 - 僅允許同簽章 AutoJs6 主程式綁定 provider 服務.

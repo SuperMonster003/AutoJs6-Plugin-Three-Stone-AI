@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI (设备端 AI) 是 AutoJs6 的官方设备端 AI 文本生成插件. 它在 CPU 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本. 全部推理在本地完成, 不联网, 不上传任何数据.
+On-Device AI (设备端 AI) 是 AutoJs6 的官方设备端 AI 文本生成插件. 它在 CPU 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 全部推理在本地完成, 不联网, 不上传任何数据.
 
 ******
 
@@ -51,6 +51,7 @@ On-Device AI (设备端 AI) 是 AutoJs6 的官方设备端 AI 文本生成插件
 - 打开系统文件选择器前预检私有存储空间, 显示当前导入预算和私有副本预计占用, 并在复制前再次检查所选文件.
 - 使用纯文本 system, user 和 assistant 历史创建本地生成请求.
 - 将 AutoJs6 `ai.ask`, `ai.chat` 和 `ai.stream` 的 `temperature`, `topK`, `topP` 与 `maxTokens` 透传到 LiteRT-LM.
+- 通过 AutoJs6 `structuredJson` 和 `responseSchema` 启用 LiteRT-LM 原生 JSON Schema 约束解码; 完整结果仍为可供 `JSON.parse` 解析的 JSON 文本.
 - 通过 AutoJs6 `ai.chat().usage` 和流式 usage 事件返回 LiteRT-LM 精确的输入, 输出及总 token 数, 以及插件侧生成耗时.
 - 通过 AutoJs6 `ai.session` 在同一个 LiteRT-LM 原生 Conversation 中保留多轮上下文, 后续轮次只发送新的用户提示词.
 - 按模型 SHA-256 复用已初始化 Engine, 消除同模型连续请求的重复冷启动.
@@ -69,8 +70,8 @@ On-Device AI (设备端 AI) 是 AutoJs6 的官方设备端 AI 文本生成插件
 
 ```text
 model package: .litertlm
-input: text/plain message history
-output: streamed text/plain chunks
+input: text/plain message history plus application/json response schema
+output: streamed text/plain or application/json text chunks
 runtime: LiteRT-LM 0.15.0
 ```
 
@@ -92,7 +93,7 @@ protocol: V1.2
 required host build: 5276
 ```
 
-插件声明 ON_DEVICE 执行位置和 NONE credential 模式. 它声明 `streaming`, `usage` 与 `persistent-session` 能力及 `text/plain` 输入输出.
+插件声明 ON_DEVICE 执行位置和 NONE credential 模式. 它声明 `streaming`, `usage`, `persistent-session` 与 `structured-json` 能力, 接受 `text/plain` 消息输入和 `application/json` 响应 schema, 并输出 `text/plain` 或 `application/json` 文本.
 
 需要宿主构建版本 5276 或更高版本. 发布产物包含 arm64-v8a, x86_64, universal APK.
 
@@ -102,7 +103,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (构建 5276 及以上) 的 `ai.ask`, `ai.chat` 与 `ai.stream` 支持本地插件路由. `ai.session({ plugin: true })` 可创建持久多轮 Conversation, 后续 `ask`, `chat` 与 `stream` 调用只发送新的用户提示词. `ai.ask(messages, { plugin: true })` 会按顺序保留纯文本 `system`, `user` 与 `assistant` 消息, 且最后一条消息必须为 `user`. `ai.chat` 会在 `usage` 中返回精确 token 数, 并在 `usage.raw.durationMillis` 中返回实测生成耗时; `ai.stream` 会在完成前发送同一份累计 usage. 传入 `plugin: true` 即选择本插件, 单模型场景可省略模型 ID; `ai.models({ plugin: true })` 可枚举已导入模型. 插件未安装, 未在插件中心启用或未导入模型时, 脚本会收到明确的错误提示. 也可通过 `plugin: { component, providerId, modelId }` 显式固定组件.
+> AutoJs6 (构建 5276 及以上) 的 `ai.ask`, `ai.chat` 与 `ai.stream` 支持本地插件路由. `ai.session({ plugin: true })` 可创建持久多轮 Conversation, 后续 `ask`, `chat` 与 `stream` 调用只发送新的用户提示词. `ai.ask(messages, { plugin: true })` 会按顺序保留纯文本 `system`, `user` 与 `assistant` 消息, 且最后一条消息必须为 `user`. `ai.chat` 会在 `usage` 中返回精确 token 数, 并在 `usage.raw.durationMillis` 中返回实测生成耗时; `ai.stream` 会在完成前发送同一份累计 usage. 传入 `plugin: true` 即选择本插件, 单模型场景可省略模型 ID; `ai.models({ plugin: true })` 可枚举已导入模型. 插件未安装, 未在插件中心启用或未导入模型时, 脚本会收到明确的错误提示. 也可通过 `plugin: { component, providerId, modelId }` 显式固定组件. `responseSchema` 会隐式启用结构化输出; 仅设置 `structuredJson: true` 时使用默认的对象根 schema. `ai.ask` 和 `ai.chat().text` 仍返回 JSON 文本, 流式 delta 是不完整的 JSON 片段, 持久会话则在所有轮次固定使用同一 schema.
 
 ******
 
@@ -125,6 +126,7 @@ required host build: 5276
 - Provider 最多缓存一个已初始化 Engine. 同模型连续请求会复用它; 切换模型时立即释放, 空闲 5 分钟后释放, 收到系统明确内存压力通知时则在当前活动会话结束后安全释放.
 - 模型自检仅证明 `Engine.initialize()` 能在当前设备和内置运行时中成功; 它不评估输出质量, 设备或运行时变化后可重新检查.
 - Provider 声明的上下文上限为 256 KiB, 输出上限为 64 KiB, 请求和模型还可施加更低上限.
+- 响应 schema 必须是 JSON 对象且不超过 64 KiB. 可用关键字以当前内置 LiteRT-LM/LLGuidance 运行时为准; 插件会严格解析并验证完整输出, 因此应为整个 JSON 值预留足够的 `maxTokens`.
 - `maxTokens` 接受 1 至 2,147,483,647 的整数. `temperature` 必须为非负有限数, `topK` 必须为正整数, `topP` 必须为 0 至 1 的有限数. 三项采样参数全部省略时保留模型或引擎默认值; 部分覆盖时, 未设置项使用 LiteRT-LM 基线 `topK: 1`, `topP: 0.95`, `temperature: 1`.
 - 流式输出使用有限 credit 和有界 chunk, 防止无限制缓冲或无背压回调.
 - Usage token 数直接来自 LiteRT-LM Conversation 的 KV cache 与 decode 计数, 不做字符数估算. `durationMillis` 只测量插件生成调用, 不包含宿主发现, 绑定, 模型枚举和分发时间.
@@ -137,7 +139,7 @@ required host build: 5276
 
 ******
 
-- 不声明 reasoning, tools 或 structured JSON 能力.
+- 不声明 reasoning 或 tools 能力.
 - 不接受 tool 角色消息, tool schema, tool call 或 tool result.
 - 不提供联网模型发现, 模型下载, 云端推理或 credential 流程.
 - 不声明 GPU 或 NPU backend. `.litertlm` 扩展名本身不保证模型能被当前 LiteRT-LM runtime 加载.
@@ -167,6 +169,7 @@ required host build: 5276
 * `新增` 通过 On-Device AI 协议 1.1 将 `temperature`, `topK`, `topP` 与 `maxTokens` 透传至 LiteRT-LM 采样和输出 token 控制
 * `新增` 通过 AutoJs6 `ai.chat().usage` 和流式 usage 事件返回 LiteRT-LM 精确的输入, 输出及总 token 数, 以及插件实测生成耗时
 * `新增` On-Device AI 协议 1.2 持久会话及 AutoJs6 `ai.session` 多轮 Conversation 复用, 后续轮次无需重传既有历史
+* `新增` 通过 AutoJs6 `structuredJson` 与 `responseSchema` 启用 LiteRT-LM 原生 JSON Schema 约束解码, 支持单次调用, 流式输出和持久会话, 并严格验证完整 JSON
 * `优化` 更新插件描述, 使用说明及 10 种语言的 README, 与宿主 `ai.*` 本地插件路由的正式化保持一致
 * `优化` 重写 ROADMAP 为可逐项勾选的功能路线图
 

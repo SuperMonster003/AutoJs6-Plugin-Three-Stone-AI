@@ -1,6 +1,6 @@
 # AutoJs6 On-Device AI
 
-This plugin imports one local `.litertlm` model package through the Android Storage Access Framework (SAF), copies it into app-private storage, and runs CPU-only LiteRT-LM generation with plain-text history and streaming text output.
+This plugin imports one local `.litertlm` model package through the Android Storage Access Framework (SAF), copies it into app-private storage, and runs CPU-only LiteRT-LM generation with plain-text history plus streaming plain-text or schema-constrained JSON output.
 
 The plugin requires AutoJs6 host build 5276 or later and Android API 24 or later.
 
@@ -45,6 +45,28 @@ ai.ask("Hello", {
     topP: 0.9,
     maxTokens: 256,
 }).then((text) => console.log(text));
+```
+
+Pass `responseSchema` to enable native structured generation (`structuredJson: true` without a schema uses a default object-root schema). The promise still resolves to JSON text, so parse only a completed `ai.ask` or `ai.chat().text` result; `ai.stream` deltas are partial JSON text. A persistent `ai.session` keeps one fixed schema for all turns:
+
+```javascript
+let schema = {
+    type: "object",
+    properties: {
+        answer: { type: "string" },
+        ok: { type: "boolean" },
+    },
+    required: [ "answer", "ok" ],
+};
+
+ai.ask("Return answer as OK and ok as true.", {
+    plugin: true,
+    responseSchema: schema,
+    maxTokens: 64,
+}).then((text) => {
+    let value = JSON.parse(text);
+    console.log(value.answer, value.ok);
+});
 ```
 
 List imported models, or pin one explicitly with `plugin: { modelId: "..." }`:
@@ -446,7 +468,8 @@ Safety and operational limits:
 - Model import is limited to 8 GiB and must leave at least 256 MiB of free space.
 - Context is limited to 256 KiB, output is limited to 64 KiB, and only one generation session may be active.
 - `maxTokens` (or raw-protocol `maximumOutputTokens`) accepts 1 through 2,147,483,647 and is enforced without requiring usage reporting. `temperature` must be finite and non-negative, `topK` positive, and `topP` finite from 0 through 1.
-- Streaming, usage, and `text/plain` are declared. Reasoning, tools, and structured JSON are unsupported.
+- Streaming, usage, persistent sessions, structured JSON, `text/plain`, and `application/json` are declared. Reasoning and tools are unsupported.
+- A response schema must be a JSON object no larger than 64 KiB; supported keywords follow the bundled LiteRT-LM/LLGuidance runtime. Completed structured output is parsed and validated strictly, so provide enough `maxTokens` for the entire JSON value.
 - Usage token counts come from LiteRT-LM Conversation KV-cache and decode counters without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, model listing, and dispatch time.
 - The plugin requests no network or storage permission.
 - Only the same-signature AutoJs6 host may bind the provider service.

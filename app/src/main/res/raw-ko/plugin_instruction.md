@@ -1,6 +1,6 @@
 # AutoJs6 온디바이스 AI
 
-이 플러그인은 Android Storage Access Framework (SAF)로 로컬 `.litertlm` 모델 패키지를 가져와 앱 전용 저장소에 복사합니다. CPU-only LiteRT-LM으로 일반 텍스트 기록을 처리하고 텍스트를 스트리밍 출력합니다.
+이 플러그인은 Android Storage Access Framework (SAF)로 로컬 `.litertlm` 모델 패키지를 가져와 앱 전용 저장소에 복사합니다. CPU-only LiteRT-LM으로 일반 텍스트 기록을 처리하고 일반 텍스트 또는 schema 제약 JSON 텍스트를 스트리밍 출력합니다.
 
 AutoJs6 호스트 build 5276 이상과 Android API 24 이상이 필요합니다.
 
@@ -45,6 +45,28 @@ ai.ask("Hello", {
     topP: 0.9,
     maxTokens: 256,
 }).then((text) => console.log(text));
+```
+
+`responseSchema`를 전달하면 네이티브 구조화 생성이 활성화됩니다 (`structuredJson: true`만 지정하고 schema를 생략하면 기본 object-root schema 사용). Promise는 계속 JSON 텍스트로 완료되므로 완성된 `ai.ask` 또는 `ai.chat().text` 결과만 parse하십시오. `ai.stream` delta는 부분 JSON 텍스트입니다. 영구 `ai.session`은 모든 턴에 하나의 고정 schema를 사용합니다:
+
+```javascript
+let schema = {
+    type: "object",
+    properties: {
+        answer: { type: "string" },
+        ok: { type: "boolean" },
+    },
+    required: [ "answer", "ok" ],
+};
+
+ai.ask("Return answer as OK and ok as true.", {
+    plugin: true,
+    responseSchema: schema,
+    maxTokens: 64,
+}).then((text) => {
+    let value = JSON.parse(text);
+    console.log(value.answer, value.ok);
+});
 ```
 
 가져온 모델을 열거하거나 `plugin: { modelId: "..." }`로 명시적으로 고정할 수 있습니다:
@@ -446,7 +468,8 @@ try {
 - 모델 가져오기 상한은 8 GiB이며 완료 후 최소 256 MiB의 여유 공간이 필요합니다.
 - 컨텍스트 상한은 256 KiB, 출력 상한은 64 KiB이며 동시에 활성화할 수 있는 생성 세션은 1개입니다.
 - `maxTokens`(직접 protocol에서는 `maximumOutputTokens`)는 1부터 2,147,483,647까지이며 usage reporting 없이 적용됩니다. `temperature`는 유한한 0 이상의 값, `topK`는 양수, `topP`는 0부터 1까지의 유한한 값이어야 합니다.
-- Streaming, usage 및 `text/plain`을 선언합니다. Reasoning, tools 및 structured JSON은 지원하지 않습니다.
+- Streaming, usage, 영구 세션, structured JSON, `text/plain`, `application/json`을 선언합니다. Reasoning 및 tools는 지원하지 않습니다.
+- 응답 schema는 64 KiB 이하의 JSON object여야 하며 지원 keyword는 포함된 LiteRT-LM/LLGuidance 런타임 구현을 따릅니다. 완성된 구조화 출력은 엄격히 parse 및 검증하므로 전체 JSON 값에 충분한 `maxTokens`를 확보해야 합니다.
 - Usage token 수는 LiteRT-LM Conversation의 KV cache 및 decode 카운터에서 가져오며 문자 수로 추정하지 않습니다. `durationMillis`는 공급자 생성 호출만 측정하고 호스트 탐색, 바인딩, 모델 열거 및 디스패치 시간은 제외합니다.
 - 네트워크 또는 저장소 권한을 요청하지 않습니다.
 - 동일한 서명의 AutoJs6 호스트만 provider 서비스에 bind할 수 있습니다.

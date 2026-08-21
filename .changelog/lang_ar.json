@@ -12,7 +12,8 @@
         "التوافق مع المحدد المختصر `plugin: true` لـ `ai.ask`/`ai.chat`/`ai.stream` وتعداد النماذج `ai.models` في AutoJs6",
         "تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر بروتوكول On-Device AI 1.1 إلى عناصر تحكم sampling و output tokens في LiteRT-LM",
         "إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد المقاسة لدى المزود عبر `ai.chat().usage` وأحداث usage للبث",
-        "إضافة جلسات مستمرة في بروتوكول On-Device AI 1.2 وإعادة استخدام Conversation متعددة الجولات عبر `ai.session` في AutoJs6 دون إعادة إرسال السجل السابق"
+        "إضافة جلسات مستمرة في بروتوكول On-Device AI 1.2 وإعادة استخدام Conversation متعددة الجولات عبر `ai.session` في AutoJs6 دون إعادة إرسال السجل السابق",
+        "إضافة فك ترميز LiteRT-LM أصلي مقيد بواسطة JSON Schema عبر `structuredJson` و `responseSchema` في AutoJs6, مع دعم الاستدعاء الواحد والبث والجلسات المستمرة والتحقق الصارم من JSON المكتمل"
       ],
       "improvement": [
         "تحديث وصف الاضافة والتعليمات و README بعشر لغات بما يتوافق مع اضفاء الطابع الرسمي على مسار الاضافة المحلية `ai.*`",

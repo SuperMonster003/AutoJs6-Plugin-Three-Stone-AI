@@ -13,6 +13,7 @@
 * `기능` On-Device AI 프로토콜 1.1을 통해 `temperature`, `topK`, `topP`, `maxTokens`를 LiteRT-LM sampling 및 출력 token 제어까지 전달
 * `기능` LiteRT-LM의 정확한 입력, 출력, 전체 token 수와 공급자 측에서 측정한 생성 시간을 `ai.chat().usage` 및 스트림 usage 이벤트로 보고
 * `기능` On-Device AI 프로토콜 1.2 영구 세션과 AutoJs6 `ai.session` 여러 턴 Conversation 재사용을 추가하여 이전 기록 재전송 제거
+* `기능` AutoJs6 `structuredJson`과 `responseSchema`를 통한 LiteRT-LM 네이티브 JSON Schema 제약 디코딩을 추가하고 단일 호출, 스트리밍, 영구 세션 및 완성 JSON의 엄격한 검증을 지원
 * `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신
 * `개선` ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성
 

@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを CPU 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません.
+On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを CPU 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません.
 
 ******
 
@@ -51,6 +51,7 @@ On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI 
 - システムピッカーを開く前にプライベートストレージを事前確認し, 現在のインポート予算とプライベートコピーの推定使用量を表示し, コピー前に選択ファイルを再確認します.
 - プレーンテキストの system, user, assistant 履歴からローカル生成リクエストを作成します.
 - AutoJs6 の `ai.ask`, `ai.chat`, `ai.stream` から `temperature`, `topK`, `topP`, `maxTokens` を LiteRT-LM まで渡します.
+- AutoJs6 の `structuredJson` と `responseSchema` により LiteRT-LM ネイティブ JSON Schema 制約デコードを使用し, 完成した値は `JSON.parse` 用の JSON テキストとして返します.
 - LiteRT-LM の正確な入力, 出力, 合計 token 数とプロバイダー側の生成時間を, AutoJs6 の `ai.chat().usage` とストリーム usage イベントで返します.
 - AutoJs6 の `ai.session` で 1 つの LiteRT-LM ネイティブ Conversation に複数ターンのコンテキストを保持し, 2 ターン目以降は新しいユーザープロンプトだけを送信します.
 - モデルの SHA-256 をキーに初期化済み Engine を再利用し, 同じモデルへの連続リクエストで繰り返すコールドスタートをなくします.
@@ -69,8 +70,8 @@ On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI 
 
 ```text
 model package: .litertlm
-input: text/plain message history
-output: streamed text/plain chunks
+input: text/plain message history plus application/json response schema
+output: streamed text/plain or application/json text chunks
 runtime: LiteRT-LM 0.15.0
 ```
 
@@ -92,7 +93,7 @@ protocol: V1.2
 required host build: 5276
 ```
 
-プラグインは ON_DEVICE 実行と NONE credential モードを宣言します. `streaming`, `usage`, `persistent-session` 機能を宣言し, 入出力は `text/plain` です.
+プラグインは ON_DEVICE 実行と NONE credential モードを宣言します. `streaming`, `usage`, `persistent-session`, `structured-json` 機能を宣言し, `text/plain` メッセージと `application/json` 応答 schema を受け取り, `text/plain` または `application/json` テキストを出力します.
 
 ホスト build 5276 以降が必要です. リリースには arm64-v8a, x86_64, universal APK variant が含まれます.
 
@@ -102,7 +103,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応. `ai.session({ plugin: true })` は永続的な複数ターン Conversation を作成し, その後の `ask`, `chat`, `stream` は新しいユーザープロンプトだけを送信します. `ai.ask(messages, { plugin: true })` はプレーンテキストの `system`, `user`, `assistant` メッセージを順序どおり保持し, 最後のメッセージは `user` である必要があります. `ai.chat` は正確な token 数を `usage` に, 実測生成時間を `usage.raw.durationMillis` に返し, `ai.stream` は完了前に同じ累積 usage を送信します. `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です.
+> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応. `ai.session({ plugin: true })` は永続的な複数ターン Conversation を作成し, その後の `ask`, `chat`, `stream` は新しいユーザープロンプトだけを送信します. `ai.ask(messages, { plugin: true })` はプレーンテキストの `system`, `user`, `assistant` メッセージを順序どおり保持し, 最後のメッセージは `user` である必要があります. `ai.chat` は正確な token 数を `usage` に, 実測生成時間を `usage.raw.durationMillis` に返し, `ai.stream` は完了前に同じ累積 usage を送信します. `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です. `responseSchema` は構造化出力を暗黙に有効化し, schema なしの `structuredJson: true` は既定の object-root schema を使用します. `ai.ask` と `ai.chat().text` は引き続き JSON テキストを返し, ストリーム delta は部分的な JSON テキストです. 永続セッションでは全ターンで 1 つの固定 schema を使用します.
 
 ******
 
@@ -125,6 +126,7 @@ required host build: 5276
 - Provider がキャッシュする初期化済み Engine は最大 1 つです. 同じモデルへの連続リクエストでは再利用し, モデル切り替え時は直ちに, 5 分間のアイドル後は自動的に, Android から明示的なメモリ圧迫通知を受けた場合は有効なセッション終了後に安全に解放します.
 - モデルチェックが確認するのは, 現在のデバイスと同梱ランタイムで `Engine.initialize()` が成功することだけです. 出力品質は評価せず, デバイスまたはランタイムの変更後に再チェックできます.
 - Provider が宣言するコンテキスト上限は 256 KiB, 出力上限は 64 KiB です. リクエストとモデルはさらに低い上限を設定できます.
+- 応答 schema は 64 KiB 以下の JSON object である必要があります. 対応 keyword は同梱 LiteRT-LM/LLGuidance ランタイムの実装に従います. 完成出力は厳密に parse と検証を行うため, JSON 値全体に十分な `maxTokens` を確保してください.
 - `maxTokens` は 1 から 2,147,483,647 までの整数です. `temperature` は有限かつ 0 以上, `topK` は正の整数, `topP` は 0 から 1 の有限値である必要があります. 3 つの sampling 設定をすべて省略すると model/engine の既定値を維持し, 一部だけ指定すると未指定項目を LiteRT-LM baseline の `topK: 1`, `topP: 0.95`, `temperature: 1` で補完します.
 - ストリーミングは有限の credit と制限付き chunk を使い, 無制限なバッファやバックプレッシャーなしの callback を防ぎます.
 - Usage token 数は LiteRT-LM Conversation の KV cache と decode カウンターから直接取得し, 文字数による推定は行いません. `durationMillis` はプラグイン生成呼び出しのみを測定し, ホストの探索, バインド, モデル列挙, ディスパッチ時間を含みません.
@@ -137,7 +139,7 @@ required host build: 5276
 
 ******
 
-- Reasoning, tools, structured JSON は宣言しません.
+- Reasoning と tools は宣言しません.
 - Tool role メッセージ, tool schema, tool call, tool result は受け付けません.
 - ネットワークでのモデル探索, モデルダウンロード, cloud 推論, credential フローはありません.
 - GPU または NPU backend は宣言しません. `.litertlm` 拡張子だけでは現在の LiteRT-LM runtime がモデルを読み込める保証にはなりません.
@@ -167,6 +169,7 @@ required host build: 5276
 * `機能` On-Device AI プロトコル 1.1 により `temperature`, `topK`, `topP`, `maxTokens` を LiteRT-LM の sampling と出力 token 制御まで伝達
 * `機能` LiteRT-LM の正確な入力, 出力, 合計 token 数とプロバイダー実測の生成時間を `ai.chat().usage` とストリーム usage イベントで報告
 * `機能` On-Device AI プロトコル 1.2 の永続セッションと AutoJs6 `ai.session` による複数ターン Conversation 再利用に対応し, 以前の履歴の再送信を不要化
+* `機能` AutoJs6 の `structuredJson` と `responseSchema` による LiteRT-LM ネイティブ JSON Schema 制約デコードを追加し, 単発呼び出し, ストリーミング, 永続セッションと完成 JSON の厳密な検証に対応
 * `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合
 * `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 

@@ -13,6 +13,7 @@
 * `Función` Transferencia de `temperature`, `topK`, `topP` y `maxTokens` mediante el protocolo On-Device AI 1.1 a los controles de muestreo y tokens de salida de LiteRT-LM
 * `Función` Informe de los recuentos exactos de tokens de entrada, salida y totales de LiteRT-LM, junto con la duración de generación medida por el proveedor, mediante `ai.chat().usage` y eventos usage de streaming
 * `Función` Sesiones persistentes del protocolo On-Device AI 1.2 y reutilización de Conversation de varios turnos con `ai.session` de AutoJs6 sin reenviar el historial anterior
+* `Función` Decodificación nativa restringida por JSON Schema de LiteRT-LM mediante `structuredJson` y `responseSchema` de AutoJs6, compatible con llamadas únicas, streaming y sesiones persistentes, con validación estricta del JSON completo
 * `Mejora` Descripción del plugin, instrucciones y README en 10 idiomas actualizados conforme a la formalización de la ruta de plugin local `ai.*`
 * `Mejora` ROADMAP reescrito como hoja de ruta de funciones con elementos verificables individualmente
 

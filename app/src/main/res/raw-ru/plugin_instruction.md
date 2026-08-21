@@ -1,6 +1,6 @@
 # AutoJs6 ИИ на устройстве
 
-Этот плагин импортирует один локальный пакет модели `.litertlm` через Android Storage Access Framework (SAF), копирует его в закрытое хранилище приложения и выполняет генерацию LiteRT-LM только на CPU с историей в обычном тексте и потоковым текстовым выводом.
+Этот плагин импортирует один локальный пакет модели `.litertlm` через Android Storage Access Framework (SAF), копирует его в закрытое хранилище приложения и выполняет генерацию LiteRT-LM только на CPU с историей в обычном тексте и потоковым выводом обычного текста или JSON с ограничением schema.
 
 Плагину требуется build хоста AutoJs6 5276 или новее и Android API 24 или новее.
 
@@ -45,6 +45,28 @@ ai.ask("Hello", {
     topP: 0.9,
     maxTokens: 256,
 }).then((text) => console.log(text));
+```
+
+Передайте `responseSchema`, чтобы включить нативную структурированную генерацию (`structuredJson: true` без schema использует schema с корневым объектом по умолчанию). Promise по-прежнему возвращает текст JSON, поэтому разбирайте только завершенный результат `ai.ask` или `ai.chat().text`; delta из `ai.stream` являются частичным текстом JSON. Постоянный `ai.session` использует одну фиксированную schema во всех ходах:
+
+```javascript
+let schema = {
+    type: "object",
+    properties: {
+        answer: { type: "string" },
+        ok: { type: "boolean" },
+    },
+    required: [ "answer", "ok" ],
+};
+
+ai.ask("Return answer as OK and ok as true.", {
+    plugin: true,
+    responseSchema: schema,
+    maxTokens: 64,
+}).then((text) => {
+    let value = JSON.parse(text);
+    console.log(value.answer, value.ok);
+});
 ```
 
 Перечисление импортированных моделей или явное закрепление через `plugin: { modelId: "..." }`:
@@ -446,7 +468,8 @@ try {
 - Импорт модели ограничен 8 GiB и должен оставить не менее 256 MiB свободного места.
 - Контекст ограничен 256 KiB, вывод 64 KiB, одновременно активен только один сеанс генерации.
 - `maxTokens` (или `maximumOutputTokens` в прямом протоколе) принимает значения от 1 до 2 147 483 647 и применяется без обязательного отчёта usage. `temperature` должен быть конечным и неотрицательным, `topK` положительным, а `topP` конечным от 0 до 1.
-- Объявлены streaming, usage и `text/plain`. Reasoning, tools и structured JSON не поддерживаются.
+- Объявлены streaming, usage, постоянные сеансы, structured JSON, `text/plain` и `application/json`. Reasoning и tools не поддерживаются.
+- Schema ответа должна быть объектом JSON размером не более 64 KiB; поддерживаются ключевые слова, реализованные во встроенной среде LiteRT-LM/LLGuidance. Завершенный структурированный вывод строго разбирается и проверяется, поэтому для всего значения JSON требуется достаточный `maxTokens`.
 - Количество токенов usage берется из счетчиков KV cache и decode объекта Conversation LiteRT-LM без оценки по символам. `durationMillis` измеряет генерацию провайдера и не включает обнаружение, привязку, перечисление моделей и диспетчеризацию хоста.
 - Плагин не запрашивает разрешения сети или хранилища.
 - Только хост AutoJs6 с той же подписью может привязаться к службе provider.

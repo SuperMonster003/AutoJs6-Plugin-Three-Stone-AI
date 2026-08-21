@@ -47,7 +47,7 @@ ai.ask("Hello", {
     temperature: 0.7,
     topK: 40,
     topP: 0.9,
-    maxTokens: 256,
+    // maxTokens: 1024,
 }).then((text) => console.log(text));
 ```
 
@@ -66,7 +66,6 @@ let schema = {
 ai.ask("Return answer as OK and ok as true.", {
     plugin: true,
     responseSchema: schema,
-    maxTokens: 64,
 }).then((text) => {
     let value = JSON.parse(text);
     console.log(value.answer, value.ok);
@@ -372,8 +371,8 @@ try {
         false,  // reasoning
         false,  // structured JSON
         true,   // usage
-        4096,   // 最大输出字节
-        java.lang.Long.valueOf("256"), // 最大输出 token
+        65536,  // 插件输出安全上限 64 KiB
+        null,   // 不额外限制 token, 使用模型/引擎默认值
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
@@ -474,6 +473,7 @@ try {
 - モデルのインポート上限は 8 GiB で, 完了後に 256 MiB 以上の空き容量が必要です.
 - コンテキスト上限は 256 KiB, 出力上限は 64 KiB で, 同時に有効な生成セッションは 1 つだけです.
 - `maxTokens` (direct protocol では `maximumOutputTokens`) は 1 から 2,147,483,647 までで, usage reporting なしで適用されます. `temperature` は有限かつ 0 以上, `topK` は正, `topP` は 0 から 1 の有限値である必要があります.
+- `maxTokens` を省略した場合 (direct protocol では `maximumOutputTokens` を `null` にした場合), モデルまたは engine の既定値を使用しますが, provider の 64 KiB 出力安全上限は引き続き適用されます.
 - Streaming, usage, 永続セッション, structured JSON, `text/plain`, `application/json` を宣言します. Reasoning と tools は非対応です.
 - 応答 schema は 64 KiB 以下の JSON object である必要があり, 対応 keyword は同梱 LiteRT-LM/LLGuidance ランタイムの実装に従います. 完成した構造化出力は厳密に parse と検証を行うため, JSON 値全体に十分な `maxTokens` を確保してください.
 - Usage token 数は LiteRT-LM Conversation の KV cache と decode カウンターから取得し, 文字数では推定しません. `durationMillis` はプロバイダー生成呼び出しのみを測定し, ホストの探索, バインド, モデル列挙, ディスパッチ時間を含みません.

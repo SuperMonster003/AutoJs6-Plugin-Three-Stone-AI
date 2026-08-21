@@ -47,7 +47,7 @@ ai.ask("Hello", {
     temperature: 0.7,
     topK: 40,
     topP: 0.9,
-    maxTokens: 256,
+    // maxTokens: 1024,
 }).then((text) => console.log(text));
 ```
 
@@ -66,7 +66,6 @@ let schema = {
 ai.ask("Return answer as OK and ok as true.", {
     plugin: true,
     responseSchema: schema,
-    maxTokens: 64,
 }).then((text) => {
     let value = JSON.parse(text);
     console.log(value.answer, value.ok);
@@ -372,8 +371,8 @@ try {
         false,  // reasoning
         false,  // structured JSON
         true,   // usage
-        4096,   // 最大输出字节
-        java.lang.Long.valueOf("256"), // 最大输出 token
+        65536,  // 插件输出安全上限 64 KiB
+        null,   // 不额外限制 token, 使用模型/引擎默认值
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
@@ -474,6 +473,7 @@ Sécurité et limites opérationnelles:
 - Un import de modèle est limité à 8 GiB et doit laisser au moins 256 MiB libres.
 - Le contexte est limité à 256 KiB, la sortie à 64 KiB et une seule session de génération peut être active.
 - `maxTokens` (ou `maximumOutputTokens` dans le protocole direct) accepte de 1 à 2 147 483 647 et s'applique sans exiger de rapport usage. `temperature` doit être fini et positif ou nul, `topK` positif et `topP` fini entre 0 et 1.
+- Si `maxTokens` est omis (ou si `maximumOutputTokens` vaut `null` dans le protocole direct), la valeur par défaut du modèle ou du moteur est utilisée; la limite de sécurité de sortie de 64 KiB du fournisseur reste applicable.
 - Streaming, usage, les sessions persistantes, structured JSON, `text/plain` et `application/json` sont déclarés. Reasoning et tools ne sont pas pris en charge.
 - Le schema de réponse doit être un objet JSON de 64 KiB au maximum; les mots-clés acceptés sont ceux implémentés par le runtime LiteRT-LM/LLGuidance intégré. La sortie structurée complète est analysée et validée strictement, il faut donc réserver assez de `maxTokens` pour la valeur JSON entière.
 - Les tokens de usage proviennent des compteurs de cache KV et decode de Conversation dans LiteRT-LM, sans estimation par caractères. `durationMillis` mesure la génération du fournisseur et exclut la découverte, la liaison, la liste des modèles et la distribution de l'hôte.

@@ -129,7 +129,7 @@ required host build: 5276
 - 모델 확인은 현재 기기와 번들 런타임에서 `Engine.initialize()`가 성공하는지만 증명합니다. 출력 품질은 평가하지 않으며 기기 또는 런타임 변경 후 다시 확인할 수 있습니다.
 - Provider가 선언하는 컨텍스트 상한은 256 KiB, 출력 상한은 64 KiB입니다. 요청과 모델은 더 낮은 상한을 적용할 수 있습니다.
 - 응답 schema는 64 KiB 이하의 JSON object여야 합니다. 지원 keyword는 포함된 LiteRT-LM/LLGuidance 런타임 구현을 따르며, 완성된 출력은 엄격히 parse 및 검증하므로 전체 JSON 값에 충분한 `maxTokens`를 확보해야 합니다.
-- `maxTokens`는 1부터 2,147,483,647까지의 정수입니다. `temperature`는 유한한 0 이상의 값, `topK`는 양의 정수, `topP`는 0부터 1까지의 유한한 값이어야 합니다. 세 sampling 설정을 모두 생략하면 모델/엔진 기본값을 유지하고, 일부만 지정하면 생략된 항목을 LiteRT-LM 기준값 `topK: 1`, `topP: 0.95`, `temperature: 1`로 채웁니다.
+- `maxTokens`는 1부터 2,147,483,647까지의 정수입니다. 생략하면 출력 token 수는 모델/엔진 기본값에 맡기며, provider의 64 KiB 출력 안전 한도는 유지됩니다. `temperature`는 유한한 0 이상의 값, `topK`는 양의 정수, `topP`는 0부터 1까지의 유한한 값이어야 합니다. 세 sampling 설정을 모두 생략하면 모델/엔진 기본값을 유지하고, 일부만 지정하면 생략된 항목을 LiteRT-LM 기준값 `topK: 1`, `topP: 0.95`, `temperature: 1`로 채웁니다.
 - 스트리밍은 유한 credit과 제한된 chunk를 사용해 무제한 버퍼 또는 역압력 없는 callback을 방지합니다.
 - Usage token 수는 LiteRT-LM Conversation의 KV cache 및 decode 카운터에서 직접 가져오며 문자 수로 추정하지 않습니다. `durationMillis`는 플러그인 생성 호출만 측정하고 호스트 탐색, 바인딩, 모델 열거 및 디스패치 시간은 제외합니다.
 - 영구적인 `ai.session`은 하나의 활성 턴만 허용하고 정상 완료 후 네이티브 Conversation을 유지합니다. 취소, timeout, 생성 실패 또는 명시적 닫기 후에는 다시 만들어야 합니다.
@@ -174,6 +174,7 @@ required host build: 5276
 * `기능` AutoJs6 `structuredJson`과 `responseSchema`를 통한 LiteRT-LM 네이티브 JSON Schema 제약 디코딩을 추가하고 단일 호출, 스트리밍, 영구 세션 및 완성 JSON의 엄격한 검증을 지원
 * `기능` 프로토콜 1.3과 AutoJs6 생성 옵션을 통한 명시적 `cpu`, `gpu`, `npu` backend profile, 기기 호환성 보고, 모델/profile별 캐시 격리 및 사용 불가 profile의 CPU fallback 금지; GPU는 OpenCL 로드 검사 성공 후에만 선언하고 NPU는 EAP runtime 미포함으로 사용 불가 유지
 * `기능` 고정 LiteRT Community 모델을 사용자가 선택한 SAF 위치로 직접 다운로드하고 진행률, 정확한 취소, 불완전 파일 정리, LiteRT-LM 헤더 및 정확한 크기/SHA-256 검증, 다운로드 후 직접 가져오기를 지원
+* `수정` 실행 가능한 안내 예제의 암묵적 256 token 및 4 KiB 출력 제한을 제거하여 `maxTokens` 생략 시 모델 또는 engine 기본값을 사용하고 raw Binder 예제는 provider의 전체 64 KiB 출력 허용량을 사용하도록 수정
 * `수정` 10개 언어로 현지화된 플러그인 안내의 저수준 Binder 예제가 프로토콜 1.1의 14개 인자 `AiGenerationOptions` 생성자를 계속 호출하여 프로토콜 1.3 API에서 실패하던 문제 수정
 * `수정` 시스템 다크 모드에서도 모델 관리 화면이 라이트 테마 텍스트 색상을 유지해 본문, 체크박스, 모델 행을 어두운 배경에서 읽을 수 없던 문제 수정
 * `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신

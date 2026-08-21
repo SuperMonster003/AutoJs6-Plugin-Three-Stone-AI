@@ -47,7 +47,7 @@ ai.ask("Hello", {
     temperature: 0.7,
     topK: 40,
     topP: 0.9,
-    maxTokens: 256,
+    // maxTokens: 1024,
 }).then((text) => console.log(text));
 ```
 
@@ -66,7 +66,6 @@ let schema = {
 ai.ask("Return answer as OK and ok as true.", {
     plugin: true,
     responseSchema: schema,
-    maxTokens: 64,
 }).then((text) => {
     let value = JSON.parse(text);
     console.log(value.answer, value.ok);
@@ -372,8 +371,8 @@ try {
         false,  // reasoning
         false,  // structured JSON
         true,   // usage
-        4096,   // 最大输出字节
-        java.lang.Long.valueOf("256"), // 最大输出 token
+        65536,  // 插件输出安全上限 64 KiB
+        null,   // 不额外限制 token, 使用模型/引擎默认值
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
@@ -474,6 +473,7 @@ Safety and operational limits:
 - Model import is limited to 8 GiB and must leave at least 256 MiB of free space.
 - Context is limited to 256 KiB, output is limited to 64 KiB, and only one generation session may be active.
 - `maxTokens` (or raw-protocol `maximumOutputTokens`) accepts 1 through 2,147,483,647 and is enforced without requiring usage reporting. `temperature` must be finite and non-negative, `topK` positive, and `topP` finite from 0 through 1.
+- Omit `maxTokens` (or pass raw-protocol `maximumOutputTokens` as `null`) to use the model or engine default; the provider's 64 KiB output safety limit still applies.
 - Streaming, usage, persistent sessions, structured JSON, `text/plain`, and `application/json` are declared. Reasoning and tools are unsupported.
 - A response schema must be a JSON object no larger than 64 KiB; supported keywords follow the bundled LiteRT-LM/LLGuidance runtime. Completed structured output is parsed and validated strictly, so provide enough `maxTokens` for the entire JSON value.
 - Usage token counts come from LiteRT-LM Conversation KV-cache and decode counters without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, model listing, and dispatch time.

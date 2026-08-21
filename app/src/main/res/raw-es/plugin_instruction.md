@@ -47,7 +47,7 @@ ai.ask("Hello", {
     temperature: 0.7,
     topK: 40,
     topP: 0.9,
-    maxTokens: 256,
+    // maxTokens: 1024,
 }).then((text) => console.log(text));
 ```
 
@@ -66,7 +66,6 @@ let schema = {
 ai.ask("Return answer as OK and ok as true.", {
     plugin: true,
     responseSchema: schema,
-    maxTokens: 64,
 }).then((text) => {
     let value = JSON.parse(text);
     console.log(value.answer, value.ok);
@@ -372,8 +371,8 @@ try {
         false,  // reasoning
         false,  // structured JSON
         true,   // usage
-        4096,   // 最大输出字节
-        java.lang.Long.valueOf("256"), // 最大输出 token
+        65536,  // 插件输出安全上限 64 KiB
+        null,   // 不额外限制 token, 使用模型/引擎默认值
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
@@ -474,6 +473,7 @@ Seguridad y límites operativos:
 - La importación de un modelo se limita a 8 GiB y debe dejar al menos 256 MiB libres.
 - El contexto se limita a 256 KiB, la salida a 64 KiB y solo puede estar activa una sesión de generación.
 - `maxTokens` (o `maximumOutputTokens` en el protocolo directo) admite de 1 a 2.147.483.647 y se aplica sin requerir informes de usage. `temperature` debe ser finito y no negativo, `topK` positivo y `topP` finito entre 0 y 1.
+- Si se omite `maxTokens` (o se pasa `maximumOutputTokens` como `null` en el protocolo directo), se usa el valor predeterminado del modelo o motor; el límite de seguridad de salida de 64 KiB del proveedor sigue vigente.
 - Se declaran streaming, usage, sesiones persistentes, structured JSON, `text/plain` y `application/json`. No se admiten reasoning ni tools.
 - El schema de respuesta debe ser un objeto JSON de no más de 64 KiB; las palabras clave admitidas son las implementadas por el runtime LiteRT-LM/LLGuidance incluido. La salida estructurada completa se analiza y valida estrictamente, por lo que debe reservarse suficiente `maxTokens` para todo el valor JSON.
 - Los tokens de usage proceden de los contadores de caché KV y decode de Conversation en LiteRT-LM, sin estimaciones por caracteres. `durationMillis` mide la generación del proveedor y excluye descubrimiento, enlace, listado de modelos y despacho del host.

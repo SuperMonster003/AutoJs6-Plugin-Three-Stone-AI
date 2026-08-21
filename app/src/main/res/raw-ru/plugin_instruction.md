@@ -47,7 +47,7 @@ ai.ask("Hello", {
     temperature: 0.7,
     topK: 40,
     topP: 0.9,
-    maxTokens: 256,
+    // maxTokens: 1024,
 }).then((text) => console.log(text));
 ```
 
@@ -66,7 +66,6 @@ let schema = {
 ai.ask("Return answer as OK and ok as true.", {
     plugin: true,
     responseSchema: schema,
-    maxTokens: 64,
 }).then((text) => {
     let value = JSON.parse(text);
     console.log(value.answer, value.ok);
@@ -372,8 +371,8 @@ try {
         false,  // reasoning
         false,  // structured JSON
         true,   // usage
-        4096,   // 最大输出字节
-        java.lang.Long.valueOf("256"), // 最大输出 token
+        65536,  // 插件输出安全上限 64 KiB
+        null,   // 不额外限制 token, 使用模型/引擎默认值
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
@@ -474,6 +473,7 @@ try {
 - Импорт модели ограничен 8 GiB и должен оставить не менее 256 MiB свободного места.
 - Контекст ограничен 256 KiB, вывод 64 KiB, одновременно активен только один сеанс генерации.
 - `maxTokens` (или `maximumOutputTokens` в прямом протоколе) принимает значения от 1 до 2 147 483 647 и применяется без обязательного отчёта usage. `temperature` должен быть конечным и неотрицательным, `topK` положительным, а `topP` конечным от 0 до 1.
+- Если опустить `maxTokens` (или передать `maximumOutputTokens` как `null` в прямом протоколе), используется значение по умолчанию модели или движка; защитный предел вывода провайдера 64 KiB продолжает действовать.
 - Объявлены streaming, usage, постоянные сеансы, structured JSON, `text/plain` и `application/json`. Reasoning и tools не поддерживаются.
 - Schema ответа должна быть объектом JSON размером не более 64 KiB; поддерживаются ключевые слова, реализованные во встроенной среде LiteRT-LM/LLGuidance. Завершенный структурированный вывод строго разбирается и проверяется, поэтому для всего значения JSON требуется достаточный `maxTokens`.
 - Количество токенов usage берется из счетчиков KV cache и decode объекта Conversation LiteRT-LM без оценки по символам. `durationMillis` измеряет генерацию провайдера и не включает обнаружение, привязку, перечисление моделей и диспетчеризацию хоста.

@@ -129,7 +129,7 @@ required host build: 5276
 - モデルチェックが確認するのは, 現在のデバイスと同梱ランタイムで `Engine.initialize()` が成功することだけです. 出力品質は評価せず, デバイスまたはランタイムの変更後に再チェックできます.
 - Provider が宣言するコンテキスト上限は 256 KiB, 出力上限は 64 KiB です. リクエストとモデルはさらに低い上限を設定できます.
 - 応答 schema は 64 KiB 以下の JSON object である必要があります. 対応 keyword は同梱 LiteRT-LM/LLGuidance ランタイムの実装に従います. 完成出力は厳密に parse と検証を行うため, JSON 値全体に十分な `maxTokens` を確保してください.
-- `maxTokens` は 1 から 2,147,483,647 までの整数です. `temperature` は有限かつ 0 以上, `topK` は正の整数, `topP` は 0 から 1 の有限値である必要があります. 3 つの sampling 設定をすべて省略すると model/engine の既定値を維持し, 一部だけ指定すると未指定項目を LiteRT-LM baseline の `topK: 1`, `topP: 0.95`, `temperature: 1` で補完します.
+- `maxTokens` は 1 から 2,147,483,647 までの整数です. 省略すると出力 token 数は model/engine の既定値に委ねられますが, provider の 64 KiB 出力安全上限は維持されます. `temperature` は有限かつ 0 以上, `topK` は正の整数, `topP` は 0 から 1 の有限値である必要があります. 3 つの sampling 設定をすべて省略すると model/engine の既定値を維持し, 一部だけ指定すると未指定項目を LiteRT-LM baseline の `topK: 1`, `topP: 0.95`, `temperature: 1` で補完します.
 - ストリーミングは有限の credit と制限付き chunk を使い, 無制限なバッファやバックプレッシャーなしの callback を防ぎます.
 - Usage token 数は LiteRT-LM Conversation の KV cache と decode カウンターから直接取得し, 文字数による推定は行いません. `durationMillis` はプラグイン生成呼び出しのみを測定し, ホストの探索, バインド, モデル列挙, ディスパッチ時間を含みません.
 - 永続的な `ai.session` は 1 つのアクティブターンだけを許可し, 正常完了後もネイティブ Conversation を保持します. キャンセル, timeout, 生成失敗, 明示的な終了の後は再作成が必要です.
@@ -174,6 +174,7 @@ required host build: 5276
 * `機能` AutoJs6 の `structuredJson` と `responseSchema` による LiteRT-LM ネイティブ JSON Schema 制約デコードを追加し, 単発呼び出し, ストリーミング, 永続セッションと完成 JSON の厳密な検証に対応
 * `機能` プロトコル 1.3 と AutoJs6 生成オプションで明示的な `cpu`, `gpu`, `npu` backend profile を提供し, デバイス互換性報告, モデル/profile 単位のキャッシュ分離, 使用不可 profile からのフォールバック禁止に対応; GPU は OpenCL ロード検査成功後のみ宣言し, NPU は EAP runtime 未同梱のため使用不可を維持
 * `機能` 固定 LiteRT Community モデルをユーザー選択の SAF 保存先へ直接ダウンロードし, 進捗, 正確なキャンセル, 不完全ファイル削除, LiteRT-LM ヘッダーと正確なサイズ/SHA-256 検証, ダウンロード後の直接インポートに対応
+* `修正` 実行可能な説明例に設定されていた暗黙の 256 token / 4 KiB 出力上限を削除し、`maxTokens` 省略時はモデルまたは engine の既定値を使用、raw Binder 例は provider の 64 KiB 出力許容量全体を使用するよう修正
 * `修正` 10 言語のローカライズ済みプラグイン説明にある低レベル Binder 例が、プロトコル 1.1 の 14 引数 `AiGenerationOptions` コンストラクターを呼び続け、プロトコル 1.3 API で失敗する問題を修正
 * `修正` システムのダークモードでもモデル管理画面がライトテーマの文字色を保持し、本文、チェックボックス、モデル行が暗い背景で読めなくなる問題を修正
 * `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合

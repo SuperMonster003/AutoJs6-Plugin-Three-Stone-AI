@@ -47,7 +47,7 @@ ai.ask("Hello", {
     temperature: 0.7,
     topK: 40,
     topP: 0.9,
-    maxTokens: 256,
+    // maxTokens: 1024,
 }).then((text) => console.log(text));
 ```
 
@@ -66,7 +66,6 @@ let schema = {
 ai.ask("Return answer as OK and ok as true.", {
     plugin: true,
     responseSchema: schema,
-    maxTokens: 64,
 }).then((text) => {
     let value = JSON.parse(text);
     console.log(value.answer, value.ok);
@@ -372,8 +371,8 @@ try {
         false,  // reasoning
         false,  // structured JSON
         true,   // usage
-        4096,   // 最大输出字节
-        java.lang.Long.valueOf("256"), // 最大输出 token
+        65536,  // 插件输出安全上限 64 KiB
+        null,   // 不额外限制 token, 使用模型/引擎默认值
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
@@ -474,6 +473,7 @@ try {
 - 模型匯入上限為 8 GiB, 完成後必須至少保留 256 MiB 可用空間.
 - 內容上限為 256 KiB, 輸出上限為 64 KiB, 同一時間僅允許一個生成工作階段.
 - `maxTokens` (原始協議欄位為 `maximumOutputTokens`) 接受 1 至 2,147,483,647, 且毋須 usage 上報即可執行. `temperature` 必須係非負有限數, `topK` 必須係正數, `topP` 必須係 0 至 1 嘅有限數.
+- 省略 `maxTokens` (或者喺原始協議將 `maximumOutputTokens` 傳做 `null`) 時會使用模型或引擎預設值; 插件嘅 64 KiB 輸出安全上限仍然生效.
 - 宣告 streaming, usage, persistent session, structured JSON, `text/plain` 同 `application/json`. 唔支援 reasoning 同 tools.
 - 響應 schema 必須係 JSON 對象且唔超過 64 KiB; 可用關鍵字以目前內置 LiteRT-LM/LLGuidance 運行時為準. 插件會嚴格解析同驗證完整結構化輸出, 因此應為整個 JSON 值預留足夠嘅 `maxTokens`.
 - Usage token 數來自 LiteRT-LM Conversation 嘅 KV cache 同 decode 計數, 唔會用字符數估算. `durationMillis` 只量度插件生成調用, 唔包括宿主發現, 綁定, 模型枚舉同分發時間.

@@ -58,6 +58,28 @@ class PluginInstructionCompatibilityTest {
                 "$label must document the backend-profile argument",
                 source.contains("\"cpu\"   // explicit backend profile"),
             )
+            assertTrue(
+                "$label runnable examples must not impose a token limit by default",
+                source.lineSequence().none { line ->
+                    line.trimStart().startsWith("maxTokens:")
+                },
+            )
+            assertTrue(
+                "$label must retain maxTokens as a documented opt-in option",
+                source.contains("// maxTokens: 1024,"),
+            )
+            assertFalse(
+                "$label raw example must not retain the old 256-token limit",
+                source.contains("java.lang.Long.valueOf(\"256\")"),
+            )
+            assertTrue(
+                "$label raw example must use the provider's full output-byte allowance",
+                source.contains("65536,  // 插件输出安全上限 64 KiB"),
+            )
+            assertTrue(
+                "$label raw example must delegate its token limit to the model or engine",
+                source.contains("null,   // 不额外限制 token, 使用模型/引擎默认值"),
+            )
         }
     }
 

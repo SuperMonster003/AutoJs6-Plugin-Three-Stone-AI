@@ -129,7 +129,7 @@ required host build: 5276
 - 模型自檢只證明 `Engine.initialize()` 能喺目前裝置同內置運行環境成功; 佢唔評估輸出質素, 裝置或運行環境變更後可以重新檢查.
 - Provider 宣告的內容上限為 256 KiB, 輸出上限為 64 KiB, 請求和模型亦可施加更低上限.
 - 響應 schema 必須係 JSON 對象且唔超過 64 KiB. 可用關鍵字以目前內置 LiteRT-LM/LLGuidance 運行時為準; 插件會嚴格解析同驗證完整輸出, 因此應為整個 JSON 值預留足夠嘅 `maxTokens`.
-- `maxTokens` 接受 1 至 2,147,483,647 嘅整數. `temperature` 必須係非負有限數, `topK` 必須係正整數, `topP` 必須係 0 至 1 嘅有限數. 三項採樣參數全部省略時保留模型或引擎預設值; 部分覆蓋時, 未設定項使用 LiteRT-LM 基線 `topK: 1`, `topP: 0.95`, `temperature: 1`.
+- `maxTokens` 接受 1 至 2,147,483,647 嘅整數. 省略時會將輸出 token 數交畀模型或引擎預設值決定, 插件嘅 64 KiB 輸出安全上限仍然生效. `temperature` 必須係非負有限數, `topK` 必須係正整數, `topP` 必須係 0 至 1 嘅有限數. 三項採樣參數全部省略時保留模型或引擎預設值; 部分覆蓋時, 未設定項使用 LiteRT-LM 基線 `topK: 1`, `topP: 0.95`, `temperature: 1`.
 - 串流輸出使用有限 credit 和有界 chunk, 防止無限制緩衝或無背壓回呼.
 - Usage token 數直接來自 LiteRT-LM Conversation 嘅 KV cache 同 decode 計數, 唔會用字符數估算. `durationMillis` 只量度插件生成調用, 唔包括宿主發現, 綁定, 模型枚舉同分發時間.
 - 持久 `ai.session` 只允許一個活動輪次, 正常完成後保留原生 Conversation; 取消, 逾時, 生成失敗或顯式關閉後必須重新建立會話.
@@ -174,6 +174,7 @@ required host build: 5276
 * `新增` 通過 AutoJs6 `structuredJson` 同 `responseSchema` 啟用 LiteRT-LM 原生 JSON Schema 約束解碼, 支援單次調用, 串流輸出同持久會話, 並嚴格驗證完整 JSON
 * `新增` 通過協議 1.3 同 AutoJs6 生成選項提供明確 `cpu`, `gpu` 同 `npu` backend profile, 包含裝置兼容性報告, 模型/profile 快取隔離及不可用 profile 禁止回退; GPU 只會在 OpenCL 載入探測成功後聲明, NPU 因未封裝 EAP runtime 而維持不可用
 * `新增` 將固定版本嘅 LiteRT Community 建議模型直接下載到用戶選擇嘅 SAF 位置, 支援進度, 精確取消, 殘缺檔案清理, LiteRT-LM 檔案頭同精確大小/SHA-256 驗證, 以及下載後直接匯入
+* `修復` 移除插件說明可執行範例預設設定嘅 256 token 同 4 KiB 輸出限制: 省略 `maxTokens` 時改用模型或引擎預設值, raw Binder 範例使用插件完整嘅 64 KiB 輸出額度
 * `修復` 修復 10 種本地化插件說明中的底層 Binder 範例仍呼叫協議 1.1 的 14 參數 `AiGenerationOptions` 建構方法, 導致喺協議 1.3 API 下報告 Java 建構方法不存在
 * `修復` 修復模型管理介面在系統深色模式下仍使用淺色主題文字, 導致正文, 核取方塊及模型清單與深色背景對比不足
 * `優化` 更新插件描述, 使用說明及 10 種語言嘅 README, 與宿主 `ai.*` 本機插件路由嘅正式化保持一致

@@ -16,6 +16,7 @@
 * `新增` 透過 AutoJs6 `structuredJson` 與 `responseSchema` 啟用 LiteRT-LM 原生 JSON Schema 約束解碼, 支援單次呼叫, 串流輸出及持久工作階段, 並嚴格驗證完整 JSON
 * `新增` 透過協定 1.3 與 AutoJs6 生成選項提供明確 `cpu`, `gpu` 與 `npu` backend profile, 包含裝置相容性報告, 模型/profile 快取隔離及不可用 profile 禁止回退; GPU 僅在 OpenCL 載入探測成功後宣告, NPU 因未封裝 EAP runtime 而維持不可用
 * `新增` 將固定版本的 LiteRT Community 推薦模型直接下載到使用者選擇的 SAF 位置, 支援進度, 精確取消, 殘缺檔案清理, LiteRT-LM 檔頭與精確大小/SHA-256 驗證, 以及下載後直接匯入
+* `修復` 移除外掛說明可執行範例預設設定的 256 token 與 4 KiB 輸出限制: 省略 `maxTokens` 時改用模型或引擎預設值, raw Binder 範例使用外掛完整的 64 KiB 輸出額度
 * `修復` 修復 10 種本地化外掛說明中的底層 Binder 範例仍呼叫協定 1.1 的 14 參數 `AiGenerationOptions` 建構方法, 導致其在協定 1.3 API 下回報 Java 建構方法不存在
 * `修復` 修復模型管理介面在系統深色模式下仍使用淺色主題文字, 導致本文, 核取方塊及模型清單與深色背景對比不足
 * `優化` 更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致

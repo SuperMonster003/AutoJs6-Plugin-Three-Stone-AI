@@ -47,7 +47,7 @@ ai.ask("Hello", {
     temperature: 0.7,
     topK: 40,
     topP: 0.9,
-    maxTokens: 256,
+    // maxTokens: 1024,
 }).then((text) => console.log(text));
 ```
 
@@ -66,7 +66,6 @@ let schema = {
 ai.ask("Return answer as OK and ok as true.", {
     plugin: true,
     responseSchema: schema,
-    maxTokens: 64,
 }).then((text) => {
     let value = JSON.parse(text);
     console.log(value.answer, value.ok);
@@ -372,8 +371,8 @@ try {
         false,  // reasoning
         false,  // structured JSON
         true,   // usage
-        4096,   // 最大输出字节
-        java.lang.Long.valueOf("256"), // 最大输出 token
+        65536,  // 插件输出安全上限 64 KiB
+        null,   // 不额外限制 token, 使用模型/引擎默认值
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
@@ -474,6 +473,7 @@ try {
 - يقتصر استيراد النموذج على 8 GiB ويجب أن يترك 256 MiB على الأقل من المساحة الحرة.
 - يقتصر السياق على 256 KiB والإخراج على 64 KiB ويمكن تنشيط جلسة توليد واحدة فقط.
 - يقبل `maxTokens` (او `maximumOutputTokens` في البروتوكول المباشر) من 1 إلى 2,147,483,647 ويطبق دون اشتراط تقارير usage. يجب أن تكون `temperature` محدودة وغير سالبة و `topK` موجبة و `topP` محدودة بين 0 و1.
+- يؤدي حذف `maxTokens` (أو تمرير `maximumOutputTokens` بالقيمة `null` في البروتوكول المباشر) إلى استخدام القيمة الافتراضية للنموذج أو المحرك، مع استمرار حد أمان إخراج المزود البالغ 64 KiB.
 - يعلن streaming و usage والجلسات المستمرة و structured JSON و `text/plain` و `application/json`. لا يدعم reasoning او tools.
 - يجب ان تكون schema الاستجابة كائن JSON لا يتجاوز 64 KiB; الكلمات المفتاحية المدعومة هي التي ينفذها runtime LiteRT-LM/LLGuidance المضمن. يجري تحليل الإخراج المنظم المكتمل والتحقق منه بصرامة, لذا يجب تخصيص `maxTokens` كاف للقيمة JSON كاملة.
 - تأتي أعداد رموز usage من عدادات KV cache و decode في Conversation ضمن LiteRT-LM دون تقدير بالمحارف. يقيس `durationMillis` توليد المزود ولا يشمل اكتشاف المضيف أو الربط أو تعداد النماذج أو التوزيع.

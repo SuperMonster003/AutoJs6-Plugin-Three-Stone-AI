@@ -149,6 +149,7 @@ internal class ModelPager(
         val OPAQUE_TOKEN = Regex("^[0-9a-f]{48}$")
         val PUBLIC_CAPABILITY_IDS = listOf(
             OnDeviceAiCapabilityId.STREAMING,
+            OnDeviceAiCapabilityId.STRUCTURED_JSON,
             OnDeviceAiCapabilityId.USAGE,
             OnDeviceAiCapabilityId.PERSISTENT_SESSION,
         )

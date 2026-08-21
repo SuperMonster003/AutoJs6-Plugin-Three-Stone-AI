@@ -31,6 +31,7 @@ internal data class GenerationRequest(
     val maximumOutputTokens: Int?,
     val samplingOptions: GenerationSamplingOptions?,
     val reportUsage: Boolean,
+    val responseJsonSchema: String? = null,
 )
 
 /** Exact provider-side counters for one generation turn. */

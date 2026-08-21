@@ -8,6 +8,7 @@ import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.ExperimentalApi
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
+import com.google.ai.edge.litertlm.ResponseFormat
 import com.google.ai.edge.litertlm.SamplerConfig
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -58,6 +59,7 @@ internal class LiteRtLmGenerationBackend(
                         samplerConfig = request.samplingOptions?.toLiteRtSamplerConfig(),
                         automaticToolCalling = false,
                         maxOutputToken = request.maximumOutputTokens,
+                        enableResponseFormat = request.responseJsonSchema != null,
                     ),
                 )
                 synchronized(lifecycleLock) { conversation = localConversation }
@@ -153,6 +155,7 @@ internal class LiteRtLmGenerationBackend(
                     }
                 },
                 maxOutputToken = request.maximumOutputTokens,
+                responseFormat = request.toLiteRtResponseFormat(),
             )
         } catch (error: Throwable) {
             turnActive.set(false)
@@ -233,3 +236,6 @@ internal fun GenerationSamplingOptions.toLiteRtSamplerConfig() = SamplerConfig(
     topP = topP,
     temperature = temperature,
 )
+
+internal fun GenerationRequest.toLiteRtResponseFormat(): ResponseFormat? =
+    responseJsonSchema?.let(ResponseFormat::json)

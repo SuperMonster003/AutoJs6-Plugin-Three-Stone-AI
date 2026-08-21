@@ -190,13 +190,13 @@ internal class RemoteOnDeviceAiSession(
                 provider = OnDeviceAiPlugin.capabilities,
                 descriptorCount = turn.descriptors.count,
             )
-            requireTurnConfiguration(turn, request)
             val materialized = PayloadMaterializer.materializeRequest(
                 request,
                 turn.descriptors::readDeclaredBytes,
             )
             turn.descriptors.close()
             turn.ensureActive()
+            requireTurnConfiguration(turn, request, materialized)
             val generationRequest = PromptPlanner.plan(request, materialized)
             val activeBackend = if (turn.firstTurn) {
                 val model = repository.findByModelId(request.modelId) ?: throw ModelUnavailable()
@@ -255,14 +255,15 @@ internal class RemoteOnDeviceAiSession(
         require(request.providerId == OnDeviceAiPlugin.PROVIDER_ID) { "Provider ID does not match" }
         val options = request.options
         if (
-            options.includeReasoning || options.structuredJson ||
+            options.includeReasoning ||
             options.maximumToolRounds != 0 ||
-            options.responseMimeType != OnDeviceAiMimeType.PLAIN || options.responseSchema != null ||
+            (!options.structuredJson && options.responseMimeType != OnDeviceAiMimeType.PLAIN) ||
             request.tools.isNotEmpty() ||
             options.requiredCapabilityIds.any {
                 it != OnDeviceAiCapabilityId.STREAMING &&
                     it != OnDeviceAiCapabilityId.USAGE &&
-                    it != OnDeviceAiCapabilityId.PERSISTENT_SESSION
+                    it != OnDeviceAiCapabilityId.PERSISTENT_SESSION &&
+                    it != OnDeviceAiCapabilityId.STRUCTURED_JSON
             } ||
             request.messages.any { it.name != null }
         ) {
@@ -270,12 +271,16 @@ internal class RemoteOnDeviceAiSession(
         }
     }
 
-    private fun requireTurnConfiguration(turn: Turn, request: OnDeviceAiRequest) {
+    private fun requireTurnConfiguration(
+        turn: Turn,
+        request: OnDeviceAiRequest,
+        materialized: MaterializedRequest,
+    ) {
         require(request.options.persistentSession == persistent)
         if (persistent) {
             require(OnDeviceAiCapabilityId.PERSISTENT_SESSION in request.options.requiredCapabilityIds)
         }
-        val configuration = FixedConfiguration.from(request)
+        val configuration = FixedConfiguration.from(request, materialized.responseSchemaJson)
         if (turn.firstTurn) {
             require(fixedConfiguration.compareAndSet(null, configuration))
         } else {
@@ -590,7 +595,7 @@ internal class RemoteOnDeviceAiSession(
             }
             val result = AiCompletionResult(
                 output = AiPayloadReference(
-                    mimeType = OnDeviceAiMimeType.PLAIN,
+                    mimeType = request.options.responseMimeType,
                     declaredLengthBytes = bytes.size.toLong(),
                     inlineBytes = bytes,
                     charset = "utf-8",
@@ -674,9 +679,15 @@ internal class RemoteOnDeviceAiSession(
         val temperature: Double?,
         val topK: Int?,
         val topP: Double?,
+        val structuredJson: Boolean,
+        val responseMimeType: String,
+        val responseSchemaJson: String?,
     ) {
         companion object {
-            fun from(request: OnDeviceAiRequest) = FixedConfiguration(
+            fun from(
+                request: OnDeviceAiRequest,
+                responseSchemaJson: String?,
+            ) = FixedConfiguration(
                 protocolVersion = request.protocolVersion,
                 providerId = request.providerId,
                 modelId = request.modelId,
@@ -687,6 +698,9 @@ internal class RemoteOnDeviceAiSession(
                 temperature = request.options.temperature,
                 topK = request.options.topK,
                 topP = request.options.topP,
+                structuredJson = request.options.structuredJson,
+                responseMimeType = request.options.responseMimeType,
+                responseSchemaJson = responseSchemaJson,
             )
         }
     }

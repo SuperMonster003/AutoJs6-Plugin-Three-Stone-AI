@@ -32,7 +32,7 @@ internal object OnDeviceAiPlugin {
         supportsStreaming = true,
         supportsReasoning = false,
         supportsTools = false,
-        supportsStructuredJson = false,
+        supportsStructuredJson = true,
         supportsUsage = true,
         supportsPersistentSessions = true,
         maximumMessages = MAXIMUM_MESSAGES,
@@ -44,8 +44,8 @@ internal object OnDeviceAiPlugin {
         maximumOutstandingToolCalls = 0,
         maximumRequestDescriptors = MAXIMUM_REQUEST_DESCRIPTORS,
         maximumSessionDescriptors = MAXIMUM_SESSION_DESCRIPTORS,
-        acceptedTextMimeTypes = listOf(OnDeviceAiMimeType.PLAIN),
-        acceptedSchemaMimeTypes = emptyList(),
+        acceptedTextMimeTypes = listOf(OnDeviceAiMimeType.PLAIN, OnDeviceAiMimeType.JSON),
+        acceptedSchemaMimeTypes = listOf(OnDeviceAiMimeType.JSON),
     )
 }
 

@@ -1,6 +1,8 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai.backend
 
+import com.google.ai.edge.litertlm.ResponseFormat
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -34,5 +36,23 @@ class LiteRtLmGenerationConfigTest {
                 GenerationSamplingOptions(1.0, 1, topP)
             }
         }
+    }
+
+    @Test
+    fun structuredJsonMapsToThePackagedLiteRtLmNativeResponseFormat() {
+        val schema = """{"type":"object","properties":{"ok":{"type":"boolean"}}}"""
+        val request = GenerationRequest(
+            history = emptyList(),
+            prompt = GenerationMessage(GenerationRole.USER, listOf("Return JSON")),
+            maximumOutputTokens = 128,
+            samplingOptions = null,
+            reportUsage = true,
+            responseJsonSchema = schema,
+        )
+
+        val format = checkNotNull(request.toLiteRtResponseFormat())
+        assertEquals(ResponseFormat.Type.JSON_OBJECT, format.type)
+        assertEquals(schema, format.schemaOrPattern)
+        assertNull(request.copy(responseJsonSchema = null).toLiteRtResponseFormat())
     }
 }

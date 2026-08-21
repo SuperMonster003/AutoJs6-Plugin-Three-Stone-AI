@@ -13,6 +13,7 @@ internal data class MaterializedMessage(
 internal data class MaterializedRequest(
     val messages: List<MaterializedMessage>,
     val inputBytes: Long,
+    val responseSchemaJson: String? = null,
 )
 
 internal object PayloadMaterializer {
@@ -33,7 +34,18 @@ internal object PayloadMaterializer {
                 },
             )
         }
-        return MaterializedRequest(messages = messages, inputBytes = inputBytes)
+        val responseSchemaJson = request.options.responseSchema?.let { schema ->
+            AiValidation.decodeUtf8(materialize(schema, readDescriptor)).also { value ->
+                require(value.trimStart().startsWith('{')) {
+                    "The response schema must be a JSON object"
+                }
+            }
+        }
+        return MaterializedRequest(
+            messages = messages,
+            inputBytes = inputBytes,
+            responseSchemaJson = responseSchemaJson,
+        )
     }
 
     private fun materialize(

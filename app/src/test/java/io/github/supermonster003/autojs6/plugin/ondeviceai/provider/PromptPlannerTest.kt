@@ -13,6 +13,7 @@ import org.autojs.plugin.ondeviceai.api.OnDeviceAiProtocol
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -83,6 +84,36 @@ class PromptPlannerTest {
         assertNull(defaults.samplingOptions)
     }
 
+    @Test
+    fun mapsStructuredJsonSchemaAndUsesAStableObjectDefault() {
+        val schema = """{"type":"object","properties":{"answer":{"type":"string"}}}"""
+        val schemaRequest = request(
+            roles = listOf(AiMessageRole.USER),
+            structuredJson = true,
+            responseSchemaJson = schema,
+        )
+        val schemaPlan = PromptPlanner.plan(
+            schemaRequest,
+            MaterializedRequest(
+                messages = listOf(MaterializedMessage(AiMessageRole.USER, listOf("text"))),
+                inputBytes = 4L,
+                responseSchemaJson = schema,
+            ),
+        )
+        assertEquals(schema, schemaPlan.responseJsonSchema)
+
+        val defaultRequest = request(
+            roles = listOf(AiMessageRole.USER),
+            structuredJson = true,
+        )
+        val defaultPlan = PromptPlanner.plan(
+            defaultRequest,
+            MaterializedRequest(listOf(MaterializedMessage(AiMessageRole.USER, listOf("text"))), 4L),
+        )
+        assertEquals("""{"type":"object"}""", defaultPlan.responseJsonSchema)
+        assertTrue(defaultPlan.responseJsonSchema!!.isNotEmpty())
+    }
+
     private fun request(
         roles: List<Int>,
         maximumOutputTokens: Long? = null,
@@ -90,6 +121,8 @@ class PromptPlannerTest {
         topK: Int? = null,
         topP: Double? = null,
         reportUsage: Boolean = false,
+        structuredJson: Boolean = false,
+        responseSchemaJson: String? = null,
     ): OnDeviceAiRequest = OnDeviceAiRequest(
         requestId = "request-1",
         protocolVersion = OnDeviceAiProtocol.HOST_PROTOCOL_RANGE.maximum,
@@ -114,12 +147,22 @@ class PromptPlannerTest {
         options = AiGenerationOptions(
             stream = true,
             includeReasoning = false,
-            structuredJson = false,
+            structuredJson = structuredJson,
             reportUsage = reportUsage,
             maximumOutputBytes = OnDeviceAiPlugin.MAXIMUM_OUTPUT_BYTES,
             maximumOutputTokens = maximumOutputTokens,
             maximumToolRounds = 0,
             timeoutMillis = 30_000L,
+            responseMimeType = if (structuredJson) OnDeviceAiMimeType.JSON else OnDeviceAiMimeType.PLAIN,
+            responseSchema = responseSchemaJson?.let { schema ->
+                val bytes = schema.toByteArray(Charsets.UTF_8)
+                AiPayloadReference(
+                    mimeType = OnDeviceAiMimeType.JSON,
+                    declaredLengthBytes = bytes.size.toLong(),
+                    inlineBytes = bytes,
+                    charset = "utf-8",
+                )
+            },
             temperature = temperature,
             topK = topK,
             topP = topP,

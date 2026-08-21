@@ -24,6 +24,9 @@ internal object PromptPlanner {
         }
         require(messages.last().role == GenerationRole.USER) { "The final AI message must be a user message" }
         val options = request.options
+        require((materialized.responseSchemaJson != null) == (options.responseSchema != null)) {
+            "The materialized response schema does not match the request"
+        }
         val maximumTokens = options.maximumOutputTokens?.toInt()
         val samplingOptions = if (
             options.temperature == null && options.topK == null && options.topP == null
@@ -42,6 +45,13 @@ internal object PromptPlanner {
             maximumOutputTokens = maximumTokens,
             samplingOptions = samplingOptions,
             reportUsage = options.reportUsage,
+            responseJsonSchema = if (options.structuredJson) {
+                materialized.responseSchemaJson ?: DEFAULT_RESPONSE_SCHEMA_JSON
+            } else {
+                null
+            },
         )
     }
+
+    private const val DEFAULT_RESPONSE_SCHEMA_JSON = "{\"type\":\"object\"}"
 }

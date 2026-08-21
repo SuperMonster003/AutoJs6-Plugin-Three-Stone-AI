@@ -35,6 +35,7 @@ class ModelPagerTest {
             assertEquals(
                 listOf(
                     OnDeviceAiCapabilityId.STREAMING,
+                    OnDeviceAiCapabilityId.STRUCTURED_JSON,
                     OnDeviceAiCapabilityId.USAGE,
                     OnDeviceAiCapabilityId.PERSISTENT_SESSION,
                 ),

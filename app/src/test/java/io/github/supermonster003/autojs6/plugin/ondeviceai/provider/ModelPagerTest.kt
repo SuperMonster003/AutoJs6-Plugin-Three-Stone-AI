@@ -32,7 +32,10 @@ class ModelPagerTest {
         assertTrue(requireNotNull(first.nextPageToken).toByteArray().size < 128)
         assertNull(second.nextPageToken)
         (first.models + second.models).forEach { model ->
-            assertEquals(listOf(OnDeviceAiCapabilityId.STREAMING), model.capabilityIds)
+            assertEquals(
+                listOf(OnDeviceAiCapabilityId.STREAMING, OnDeviceAiCapabilityId.USAGE),
+                model.capabilityIds,
+            )
             assertEquals(OnDeviceAiPlugin.MAXIMUM_CONTEXT_BYTES, model.maximumContextBytes)
             assertEquals(OnDeviceAiPlugin.MAXIMUM_OUTPUT_BYTES, model.maximumOutputBytes)
         }

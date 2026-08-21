@@ -82,6 +82,7 @@ var providerRef = new AtomicReference(null);
 var bindError = new AtomicReference(null);
 var terminalError = new AtomicReference(null);
 var finalText = new AtomicReference(null);
+var usageRef = new AtomicReference(null);
 
 var terminalClaimed = new AtomicBoolean(false);
 var returnedCredits = new AtomicInteger(0);
@@ -162,6 +163,11 @@ var textCallback = new JavaAdapter(
         },
 
         onUsage: function (raw) {
+            try {
+                usageRef.set(AiCommonCodec.decodeUsage(raw));
+            } catch (e) {
+                failTerminal("无法解析用量信息: " + e);
+            }
         },
 
         onCompleted: function (raw, fds) {
@@ -318,14 +324,14 @@ try {
         true,   // stream
         false,  // reasoning
         false,  // structured JSON
-        false,  // usage
+        true,   // usage
         4096,   // 最大输出字节
         java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming"),
+        java.util.Arrays.asList("streaming", "usage"),
         java.lang.Double.valueOf("0.7"), // temperature
         java.lang.Integer.valueOf("40"), // topK
         java.lang.Double.valueOf("0.9")  // topP
@@ -383,6 +389,19 @@ try {
         throw new Error(String(terminalError.get()));
     }
 
+    var usage = usageRef.get();
+
+    if (usage == null) {
+        throw new Error("插件未返回用量信息");
+    }
+
+    console.log(
+        "usage: input=" + usage.getInputTokens() +
+        ", output=" + usage.getOutputTokens() +
+        ", total=" + usage.getTotalTokens() +
+        ", durationMillis=" + usage.getDurationMillis()
+    );
+
     console.log(
         "\n===== 完整结果 =====\n" + finalText.get()
     );
@@ -406,7 +425,8 @@ try {
 - Импорт модели ограничен 8 GiB и должен оставить не менее 256 MiB свободного места.
 - Контекст ограничен 256 KiB, вывод 64 KiB, одновременно активен только один сеанс генерации.
 - `maxTokens` (или `maximumOutputTokens` в прямом протоколе) принимает значения от 1 до 2 147 483 647 и применяется без обязательного отчёта usage. `temperature` должен быть конечным и неотрицательным, `topK` положительным, а `topP` конечным от 0 до 1.
-- Объявлены только streaming и `text/plain`. Reasoning, tools, structured JSON и usage не поддерживаются.
+- Объявлены streaming, usage и `text/plain`. Reasoning, tools и structured JSON не поддерживаются.
+- Количество токенов usage берется из счетчиков KV cache и decode объекта Conversation LiteRT-LM без оценки по символам. `durationMillis` измеряет генерацию провайдера и не включает обнаружение, привязку, перечисление моделей и диспетчеризацию хоста.
 - Плагин не запрашивает разрешения сети или хранилища.
 - Только хост AutoJs6 с той же подписью может привязаться к службе provider.
 - Предыдущие поколения моделей с именами по hash SHA-256 сохраняются для межпроцессной безопасности и продолжают занимать закрытое хранилище.

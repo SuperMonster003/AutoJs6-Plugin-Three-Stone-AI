@@ -82,6 +82,7 @@ var providerRef = new AtomicReference(null);
 var bindError = new AtomicReference(null);
 var terminalError = new AtomicReference(null);
 var finalText = new AtomicReference(null);
+var usageRef = new AtomicReference(null);
 
 var terminalClaimed = new AtomicBoolean(false);
 var returnedCredits = new AtomicInteger(0);
@@ -162,6 +163,11 @@ var textCallback = new JavaAdapter(
         },
 
         onUsage: function (raw) {
+            try {
+                usageRef.set(AiCommonCodec.decodeUsage(raw));
+            } catch (e) {
+                failTerminal("无法解析用量信息: " + e);
+            }
         },
 
         onCompleted: function (raw, fds) {
@@ -318,14 +324,14 @@ try {
         true,   // stream
         false,  // reasoning
         false,  // structured JSON
-        false,  // usage
+        true,   // usage
         4096,   // 最大输出字节
         java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming"),
+        java.util.Arrays.asList("streaming", "usage"),
         java.lang.Double.valueOf("0.7"), // temperature
         java.lang.Integer.valueOf("40"), // topK
         java.lang.Double.valueOf("0.9")  // topP
@@ -383,6 +389,19 @@ try {
         throw new Error(String(terminalError.get()));
     }
 
+    var usage = usageRef.get();
+
+    if (usage == null) {
+        throw new Error("插件未返回用量信息");
+    }
+
+    console.log(
+        "usage: input=" + usage.getInputTokens() +
+        ", output=" + usage.getOutputTokens() +
+        ", total=" + usage.getTotalTokens() +
+        ", durationMillis=" + usage.getDurationMillis()
+    );
+
     console.log(
         "\n===== 完整结果 =====\n" + finalText.get()
     );
@@ -406,7 +425,8 @@ try {
 - يقتصر استيراد النموذج على 8 GiB ويجب أن يترك 256 MiB على الأقل من المساحة الحرة.
 - يقتصر السياق على 256 KiB والإخراج على 64 KiB ويمكن تنشيط جلسة توليد واحدة فقط.
 - يقبل `maxTokens` (او `maximumOutputTokens` في البروتوكول المباشر) من 1 إلى 2,147,483,647 ويطبق دون اشتراط تقارير usage. يجب أن تكون `temperature` محدودة وغير سالبة و `topK` موجبة و `topP` محدودة بين 0 و1.
-- يعلن streaming و `text/plain` فقط. لا يدعم reasoning أو tools أو structured JSON أو usage.
+- يعلن streaming و usage و `text/plain`. لا يدعم reasoning أو tools أو structured JSON.
+- تأتي أعداد رموز usage من عدادات KV cache و decode في Conversation ضمن LiteRT-LM دون تقدير بالمحارف. يقيس `durationMillis` توليد المزود ولا يشمل اكتشاف المضيف أو الربط أو تعداد النماذج أو التوزيع.
 - لا يطلب الملحق إذن الشبكة أو التخزين.
 - لا يمكن ربط خدمة provider إلا من مضيف AutoJs6 ذي التوقيع نفسه.
 - يحتفظ بأجيال النماذج السابقة المسماة حسب hash من نوع SHA-256 لضمان الأمان بين العمليات, وتستمر في شغل مساحة التخزين الخاصة.

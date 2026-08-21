@@ -82,6 +82,7 @@ var providerRef = new AtomicReference(null);
 var bindError = new AtomicReference(null);
 var terminalError = new AtomicReference(null);
 var finalText = new AtomicReference(null);
+var usageRef = new AtomicReference(null);
 
 var terminalClaimed = new AtomicBoolean(false);
 var returnedCredits = new AtomicInteger(0);
@@ -162,6 +163,11 @@ var textCallback = new JavaAdapter(
         },
 
         onUsage: function (raw) {
+            try {
+                usageRef.set(AiCommonCodec.decodeUsage(raw));
+            } catch (e) {
+                failTerminal("无法解析用量信息: " + e);
+            }
         },
 
         onCompleted: function (raw, fds) {
@@ -318,14 +324,14 @@ try {
         true,   // stream
         false,  // reasoning
         false,  // structured JSON
-        false,  // usage
+        true,   // usage
         4096,   // 最大输出字节
         java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming"),
+        java.util.Arrays.asList("streaming", "usage"),
         java.lang.Double.valueOf("0.7"), // temperature
         java.lang.Integer.valueOf("40"), // topK
         java.lang.Double.valueOf("0.9")  // topP
@@ -383,6 +389,19 @@ try {
         throw new Error(String(terminalError.get()));
     }
 
+    var usage = usageRef.get();
+
+    if (usage == null) {
+        throw new Error("插件未返回用量信息");
+    }
+
+    console.log(
+        "usage: input=" + usage.getInputTokens() +
+        ", output=" + usage.getOutputTokens() +
+        ", total=" + usage.getTotalTokens() +
+        ", durationMillis=" + usage.getDurationMillis()
+    );
+
     console.log(
         "\n===== 完整结果 =====\n" + finalText.get()
     );
@@ -406,7 +425,8 @@ try {
 - モデルのインポート上限は 8 GiB で, 完了後に 256 MiB 以上の空き容量が必要です.
 - コンテキスト上限は 256 KiB, 出力上限は 64 KiB で, 同時に有効な生成セッションは 1 つだけです.
 - `maxTokens` (direct protocol では `maximumOutputTokens`) は 1 から 2,147,483,647 までで, usage reporting なしで適用されます. `temperature` は有限かつ 0 以上, `topK` は正, `topP` は 0 から 1 の有限値である必要があります.
-- 宣言する機能は streaming と `text/plain` だけです. Reasoning, tools, structured JSON, usage は非対応です.
+- Streaming, usage, `text/plain` を宣言します. Reasoning, tools, structured JSON は非対応です.
+- Usage token 数は LiteRT-LM Conversation の KV cache と decode カウンターから取得し, 文字数では推定しません. `durationMillis` はプロバイダー生成呼び出しのみを測定し, ホストの探索, バインド, モデル列挙, ディスパッチ時間を含みません.
 - ネットワーク権限とストレージ権限は要求しません.
 - 同じ署名の AutoJs6 ホストだけが provider サービスを bind できます.
 - プロセス間の安全性のため, 以前の SHA-256 hash 名モデル世代を保持します. これらはアプリ専用ストレージを引き続き使用します.

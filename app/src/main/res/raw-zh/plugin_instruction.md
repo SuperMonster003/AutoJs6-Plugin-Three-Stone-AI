@@ -82,6 +82,7 @@ var providerRef = new AtomicReference(null);
 var bindError = new AtomicReference(null);
 var terminalError = new AtomicReference(null);
 var finalText = new AtomicReference(null);
+var usageRef = new AtomicReference(null);
 
 var terminalClaimed = new AtomicBoolean(false);
 var returnedCredits = new AtomicInteger(0);
@@ -162,6 +163,11 @@ var textCallback = new JavaAdapter(
         },
 
         onUsage: function (raw) {
+            try {
+                usageRef.set(AiCommonCodec.decodeUsage(raw));
+            } catch (e) {
+                failTerminal("无法解析用量信息: " + e);
+            }
         },
 
         onCompleted: function (raw, fds) {
@@ -318,14 +324,14 @@ try {
         true,   // stream
         false,  // reasoning
         false,  // structured JSON
-        false,  // usage
+        true,   // usage
         4096,   // 最大输出字节
         java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming"),
+        java.util.Arrays.asList("streaming", "usage"),
         java.lang.Double.valueOf("0.7"), // temperature
         java.lang.Integer.valueOf("40"), // topK
         java.lang.Double.valueOf("0.9")  // topP
@@ -383,6 +389,19 @@ try {
         throw new Error(String(terminalError.get()));
     }
 
+    var usage = usageRef.get();
+
+    if (usage == null) {
+        throw new Error("插件未返回用量信息");
+    }
+
+    console.log(
+        "usage: input=" + usage.getInputTokens() +
+        ", output=" + usage.getOutputTokens() +
+        ", total=" + usage.getTotalTokens() +
+        ", durationMillis=" + usage.getDurationMillis()
+    );
+
     console.log(
         "\n===== 完整结果 =====\n" + finalText.get()
     );
@@ -406,7 +425,8 @@ try {
 - 模型导入上限为 8 GiB, 完成后必须至少保留 256 MiB 可用空间.
 - 上下文上限为 256 KiB, 输出上限为 64 KiB, 同一时间仅允许一个生成会话.
 - `maxTokens` (原始协议字段为 `maximumOutputTokens`) 接受 1 至 2,147,483,647, 且无需 usage 上报即可执行. `temperature` 必须为非负有限数, `topK` 必须为正数, `topP` 必须为 0 至 1 的有限数.
-- 仅声明 streaming 和 `text/plain`. 不支持 reasoning, tools, structured JSON 和 usage.
+- 声明 streaming, usage 和 `text/plain`. 不支持 reasoning, tools 和 structured JSON.
+- Usage token 数来自 LiteRT-LM Conversation 的 KV cache 与 decode 计数, 不做字符数估算. `durationMillis` 只测量插件生成调用, 不包含宿主发现, 绑定, 模型枚举和分发时间.
 - 插件不请求网络或存储权限.
 - 仅允许同签名 AutoJs6 宿主绑定 provider 服务.
 - 为保证跨进程安全, 会保留先前以 SHA-256 hash 命名的模型代际, 它们会继续占用应用私有存储.

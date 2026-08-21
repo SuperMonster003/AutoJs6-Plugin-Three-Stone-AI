@@ -32,6 +32,7 @@ class PromptPlannerTest {
         assertEquals(GenerationRole.ASSISTANT, plan.history.last().role)
         assertEquals(GenerationRole.USER, plan.prompt.role)
         assertEquals(listOf("part-3"), plan.prompt.textParts)
+        assertEquals(false, plan.reportUsage)
     }
 
     @Test
@@ -52,6 +53,7 @@ class PromptPlannerTest {
             temperature = 0.75,
             topK = 32,
             topP = 0.9,
+            reportUsage = true,
         )
         val exact = PromptPlanner.plan(
             exactRequest,
@@ -59,6 +61,7 @@ class PromptPlannerTest {
         )
         assertEquals(512, exact.maximumOutputTokens)
         assertEquals(GenerationSamplingOptions(0.75, 32, 0.9), exact.samplingOptions)
+        assertEquals(true, exact.reportUsage)
 
         val partialRequest = request(
             roles = listOf(AiMessageRole.USER),
@@ -85,6 +88,7 @@ class PromptPlannerTest {
         temperature: Double? = null,
         topK: Int? = null,
         topP: Double? = null,
+        reportUsage: Boolean = false,
     ): OnDeviceAiRequest = OnDeviceAiRequest(
         requestId = "request-1",
         protocolVersion = OnDeviceAiProtocol.HOST_PROTOCOL_RANGE.maximum,
@@ -110,7 +114,7 @@ class PromptPlannerTest {
             stream = true,
             includeReasoning = false,
             structuredJson = false,
-            reportUsage = false,
+            reportUsage = reportUsage,
             maximumOutputBytes = OnDeviceAiPlugin.MAXIMUM_OUTPUT_BYTES,
             maximumOutputTokens = maximumOutputTokens,
             maximumToolRounds = 0,

@@ -18,7 +18,7 @@ internal object OnDeviceAiPlugin {
     const val ENGINE = "on-device-ai"
     const val VARIANT = "default"
     const val HOST_PACKAGE_NAME = "org.autojs.autojs6"
-    const val REQUIRED_HOST_VERSION = 5270L
+    const val REQUIRED_HOST_VERSION = 5276L
     const val MAXIMUM_CONTEXT_BYTES = 256L * 1024L
     const val MAXIMUM_OUTPUT_BYTES = 64L * 1024L
     const val MAXIMUM_MESSAGES = 64
@@ -33,7 +33,7 @@ internal object OnDeviceAiPlugin {
         supportsReasoning = false,
         supportsTools = false,
         supportsStructuredJson = false,
-        supportsUsage = false,
+        supportsUsage = true,
         maximumMessages = MAXIMUM_MESSAGES,
         maximumContentParts = MAXIMUM_CONTENT_PARTS,
         maximumToolDefinitions = 0,

@@ -82,6 +82,7 @@ var providerRef = new AtomicReference(null);
 var bindError = new AtomicReference(null);
 var terminalError = new AtomicReference(null);
 var finalText = new AtomicReference(null);
+var usageRef = new AtomicReference(null);
 
 var terminalClaimed = new AtomicBoolean(false);
 var returnedCredits = new AtomicInteger(0);
@@ -162,6 +163,11 @@ var textCallback = new JavaAdapter(
         },
 
         onUsage: function (raw) {
+            try {
+                usageRef.set(AiCommonCodec.decodeUsage(raw));
+            } catch (e) {
+                failTerminal("无法解析用量信息: " + e);
+            }
         },
 
         onCompleted: function (raw, fds) {
@@ -318,14 +324,14 @@ try {
         true,   // stream
         false,  // reasoning
         false,  // structured JSON
-        false,  // usage
+        true,   // usage
         4096,   // 最大输出字节
         java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming"),
+        java.util.Arrays.asList("streaming", "usage"),
         java.lang.Double.valueOf("0.7"), // temperature
         java.lang.Integer.valueOf("40"), // topK
         java.lang.Double.valueOf("0.9")  // topP
@@ -383,6 +389,19 @@ try {
         throw new Error(String(terminalError.get()));
     }
 
+    var usage = usageRef.get();
+
+    if (usage == null) {
+        throw new Error("插件未返回用量信息");
+    }
+
+    console.log(
+        "usage: input=" + usage.getInputTokens() +
+        ", output=" + usage.getOutputTokens() +
+        ", total=" + usage.getTotalTokens() +
+        ", durationMillis=" + usage.getDurationMillis()
+    );
+
     console.log(
         "\n===== 完整结果 =====\n" + finalText.get()
     );
@@ -406,7 +425,8 @@ try {
 - 모델 가져오기 상한은 8 GiB이며 완료 후 최소 256 MiB의 여유 공간이 필요합니다.
 - 컨텍스트 상한은 256 KiB, 출력 상한은 64 KiB이며 동시에 활성화할 수 있는 생성 세션은 1개입니다.
 - `maxTokens`(직접 protocol에서는 `maximumOutputTokens`)는 1부터 2,147,483,647까지이며 usage reporting 없이 적용됩니다. `temperature`는 유한한 0 이상의 값, `topK`는 양수, `topP`는 0부터 1까지의 유한한 값이어야 합니다.
-- Streaming과 `text/plain`만 선언합니다. Reasoning, tools, structured JSON 및 usage는 지원하지 않습니다.
+- Streaming, usage 및 `text/plain`을 선언합니다. Reasoning, tools 및 structured JSON은 지원하지 않습니다.
+- Usage token 수는 LiteRT-LM Conversation의 KV cache 및 decode 카운터에서 가져오며 문자 수로 추정하지 않습니다. `durationMillis`는 공급자 생성 호출만 측정하고 호스트 탐색, 바인딩, 모델 열거 및 디스패치 시간은 제외합니다.
 - 네트워크 또는 저장소 권한을 요청하지 않습니다.
 - 동일한 서명의 AutoJs6 호스트만 provider 서비스에 bind할 수 있습니다.
 - 프로세스 간 안전을 위해 이전 SHA-256 hash 이름 모델 세대를 보존합니다. 이 파일들은 앱 전용 저장소를 계속 사용합니다.

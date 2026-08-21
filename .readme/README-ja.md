@@ -51,6 +51,7 @@ On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI 
 - システムピッカーを開く前にプライベートストレージを事前確認し, 現在のインポート予算とプライベートコピーの推定使用量を表示し, コピー前に選択ファイルを再確認します.
 - プレーンテキストの system, user, assistant 履歴からローカル生成リクエストを作成します.
 - AutoJs6 の `ai.ask`, `ai.chat`, `ai.stream` から `temperature`, `topK`, `topP`, `maxTokens` を LiteRT-LM まで渡します.
+- LiteRT-LM の正確な入力, 出力, 合計 token 数とプロバイダー側の生成時間を, AutoJs6 の `ai.chat().usage` とストリーム usage イベントで返します.
 - モデルの SHA-256 をキーに初期化済み Engine を再利用し, 同じモデルへの連続リクエストで繰り返すコールドスタートをなくします.
 - インポートした各モデルを任意で一度初期化し, 「利用可能/互換性なし」の状態を保存して, モデル管理画面から再チェックできます.
 - credit バックプレッシャーでテキスト chunk を順番に配信し, 完了, 失敗, キャンセルのいずれか 1 つの終端状態だけを公開します.
@@ -90,7 +91,7 @@ protocol: V1.1
 required host build: 5276
 ```
 
-プラグインは ON_DEVICE 実行と NONE credential モードを宣言します. 宣言する機能は `streaming` のみで, 入出力は `text/plain` のみです.
+プラグインは ON_DEVICE 実行と NONE credential モードを宣言します. `streaming` と `usage` 機能を宣言し, 入出力は `text/plain` です.
 
 ホスト build 5276 以降が必要です. リリースには arm64-v8a, x86_64, universal APK variant が含まれます.
 
@@ -100,7 +101,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応. `ai.ask(messages, { plugin: true })` はプレーンテキストの `system`, `user`, `assistant` メッセージを順序どおり保持し, 最後のメッセージは `user` である必要があります. `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です.
+> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応. `ai.ask(messages, { plugin: true })` はプレーンテキストの `system`, `user`, `assistant` メッセージを順序どおり保持し, 最後のメッセージは `user` である必要があります. `ai.chat` は正確な token 数を `usage` に, 実測生成時間を `usage.raw.durationMillis` に返し, `ai.stream` は完了前に同じ累積 usage を送信します. `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です.
 
 ******
 
@@ -125,6 +126,7 @@ required host build: 5276
 - Provider が宣言するコンテキスト上限は 256 KiB, 出力上限は 64 KiB です. リクエストとモデルはさらに低い上限を設定できます.
 - `maxTokens` は 1 から 2,147,483,647 までの整数です. `temperature` は有限かつ 0 以上, `topK` は正の整数, `topP` は 0 から 1 の有限値である必要があります. 3 つの sampling 設定をすべて省略すると model/engine の既定値を維持し, 一部だけ指定すると未指定項目を LiteRT-LM baseline の `topK: 1`, `topP: 0.95`, `temperature: 1` で補完します.
 - ストリーミングは有限の credit と制限付き chunk を使い, 無制限なバッファやバックプレッシャーなしの callback を防ぎます.
+- Usage token 数は LiteRT-LM Conversation の KV cache と decode カウンターから直接取得し, 文字数による推定は行いません. `durationMillis` はプラグイン生成呼び出しのみを測定し, ホストの探索, バインド, モデル列挙, ディスパッチ時間を含みません.
 - キャンセル, セッション終了, timeout は結果公開を停止し, 1 つの終端状態でリクエストを終了します.
 
 ******
@@ -133,7 +135,7 @@ required host build: 5276
 
 ******
 
-- Reasoning, tools, structured JSON, usage は宣言しません.
+- Reasoning, tools, structured JSON は宣言しません.
 - Tool role メッセージ, tool schema, tool call, tool result は受け付けません.
 - ネットワークでのモデル探索, モデルダウンロード, cloud 推論, credential フローはありません.
 - GPU または NPU backend は宣言しません. `.litertlm` 拡張子だけでは現在の LiteRT-LM runtime がモデルを読み込める保証にはなりません.
@@ -161,6 +163,7 @@ required host build: 5276
 * `機能` プラグイン名を On-Device AI (オンデバイス AI) に変更し, AutoJs6 公式オンデバイス AI プラグインとして位置付け
 * `機能` AutoJs6 の `ai.ask`/`ai.chat`/`ai.stream` における `plugin: true` 短縮セレクターと `ai.models` モデル列挙に対応
 * `機能` On-Device AI プロトコル 1.1 により `temperature`, `topK`, `topP`, `maxTokens` を LiteRT-LM の sampling と出力 token 制御まで伝達
+* `機能` LiteRT-LM の正確な入力, 出力, 合計 token 数とプロバイダー実測の生成時間を `ai.chat().usage` とストリーム usage イベントで報告
 * `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合
 * `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 

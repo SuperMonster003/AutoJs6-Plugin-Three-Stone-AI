@@ -10,7 +10,8 @@
       "feature": [
         "اعادة تسمية الاضافة الى On-Device AI وتحديد موقعها كاضافة الذكاء الاصطناعي المحلية الرسمية لـ AutoJs6",
         "التوافق مع المحدد المختصر `plugin: true` لـ `ai.ask`/`ai.chat`/`ai.stream` وتعداد النماذج `ai.models` في AutoJs6",
-        "تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر بروتوكول On-Device AI 1.1 إلى عناصر تحكم sampling و output tokens في LiteRT-LM"
+        "تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر بروتوكول On-Device AI 1.1 إلى عناصر تحكم sampling و output tokens في LiteRT-LM",
+        "إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد المقاسة لدى المزود عبر `ai.chat().usage` وأحداث usage للبث"
       ],
       "improvement": [
         "تحديث وصف الاضافة والتعليمات و README بعشر لغات بما يتوافق مع اضفاء الطابع الرسمي على مسار الاضافة المحلية `ai.*`",

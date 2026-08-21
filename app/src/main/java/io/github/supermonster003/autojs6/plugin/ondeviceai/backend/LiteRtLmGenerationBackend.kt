@@ -5,10 +5,12 @@ import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
+import com.google.ai.edge.litertlm.ExperimentalApi
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.SamplerConfig
 import java.io.File
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal class LiteRtLmGenerationBackend(
@@ -59,6 +61,7 @@ internal class LiteRtLmGenerationBackend(
                 )
                 synchronized(lifecycleLock) { conversation = localConversation }
                 if (closed.get() || cancelled.get()) return
+                val generationStartedNanos = System.nanoTime()
                 localConversation.sendMessageAsync(
                     toLiteRtMessage(request.prompt),
                     object : MessageCallback {
@@ -72,12 +75,28 @@ internal class LiteRtLmGenerationBackend(
                         }
 
                         override fun onDone() {
-                            callbackGate.runCallback(listener::onCompleted)
+                            val statistics = collectStatistics(
+                                conversation = localConversation,
+                                reportUsage = request.reportUsage,
+                                generationStartedNanos = generationStartedNanos,
+                            )
+                            statistics.exceptionOrNull()?.let { localEngineLease.invalidate() }
+                            callbackGate.runCallback {
+                                statistics.fold(
+                                    onSuccess = listener::onCompleted,
+                                    onFailure = { error -> listener.onFailed(error, null) },
+                                )
+                            }
                         }
 
                         override fun onError(throwable: Throwable) {
+                            val statistics = collectStatistics(
+                                conversation = localConversation,
+                                reportUsage = request.reportUsage,
+                                generationStartedNanos = generationStartedNanos,
+                            ).getOrNull()
                             localEngineLease.invalidate()
-                            callbackGate.runCallback { listener.onFailed(throwable) }
+                            callbackGate.runCallback { listener.onFailed(throwable, statistics) }
                         }
                     },
                     maxOutputToken = request.maximumOutputTokens,
@@ -86,7 +105,7 @@ internal class LiteRtLmGenerationBackend(
         } catch (error: Throwable) {
             synchronized(lifecycleLock) { engineLease }?.invalidate()
             callbackGate.runCallback {
-                if (!closed.get() && !cancelled.get()) listener.onFailed(error)
+                if (!closed.get() && !cancelled.get()) listener.onFailed(error, null)
             }
         }
     }
@@ -123,6 +142,31 @@ internal class LiteRtLmGenerationBackend(
             GenerationRole.SYSTEM -> Message.system(contents)
             GenerationRole.USER -> Message.user(contents)
             GenerationRole.ASSISTANT -> Message.model(contents)
+        }
+    }
+
+    @OptIn(ExperimentalApi::class)
+    private fun collectStatistics(
+        conversation: Conversation,
+        reportUsage: Boolean,
+        generationStartedNanos: Long,
+    ): Result<GenerationStatistics?> {
+        if (!reportUsage) return Result.success(null)
+        return runCatching {
+            val benchmark = conversation.getBenchmarkInfo()
+            val totalTokens = conversation.getTokenCount().toLong()
+            val outputTokens = benchmark.lastDecodeTokenCount.toLong()
+            require(totalTokens >= outputTokens) { "LiteRT-LM returned inconsistent token counters" }
+            GenerationStatistics(
+                // A fresh Conversation owns exactly this request's KV cache, including its complete
+                // system/history preface. Deriving input from the cache total therefore avoids
+                // under-counting initial messages when LiteRT-LM reports only the last prefill turn.
+                inputTokens = totalTokens - outputTokens,
+                outputTokens = outputTokens,
+                durationMillis = TimeUnit.NANOSECONDS.toMillis(
+                    (System.nanoTime() - generationStartedNanos).coerceAtLeast(0L),
+                ),
+            )
         }
     }
 }

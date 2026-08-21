@@ -82,6 +82,7 @@ var providerRef = new AtomicReference(null);
 var bindError = new AtomicReference(null);
 var terminalError = new AtomicReference(null);
 var finalText = new AtomicReference(null);
+var usageRef = new AtomicReference(null);
 
 var terminalClaimed = new AtomicBoolean(false);
 var returnedCredits = new AtomicInteger(0);
@@ -162,6 +163,11 @@ var textCallback = new JavaAdapter(
         },
 
         onUsage: function (raw) {
+            try {
+                usageRef.set(AiCommonCodec.decodeUsage(raw));
+            } catch (e) {
+                failTerminal("无法解析用量信息: " + e);
+            }
         },
 
         onCompleted: function (raw, fds) {
@@ -318,14 +324,14 @@ try {
         true,   // stream
         false,  // reasoning
         false,  // structured JSON
-        false,  // usage
+        true,   // usage
         4096,   // 最大输出字节
         java.lang.Long.valueOf("256"), // 最大输出 token
         0,      // tool rounds
         300000, // 插件侧超时 5 分钟
         "text/plain",
         null,
-        java.util.Collections.singletonList("streaming"),
+        java.util.Arrays.asList("streaming", "usage"),
         java.lang.Double.valueOf("0.7"), // temperature
         java.lang.Integer.valueOf("40"), // topK
         java.lang.Double.valueOf("0.9")  // topP
@@ -383,6 +389,19 @@ try {
         throw new Error(String(terminalError.get()));
     }
 
+    var usage = usageRef.get();
+
+    if (usage == null) {
+        throw new Error("插件未返回用量信息");
+    }
+
+    console.log(
+        "usage: input=" + usage.getInputTokens() +
+        ", output=" + usage.getOutputTokens() +
+        ", total=" + usage.getTotalTokens() +
+        ", durationMillis=" + usage.getDurationMillis()
+    );
+
     console.log(
         "\n===== 完整结果 =====\n" + finalText.get()
     );
@@ -406,7 +425,8 @@ Seguridad y límites operativos:
 - La importación de un modelo se limita a 8 GiB y debe dejar al menos 256 MiB libres.
 - El contexto se limita a 256 KiB, la salida a 64 KiB y solo puede estar activa una sesión de generación.
 - `maxTokens` (o `maximumOutputTokens` en el protocolo directo) admite de 1 a 2.147.483.647 y se aplica sin requerir informes de usage. `temperature` debe ser finito y no negativo, `topK` positivo y `topP` finito entre 0 y 1.
-- Solo se declaran streaming y `text/plain`. No se admiten reasoning, tools, structured JSON ni usage.
+- Se declaran streaming, usage y `text/plain`. No se admiten reasoning, tools ni structured JSON.
+- Los tokens de usage proceden de los contadores de caché KV y decode de Conversation en LiteRT-LM, sin estimaciones por caracteres. `durationMillis` mide la generación del proveedor y excluye descubrimiento, enlace, listado de modelos y despacho del host.
 - El plugin no solicita permisos de red ni almacenamiento.
 - Solo el host AutoJs6 con la misma firma puede enlazar el servicio provider.
 - Las generaciones anteriores con nombre de hash SHA-256 se conservan por seguridad entre procesos y siguen ocupando almacenamiento privado.

@@ -7,12 +7,14 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.OnDeviceAiPlugin
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationBackend
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationBackendFactory
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationListener
+import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationStatistics
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelRepository
 import org.autojs.plugin.ai.common.api.AiCommonCodec
 import org.autojs.plugin.ai.common.api.AiError
 import org.autojs.plugin.ai.common.api.AiErrorCode
 import org.autojs.plugin.ai.common.api.AiPayloadReference
 import org.autojs.plugin.ai.common.api.AiRetryDisposition
+import org.autojs.plugin.ai.common.api.AiUsage
 import org.autojs.plugin.ondeviceai.api.AiCompletionResult
 import org.autojs.plugin.ondeviceai.api.AiSessionStarted
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiCapabilityId
@@ -66,6 +68,7 @@ internal class RemoteOnDeviceAiSession(
     private val drainScheduled = AtomicBoolean(false)
     private val timeoutFuture = AtomicReference<Future<*>?>()
     private val backend = AtomicReference<GenerationBackend?>()
+    private val generationStatistics = AtomicReference<GenerationStatistics?>()
     private val terminalCause = AtomicReference(TerminalCause.NONE)
     private val futures = ConcurrentLinkedQueue<Future<*>>()
 
@@ -168,8 +171,9 @@ internal class RemoteOnDeviceAiSession(
                 generationRequest,
                 object : GenerationListener {
                     override fun onTextDelta(text: String) = backendTextDelta(text)
-                    override fun onCompleted() = backendCompleted()
-                    override fun onFailed(error: Throwable) = backendFailed()
+                    override fun onCompleted(statistics: GenerationStatistics?) = backendCompleted(statistics)
+                    override fun onFailed(error: Throwable, statistics: GenerationStatistics?) =
+                        backendFailed(statistics)
                 },
             )
         } catch (_: SessionStopped) {
@@ -198,11 +202,13 @@ internal class RemoteOnDeviceAiSession(
         require(request.providerId == OnDeviceAiPlugin.PROVIDER_ID) { "Provider ID does not match" }
         val options = request.options
         if (
-            options.includeReasoning || options.structuredJson || options.reportUsage ||
+            options.includeReasoning || options.structuredJson ||
             options.maximumToolRounds != 0 ||
             options.responseMimeType != OnDeviceAiMimeType.PLAIN || options.responseSchema != null ||
             request.tools.isNotEmpty() ||
-            options.requiredCapabilityIds.any { it != OnDeviceAiCapabilityId.STREAMING } ||
+            options.requiredCapabilityIds.any {
+                it != OnDeviceAiCapabilityId.STREAMING && it != OnDeviceAiCapabilityId.USAGE
+            } ||
             request.messages.any { it.name != null }
         ) {
             throw UnsupportedSurface()
@@ -234,21 +240,32 @@ internal class RemoteOnDeviceAiSession(
         }
         scheduleDrain()
         if (hitLimit && terminalCause.compareAndSet(TerminalCause.NONE, TerminalCause.OUTPUT_LIMIT)) {
-            output.markBackendDone()
             requestBackendCancel()
-            scheduleDrain()
         }
     }
 
-    private fun backendCompleted() {
-        if (!state.isActive || terminalCause.get() != TerminalCause.NONE) return
-        output.markBackendDone()
-        scheduleDrain()
+    private fun backendCompleted(statistics: GenerationStatistics?) {
+        if (!state.isActive) return
+        when (terminalCause.get()) {
+            TerminalCause.NONE,
+            TerminalCause.OUTPUT_LIMIT,
+            -> {
+                generationStatistics.set(statistics)
+                output.markBackendDone()
+                scheduleDrain()
+            }
+            TerminalCause.USER_CANCEL,
+            TerminalCause.TIMEOUT,
+            TerminalCause.CLOSE,
+            TerminalCause.FAILURE,
+            -> Unit
+        }
     }
 
-    private fun backendFailed() {
+    private fun backendFailed(statistics: GenerationStatistics?) {
         when (terminalCause.get()) {
             TerminalCause.OUTPUT_LIMIT -> {
+                generationStatistics.set(statistics)
                 output.markBackendDone()
                 scheduleDrain()
             }
@@ -295,6 +312,12 @@ internal class RemoteOnDeviceAiSession(
             return finishFailed(AiErrorCode.PROVIDER_FAILED, "on-device AI output finalization failed")
         }
         val bytes = snapshot.text.toByteArray(Charsets.UTF_8)
+        val usage = if (request.options.reportUsage) {
+            generationStatistics.get()?.toAiUsage()
+                ?: return finishFailed(AiErrorCode.PROVIDER_FAILED, "on-device AI usage is unavailable")
+        } else {
+            null
+        }
         val result = AiCompletionResult(
             output = AiPayloadReference(
                 mimeType = OnDeviceAiMimeType.PLAIN,
@@ -303,6 +326,7 @@ internal class RemoteOnDeviceAiSession(
                 charset = "utf-8",
             ),
             finishReason = snapshot.finishReason,
+            usage = usage,
         )
         try {
             OnDeviceAiQuotaPolicy.validateCompletionAggregate(
@@ -320,7 +344,12 @@ internal class RemoteOnDeviceAiSession(
             return finishFailed(AiErrorCode.PROVIDER_FAILED, "on-device AI completion validation failed")
         }
         if (!runCatching { state.complete() }.getOrDefault(false)) return
-        dispatchCallback { callback.onCompleted(OnDeviceAiCodec.encodeCompletionResult(result), emptyArray()) }
+        val encodedUsage = usage?.let(AiCommonCodec::encodeUsage)
+        val encodedCompletion = OnDeviceAiCodec.encodeCompletionResult(result)
+        dispatchCallback {
+            encodedUsage?.let(callback::onUsage)
+            callback.onCompleted(encodedCompletion, emptyArray())
+        }
         cleanup(cancelWorkers = false)
     }
 
@@ -450,6 +479,13 @@ internal class RemoteOnDeviceAiSession(
     private fun ensureActive() {
         if (!state.isActive || Thread.currentThread().isInterrupted) throw SessionStopped()
     }
+
+    private fun GenerationStatistics.toAiUsage() = AiUsage(
+        inputTokens = inputTokens,
+        outputTokens = outputTokens,
+        totalTokens = totalTokens,
+        durationMillis = durationMillis,
+    )
 
     private enum class TerminalCause { NONE, OUTPUT_LIMIT, USER_CANCEL, TIMEOUT, CLOSE, FAILURE }
     private class SessionStopped : RuntimeException()

@@ -51,6 +51,7 @@ On-Device AI is the official on-device on-device AI plugin for AutoJs6. It runs 
 - Preflight private storage before opening the picker, show the current import budget and estimated private-copy footprint, and recheck the selected file before copying.
 - Create local generation requests from plain-text system, user, and assistant history.
 - Forward `temperature`, `topK`, `topP`, and `maxTokens` from AutoJs6 `ai.ask`, `ai.chat`, and `ai.stream` to LiteRT-LM.
+- Report exact LiteRT-LM input, output, and total token counts plus provider-side generation duration through AutoJs6 `ai.chat().usage` and stream usage events.
 - Reuse an initialized Engine by model SHA-256, eliminating repeated cold starts for consecutive requests to the same model.
 - Optionally initialize each imported model once, persist its Available/Incompatible status, and rerun the check from the model manager.
 - Deliver text chunks in order with credit backpressure and publish exactly one completed, failed, or cancelled terminal state.
@@ -90,7 +91,7 @@ protocol: V1.1
 required host build: 5276
 ```
 
-The plugin declares ON_DEVICE execution and the NONE credential mode. It declares only the `streaming` capability and `text/plain` input and output.
+The plugin declares ON_DEVICE execution and the NONE credential mode. It declares the `streaming` and `usage` capabilities with `text/plain` input and output.
 
 Host build 5276 or later is required. Releases include arm64-v8a, x86_64, universal APK variants.
 
@@ -100,7 +101,7 @@ Host build 5276 or later is required. Releases include arm64-v8a, x86_64, univer
 
 ******
 
-> In AutoJs6 (build 5276 and later), `ai.ask`, `ai.chat`, and `ai.stream` support the local plugin route. `ai.ask(messages, { plugin: true })` preserves ordered plain-text `system`, `user`, and `assistant` messages, and the final message must be `user`. Pass `plugin: true` to select this plugin, and the model ID may be omitted when only one model is imported; `ai.models({ plugin: true })` lists imported models. When the plugin is not installed, not enabled in Plugin Center, or has no imported model, scripts receive a clear error message. A fully pinned `plugin: { component, providerId, modelId }` selector is also supported.
+> In AutoJs6 (build 5276 and later), `ai.ask`, `ai.chat`, and `ai.stream` support the local plugin route. `ai.ask(messages, { plugin: true })` preserves ordered plain-text `system`, `user`, and `assistant` messages, and the final message must be `user`. `ai.chat` returns exact token counts in `usage` and the measured generation duration in `usage.raw.durationMillis`; `ai.stream` emits the same cumulative usage before completion. Pass `plugin: true` to select this plugin, and the model ID may be omitted when only one model is imported; `ai.models({ plugin: true })` lists imported models. When the plugin is not installed, not enabled in Plugin Center, or has no imported model, scripts receive a clear error message. A fully pinned `plugin: { component, providerId, modelId }` selector is also supported.
 
 ******
 
@@ -125,6 +126,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 - The provider advertises a 256 KiB context ceiling and a 64 KiB output ceiling. Requests and models may impose lower limits.
 - `maxTokens` accepts integers from 1 through 2,147,483,647. `temperature` must be finite and non-negative, `topK` a positive integer, and `topP` finite from 0 through 1. Leaving all three sampling controls unset preserves model/engine defaults; a partial override fills the omitted controls with the LiteRT-LM baseline `topK: 1`, `topP: 0.95`, and `temperature: 1`.
 - Streaming uses finite credits and bounded chunks to prevent unbounded buffering or callbacks without backpressure.
+- Usage token counts come from LiteRT-LM's conversation KV-cache and decode counters, without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, model listing, and dispatch time.
 - Cancellation, session close, and timeout stop result publication and finish the request through one terminal state.
 
 ******
@@ -133,7 +135,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 
 ******
 
-- Reasoning, tools, structured JSON, and usage are not declared.
+- Reasoning, tools, and structured JSON are not declared.
 - Tool-role messages, tool schemas, tool calls, and tool results are not accepted.
 - There is no network model discovery, model download, cloud inference, or credential flow.
 - No GPU or NPU backend is declared. A `.litertlm` extension alone does not guarantee that the current LiteRT-LM runtime can load the model.
@@ -161,6 +163,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Feature` Plugin brand and runtime identity standardized as On-Device AI across display names, package and component names, discovery identifiers, protocol API, build artifacts, and documentation
 * `Feature` Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing
 * `Feature` Forwarded `temperature`, `topK`, `topP`, and `maxTokens` through On-Device AI protocol 1.1 to LiteRT-LM sampling and output-token controls
+* `Feature` Reported exact LiteRT-LM input, output, and total token counts plus provider-measured generation duration through AutoJs6 `ai.chat().usage` and stream usage events
 * `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 

@@ -10,7 +10,8 @@
       "feature": [
         "外掛品牌與執行階段識別統一為 On-Device AI (裝置端 AI), 同步應用程式名稱, 套件名稱, 元件名稱, 探索識別, 協定 API, 建置產物及文件",
         "適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 的 `plugin: true` 簡寫選擇器及 `ai.models` 模型列舉",
-        "透過 On-Device AI 協定 1.1 將 `temperature`, `topK`, `topP` 與 `maxTokens` 傳遞至 LiteRT-LM 取樣及輸出 token 控制"
+        "透過 On-Device AI 協定 1.1 將 `temperature`, `topK`, `topP` 與 `maxTokens` 傳遞至 LiteRT-LM 取樣及輸出 token 控制",
+        "透過 AutoJs6 `ai.chat().usage` 與串流 usage 事件回傳 LiteRT-LM 精確的輸入, 輸出及總 token 數, 以及外掛實測生成耗時"
       ],
       "improvement": [
         "更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致",

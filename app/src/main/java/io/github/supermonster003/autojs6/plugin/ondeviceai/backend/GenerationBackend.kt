@@ -30,12 +30,30 @@ internal data class GenerationRequest(
     val prompt: GenerationMessage,
     val maximumOutputTokens: Int?,
     val samplingOptions: GenerationSamplingOptions?,
+    val reportUsage: Boolean,
 )
+
+/** Exact provider-side counters for one generation turn. */
+internal data class GenerationStatistics(
+    val inputTokens: Long,
+    val outputTokens: Long,
+    val durationMillis: Long,
+) {
+    val totalTokens: Long
+
+    init {
+        require(inputTokens >= 0L)
+        require(outputTokens >= 0L)
+        require(durationMillis >= 0L)
+        require(inputTokens <= Long.MAX_VALUE - outputTokens)
+        totalTokens = inputTokens + outputTokens
+    }
+}
 
 internal interface GenerationListener {
     fun onTextDelta(text: String)
-    fun onCompleted()
-    fun onFailed(error: Throwable)
+    fun onCompleted(statistics: GenerationStatistics?)
+    fun onFailed(error: Throwable, statistics: GenerationStatistics?)
 }
 
 internal interface GenerationBackend : Closeable {

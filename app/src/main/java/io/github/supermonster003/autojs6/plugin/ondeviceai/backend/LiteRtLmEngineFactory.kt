@@ -3,20 +3,28 @@ package io.github.supermonster003.autojs6.plugin.ondeviceai.backend
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.ExperimentalApi
+import com.google.ai.edge.litertlm.ExperimentalFlags
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ImportedModel
 import java.io.File
 
 /** Keeps generation and model-health probes on the exact same LiteRT-LM configuration. */
 internal object LiteRtLmEngineFactory {
-    fun create(modelPath: String, cacheDirectory: File): Engine = Engine(
-        EngineConfig(
-            modelPath = modelPath,
-            backend = Backend.CPU(
-                threadCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 8),
+    @OptIn(ExperimentalApi::class)
+    @Synchronized
+    fun create(modelPath: String, cacheDirectory: File): Engine {
+        // LiteRT-LM snapshots this process-wide flag while constructing the native engine.
+        ExperimentalFlags.enableBenchmark = true
+        return Engine(
+            EngineConfig(
+                modelPath = modelPath,
+                backend = Backend.CPU(
+                    threadCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 8),
+                ),
+                cacheDir = cacheDirectory.absolutePath,
             ),
-            cacheDir = cacheDirectory.absolutePath,
-        ),
-    )
+        )
+    }
 }
 
 internal fun interface ModelHealthChecker {

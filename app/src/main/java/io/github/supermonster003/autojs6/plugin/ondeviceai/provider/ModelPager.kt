@@ -147,7 +147,10 @@ internal class ModelPager(
     private companion object {
         const val MAXIMUM_TOKEN_GENERATION_ATTEMPTS = 8
         val OPAQUE_TOKEN = Regex("^[0-9a-f]{48}$")
-        val PUBLIC_CAPABILITY_IDS = listOf(OnDeviceAiCapabilityId.STREAMING)
+        val PUBLIC_CAPABILITY_IDS = listOf(
+            OnDeviceAiCapabilityId.STREAMING,
+            OnDeviceAiCapabilityId.USAGE,
+        )
     }
 }
 

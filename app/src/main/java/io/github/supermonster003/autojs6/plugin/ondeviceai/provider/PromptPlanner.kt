@@ -41,6 +41,7 @@ internal object PromptPlanner {
             prompt = messages.last(),
             maximumOutputTokens = maximumTokens,
             samplingOptions = samplingOptions,
+            reportUsage = options.reportUsage,
         )
     }
 }

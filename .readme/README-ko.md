@@ -100,7 +100,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`은 로컬 플러그인 경로를 지원합니다: `plugin: true`를 전달하면 이 플러그인이 선택되고, 모델이 하나뿐인 경우 모델 ID를 생략할 수 있습니다. `ai.models({ plugin: true })`로 가져온 모델을 열거할 수 있습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 스크립트에 명확한 오류가 전달됩니다. `plugin: { component, providerId, modelId }`로 명시적 고정도 가능합니다.
+> AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`은 로컬 플러그인 경로를 지원합니다. `ai.ask(messages, { plugin: true })`는 일반 텍스트 `system`, `user`, `assistant` 메시지의 순서를 유지하며 마지막 메시지는 `user` 역할이어야 합니다. `plugin: true`를 전달하면 이 플러그인이 선택되고, 모델이 하나뿐인 경우 모델 ID를 생략할 수 있습니다. `ai.models({ plugin: true })`로 가져온 모델을 열거할 수 있습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 스크립트에 명확한 오류가 전달됩니다. `plugin: { component, providerId, modelId }`로 명시적 고정도 가능합니다.
 
 ******
 

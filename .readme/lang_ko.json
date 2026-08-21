@@ -25,7 +25,7 @@
   "p_plugin_scope": "플러그인은 ON_DEVICE 실행과 NONE credential 모드를 선언합니다. `streaming` 기능과 `text/plain` 입출력만 선언합니다.",
   "p_plugin_packaging": "호스트 build {{ required_host_build }} 이상이 필요합니다. 릴리스에는 {{ supported_abis }} APK 변형이 포함됩니다.",
   "h3_host_integration_status": "호스트 통합 상태",
-  "p_host_integration_status": "AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`은 로컬 플러그인 경로를 지원합니다: `plugin: true`를 전달하면 이 플러그인이 선택되고, 모델이 하나뿐인 경우 모델 ID를 생략할 수 있습니다. `ai.models({ plugin: true })`로 가져온 모델을 열거할 수 있습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 스크립트에 명확한 오류가 전달됩니다. `plugin: { component, providerId, modelId }`로 명시적 고정도 가능합니다.",
+  "p_host_integration_status": "AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`은 로컬 플러그인 경로를 지원합니다. `ai.ask(messages, { plugin: true })`는 일반 텍스트 `system`, `user`, `assistant` 메시지의 순서를 유지하며 마지막 메시지는 `user` 역할이어야 합니다. `plugin: true`를 전달하면 이 플러그인이 선택되고, 모델이 하나뿐인 경우 모델 ID를 생략할 수 있습니다. `ai.models({ plugin: true })`로 가져온 모델을 열거할 수 있습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 스크립트에 명확한 오류가 전달됩니다. `plugin: { component, providerId, modelId }`로 명시적 고정도 가능합니다.",
   "h3_security": "보안 및 개인정보 보호",
   "p_security": "네트워크 또는 저장소 권한을 요청하지 않습니다. 시스템 선택기가 허용한 URI로만 모델을 읽고 SHA-256을 계산하며 앱 전용 `files/models`로 복사한 뒤 fsync하고 같은 디렉터리의 pointer를 원자적으로 교체해 활성화합니다. Provider 서비스는 AutoJs6 패키지 이름, 호출 UID 소유권 및 양쪽 서명 일치도 검증합니다.",
   "h3_security_limits": "운영 제한",

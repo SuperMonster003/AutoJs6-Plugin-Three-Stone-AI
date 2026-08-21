@@ -100,7 +100,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由: 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件.
+> AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由. `ai.ask(messages, { plugin: true })` 會按順序保留純文字 `system`, `user` 同 `assistant` 消息, 而最後一條消息必須係 `user`. 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件.
 
 ******
 

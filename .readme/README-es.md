@@ -100,7 +100,7 @@ Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes
 
 ******
 
-> En AutoJs6 (compilación 5276 y posteriores), `ai.ask`, `ai.chat` y `ai.stream` admiten la ruta de plugin local: pase `plugin: true` para seleccionar este plugin, y el ID de modelo puede omitirse cuando solo hay un modelo importado; `ai.models({ plugin: true })` enumera los modelos importados. Si el plugin no está instalado, no está habilitado en el Centro de plugins o no tiene modelo, los scripts reciben un error claro. También se admite el selector explícito `plugin: { component, providerId, modelId }`.
+> En AutoJs6 (compilación 5276 y posteriores), `ai.ask`, `ai.chat` y `ai.stream` admiten la ruta de plugin local. `ai.ask(messages, { plugin: true })` conserva en orden los mensajes de texto sin formato con roles `system`, `user` y `assistant`, y el último mensaje debe tener el rol `user`. Pase `plugin: true` para seleccionar este plugin, y el ID de modelo puede omitirse cuando solo hay un modelo importado; `ai.models({ plugin: true })` enumera los modelos importados. Si el plugin no está instalado, no está habilitado en el Centro de plugins o no tiene modelo, los scripts reciben un error claro. También se admite el selector explícito `plugin: { component, providerId, modelId }`.
 
 ******
 

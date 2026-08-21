@@ -25,7 +25,7 @@
   "p_plugin_scope": "プラグインは ON_DEVICE 実行と NONE credential モードを宣言します. 宣言する機能は `streaming` のみで, 入出力は `text/plain` のみです.",
   "p_plugin_packaging": "ホスト build {{ required_host_build }} 以降が必要です. リリースには {{ supported_abis }} APK variant が含まれます.",
   "h3_host_integration_status": "ホスト統合状態",
-  "p_host_integration_status": "AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応: `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です.",
+  "p_host_integration_status": "AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応. `ai.ask(messages, { plugin: true })` はプレーンテキストの `system`, `user`, `assistant` メッセージを順序どおり保持し, 最後のメッセージは `user` である必要があります. `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です.",
   "h3_security": "セキュリティとプライバシー",
   "p_security": "ネットワーク権限とストレージ権限は要求しません. システムピッカーが許可した URI だけからモデルを読み込み, SHA-256 を計算しながらアプリ専用の `files/models` にコピーし, fsync 後に同じディレクトリの pointer を原子的に置換して有効化します. Provider サービスは AutoJs6 パッケージ名, 呼び出し UID の所有権, 双方の一致する署名も検証します.",
   "h3_security_limits": "動作制限",

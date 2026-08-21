@@ -100,7 +100,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat` 與 `ai.stream` 支援本機外掛路由: 傳入 `plugin: true` 即選擇本外掛, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可列舉已匯入模型. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, 指令碼會收到明確的錯誤提示. 亦可透過 `plugin: { component, providerId, modelId }` 顯式固定元件.
+> AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat` 與 `ai.stream` 支援本機外掛路由. `ai.ask(messages, { plugin: true })` 會依序保留純文字 `system`, `user` 與 `assistant` 訊息, 且最後一則訊息必須為 `user`. 傳入 `plugin: true` 即選擇本外掛, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可列舉已匯入模型. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, 指令碼會收到明確的錯誤提示. 亦可透過 `plugin: { component, providerId, modelId }` 顯式固定元件.
 
 ******
 

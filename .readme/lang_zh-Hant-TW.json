@@ -25,7 +25,7 @@
   "p_plugin_scope": "外掛宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它只宣告 `streaming` 能力及 `text/plain` 輸入輸出.",
   "p_plugin_packaging": "需要主程式建置版本 {{ required_host_build }} 或更高版本. 發布產物包含 {{ supported_abis }} APK.",
   "h3_host_integration_status": "主程式整合狀態",
-  "p_host_integration_status": "AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat` 與 `ai.stream` 支援本機外掛路由: 傳入 `plugin: true` 即選擇本外掛, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可列舉已匯入模型. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, 指令碼會收到明確的錯誤提示. 亦可透過 `plugin: { component, providerId, modelId }` 顯式固定元件.",
+  "p_host_integration_status": "AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat` 與 `ai.stream` 支援本機外掛路由. `ai.ask(messages, { plugin: true })` 會依序保留純文字 `system`, `user` 與 `assistant` 訊息, 且最後一則訊息必須為 `user`. 傳入 `plugin: true` 即選擇本外掛, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可列舉已匯入模型. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, 指令碼會收到明確的錯誤提示. 亦可透過 `plugin: { component, providerId, modelId }` 顯式固定元件.",
   "h3_security": "安全性和隱私",
   "p_security": "外掛不要求網路或儲存權限. 模型只透過系統檔案選擇器授予的 URI 讀取, 以串流 SHA-256 校驗和 fsync 寫入應用程式私人 `files/models` 目錄, 再透過同目錄原子 pointer 取代啟用. Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬及雙方簽章.",
   "h3_security_limits": "執行限制",

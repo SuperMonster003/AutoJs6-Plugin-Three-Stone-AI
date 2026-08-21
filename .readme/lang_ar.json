@@ -25,7 +25,7 @@
   "p_plugin_scope": "يعلن الملحق تنفيذ ON_DEVICE ووضع credential من نوع NONE. ولا يعلن إلا قدرة `streaming` وإدخال وإخراج `text/plain`.",
   "p_plugin_packaging": "يلزم build المضيف {{ required_host_build }} أو أحدث. تتضمن الإصدارات متغيرات APK التالية: {{ supported_abis }}.",
   "h3_host_integration_status": "حالة التكامل مع المضيف",
-  "p_host_integration_status": "في AutoJs6 (البنية 5276 وما بعدها) تدعم `ai.ask` و `ai.chat` و `ai.stream` مسار الاضافة المحلية: مرر `plugin: true` لاختيار هذه الاضافة, ويمكن حذف معرف النموذج عند وجود نموذج واحد; كما تعدد `ai.models({ plugin: true })` النماذج المستوردة. عند عدم تثبيت الاضافة او تعطيلها في مركز الاضافات او عدم وجود نموذج, تتلقى السكربتات خطا واضحا. كما يدعم المحدد الصريح `plugin: { component, providerId, modelId }`.",
+  "p_host_integration_status": "في AutoJs6 (البنية 5276 وما بعدها) تدعم `ai.ask` و `ai.chat` و `ai.stream` مسار الاضافة المحلية. يحافظ `ai.ask(messages, { plugin: true })` على ترتيب رسائل النص العادي بادوار `system` و `user` و `assistant`, ويجب ان تكون الرسالة الاخيرة بدور `user`. مرر `plugin: true` لاختيار هذه الاضافة, ويمكن حذف معرف النموذج عند وجود نموذج واحد; كما تعدد `ai.models({ plugin: true })` النماذج المستوردة. عند عدم تثبيت الاضافة او تعطيلها في مركز الاضافات او عدم وجود نموذج, تتلقى السكربتات خطا واضحا. كما يدعم المحدد الصريح `plugin: { component, providerId, modelId }`.",
   "h3_security": "الأمان والخصوصية",
   "p_security": "لا يطلب الملحق إذن الشبكة أو التخزين. يقرأ النموذج فقط عبر URI منحه منتقي النظام, ويحسب SHA-256 أثناء نسخه إلى مجلد التطبيق الخاص `files/models`, ثم ينفذ fsync ويفعله باستبدال ذري للـ pointer في المجلد نفسه. تتحقق الخدمات أيضا من اسم حزمة AutoJs6 وملكية UID المتصل وتطابق التوقيعات.",
   "h3_security_limits": "حدود التشغيل",

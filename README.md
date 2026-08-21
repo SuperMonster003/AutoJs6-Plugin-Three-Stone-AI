@@ -100,7 +100,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (构建 5276 及以上) 的 `ai.ask`, `ai.chat` 与 `ai.stream` 支持本地插件路由: 传入 `plugin: true` 即选择本插件, 单模型场景可省略模型 ID; `ai.models({ plugin: true })` 可枚举已导入模型. 插件未安装, 未在插件中心启用或未导入模型时, 脚本会收到明确的错误提示. 也可通过 `plugin: { component, providerId, modelId }` 显式固定组件.
+> AutoJs6 (构建 5276 及以上) 的 `ai.ask`, `ai.chat` 与 `ai.stream` 支持本地插件路由. `ai.ask(messages, { plugin: true })` 会按顺序保留纯文本 `system`, `user` 与 `assistant` 消息, 且最后一条消息必须为 `user`. 传入 `plugin: true` 即选择本插件, 单模型场景可省略模型 ID; `ai.models({ plugin: true })` 可枚举已导入模型. 插件未安装, 未在插件中心启用或未导入模型时, 脚本会收到明确的错误提示. 也可通过 `plugin: { component, providerId, modelId }` 显式固定组件.
 
 ******
 

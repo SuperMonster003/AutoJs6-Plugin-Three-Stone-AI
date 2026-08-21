@@ -25,7 +25,7 @@
   "p_plugin_scope": "插件宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它只宣告 `streaming` 能力及 `text/plain` 輸入輸出.",
   "p_plugin_packaging": "需要主程式構建版本 {{ required_host_build }} 或更高版本. 發佈產物包含 {{ supported_abis }} APK.",
   "h3_host_integration_status": "主程式整合狀態",
-  "p_host_integration_status": "AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由: 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件.",
+  "p_host_integration_status": "AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由. `ai.ask(messages, { plugin: true })` 會按順序保留純文字 `system`, `user` 同 `assistant` 消息, 而最後一條消息必須係 `user`. 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件.",
   "h3_security": "安全性和私隱",
   "p_security": "插件不要求網絡或儲存權限. 模型只透過系統檔案選擇器授予的 URI 讀取, 以串流 SHA-256 校驗和 fsync 寫入應用程式私人 `files/models` 目錄, 再透過同目錄原子 pointer 替換啟用. Provider 服務亦會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬及雙方簽名.",
   "h3_security_limits": "執行限制",

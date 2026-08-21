@@ -100,7 +100,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応: `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です.
+> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応. `ai.ask(messages, { plugin: true })` はプレーンテキストの `system`, `user`, `assistant` メッセージを順序どおり保持し, 最後のメッセージは `user` である必要があります. `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です.
 
 ******
 

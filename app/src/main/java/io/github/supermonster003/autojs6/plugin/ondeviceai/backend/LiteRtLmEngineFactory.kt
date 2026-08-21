@@ -12,15 +12,24 @@ import java.io.File
 internal object LiteRtLmEngineFactory {
     @OptIn(ExperimentalApi::class)
     @Synchronized
-    fun create(modelPath: String, cacheDirectory: File): Engine {
+    fun create(
+        modelPath: String,
+        cacheDirectory: File,
+        backendProfile: LiteRtLmBackendProfile = LiteRtLmBackendProfile.CPU,
+    ): Engine {
         // LiteRT-LM snapshots this process-wide flag while constructing the native engine.
         ExperimentalFlags.enableBenchmark = true
         return Engine(
             EngineConfig(
                 modelPath = modelPath,
-                backend = Backend.CPU(
-                    threadCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 8),
-                ),
+                backend = when (backendProfile) {
+                    LiteRtLmBackendProfile.CPU -> Backend.CPU(
+                        threadCount = Runtime.getRuntime().availableProcessors().coerceIn(1, 8),
+                    )
+                    LiteRtLmBackendProfile.GPU -> Backend.GPU()
+                    LiteRtLmBackendProfile.NPU ->
+                        throw IllegalArgumentException("The NPU runtime is not packaged")
+                },
                 cacheDir = cacheDirectory.absolutePath,
             ),
         )

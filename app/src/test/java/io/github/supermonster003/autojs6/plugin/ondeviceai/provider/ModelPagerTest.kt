@@ -6,6 +6,7 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelCatalogEnt
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelImportPolicy
 import org.autojs.plugin.ondeviceai.api.AiModelListRequest
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiCapabilityId
+import org.autojs.plugin.ondeviceai.api.OnDeviceAiBackendProfile
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiProtocol
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -43,6 +44,7 @@ class ModelPagerTest {
             )
             assertEquals(OnDeviceAiPlugin.MAXIMUM_CONTEXT_BYTES, model.maximumContextBytes)
             assertEquals(OnDeviceAiPlugin.MAXIMUM_OUTPUT_BYTES, model.maximumOutputBytes)
+            assertEquals(listOf(OnDeviceAiBackendProfile.CPU), model.backendProfiles.map { it.profileId })
         }
     }
 

@@ -15,13 +15,22 @@ internal class LiteRtLmEngineRuntime(
         Executors.newSingleThreadScheduledExecutor { runnable ->
             Thread(runnable, "on-device-ai-engine-cache").apply { isDaemon = true }
         }
-    private val engineCache = ReusableResourceCache<String, Engine>(
+    private val engineCache = ReusableResourceCache<EngineCacheKey, Engine>(
         scheduler = scheduler,
         idleTimeoutMillis = ENGINE_IDLE_TIMEOUT_MILLIS,
     )
 
-    fun createBackend(modelSha256: String, modelPath: String): GenerationBackend =
-        LiteRtLmGenerationBackend(modelSha256, modelPath, cacheDirectory, engineCache)
+    fun createBackend(
+        modelSha256: String,
+        modelPath: String,
+        backendProfile: LiteRtLmBackendProfile,
+    ): GenerationBackend = LiteRtLmGenerationBackend(
+        modelSha256,
+        modelPath,
+        backendProfile,
+        cacheDirectory,
+        engineCache,
+    )
 
     fun requestEviction() {
         try {
@@ -40,6 +49,11 @@ internal class LiteRtLmEngineRuntime(
         const val ENGINE_IDLE_TIMEOUT_MILLIS = 5L * 60L * 1_000L
     }
 }
+
+internal data class EngineCacheKey(
+    val modelSha256: String,
+    val backendProfile: LiteRtLmBackendProfile,
+)
 
 /** Ignores ordinary UI/background transitions while reacting to explicit Android pressure levels. */
 internal object EngineMemoryPressurePolicy {

@@ -22,6 +22,7 @@ import org.autojs.plugin.ondeviceai.api.AiMessageRole
 import org.autojs.plugin.ondeviceai.api.AiSessionStarted
 import org.autojs.plugin.ondeviceai.api.IOnDeviceAiCallback
 import org.autojs.plugin.ondeviceai.api.IOnDeviceAiSession
+import org.autojs.plugin.ondeviceai.api.OnDeviceAiBackendProfile
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiCapabilityId
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiChunk
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiCodec
@@ -200,7 +201,11 @@ internal class RemoteOnDeviceAiSession(
             val generationRequest = PromptPlanner.plan(request, materialized)
             val activeBackend = if (turn.firstTurn) {
                 val model = repository.findByModelId(request.modelId) ?: throw ModelUnavailable()
-                backendFactory.create(model.sha256, model.file.absolutePath).also { created ->
+                backendFactory.create(
+                    model.sha256,
+                    model.file.absolutePath,
+                    request.options.backendProfile,
+                ).also { created ->
                     if (closed.get() || !backend.compareAndSet(null, created)) {
                         runCatching(created::close)
                         throw SessionStopped()
@@ -245,16 +250,15 @@ internal class RemoteOnDeviceAiSession(
 
     private fun requireProtocolAndSurface(request: OnDeviceAiRequest) {
         try {
-            OnDeviceAiVersionPolicy.requireSelected(
-                request.protocolVersion,
-                OnDeviceAiProtocol.HOST_PROTOCOL_RANGE.maximum,
-            )
+            require(request.protocolVersion in OnDeviceAiProtocol.HOST_PROTOCOL_RANGE)
         } catch (_: IllegalArgumentException) {
             throw UnsupportedProtocol()
         }
         require(request.providerId == OnDeviceAiPlugin.PROVIDER_ID) { "Provider ID does not match" }
         val options = request.options
         if (
+            (options.backendProfile != OnDeviceAiBackendProfile.CPU &&
+                request.protocolVersion < OnDeviceAiProtocol.PROTOCOL_V1_3) ||
             options.includeReasoning ||
             options.maximumToolRounds != 0 ||
             (!options.structuredJson && options.responseMimeType != OnDeviceAiMimeType.PLAIN) ||

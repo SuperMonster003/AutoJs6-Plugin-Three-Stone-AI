@@ -17,8 +17,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class LiteRtLmGenerationBackend(
     private val modelSha256: String,
     private val modelPath: String,
+    private val backendProfile: LiteRtLmBackendProfile,
     private val cacheDirectory: File,
-    private val engineCache: ReusableResourceCache<String, Engine>,
+    private val engineCache: ReusableResourceCache<EngineCacheKey, Engine>,
 ) : GenerationBackend {
     private val lifecycleLock = Any()
     private val nativeLifecycleLock = Any()
@@ -40,8 +41,8 @@ internal class LiteRtLmGenerationBackend(
         try {
             synchronized(nativeLifecycleLock) {
                 if (closed.get() || cancelled.get()) return
-                val localEngineLease = engineCache.acquire(modelSha256) {
-                    LiteRtLmEngineFactory.create(modelPath, cacheDirectory).also { created ->
+                val localEngineLease = engineCache.acquire(EngineCacheKey(modelSha256, backendProfile)) {
+                    LiteRtLmEngineFactory.create(modelPath, cacheDirectory, backendProfile).also { created ->
                         try {
                             created.initialize()
                         } catch (error: Throwable) {

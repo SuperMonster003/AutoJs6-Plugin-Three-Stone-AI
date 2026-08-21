@@ -5,17 +5,20 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelCatalogDoc
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelCatalogPolicy
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelRepository
 import org.autojs.plugin.ai.common.api.AiProtocolVersion
+import org.autojs.plugin.ondeviceai.api.AiBackendProfileInfo
 import org.autojs.plugin.ondeviceai.api.AiModelInfo
 import org.autojs.plugin.ondeviceai.api.AiModelListRequest
 import org.autojs.plugin.ondeviceai.api.AiModelPage
+import org.autojs.plugin.ondeviceai.api.OnDeviceAiBackendAvailability
+import org.autojs.plugin.ondeviceai.api.OnDeviceAiBackendProfile
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiCapabilityId
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiLimits
 import org.autojs.plugin.ondeviceai.api.OnDeviceAiProtocol
-import org.autojs.plugin.ondeviceai.api.OnDeviceAiVersionPolicy
 import java.security.SecureRandom
 
 internal class ModelPager(
     private val catalogSnapshot: () -> ModelCatalogDocument,
+    private val backendProfiles: () -> List<AiBackendProfileInfo> = ::defaultBackendProfiles,
     private val tokenSource: () -> String = ModelPageTokenSource::next,
     private val maximumIssuedTokens: Int = OnDeviceAiLimits.MAX_MODEL_PAGE_TOKEN_LEDGER_ENTRIES,
 ) {
@@ -28,7 +31,10 @@ internal class ModelPager(
         }
     }
 
-    constructor(repository: ModelRepository) : this(repository::catalogSnapshot)
+    constructor(
+        repository: ModelRepository,
+        backendProfiles: () -> List<AiBackendProfileInfo> = ::defaultBackendProfiles,
+    ) : this(repository::catalogSnapshot, backendProfiles)
 
     /** Tokens are consumed and the catalog snapshot is selected under one service-scoped lock. */
     @Synchronized
@@ -44,6 +50,7 @@ internal class ModelPager(
         val models: List<AiModelInfo>
         val listingGeneration: String
         try {
+            val detectedBackendProfiles = backendProfiles()
             models = catalog.entries.map { entry ->
                 AiModelInfo(
                     modelId = entry.modelId,
@@ -51,6 +58,7 @@ internal class ModelPager(
                     capabilityIds = PUBLIC_CAPABILITY_IDS,
                     maximumContextBytes = OnDeviceAiPlugin.MAXIMUM_CONTEXT_BYTES,
                     maximumOutputBytes = OnDeviceAiPlugin.MAXIMUM_OUTPUT_BYTES,
+                    backendProfiles = detectedBackendProfiles,
                 )
             }
             listingGeneration = ModelCatalogPolicy.listingGeneration(
@@ -58,6 +66,7 @@ internal class ModelPager(
                 capabilityIds = PUBLIC_CAPABILITY_IDS,
                 maximumContextBytes = OnDeviceAiPlugin.MAXIMUM_CONTEXT_BYTES,
                 maximumOutputBytes = OnDeviceAiPlugin.MAXIMUM_OUTPUT_BYTES,
+                backendProfiles = detectedBackendProfiles,
             )
         } catch (error: Throwable) {
             throw ModelListingFailedException(error)
@@ -106,7 +115,7 @@ internal class ModelPager(
 
     private fun requireSelectedProtocol(requested: AiProtocolVersion) {
         try {
-            OnDeviceAiVersionPolicy.requireSelected(requested, OnDeviceAiProtocol.HOST_PROTOCOL_RANGE.maximum)
+            require(requested in OnDeviceAiProtocol.HOST_PROTOCOL_RANGE)
         } catch (error: Throwable) {
             throw UnsupportedModelListProtocolException(error)
         }
@@ -155,6 +164,13 @@ internal class ModelPager(
         )
     }
 }
+
+private fun defaultBackendProfiles() = listOf(
+    AiBackendProfileInfo(
+        profileId = OnDeviceAiBackendProfile.CPU,
+        availability = OnDeviceAiBackendAvailability.AVAILABLE,
+    ),
+)
 
 internal class InvalidModelListRequestException : IllegalArgumentException("Invalid model-list request")
 

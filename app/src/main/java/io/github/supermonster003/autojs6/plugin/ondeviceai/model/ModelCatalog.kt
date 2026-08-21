@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai.model
 
+import org.autojs.plugin.ondeviceai.api.AiBackendProfileInfo
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.security.MessageDigest
@@ -218,6 +219,7 @@ internal object ModelCatalogPolicy {
         capabilityIds: List<String>,
         maximumContextBytes: Long,
         maximumOutputBytes: Long,
+        backendProfiles: List<AiBackendProfileInfo> = emptyList(),
     ): String {
         val normalized = normalize(document)
         val bytes = ByteArrayOutputStream().use { buffer ->
@@ -230,12 +232,19 @@ internal object ModelCatalogPolicy {
                     capabilityIds.forEach { capabilityId -> output.writeLengthPrefixed(capabilityId) }
                     output.writeLong(maximumContextBytes)
                     output.writeLong(maximumOutputBytes)
+                    output.writeInt(backendProfiles.size)
+                    backendProfiles.forEach { profile ->
+                        output.writeLengthPrefixed(profile.profileId)
+                        output.writeLengthPrefixed(profile.availability)
+                        output.writeBoolean(profile.unavailableReason != null)
+                        profile.unavailableReason?.let { reason -> output.writeLengthPrefixed(reason) }
+                    }
                 }
             }
             buffer.toByteArray()
         }
         val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
-        return "litertlm-catalog-v2-${digest.toHex().take(32)}"
+        return "litertlm-catalog-v3-${digest.toHex().take(32)}"
     }
 
     fun requireValidEntry(entry: ModelCatalogEntry) {

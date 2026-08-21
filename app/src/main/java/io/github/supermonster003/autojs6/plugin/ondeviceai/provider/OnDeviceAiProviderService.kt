@@ -8,6 +8,7 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.OnDeviceAiPlugin
 import io.github.supermonster003.autojs6.plugin.ondeviceai.OnDeviceAiApplication
 import io.github.supermonster003.autojs6.plugin.ondeviceai.aiProviderInfo
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationBackendFactory
+import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.LiteRtLmBackendCompatibilityDetector
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelRepository
 import org.autojs.plugin.ai.common.api.AiCommonCodec
 import org.autojs.plugin.ai.common.api.AiCommonLimits
@@ -33,6 +34,7 @@ class OnDeviceAiProviderService : Service() {
     private lateinit var repository: ModelRepository
     private lateinit var modelPager: ModelPager
     private lateinit var backendFactory: GenerationBackendFactory
+    private lateinit var backendCompatibilityDetector: LiteRtLmBackendCompatibilityDetector
     private val activeSession = AtomicReference<RemoteOnDeviceAiSession?>()
     private val sessions = ConcurrentHashMap.newKeySet<RemoteOnDeviceAiSession>()
 
@@ -45,10 +47,15 @@ class OnDeviceAiProviderService : Service() {
         }
         callbackLane = SerialCallbackLane()
         repository = ModelRepository(this)
-        modelPager = ModelPager(repository)
+        backendCompatibilityDetector = LiteRtLmBackendCompatibilityDetector()
+        modelPager = ModelPager(repository, backendCompatibilityDetector::profiles)
         val engineRuntime = (application as OnDeviceAiApplication).engineRuntime
-        backendFactory = GenerationBackendFactory { modelSha256, modelPath ->
-            engineRuntime.createBackend(modelSha256, modelPath)
+        backendFactory = GenerationBackendFactory { modelSha256, modelPath, backendProfile ->
+            engineRuntime.createBackend(
+                modelSha256,
+                modelPath,
+                backendCompatibilityDetector.requireAvailable(backendProfile),
+            )
         }
     }
 

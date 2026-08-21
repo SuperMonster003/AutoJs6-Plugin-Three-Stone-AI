@@ -70,5 +70,5 @@ internal interface GenerationBackend : Closeable {
 }
 
 internal fun interface GenerationBackendFactory {
-    fun create(modelSha256: String, modelPath: String): GenerationBackend
+    fun create(modelSha256: String, modelPath: String, backendProfile: String): GenerationBackend
 }

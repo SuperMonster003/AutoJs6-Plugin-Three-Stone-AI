@@ -23,6 +23,7 @@ internal class LiteRtLmGenerationBackend(
     private val nativeLifecycleLock = Any()
     private val callbackGate = CallbackQuiescenceGate()
     private val started = AtomicBoolean(false)
+    private val turnActive = AtomicBoolean(false)
     private val cancelled = AtomicBoolean(false)
     private val closed = AtomicBoolean(false)
 
@@ -61,45 +62,12 @@ internal class LiteRtLmGenerationBackend(
                 )
                 synchronized(lifecycleLock) { conversation = localConversation }
                 if (closed.get() || cancelled.get()) return
-                val generationStartedNanos = System.nanoTime()
-                localConversation.sendMessageAsync(
-                    toLiteRtMessage(request.prompt),
-                    object : MessageCallback {
-                        override fun onMessage(message: Message) {
-                            callbackGate.runCallback {
-                                val delta = message.contents.contents
-                                    .filterIsInstance<Content.Text>()
-                                    .joinToString(separator = "") { it.text }
-                                if (delta.isNotEmpty()) listener.onTextDelta(delta)
-                            }
-                        }
-
-                        override fun onDone() {
-                            val statistics = collectStatistics(
-                                conversation = localConversation,
-                                reportUsage = request.reportUsage,
-                                generationStartedNanos = generationStartedNanos,
-                            )
-                            statistics.exceptionOrNull()?.let { localEngineLease.invalidate() }
-                            callbackGate.runCallback {
-                                statistics.fold(
-                                    onSuccess = listener::onCompleted,
-                                    onFailure = { error -> listener.onFailed(error, null) },
-                                )
-                            }
-                        }
-
-                        override fun onError(throwable: Throwable) {
-                            val statistics = collectStatistics(
-                                conversation = localConversation,
-                                reportUsage = request.reportUsage,
-                                generationStartedNanos = generationStartedNanos,
-                            ).getOrNull()
-                            localEngineLease.invalidate()
-                            callbackGate.runCallback { listener.onFailed(throwable, statistics) }
-                        }
-                    },
-                    maxOutputToken = request.maximumOutputTokens,
+                runTurn(
+                    request = request,
+                    listener = listener,
+                    localConversation = localConversation,
+                    localEngineLease = localEngineLease,
+                    tokenBaseline = 0L,
                 )
             }
         } catch (error: Throwable) {
@@ -107,6 +75,88 @@ internal class LiteRtLmGenerationBackend(
             callbackGate.runCallback {
                 if (!closed.get() && !cancelled.get()) listener.onFailed(error, null)
             }
+        }
+    }
+
+    override fun continueGeneration(request: GenerationRequest, listener: GenerationListener) {
+        check(started.get()) { "LiteRT-LM backend has not been started" }
+        check(request.history.isEmpty()) { "A continued LiteRT-LM turn must not resend history" }
+        check(request.prompt.role == GenerationRole.USER) { "A continued LiteRT-LM prompt must be a user message" }
+        try {
+            synchronized(nativeLifecycleLock) {
+                check(!closed.get() && !cancelled.get()) { "LiteRT-LM backend is closed" }
+                val localConversation = checkNotNull(synchronized(lifecycleLock) { conversation })
+                val localEngineLease = checkNotNull(synchronized(lifecycleLock) { engineLease })
+                val tokenBaseline = collectTokenCount(localConversation).getOrElse { error ->
+                    localEngineLease.invalidate()
+                    throw error
+                }
+                runTurn(request, listener, localConversation, localEngineLease, tokenBaseline)
+            }
+        } catch (error: Throwable) {
+            synchronized(lifecycleLock) { engineLease }?.invalidate()
+            callbackGate.runCallback {
+                if (!closed.get() && !cancelled.get()) listener.onFailed(error, null)
+            }
+        }
+    }
+
+    private fun runTurn(
+        request: GenerationRequest,
+        listener: GenerationListener,
+        localConversation: Conversation,
+        localEngineLease: ResourceLease<Engine>,
+        tokenBaseline: Long,
+    ) {
+        check(turnActive.compareAndSet(false, true)) { "LiteRT-LM generation turn is already active" }
+        val generationStartedNanos = System.nanoTime()
+        try {
+            localConversation.sendMessageAsync(
+                toLiteRtMessage(request.prompt),
+                object : MessageCallback {
+                    override fun onMessage(message: Message) {
+                        callbackGate.runCallback {
+                            val delta = message.contents.contents
+                                .filterIsInstance<Content.Text>()
+                                .joinToString(separator = "") { it.text }
+                            if (delta.isNotEmpty()) listener.onTextDelta(delta)
+                        }
+                    }
+
+                    override fun onDone() {
+                        val statistics = collectStatistics(
+                            conversation = localConversation,
+                            reportUsage = request.reportUsage,
+                            generationStartedNanos = generationStartedNanos,
+                            tokenBaseline = tokenBaseline,
+                        )
+                        statistics.exceptionOrNull()?.let { localEngineLease.invalidate() }
+                        turnActive.set(false)
+                        callbackGate.runCallback {
+                            statistics.fold(
+                                onSuccess = listener::onCompleted,
+                                onFailure = { error -> listener.onFailed(error, null) },
+                            )
+                        }
+                    }
+
+                    override fun onError(throwable: Throwable) {
+                        val statistics = collectStatistics(
+                            conversation = localConversation,
+                            reportUsage = request.reportUsage,
+                            generationStartedNanos = generationStartedNanos,
+                            tokenBaseline = tokenBaseline,
+                        ).getOrNull()
+                        localEngineLease.invalidate()
+                        turnActive.set(false)
+                        callbackGate.runCallback { listener.onFailed(throwable, statistics) }
+                    }
+                },
+                maxOutputToken = request.maximumOutputTokens,
+            )
+        } catch (error: Throwable) {
+            turnActive.set(false)
+            throw error
         }
     }
 
@@ -150,24 +200,31 @@ internal class LiteRtLmGenerationBackend(
         conversation: Conversation,
         reportUsage: Boolean,
         generationStartedNanos: Long,
+        tokenBaseline: Long,
     ): Result<GenerationStatistics?> {
         if (!reportUsage) return Result.success(null)
         return runCatching {
             val benchmark = conversation.getBenchmarkInfo()
             val totalTokens = conversation.getTokenCount().toLong()
             val outputTokens = benchmark.lastDecodeTokenCount.toLong()
-            require(totalTokens >= outputTokens) { "LiteRT-LM returned inconsistent token counters" }
+            require(totalTokens >= tokenBaseline && totalTokens - tokenBaseline >= outputTokens) {
+                "LiteRT-LM returned inconsistent token counters"
+            }
             GenerationStatistics(
-                // A fresh Conversation owns exactly this request's KV cache, including its complete
-                // system/history preface. Deriving input from the cache total therefore avoids
-                // under-counting initial messages when LiteRT-LM reports only the last prefill turn.
-                inputTokens = totalTokens - outputTokens,
+                // First-turn baseline zero includes its complete initial preface. Later baselines
+                // exclude the retained KV cache, so usage accounts only for the new user message.
+                inputTokens = totalTokens - tokenBaseline - outputTokens,
                 outputTokens = outputTokens,
                 durationMillis = TimeUnit.NANOSECONDS.toMillis(
                     (System.nanoTime() - generationStartedNanos).coerceAtLeast(0L),
                 ),
             )
         }
+    }
+
+    @OptIn(ExperimentalApi::class)
+    private fun collectTokenCount(conversation: Conversation): Result<Long> = runCatching {
+        conversation.getTokenCount().toLong().also { require(it >= 0L) }
     }
 }
 

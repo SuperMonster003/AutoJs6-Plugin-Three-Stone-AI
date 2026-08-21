@@ -56,6 +56,36 @@ class GenerationBackendAbstractionTest {
         }
     }
 
+    @Test
+    fun persistentBackendReceivesOnlyTheNewPromptOnLaterTurns() {
+        val backend = RecordingPersistentBackend()
+        val listener = object : GenerationListener {
+            override fun onTextDelta(text: String) = Unit
+            override fun onCompleted(statistics: GenerationStatistics?) = Unit
+            override fun onFailed(error: Throwable, statistics: GenerationStatistics?) =
+                throw AssertionError(error)
+        }
+        val initial = GenerationRequest(
+            history = listOf(GenerationMessage(GenerationRole.SYSTEM, listOf("Be concise"))),
+            prompt = GenerationMessage(GenerationRole.USER, listOf("First")),
+            maximumOutputTokens = 64,
+            samplingOptions = GenerationSamplingOptions(0.5, 8, 0.9),
+            reportUsage = true,
+        )
+        val next = initial.copy(
+            history = emptyList(),
+            prompt = GenerationMessage(GenerationRole.USER, listOf("Second only")),
+        )
+
+        backend.start(initial, listener)
+        backend.continueGeneration(next, listener)
+
+        assertEquals(initial, backend.initial)
+        assertEquals(next, backend.next)
+        assertTrue(requireNotNull(backend.next).history.isEmpty())
+        assertEquals(listOf("Second only"), requireNotNull(backend.next).prompt.textParts)
+    }
+
     private class FakeBackend(
         private val deltas: List<String>,
         private val statistics: GenerationStatistics,
@@ -73,5 +103,23 @@ class GenerationBackendAbstractionTest {
         override fun close() {
             closed = true
         }
+    }
+
+    private class RecordingPersistentBackend : GenerationBackend {
+        var initial: GenerationRequest? = null
+        var next: GenerationRequest? = null
+
+        override fun start(request: GenerationRequest, listener: GenerationListener) {
+            initial = request
+            listener.onCompleted(null)
+        }
+
+        override fun continueGeneration(request: GenerationRequest, listener: GenerationListener) {
+            next = request
+            listener.onCompleted(null)
+        }
+
+        override fun cancel() = Unit
+        override fun close() = Unit
     }
 }

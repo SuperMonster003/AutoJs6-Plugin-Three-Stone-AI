@@ -34,6 +34,7 @@ internal object OnDeviceAiPlugin {
         supportsTools = false,
         supportsStructuredJson = false,
         supportsUsage = true,
+        supportsPersistentSessions = true,
         maximumMessages = MAXIMUM_MESSAGES,
         maximumContentParts = MAXIMUM_CONTENT_PARTS,
         maximumToolDefinitions = 0,

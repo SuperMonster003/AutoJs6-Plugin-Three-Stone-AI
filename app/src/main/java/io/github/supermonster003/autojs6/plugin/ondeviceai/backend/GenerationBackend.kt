@@ -57,7 +57,14 @@ internal interface GenerationListener {
 }
 
 internal interface GenerationBackend : Closeable {
+    /** Creates the native Conversation and runs its first turn. */
     fun start(request: GenerationRequest, listener: GenerationListener)
+
+    /** Runs one new user turn on the Conversation created by [start]. */
+    fun continueGeneration(request: GenerationRequest, listener: GenerationListener) {
+        throw UnsupportedOperationException("Persistent generation is not supported")
+    }
+
     fun cancel()
 }
 

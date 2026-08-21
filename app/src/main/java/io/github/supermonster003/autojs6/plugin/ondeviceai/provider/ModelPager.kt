@@ -150,6 +150,7 @@ internal class ModelPager(
         val PUBLIC_CAPABILITY_IDS = listOf(
             OnDeviceAiCapabilityId.STREAMING,
             OnDeviceAiCapabilityId.USAGE,
+            OnDeviceAiCapabilityId.PERSISTENT_SESSION,
         )
     }
 }

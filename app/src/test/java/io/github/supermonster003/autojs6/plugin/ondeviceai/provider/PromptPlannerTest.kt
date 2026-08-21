@@ -60,6 +60,7 @@ class PromptPlannerTest {
             MaterializedRequest(listOf(MaterializedMessage(AiMessageRole.USER, listOf("text"))), 4L),
         )
         assertEquals(512, exact.maximumOutputTokens)
+        assertEquals(emptyList<Any>(), exact.history)
         assertEquals(GenerationSamplingOptions(0.75, 32, 0.9), exact.samplingOptions)
         assertEquals(true, exact.reportUsage)
 

@@ -33,7 +33,11 @@ class ModelPagerTest {
         assertNull(second.nextPageToken)
         (first.models + second.models).forEach { model ->
             assertEquals(
-                listOf(OnDeviceAiCapabilityId.STREAMING, OnDeviceAiCapabilityId.USAGE),
+                listOf(
+                    OnDeviceAiCapabilityId.STREAMING,
+                    OnDeviceAiCapabilityId.USAGE,
+                    OnDeviceAiCapabilityId.PERSISTENT_SESSION,
+                ),
                 model.capabilityIds,
             )
             assertEquals(OnDeviceAiPlugin.MAXIMUM_CONTEXT_BYTES, model.maximumContextBytes)

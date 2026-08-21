@@ -54,7 +54,7 @@
 
 ## 远期
 
-- [ ] 多轮对话会话: 复用 Conversation 保持上下文, 提供 `ai.session()` 风格 API, 避免每轮重传全部历史.
+- [x] 多轮对话会话: 复用 Conversation 保持上下文, 提供 `ai.session()` 风格 API, 避免每轮重传全部历史.
 - [ ] Structured JSON 输出: 协议已预留 structuredJson 能力位, 在真实模型上验证后开放.
 - [ ] GPU/NPU backend: 提供显式 backend profile 与设备兼容性检测; 仅在真实设备验证通过后声明.
 - [ ] 模型下载协助: 在插件内提供常用 `.litertlm` 模型的下载指引 (跳转浏览器, 不内置下载器).

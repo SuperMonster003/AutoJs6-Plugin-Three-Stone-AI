@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="org.autojs.permission.PLUGIN" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <queries>
         <package android:name="org.autojs.autojs6" />

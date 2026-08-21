@@ -22,6 +22,13 @@ import android.widget.RadioButton
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import io.github.supermonster003.autojs6.plugin.ondeviceai.download.ModelDownloadCleanupResult
+import io.github.supermonster003.autojs6.plugin.ondeviceai.download.ModelDownloadCoordinator
+import io.github.supermonster003.autojs6.plugin.ondeviceai.download.ModelDownloadFailureReason
+import io.github.supermonster003.autojs6.plugin.ondeviceai.download.ModelDownloadProgress
+import io.github.supermonster003.autojs6.plugin.ondeviceai.download.ModelDownloadState
+import io.github.supermonster003.autojs6.plugin.ondeviceai.download.RecommendedModel
+import io.github.supermonster003.autojs6.plugin.ondeviceai.download.RecommendedModelCatalog
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDeletionState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelDisplayNamePolicy
@@ -41,6 +48,12 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelStorageCle
 
 class ModelManagerActivity : Activity() {
     private lateinit var importCoordinator: ModelImportCoordinator
+    private lateinit var downloadCoordinator: ModelDownloadCoordinator
+    private lateinit var downloadStatus: TextView
+    private lateinit var downloadButton: Button
+    private lateinit var cancelDownloadButton: Button
+    private lateinit var importDownloadedButton: Button
+    private lateinit var downloadProgress: ProgressBar
     private lateinit var status: TextView
     private lateinit var copyModelIdButton: Button
     private lateinit var importButton: Button
@@ -53,7 +66,11 @@ class ModelManagerActivity : Activity() {
     private lateinit var catalogRows: LinearLayout
     private var copyableModelId: String? = null
     private var cancellableOperationId: Long? = null
+    private var cancellableDownloadOperationId: Long? = null
+    private var downloadedDestination: ModelDownloadState.Succeeded<Uri>? = null
+    private var pendingDownloadModelId: String? = null
     private var lastNotifiedImportOperationId = 0L
+    private var lastNotifiedDownloadOperationId = 0L
     private var lastNotifiedSelectionOperationId = 0L
     private var lastNotifiedDeletionOperationId = 0L
     private var lastNotifiedRenameOperationId = 0L
@@ -61,14 +78,19 @@ class ModelManagerActivity : Activity() {
     private var lastNotifiedHealthCheckOperationId = 0L
     private var checkAfterImport = true
     private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
+    private val downloadObserver = ModelDownloadCoordinator.Observer(::renderDownloadState)
     private var renderedManagerView: ModelManagerViewState? = null
     private var importStateAllowsPicker = false
     private var catalogMutationBlocksPicker = false
     private var storageAllowsPicker = false
+    private var downloadStateAllowsStart = true
+    private var downloadBlocksImport = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         importCoordinator = ModelImportCoordinator.get(applicationContext)
+        downloadCoordinator = ModelDownloadCoordinator.get(applicationContext)
+        pendingDownloadModelId = savedInstanceState?.getString(STATE_PENDING_DOWNLOAD_MODEL_ID)
         checkAfterImport = savedInstanceState?.getBoolean(STATE_CHECK_AFTER_IMPORT)
             ?: getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE).getBoolean(
                 PREFERENCE_CHECK_AFTER_IMPORT,
@@ -89,21 +111,31 @@ class ModelManagerActivity : Activity() {
             lastNotifiedHealthCheckOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID)
         }
+        savedInstanceState?.takeIf { restored ->
+            restored.getString(STATE_DOWNLOAD_PROCESS_SESSION_TOKEN) ==
+                downloadCoordinator.processSessionToken
+        }?.let { restored ->
+            lastNotifiedDownloadOperationId =
+                restored.getLong(STATE_LAST_NOTIFIED_DOWNLOAD_OPERATION_ID)
+        }
         setContentView(createContentView())
     }
 
     override fun onStart() {
         super.onStart()
         renderManagerState(importCoordinator.attachManager(managerObserver))
+        renderDownloadState(downloadCoordinator.attach(downloadObserver))
     }
 
     override fun onStop() {
+        downloadCoordinator.detach(downloadObserver)
         importCoordinator.detachManager(managerObserver)
         super.onStop()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID, lastNotifiedImportOperationId)
+        outState.putLong(STATE_LAST_NOTIFIED_DOWNLOAD_OPERATION_ID, lastNotifiedDownloadOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID, lastNotifiedSelectionOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_DELETION_OPERATION_ID, lastNotifiedDeletionOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_RENAME_OPERATION_ID, lastNotifiedRenameOperationId)
@@ -116,15 +148,30 @@ class ModelManagerActivity : Activity() {
             lastNotifiedHealthCheckOperationId,
         )
         outState.putBoolean(STATE_CHECK_AFTER_IMPORT, checkAfterImportOption.isChecked)
+        outState.putString(STATE_PENDING_DOWNLOAD_MODEL_ID, pendingDownloadModelId)
         outState.putString(STATE_PROCESS_SESSION_TOKEN, importCoordinator.processSessionToken)
+        outState.putString(
+            STATE_DOWNLOAD_PROCESS_SESSION_TOKEN,
+            downloadCoordinator.processSessionToken,
+        )
         super.onSaveInstanceState(outState)
     }
 
     @Deprecated("Deprecated in Android SDK")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_OPEN_MODEL && resultCode == RESULT_OK) {
-            data?.data?.let { uri -> importModel(uri, data.flags) }
+        when (requestCode) {
+            REQUEST_OPEN_MODEL -> if (resultCode == RESULT_OK) {
+                data?.data?.let { uri -> importModel(uri, data.flags) }
+            }
+            REQUEST_CREATE_MODEL_DOWNLOAD -> {
+                val model = pendingDownloadModelId?.let(RecommendedModelCatalog::find)
+                pendingDownloadModelId = null
+                if (resultCode == RESULT_OK && model != null) {
+                    data?.data?.let { uri -> downloadModel(model, uri, data.flags) }
+                }
+                updateDownloadButtonEnabled()
+            }
         }
     }
 
@@ -145,6 +192,56 @@ class ModelManagerActivity : Activity() {
                 textSize = 16f
                 setPadding(0, dp(20), 0, dp(20))
             })
+            addView(TextView(context).apply {
+                text = getString(R.string.download_section_title)
+                textSize = 18f
+                setPadding(0, 0, 0, dp(8))
+            }, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            downloadStatus = TextView(context).apply {
+                text = getString(R.string.download_description)
+                textSize = 14f
+                setTextIsSelectable(true)
+            }
+            addView(
+                downloadStatus,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
+            downloadProgress = ProgressBar(
+                context,
+                null,
+                android.R.attr.progressBarStyleHorizontal,
+            ).apply {
+                max = PROGRESS_MAX
+                visibility = View.GONE
+            }
+            addView(
+                downloadProgress,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
+            cancelDownloadButton = Button(context).apply {
+                text = getString(R.string.button_cancel_download)
+                visibility = View.GONE
+                setOnClickListener { cancelDownload() }
+            }
+            addView(cancelDownloadButton)
+            downloadButton = Button(context).apply {
+                text = getString(R.string.button_download_model)
+                setOnClickListener { chooseRecommendedModel() }
+            }
+            addView(downloadButton)
+            importDownloadedButton = Button(context).apply {
+                text = getString(R.string.button_import_downloaded_model)
+                visibility = View.GONE
+                setOnClickListener { importDownloadedModel() }
+            }
+            addView(importDownloadedButton)
+            addView(TextView(context).apply {
+                text = getString(R.string.import_section_title)
+                textSize = 18f
+                setPadding(0, dp(24), 0, dp(8))
+            }, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             status = TextView(context).apply {
                 textSize = 15f
                 setTextIsSelectable(true)
@@ -209,6 +306,238 @@ class ModelManagerActivity : Activity() {
             addView(catalogRows, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
         return ScrollView(this).apply { addView(content) }
+    }
+
+    private fun chooseRecommendedModel() {
+        val models = RecommendedModelCatalog.models
+        val labels = models.map { model ->
+            getString(
+                R.string.download_catalog_item,
+                model.displayName,
+                Formatter.formatFileSize(this, model.expectedSizeBytes),
+                model.license,
+            )
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.download_catalog_title)
+            .setMessage(R.string.download_catalog_message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setItems(labels) { _, index -> confirmRecommendedModel(models[index]) }
+            .show()
+    }
+
+    private fun confirmRecommendedModel(model: RecommendedModel) {
+        AlertDialog.Builder(this)
+            .setTitle(model.displayName)
+            .setMessage(
+                getString(
+                    R.string.download_confirm_message,
+                    Formatter.formatFileSize(this, model.expectedSizeBytes),
+                    model.expectedSha256,
+                    model.license,
+                ),
+            )
+            .setNegativeButton(android.R.string.cancel, null)
+            .setNeutralButton(R.string.button_view_model_source) { _, _ ->
+                openModelSource(model)
+            }
+            .setPositiveButton(R.string.button_choose_download_location) { _, _ ->
+                openDownloadDestinationPicker(model)
+            }
+            .show()
+    }
+
+    private fun openModelSource(model: RecommendedModel) {
+        runCatching {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(model.sourceUrl)))
+        }.onFailure {
+            Toast.makeText(this, R.string.download_source_unavailable, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun openDownloadDestinationPicker(model: RecommendedModel) {
+        pendingDownloadModelId = model.id
+        updateDownloadButtonEnabled()
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/octet-stream"
+            putExtra(Intent.EXTRA_TITLE, model.fileName)
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION,
+            )
+        }
+        runCatching { startActivityForResult(intent, REQUEST_CREATE_MODEL_DOWNLOAD) }
+            .onFailure {
+                pendingDownloadModelId = null
+                updateDownloadButtonEnabled()
+                Toast.makeText(
+                    this,
+                    R.string.download_destination_unavailable,
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+    }
+
+    private fun downloadModel(model: RecommendedModel, destination: Uri, grantedFlags: Int) {
+        val accepted = downloadCoordinator.beginDownload(model, destination, grantedFlags)
+        renderDownloadState(downloadCoordinator.state())
+        if (!accepted) {
+            Toast.makeText(this, R.string.download_already_running, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun cancelDownload() {
+        val operationId = cancellableDownloadOperationId ?: return
+        cancelDownloadButton.isEnabled = false
+        if (downloadCoordinator.cancelDownload(operationId)) return
+        renderDownloadState(downloadCoordinator.state())
+    }
+
+    private fun importDownloadedModel() {
+        val completed = downloadedDestination ?: return
+        val preflight = refreshImportStoragePreflight()
+        if (completed.model.expectedSizeBytes > preflight.maximumAdditionalModelBytes) {
+            Toast.makeText(
+                this,
+                getString(
+                    R.string.download_import_insufficient_storage,
+                    Formatter.formatFileSize(this, completed.model.expectedSizeBytes),
+                    Formatter.formatFileSize(this, preflight.maximumAdditionalModelBytes),
+                ),
+                Toast.LENGTH_LONG,
+            ).show()
+            return
+        }
+        val accepted = importCoordinator.beginImport(
+            completed.destination,
+            completed.grantedFlags,
+            checkAfterImportOption.isChecked,
+        )
+        renderManagerState(importCoordinator.managerState())
+        if (!accepted) {
+            Toast.makeText(this, R.string.download_import_unavailable, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun renderDownloadState(state: ModelDownloadState<Uri>) {
+        when (state) {
+            ModelDownloadState.Idle -> {
+                setDownloadUi(inProgress = false, startEnabled = true)
+                downloadStatus.text = getString(R.string.download_description)
+            }
+            is ModelDownloadState.Running -> {
+                setDownloadUi(
+                    inProgress = true,
+                    startEnabled = false,
+                    cancelOperationId = state.operationId,
+                )
+                showDownloadProgress(state.model, state.progress)
+            }
+            is ModelDownloadState.Cancelling -> {
+                setDownloadUi(inProgress = true, startEnabled = false)
+                showDownloadProgress(state.model, state.progress)
+                downloadStatus.text = getString(
+                    R.string.download_cancelling,
+                    state.model.displayName,
+                )
+            }
+            is ModelDownloadState.Succeeded -> {
+                setDownloadUi(inProgress = false, startEnabled = true, completed = state)
+                downloadStatus.text = getString(
+                    R.string.download_succeeded,
+                    state.model.displayName,
+                    Formatter.formatFileSize(this, state.model.expectedSizeBytes),
+                )
+                notifyDownloadOnce(
+                    state.operationId,
+                    getString(R.string.download_succeeded_toast),
+                    Toast.LENGTH_SHORT,
+                )
+            }
+            is ModelDownloadState.Cancelled -> {
+                setDownloadUi(inProgress = false, startEnabled = true)
+                val message = terminalDownloadMessage(
+                    getString(R.string.download_cancelled),
+                    state.cleanup,
+                )
+                downloadStatus.text = message
+                notifyDownloadOnce(state.operationId, message, Toast.LENGTH_LONG)
+            }
+            is ModelDownloadState.Failed -> {
+                setDownloadUi(inProgress = false, startEnabled = true)
+                val message = terminalDownloadMessage(
+                    getString(downloadFailureMessage(state.reason)),
+                    state.cleanup,
+                )
+                downloadStatus.text = message
+                notifyDownloadOnce(state.operationId, message, Toast.LENGTH_LONG)
+            }
+        }
+    }
+
+    private fun showDownloadProgress(model: RecommendedModel, value: ModelDownloadProgress) {
+        downloadProgress.isIndeterminate = value.processedBytes == 0L
+        downloadProgress.progress = if (value.processedBytes >= value.totalBytes) {
+            PROGRESS_MAX
+        } else {
+            (value.processedBytes * PROGRESS_MAX / value.totalBytes).toInt()
+        }
+        downloadStatus.text = if (value.processedBytes == 0L) {
+            getString(R.string.download_connecting, model.displayName)
+        } else {
+            getString(
+                R.string.download_progress_known,
+                model.displayName,
+                Formatter.formatFileSize(this, value.processedBytes),
+                Formatter.formatFileSize(this, value.totalBytes),
+                downloadProgress.progress / (PROGRESS_MAX / 100),
+            )
+        }
+    }
+
+    private fun setDownloadUi(
+        inProgress: Boolean,
+        startEnabled: Boolean,
+        cancelOperationId: Long? = null,
+        completed: ModelDownloadState.Succeeded<Uri>? = null,
+    ) {
+        cancellableDownloadOperationId = cancelOperationId
+        downloadedDestination = completed
+        downloadProgress.visibility = if (inProgress) View.VISIBLE else View.GONE
+        cancelDownloadButton.visibility = if (cancelOperationId == null) View.GONE else View.VISIBLE
+        cancelDownloadButton.isEnabled = cancelOperationId != null
+        importDownloadedButton.visibility = if (completed == null) View.GONE else View.VISIBLE
+        downloadStateAllowsStart = startEnabled
+        downloadBlocksImport = inProgress
+        updateDownloadButtonEnabled()
+        updateImportButtonEnabled()
+    }
+
+    private fun terminalDownloadMessage(
+        message: String,
+        cleanup: ModelDownloadCleanupResult,
+    ): String = when (cleanup) {
+        ModelDownloadCleanupResult.NOT_NEEDED,
+        ModelDownloadCleanupResult.DELETED,
+        -> message
+        ModelDownloadCleanupResult.TRUNCATED ->
+            "$message\n${getString(R.string.download_cleanup_truncated)}"
+        ModelDownloadCleanupResult.FAILED ->
+            "$message\n${getString(R.string.download_cleanup_failed)}"
+    }
+
+    private fun downloadFailureMessage(reason: ModelDownloadFailureReason): Int = when (reason) {
+        ModelDownloadFailureReason.NETWORK_UNAVAILABLE -> R.string.download_failed_network
+        ModelDownloadFailureReason.HTTP_ERROR -> R.string.download_failed_http
+        ModelDownloadFailureReason.INVALID_CONTENT -> R.string.download_failed_invalid_content
+        ModelDownloadFailureReason.INTEGRITY_MISMATCH -> R.string.download_failed_integrity
+        ModelDownloadFailureReason.DESTINATION_UNAVAILABLE ->
+            R.string.download_failed_destination
+        ModelDownloadFailureReason.INTERRUPTED -> R.string.download_failed_interrupted
+        ModelDownloadFailureReason.UNKNOWN -> R.string.download_failed
     }
 
     @Suppress("DEPRECATION")
@@ -387,6 +716,7 @@ class ModelManagerActivity : Activity() {
         val view = ModelManagerPresentation.managerView(state)
         catalogMutationBlocksPicker = view.catalogMutationBusy
         updateImportButtonEnabled()
+        updateDownloadButtonEnabled()
         cleanupStorageButton.isEnabled = view.cleanupEnabled
         cleanupStorageButton.text = getString(
             if (view.cleanupInProgress) {
@@ -677,6 +1007,7 @@ class ModelManagerActivity : Activity() {
         checkAfterImportOption.isEnabled = !inProgress
         importStateAllowsPicker = importEnabled
         updateImportButtonEnabled()
+        updateDownloadButtonEnabled()
     }
 
     @SuppressLint("UsableSpace") // The budget is deliberately conservative and excludes reclaimable caches.
@@ -703,8 +1034,18 @@ class ModelManagerActivity : Activity() {
     }
 
     private fun updateImportButtonEnabled() {
-        importButton.isEnabled =
-            importStateAllowsPicker && !catalogMutationBlocksPicker && storageAllowsPicker
+        val enabled = importStateAllowsPicker &&
+            !catalogMutationBlocksPicker && storageAllowsPicker && !downloadBlocksImport
+        importButton.isEnabled = enabled
+        if (::importDownloadedButton.isInitialized) {
+            importDownloadedButton.isEnabled = enabled && downloadedDestination != null
+        }
+    }
+
+    private fun updateDownloadButtonEnabled() {
+        if (!::downloadButton.isInitialized) return
+        downloadButton.isEnabled = downloadStateAllowsStart &&
+            importStateAllowsPicker && !catalogMutationBlocksPicker && pendingDownloadModelId == null
     }
 
     private fun importFailureMessage(reason: ModelImportFailureReason): Int = when (reason) {
@@ -725,6 +1066,12 @@ class ModelManagerActivity : Activity() {
     private fun notifySelectionOnce(operationId: Long, message: Int, duration: Int) {
         if (operationId <= lastNotifiedSelectionOperationId) return
         lastNotifiedSelectionOperationId = operationId
+        Toast.makeText(this, message, duration).show()
+    }
+
+    private fun notifyDownloadOnce(operationId: Long, message: CharSequence, duration: Int) {
+        if (operationId <= lastNotifiedDownloadOperationId) return
+        lastNotifiedDownloadOperationId = operationId
         Toast.makeText(this, message, duration).show()
     }
 
@@ -754,7 +1101,9 @@ class ModelManagerActivity : Activity() {
 
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
+        const val REQUEST_CREATE_MODEL_DOWNLOAD = 1002
         const val STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID = "lastNotifiedImportOperationId"
+        const val STATE_LAST_NOTIFIED_DOWNLOAD_OPERATION_ID = "lastNotifiedDownloadOperationId"
         const val STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID = "lastNotifiedSelectionOperationId"
         const val STATE_LAST_NOTIFIED_DELETION_OPERATION_ID = "lastNotifiedDeletionOperationId"
         const val STATE_LAST_NOTIFIED_RENAME_OPERATION_ID = "lastNotifiedRenameOperationId"
@@ -763,9 +1112,11 @@ class ModelManagerActivity : Activity() {
         const val STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID =
             "lastNotifiedHealthCheckOperationId"
         const val STATE_CHECK_AFTER_IMPORT = "checkAfterImport"
+        const val STATE_PENDING_DOWNLOAD_MODEL_ID = "pendingDownloadModelId"
         const val PREFERENCES_NAME = "model-manager"
         const val PREFERENCE_CHECK_AFTER_IMPORT = "checkAfterImport"
         const val STATE_PROCESS_SESSION_TOKEN = "processSessionToken"
+        const val STATE_DOWNLOAD_PROCESS_SESSION_TOKEN = "downloadProcessSessionToken"
         const val PROGRESS_MAX = 10_000
     }
 }

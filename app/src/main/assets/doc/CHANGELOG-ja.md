@@ -6,7 +6,7 @@
 
 # v1.1.0
 
-###### 2026/08/20
+###### 2026/08/21
 
 * `機能` プラグイン名を On-Device AI (オンデバイス AI) に変更し, AutoJs6 公式オンデバイス AI プラグインとして位置付け
 * `機能` AutoJs6 の `ai.ask`/`ai.chat`/`ai.stream` における `plugin: true` 短縮セレクターと `ai.models` モデル列挙に対応
@@ -14,6 +14,7 @@
 * `機能` LiteRT-LM の正確な入力, 出力, 合計 token 数とプロバイダー実測の生成時間を `ai.chat().usage` とストリーム usage イベントで報告
 * `機能` On-Device AI プロトコル 1.2 の永続セッションと AutoJs6 `ai.session` による複数ターン Conversation 再利用に対応し, 以前の履歴の再送信を不要化
 * `機能` AutoJs6 の `structuredJson` と `responseSchema` による LiteRT-LM ネイティブ JSON Schema 制約デコードを追加し, 単発呼び出し, ストリーミング, 永続セッションと完成 JSON の厳密な検証に対応
+* `機能` プロトコル 1.3 と AutoJs6 生成オプションで明示的な `cpu`, `gpu`, `npu` backend profile を提供し, デバイス互換性報告, モデル/profile 単位のキャッシュ分離, 使用不可 profile からのフォールバック禁止に対応; GPU は OpenCL ロード検査成功後のみ宣言し, NPU は EAP runtime 未同梱のため使用不可を維持
 * `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合
 * `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 

@@ -6,7 +6,7 @@
 
 # v1.1.0
 
-###### 2026/08/20
+###### 2026/08/21
 
 * `新增` 外掛品牌與執行階段識別統一為 On-Device AI (裝置端 AI), 同步應用程式名稱, 套件名稱, 元件名稱, 探索識別, 協定 API, 建置產物及文件
 * `新增` 適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 的 `plugin: true` 簡寫選擇器及 `ai.models` 模型列舉
@@ -14,6 +14,7 @@
 * `新增` 透過 AutoJs6 `ai.chat().usage` 與串流 usage 事件回傳 LiteRT-LM 精確的輸入, 輸出及總 token 數, 以及外掛實測生成耗時
 * `新增` On-Device AI 協定 1.2 持久工作階段及 AutoJs6 `ai.session` 多輪 Conversation 重複使用, 後續輪次無需重傳既有歷史
 * `新增` 透過 AutoJs6 `structuredJson` 與 `responseSchema` 啟用 LiteRT-LM 原生 JSON Schema 約束解碼, 支援單次呼叫, 串流輸出及持久工作階段, 並嚴格驗證完整 JSON
+* `新增` 透過協定 1.3 與 AutoJs6 生成選項提供明確 `cpu`, `gpu` 與 `npu` backend profile, 包含裝置相容性報告, 模型/profile 快取隔離及不可用 profile 禁止回退; GPU 僅在 OpenCL 載入探測成功後宣告, NPU 因未封裝 EAP runtime 而維持不可用
 * `優化` 更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致
 * `優化` 重寫 ROADMAP 為可逐項勾選的功能路線圖
 

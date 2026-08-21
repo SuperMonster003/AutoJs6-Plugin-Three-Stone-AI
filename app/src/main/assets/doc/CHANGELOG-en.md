@@ -6,7 +6,7 @@
 
 # v1.1.0
 
-###### 2026/08/20
+###### 2026/08/21
 
 * `Feature` Plugin brand and runtime identity standardized as On-Device AI across display names, package and component names, discovery identifiers, protocol API, build artifacts, and documentation
 * `Feature` Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing
@@ -14,6 +14,7 @@
 * `Feature` Reported exact LiteRT-LM input, output, and total token counts plus provider-measured generation duration through AutoJs6 `ai.chat().usage` and stream usage events
 * `Feature` Added On-Device AI protocol 1.2 persistent sessions and AutoJs6 `ai.session` multi-turn Conversation reuse without resending prior history
 * `Feature` Added native LiteRT-LM JSON Schema constrained decoding through AutoJs6 `structuredJson` and `responseSchema`, with single-call, streaming, and persistent-session support plus strict completed-JSON validation
+* `Feature` Explicit `cpu`, `gpu`, and `npu` backend profiles through protocol 1.3 and AutoJs6 generation options, with device compatibility reporting, model/profile cache isolation, and no fallback from unavailable profiles; GPU is declared only after an OpenCL load probe and NPU remains unavailable because its EAP runtime is not packaged
 * `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 

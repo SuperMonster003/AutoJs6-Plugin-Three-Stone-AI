@@ -39,7 +39,7 @@ The current README.md supports the following languages:
 
 ******
 
-On-Device AI is the official on-device AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on the CPU, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. All inference happens locally: no network access and no data upload.
+On-Device AI is the official on-device AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. All inference happens locally: no network access and no data upload.
 
 ******
 
@@ -58,7 +58,7 @@ On-Device AI is the official on-device AI text-generation plugin for AutoJs6. It
 - Optionally initialize each imported model once, persist its Available/Incompatible status, and rerun the check from the model manager.
 - Deliver text chunks in order with credit backpressure and publish exactly one completed, failed, or cancelled terminal state.
 - List, select, and rename imported models, delete unselected models, and reclaim unreferenced model files from the manager.
-- Run entirely on-device with a CPU backend, without downloading models or calling a remote inference service.
+- Select an explicit `cpu`, `gpu`, or `npu` backend through AutoJs6; CPU is the default, GPU is exposed only after an OpenCL loader probe, and NPU is reported unavailable because its EAP runtime is not packaged.
 
 ******
 
@@ -89,11 +89,11 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1.2
+protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-The plugin declares ON_DEVICE execution and the NONE credential mode. It declares the `streaming`, `usage`, `persistent-session`, and `structured-json` capabilities, accepts `text/plain` message input and `application/json` response schemas, and emits `text/plain` or `application/json` text.
+The plugin declares ON_DEVICE execution and the NONE credential mode. It declares the `streaming`, `usage`, `persistent-session`, and `structured-json` capabilities, accepts `text/plain` message input and `application/json` response schemas, and emits `text/plain` or `application/json` text. Protocol 1.3 adds explicit backend profiles and device-scoped availability without CPU fallback.
 
 Host build 5276 or later is required. Releases include arm64-v8a, x86_64, universal APK variants.
 
@@ -103,7 +103,7 @@ Host build 5276 or later is required. Releases include arm64-v8a, x86_64, univer
 
 ******
 
-> In AutoJs6 (build 5276 and later), `ai.ask`, `ai.chat`, and `ai.stream` support the local plugin route. `ai.session({ plugin: true })` creates a persistent multi-turn Conversation whose later `ask`, `chat`, and `stream` calls send only the new user prompt. `ai.ask(messages, { plugin: true })` preserves ordered plain-text `system`, `user`, and `assistant` messages, and the final message must be `user`. `ai.chat` returns exact token counts in `usage` and the measured generation duration in `usage.raw.durationMillis`; `ai.stream` emits the same cumulative usage before completion. Pass `plugin: true` to select this plugin, and the model ID may be omitted when only one model is imported; `ai.models({ plugin: true })` lists imported models. When the plugin is not installed, not enabled in Plugin Center, or has no imported model, scripts receive a clear error message. A fully pinned `plugin: { component, providerId, modelId }` selector is also supported. `responseSchema` implies structured output; `structuredJson: true` without a schema uses a default object-root schema. `ai.ask` and `ai.chat().text` still return JSON text, streamed deltas are partial JSON text, and a persistent session keeps one fixed schema for every turn.
+> In AutoJs6 (build 5276 and later), `ai.ask`, `ai.chat`, and `ai.stream` support the local plugin route. `ai.session({ plugin: true })` creates a persistent multi-turn Conversation whose later `ask`, `chat`, and `stream` calls send only the new user prompt. `ai.ask(messages, { plugin: true })` preserves ordered plain-text `system`, `user`, and `assistant` messages, and the final message must be `user`. `ai.chat` returns exact token counts in `usage` and the measured generation duration in `usage.raw.durationMillis`; `ai.stream` emits the same cumulative usage before completion. Pass `plugin: true` to select this plugin, and the model ID may be omitted when only one model is imported; `ai.models({ plugin: true })` lists imported models and their `backendProfiles`. Generation accepts `backend: 'cpu' | 'gpu' | 'npu'`; unavailable profiles fail explicitly and never fall back to CPU. When the plugin is not installed, not enabled in Plugin Center, or has no imported model, scripts receive a clear error message. A fully pinned `plugin: { component, providerId, modelId }` selector is also supported. `responseSchema` implies structured output; `structuredJson: true` without a schema uses a default object-root schema. `ai.ask` and `ai.chat().text` still return JSON text, streamed deltas are partial JSON text, and a persistent session keeps one fixed schema and backend for every turn.
 
 ******
 
@@ -123,7 +123,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 - An application-scoped single-import coordinator keeps ongoing work alive across Activity recreation. A fsynced pending journal supports cold-start recovery and cleanup of stale `.incoming`, `.current`, and `.pending` temporary files. Recovery deletes only a destination created by the current attempt and never published through current metadata; published, current, and historical hash generations are retained.
 - To avoid cross-process races with the isolated `:provider` process, imports do not automatically delete previous SHA-256-named model generations. The model manager can delete unselected catalog models and reclaim hash-named files no longer referenced by the catalog.
 - At most one generation session is active in the process. Request descriptors are duplicated before asynchronous work and closed under protocol quotas.
-- The provider caches at most one initialized Engine. Consecutive requests to the same model reuse it; it is released immediately on a model switch, after five idle minutes, or safely after the active session when Android reports explicit memory pressure.
+- The provider caches at most one initialized Engine by model SHA-256 and backend profile. Consecutive requests with the same pair reuse it; changing either key releases it, as do five idle minutes or explicit Android memory pressure after the active session.
 - A model health check proves only that `Engine.initialize()` succeeds on the current device and bundled runtime; it does not assess output quality and can be rerun after device or runtime changes.
 - The provider advertises a 256 KiB context ceiling and a 64 KiB output ceiling. Requests and models may impose lower limits.
 - A response schema must be a JSON object no larger than 64 KiB. Supported keywords are those implemented by the bundled LiteRT-LM/LLGuidance runtime; completed output is parsed and validated strictly, so reserve enough `maxTokens` for the entire JSON value.
@@ -142,7 +142,7 @@ The plugin requests no network or storage permission. It reads a model only thro
 - Reasoning and tools are not declared.
 - Tool-role messages, tool schemas, tool calls, and tool results are not accepted.
 - There is no network model discovery, model download, cloud inference, or credential flow.
-- No GPU or NPU backend is declared. A `.litertlm` extension alone does not guarantee that the current LiteRT-LM runtime can load the model.
+- NPU inference is not declared: the profile is discoverable as `unavailable` with `npu-runtime-not-packaged`. GPU is declared only when `libOpenCL.so` is loadable, and a `.litertlm` extension alone still does not guarantee model initialization.
 
 ******
 
@@ -162,7 +162,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 # v1.1.0
 
-###### 2026/08/20
+###### 2026/08/21
 
 * `Feature` Plugin brand and runtime identity standardized as On-Device AI across display names, package and component names, discovery identifiers, protocol API, build artifacts, and documentation
 * `Feature` Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing
@@ -170,6 +170,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Feature` Reported exact LiteRT-LM input, output, and total token counts plus provider-measured generation duration through AutoJs6 `ai.chat().usage` and stream usage events
 * `Feature` Added On-Device AI protocol 1.2 persistent sessions and AutoJs6 `ai.session` multi-turn Conversation reuse without resending prior history
 * `Feature` Added native LiteRT-LM JSON Schema constrained decoding through AutoJs6 `structuredJson` and `responseSchema`, with single-call, streaming, and persistent-session support plus strict completed-JSON validation
+* `Feature` Explicit `cpu`, `gpu`, and `npu` backend profiles through protocol 1.3 and AutoJs6 generation options, with device compatibility reporting, model/profile cache isolation, and no fallback from unavailable profiles; GPU is declared only after an OpenCL load probe and NPU remains unavailable because its EAP runtime is not packaged
 * `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 

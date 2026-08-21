@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI (裝置端 AI) 係 AutoJs6 嘅官方裝置端 AI 文本生成插件. 佢喺 CPU 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本或受 schema 約束嘅 JSON 文本. 全部推理喺本地完成, 唔聯網, 唔上傳任何數據.
+On-Device AI (裝置端 AI) 係 AutoJs6 嘅官方裝置端 AI 文本生成插件. 佢喺顯式選擇嘅 CPU 或相容 GPU backend 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本或受 schema 約束嘅 JSON 文本. 全部推理喺本地完成, 唔聯網, 唔上傳任何數據.
 
 ******
 
@@ -58,7 +58,7 @@ On-Device AI (裝置端 AI) 係 AutoJs6 嘅官方裝置端 AI 文本生成插件
 - 可選擇將每個匯入模型初始化一次, 持久保存其「可用/不相容」狀態, 並可喺模型管理介面重新檢查.
 - 透過 credit 背壓按序傳送文字 chunk, 並只發佈一個完成, 錯誤或取消終態.
 - 列出, 選擇同重新命名已匯入模型, 刪除未選取模型, 並喺管理介面一鍵回收未引用模型檔案.
-- 完全在裝置端以 CPU backend 執行, 不下載模型, 不呼叫遠端推理服務.
+- 透過 AutoJs6 顯式選擇 `cpu`, `gpu` 或 `npu` backend; CPU 為預設值, GPU 只會喺 OpenCL 載入探測通過後開放, NPU 因未封裝 EAP runtime 而明確回報不可用.
 
 ******
 
@@ -89,11 +89,11 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1.2
+protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-插件宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming`, `usage`, `persistent-session` 同 `structured-json` 能力, 接受 `text/plain` 消息輸入同 `application/json` 響應 schema, 並輸出 `text/plain` 或 `application/json` 文本.
+插件宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming`, `usage`, `persistent-session` 同 `structured-json` 能力, 接受 `text/plain` 消息輸入同 `application/json` 響應 schema, 並輸出 `text/plain` 或 `application/json` 文本. 協議 1.3 加入顯式 backend profile 同裝置級可用性, 並禁止靜默回退 CPU.
 
 需要主程式構建版本 5276 或更高版本. 發佈產物包含 arm64-v8a, x86_64, universal APK.
 
@@ -103,7 +103,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由. `ai.session({ plugin: true })` 可建立持久多輪 Conversation, 後續 `ask`, `chat` 同 `stream` 調用只發送新嘅用戶提示詞. `ai.ask(messages, { plugin: true })` 會按順序保留純文字 `system`, `user` 同 `assistant` 消息, 而最後一條消息必須係 `user`. `ai.chat` 會喺 `usage` 回傳精確 token 數, 並喺 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會喺完成前發送同一份累計 usage. 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件. `responseSchema` 會隱式啟用結構化輸出; 只設定 `structuredJson: true` 時使用預設嘅對象根 schema. `ai.ask` 同 `ai.chat().text` 仍然返回 JSON 文本, 串流 delta 係未完整嘅 JSON 片段, 持久會話就會喺所有輪次固定使用同一 schema.
+> AutoJs6 (構建 5276 及以上) 嘅 `ai.ask`, `ai.chat` 與 `ai.stream` 支持本機插件路由. `ai.session({ plugin: true })` 可建立持久多輪 Conversation, 後續 `ask`, `chat` 同 `stream` 調用只發送新嘅用戶提示詞. `ai.ask(messages, { plugin: true })` 會按順序保留純文字 `system`, `user` 同 `assistant` 消息, 而最後一條消息必須係 `user`. `ai.chat` 會喺 `usage` 回傳精確 token 數, 並喺 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會喺完成前發送同一份累計 usage. 傳入 `plugin: true` 即選擇本插件, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可枚舉已導入模型同 `backendProfiles`. 生成選項接受 `backend: 'cpu' | 'gpu' | 'npu'`; 不可用 profile 會明確失敗, 絕不回退 CPU. 插件未安裝, 未喺插件中心啟用或未導入模型時, 腳本會收到明確嘅錯誤提示. 亦可通過 `plugin: { component, providerId, modelId }` 顯式固定組件. `responseSchema` 會隱式啟用結構化輸出; 只設定 `structuredJson: true` 時使用預設嘅對象根 schema. `ai.ask` 同 `ai.chat().text` 仍然返回 JSON 文本, 串流 delta 係未完整嘅 JSON 片段, 持久會話就會喺所有輪次固定使用同一 schema 同 backend.
 
 ******
 
@@ -123,7 +123,7 @@ required host build: 5276
 - 應用程式級單匯入協調器使 Activity 重建不會中斷正在進行的匯入. Fsync pending journal 支援冷啟動復原並清理 stale `.incoming`, `.current` 和 `.pending` 暫存檔案. 復原只會刪除本次嘗試新建且從未由 current metadata 發佈的 destination, 已發佈或 current 模型及歷史 hash 代次均會保留.
 - 為避免與獨立 `:provider` 進程發生競態, 匯入時唔會自動刪除先前以 SHA-256 hash 命名嘅模型代次. 模型管理介面可刪除未選取嘅 catalog 模型, 並回收唔再由 catalog 引用嘅 hash 命名檔案.
 - 同一進程最多有一個活動生成工作階段. 請求描述符會在非同步處理前複製並按協議配額關閉.
-- Provider 最多快取一個已初始化 Engine. 同一模型嘅連續請求會重用佢; 切換模型時立即釋放, 閒置 5 分鐘後釋放, 收到系統明確記憶體壓力通知時就喺目前活動工作階段結束後安全釋放.
+- Provider 以模型 SHA-256 同 backend profile 作聯合鍵, 最多快取一個已初始化 Engine. 相同組合嘅連續請求會重用; 任一鍵改變, 閒置 5 分鐘或收到明確記憶體壓力時會安全釋放.
 - 模型自檢只證明 `Engine.initialize()` 能喺目前裝置同內置運行環境成功; 佢唔評估輸出質素, 裝置或運行環境變更後可以重新檢查.
 - Provider 宣告的內容上限為 256 KiB, 輸出上限為 64 KiB, 請求和模型亦可施加更低上限.
 - 響應 schema 必須係 JSON 對象且唔超過 64 KiB. 可用關鍵字以目前內置 LiteRT-LM/LLGuidance 運行時為準; 插件會嚴格解析同驗證完整輸出, 因此應為整個 JSON 值預留足夠嘅 `maxTokens`.
@@ -142,7 +142,7 @@ required host build: 5276
 - 不宣告 reasoning 或 tools 能力.
 - 不接受 tool 角色訊息, tool schema, tool call 或 tool result.
 - 不提供連網模型發現, 模型下載, 雲端推理或 credential 流程.
-- 不宣告 GPU 或 NPU backend. `.litertlm` 副檔名本身不保證模型可由目前 LiteRT-LM runtime 載入.
+- 不宣告 NPU 推理可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 只喺 `libOpenCL.so` 可載入時宣告, 而 `.litertlm` 副檔名本身仍不保證模型初始化成功.
 
 ******
 
@@ -162,7 +162,7 @@ required host build: 5276
 
 # v1.1.0
 
-###### 2026/08/20
+###### 2026/08/21
 
 * `新增` 插件品牌與運行時標識統一為 On-Device AI (裝置端 AI), 同步應用名, 包名, 組件名, 發現標識, 協議 API, 構建產物及文檔
 * `新增` 適配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 嘅 `plugin: true` 簡寫選擇器及 `ai.models` 模型枚舉
@@ -170,6 +170,7 @@ required host build: 5276
 * `新增` 透過 AutoJs6 `ai.chat().usage` 同串流 usage 事件回傳 LiteRT-LM 精確嘅輸入, 輸出及總 token 數, 以及插件實測生成耗時
 * `新增` On-Device AI 協議 1.2 持久會話及 AutoJs6 `ai.session` 多輪 Conversation 重用, 後續輪次無需重傳既有歷史
 * `新增` 通過 AutoJs6 `structuredJson` 同 `responseSchema` 啟用 LiteRT-LM 原生 JSON Schema 約束解碼, 支援單次調用, 串流輸出同持久會話, 並嚴格驗證完整 JSON
+* `新增` 通過協議 1.3 同 AutoJs6 生成選項提供明確 `cpu`, `gpu` 同 `npu` backend profile, 包含裝置兼容性報告, 模型/profile 快取隔離及不可用 profile 禁止回退; GPU 只會在 OpenCL 載入探測成功後聲明, NPU 因未封裝 EAP runtime 而維持不可用
 * `優化` 更新插件描述, 使用說明及 10 種語言嘅 README, 與宿主 `ai.*` 本機插件路由嘅正式化保持一致
 * `優化` 重寫 ROADMAP 為可逐項勾選嘅功能路線圖
 

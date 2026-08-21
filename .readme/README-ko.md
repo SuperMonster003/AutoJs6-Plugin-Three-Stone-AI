@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI (온디바이스 AI)는 AutoJs6의 공식 온디바이스 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 CPU에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 모든 추론은 로컬에서 이루어지며 네트워크 접근이나 데이터 업로드가 없습니다.
+On-Device AI (온디바이스 AI)는 AutoJs6의 공식 온디바이스 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 모든 추론은 로컬에서 이루어지며 네트워크 접근이나 데이터 업로드가 없습니다.
 
 ******
 
@@ -58,7 +58,7 @@ On-Device AI (온디바이스 AI)는 AutoJs6의 공식 온디바이스 AI 텍스
 - 가져온 각 모델을 선택적으로 한 번 초기화하고 사용 가능/호환되지 않음 상태를 저장하며 모델 관리자에서 다시 확인합니다.
 - credit 역압력으로 텍스트 chunk를 순서대로 전달하고 완료, 실패 또는 취소 중 하나의 종료 상태만 게시합니다.
 - 가져온 모델을 나열하고 선택하고 이름을 변경하며, 선택되지 않은 모델을 삭제하고 관리 화면에서 참조되지 않은 모델 파일을 회수합니다.
-- 모델 다운로드나 원격 추론 서비스 없이 CPU backend로 완전히 기기 내에서 실행합니다.
+- AutoJs6에서 `cpu`, `gpu`, `npu` backend를 명시적으로 선택합니다. CPU가 기본값이며 GPU는 OpenCL 로드 검사를 통과할 때만 노출되고, NPU는 EAP runtime 미포함으로 사용 불가가 명시됩니다.
 
 ******
 
@@ -89,11 +89,11 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1.2
+protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-플러그인은 ON_DEVICE 실행과 NONE credential 모드를 선언합니다. `streaming`, `usage`, `persistent-session`, `structured-json` 기능을 선언하고, `text/plain` 메시지와 `application/json` 응답 schema를 입력받아 `text/plain` 또는 `application/json` 텍스트를 출력합니다.
+플러그인은 ON_DEVICE 실행과 NONE credential 모드를 선언합니다. `streaming`, `usage`, `persistent-session`, `structured-json` 기능을 선언하고, `text/plain` 메시지와 `application/json` 응답 schema를 입력받아 `text/plain` 또는 `application/json` 텍스트를 출력합니다. 프로토콜 1.3은 명시적 backend profile과 기기별 가용성을 추가하며 CPU로의 자동 전환을 금지합니다.
 
 호스트 build 5276 이상이 필요합니다. 릴리스에는 arm64-v8a, x86_64, universal APK 변형이 포함됩니다.
 
@@ -103,7 +103,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`은 로컬 플러그인 경로를 지원합니다. `ai.session({ plugin: true })`은 영구적인 여러 턴 Conversation을 만들며 이후 `ask`, `chat`, `stream` 호출은 새 사용자 프롬프트만 전송합니다. `ai.ask(messages, { plugin: true })`는 일반 텍스트 `system`, `user`, `assistant` 메시지의 순서를 유지하며 마지막 메시지는 `user` 역할이어야 합니다. `ai.chat`은 정확한 token 수를 `usage`에, 측정된 생성 시간을 `usage.raw.durationMillis`에 반환하며, `ai.stream`은 완료 전에 같은 누적 usage를 전송합니다. `plugin: true`를 전달하면 이 플러그인이 선택되고, 모델이 하나뿐인 경우 모델 ID를 생략할 수 있습니다. `ai.models({ plugin: true })`로 가져온 모델을 열거할 수 있습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 스크립트에 명확한 오류가 전달됩니다. `plugin: { component, providerId, modelId }`로 명시적 고정도 가능합니다. `responseSchema`는 구조화 출력을 암시적으로 활성화하고, schema 없이 `structuredJson: true`만 지정하면 기본 object-root schema를 사용합니다. `ai.ask`와 `ai.chat().text`는 계속 JSON 텍스트를 반환하고 스트림 delta는 부분 JSON 텍스트이며, 영구 세션은 모든 턴에 하나의 고정 schema를 사용합니다.
+> AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`은 로컬 플러그인 경로를 지원합니다. `ai.session({ plugin: true })`은 영구적인 여러 턴 Conversation을 만들며 이후 `ask`, `chat`, `stream` 호출은 새 사용자 프롬프트만 전송합니다. `ai.ask(messages, { plugin: true })`는 일반 텍스트 `system`, `user`, `assistant` 메시지의 순서를 유지하며 마지막 메시지는 `user` 역할이어야 합니다. `ai.chat`은 정확한 token 수를 `usage`에, 측정된 생성 시간을 `usage.raw.durationMillis`에 반환하며, `ai.stream`은 완료 전에 같은 누적 usage를 전송합니다. `plugin: true`를 전달하면 이 플러그인이 선택되고, 모델이 하나뿐인 경우 모델 ID를 생략할 수 있습니다. `ai.models({ plugin: true })`로 모델과 `backendProfiles`를 열거할 수 있습니다. 생성은 `backend: 'cpu' | 'gpu' | 'npu'`를 받으며 사용 불가 profile은 명시적으로 실패하고 CPU로 전환되지 않습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 스크립트에 명확한 오류가 전달됩니다. `plugin: { component, providerId, modelId }`로 명시적 고정도 가능합니다. `responseSchema`는 구조화 출력을 암시적으로 활성화하고, schema 없이 `structuredJson: true`만 지정하면 기본 object-root schema를 사용합니다. `ai.ask`와 `ai.chat().text`는 계속 JSON 텍스트를 반환하고 스트림 delta는 부분 JSON 텍스트이며, 영구 세션은 모든 턴에 하나의 고정 schema와 backend를 사용합니다.
 
 ******
 
@@ -123,7 +123,7 @@ required host build: 5276
 - Application scope 단일 가져오기 coordinator가 Activity 재생성 중에도 작업을 유지합니다. Fsync된 pending journal로 콜드 스타트 복구와 stale `.incoming`, `.current`, `.pending` 임시 파일 cleanup을 수행합니다. 복구는 현재 시도가 새로 만들고 current metadata로 게시한 적 없는 destination만 삭제하며 게시됨, current 및 이전 hash 세대는 보존합니다.
 - 분리된 `:provider` 프로세스와의 프로세스 간 경쟁을 피하기 위해 가져오기 중에는 이전 SHA-256 hash 이름 모델 세대를 자동 삭제하지 않습니다. 모델 관리 화면에서 선택되지 않은 catalog 모델을 삭제하고 catalog에서 더 이상 참조하지 않는 hash 이름 파일을 회수할 수 있습니다.
 - 프로세스에서 활성 생성 세션은 최대 1개입니다. 요청 descriptor는 비동기 작업 전에 복제되고 프로토콜 quota에 따라 닫힙니다.
-- Provider는 초기화된 Engine을 최대 하나만 캐시합니다. 같은 모델에 대한 연속 요청은 이를 재사용하며, 모델 전환 시 즉시, 5분 동안 유휴 상태가 지속되면 자동으로, Android가 명시적 메모리 압박을 알리면 활성 세션 종료 후 안전하게 해제합니다.
+- Provider는 모델 SHA-256과 backend profile 쌍을 키로 초기화된 Engine을 최대 하나만 캐시합니다. 같은 쌍은 재사용하며, 어느 키든 바뀌거나 5분 유휴 또는 명시적 메모리 압박 시 안전하게 해제합니다.
 - 모델 확인은 현재 기기와 번들 런타임에서 `Engine.initialize()`가 성공하는지만 증명합니다. 출력 품질은 평가하지 않으며 기기 또는 런타임 변경 후 다시 확인할 수 있습니다.
 - Provider가 선언하는 컨텍스트 상한은 256 KiB, 출력 상한은 64 KiB입니다. 요청과 모델은 더 낮은 상한을 적용할 수 있습니다.
 - 응답 schema는 64 KiB 이하의 JSON object여야 합니다. 지원 keyword는 포함된 LiteRT-LM/LLGuidance 런타임 구현을 따르며, 완성된 출력은 엄격히 parse 및 검증하므로 전체 JSON 값에 충분한 `maxTokens`를 확보해야 합니다.
@@ -142,7 +142,7 @@ required host build: 5276
 - Reasoning 및 tools는 선언하지 않습니다.
 - Tool 역할 메시지, tool schema, tool call 및 tool result를 받지 않습니다.
 - 네트워크 모델 검색, 모델 다운로드, cloud 추론 또는 credential 흐름이 없습니다.
-- GPU 또는 NPU backend를 선언하지 않습니다. `.litertlm` 확장자만으로 현재 LiteRT-LM runtime이 모델을 로드할 수 있음을 보장하지 않습니다.
+- NPU 추론은 선언하지 않습니다. profile은 `npu-runtime-not-packaged` 사유의 `unavailable`로 검색됩니다. GPU는 `libOpenCL.so`를 로드할 수 있을 때만 선언되며 `.litertlm` 확장자만으로 모델 초기화를 보장하지 않습니다.
 
 ******
 
@@ -162,7 +162,7 @@ required host build: 5276
 
 # v1.1.0
 
-###### 2026/08/20
+###### 2026/08/21
 
 * `기능` 플러그인 이름을 On-Device AI (온디바이스 AI)로 변경하고 AutoJs6 공식 온디바이스 AI 플러그인으로 자리매김
 * `기능` AutoJs6 `ai.ask`/`ai.chat`/`ai.stream`의 `plugin: true` 축약 선택자 및 `ai.models` 모델 열거 지원
@@ -170,6 +170,7 @@ required host build: 5276
 * `기능` LiteRT-LM의 정확한 입력, 출력, 전체 token 수와 공급자 측에서 측정한 생성 시간을 `ai.chat().usage` 및 스트림 usage 이벤트로 보고
 * `기능` On-Device AI 프로토콜 1.2 영구 세션과 AutoJs6 `ai.session` 여러 턴 Conversation 재사용을 추가하여 이전 기록 재전송 제거
 * `기능` AutoJs6 `structuredJson`과 `responseSchema`를 통한 LiteRT-LM 네이티브 JSON Schema 제약 디코딩을 추가하고 단일 호출, 스트리밍, 영구 세션 및 완성 JSON의 엄격한 검증을 지원
+* `기능` 프로토콜 1.3과 AutoJs6 생성 옵션을 통한 명시적 `cpu`, `gpu`, `npu` backend profile, 기기 호환성 보고, 모델/profile별 캐시 격리 및 사용 불가 profile의 CPU fallback 금지; GPU는 OpenCL 로드 검사 성공 후에만 선언하고 NPU는 EAP runtime 미포함으로 사용 불가 유지
 * `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신
 * `개선` ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성
 

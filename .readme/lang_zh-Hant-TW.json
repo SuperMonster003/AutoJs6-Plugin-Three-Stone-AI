@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "語言",
   "p_languages_all_supported_for_readme": "目前 README.md 支援以下語言",
   "h3_introduction": "簡介",
-  "p_introduction": "On-Device AI (裝置端 AI) 是 AutoJs6 的官方裝置端 AI 文字生成外掛. 它在 CPU 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段回傳純文字或受 schema 約束的 JSON 文字. 全部推理在本地完成, 不連網, 不上傳任何資料.",
+  "p_introduction": "On-Device AI (裝置端 AI) 是 AutoJs6 的官方裝置端 AI 文字生成外掛. 它在明確選擇的 CPU 或相容 GPU backend 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段回傳純文字或受 schema 約束的 JSON 文字. 全部推理在本地完成, 不連網, 不上傳任何資料.",
   "h3_functions": "功能",
   "features": [
     "透過 Android 系統檔案選擇器匯入 `.litertlm` 模型套件, 並將驗證後的副本儲存到應用程式私人儲存空間.",
@@ -19,16 +19,16 @@
     "可選擇將每個匯入模型初始化一次, 持久保存其「可用/不相容」狀態, 並可在模型管理介面重新檢查.",
     "透過 credit 背壓依序傳送文字 chunk, 並只發布一個完成, 錯誤或取消終態.",
     "列出, 選取及重新命名已匯入模型, 刪除未選取模型, 並在管理介面一鍵回收未參照模型檔案.",
-    "完全在裝置端以 CPU backend 執行, 不下載模型, 不呼叫遠端推論服務."
+    "透過 AutoJs6 明確選擇 `cpu`, `gpu` 或 `npu` backend; CPU 為預設值, GPU 僅在 OpenCL 載入探測通過後開放, NPU 因未封裝 EAP runtime 而明確回報不可用."
   ],
   "h3_formats": "模型和資料格式",
   "p_formats": "版本 1 僅宣告以下模型和文字範圍",
   "h3_plugin_interface": "外掛介面",
   "p_plugin_interface": "主程式透過以下識別發現並呼叫外掛",
-  "p_plugin_scope": "外掛宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming`, `usage`, `persistent-session` 與 `structured-json` 能力, 接受 `text/plain` 訊息輸入和 `application/json` 回應 schema, 並輸出 `text/plain` 或 `application/json` 文字.",
+  "p_plugin_scope": "外掛宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming`, `usage`, `persistent-session` 與 `structured-json` 能力, 接受 `text/plain` 訊息輸入和 `application/json` 回應 schema, 並輸出 `text/plain` 或 `application/json` 文字. 協議 1.3 新增明確 backend profile 與裝置級可用性, 並禁止靜默回退 CPU.",
   "p_plugin_packaging": "需要主程式建置版本 {{ required_host_build }} 或更高版本. 發布產物包含 {{ supported_abis }} APK.",
   "h3_host_integration_status": "主程式整合狀態",
-  "p_host_integration_status": "AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat` 與 `ai.stream` 支援本機外掛路由. `ai.session({ plugin: true })` 可建立持久多輪 Conversation, 後續 `ask`, `chat` 與 `stream` 呼叫只傳送新的使用者提示詞. `ai.ask(messages, { plugin: true })` 會依序保留純文字 `system`, `user` 與 `assistant` 訊息, 且最後一則訊息必須為 `user`. `ai.chat` 會在 `usage` 回傳精確 token 數, 並在 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會在完成前傳送同一份累計 usage. 傳入 `plugin: true` 即選擇本外掛, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可列舉已匯入模型. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, 指令碼會收到明確的錯誤提示. 亦可透過 `plugin: { component, providerId, modelId }` 顯式固定元件. `responseSchema` 會隱式啟用結構化輸出; 僅設定 `structuredJson: true` 時使用預設的物件根 schema. `ai.ask` 和 `ai.chat().text` 仍回傳 JSON 文字, 串流 delta 是未完整的 JSON 片段, 持久工作階段則在所有輪次固定使用同一 schema.",
+  "p_host_integration_status": "AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat` 與 `ai.stream` 支援本機外掛路由. `ai.session({ plugin: true })` 可建立持久多輪 Conversation, 後續 `ask`, `chat` 與 `stream` 呼叫只傳送新的使用者提示詞. `ai.ask(messages, { plugin: true })` 會依序保留純文字 `system`, `user` 與 `assistant` 訊息, 且最後一則訊息必須為 `user`. `ai.chat` 會在 `usage` 回傳精確 token 數, 並在 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會在完成前傳送同一份累計 usage. 傳入 `plugin: true` 即選擇本外掛, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可列舉已匯入模型與 `backendProfiles`. 生成選項接受 `backend: 'cpu' | 'gpu' | 'npu'`; 不可用 profile 會明確失敗且絕不回退 CPU. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, 指令碼會收到明確的錯誤提示. 亦可透過 `plugin: { component, providerId, modelId }` 顯式固定元件. `responseSchema` 會隱式啟用結構化輸出; 僅設定 `structuredJson: true` 時使用預設的物件根 schema. `ai.ask` 和 `ai.chat().text` 仍回傳 JSON 文字, 串流 delta 是未完整的 JSON 片段, 持久工作階段則在所有輪次固定使用同一 schema 與 backend.",
   "h3_security": "安全性和隱私",
   "p_security": "外掛不要求網路或儲存權限. 模型只透過系統檔案選擇器授予的 URI 讀取, 以串流 SHA-256 校驗和 fsync 寫入應用程式私人 `files/models` 目錄, 再透過同目錄原子 pointer 取代啟用. Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬及雙方簽章.",
   "h3_security_limits": "執行限制",
@@ -37,7 +37,7 @@
     "應用程式層級單一匯入協調器使 Activity 重建不會中斷進行中的匯入. Fsync pending journal 支援冷啟動復原並清理 stale `.incoming`, `.current` 和 `.pending` 暫存檔案. 復原只會刪除本次嘗試新建且從未由 current metadata 發布的 destination, 已發布或 current 模型及歷史 hash 代次均會保留.",
     "為避免與獨立 `:provider` 程序發生競態, 匯入時不會自動刪除先前以 SHA-256 hash 命名的模型代次. 模型管理介面可刪除未選取的 catalog 模型, 並回收不再由 catalog 參照的 hash 命名檔案.",
     "同一程序最多有一個作用中生成工作階段. 請求描述元會在非同步處理前複製並依協定配額關閉.",
-    "Provider 最多快取一個已初始化 Engine. 同一模型的連續請求會重複使用它; 切換模型時立即釋放, 閒置 5 分鐘後釋放, 收到系統明確記憶體壓力通知時則在目前作用中工作階段結束後安全釋放.",
+    "Provider 以模型 SHA-256 與 backend profile 為聯合鍵, 最多快取一個已初始化 Engine. 相同組合的連續請求會重複使用; 任一鍵變更, 閒置 5 分鐘或收到明確記憶體壓力時會安全釋放.",
     "模型自檢僅證明 `Engine.initialize()` 能在目前裝置與內建執行階段成功; 它不評估輸出品質, 裝置或執行階段變更後可重新檢查.",
     "Provider 宣告的內容上限為 256 KiB, 輸出上限為 64 KiB, 請求和模型也可施加更低上限.",
     "回應 schema 必須是 JSON 物件且不超過 64 KiB. 可用關鍵字以目前內建 LiteRT-LM/LLGuidance 執行階段為準; 外掛會嚴格解析並驗證完整輸出, 因此應為整個 JSON 值預留足夠的 `maxTokens`.",
@@ -52,7 +52,7 @@
     "不宣告 reasoning 或 tools 能力.",
     "不接受 tool 角色訊息, tool schema, tool call 或 tool result.",
     "不提供連網模型探索, 模型下載, 雲端推論或 credential 流程.",
-    "不宣告 GPU 或 NPU backend. `.litertlm` 副檔名本身不保證模型可由目前 LiteRT-LM runtime 載入."
+    "不宣告 NPU 推論可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 僅在 `libOpenCL.so` 可載入時宣告, 且 `.litertlm` 副檔名本身仍不保證模型初始化成功."
   ],
   "h3_roadmap": "路線圖",
   "p_roadmap": "路線圖按可交付的使用者功能組織, 每項均可單獨勾選與驗收",

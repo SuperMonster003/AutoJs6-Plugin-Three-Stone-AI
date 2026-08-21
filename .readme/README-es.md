@@ -39,7 +39,7 @@ El README.md actual admite los siguientes idiomas:
 
 ******
 
-On-Device AI es el plugin oficial de generación de texto con IA local para AutoJs6. Ejecuta en la CPU los modelos LiteRT-LM importados por el usuario, acepta un historial de mensajes de texto plano y devuelve texto plano o texto JSON restringido por un schema mediante una sesión de streaming controlada. Toda la inferencia ocurre localmente: sin acceso a la red y sin subir datos.
+On-Device AI es el plugin oficial de generación de texto con IA local para AutoJs6. Ejecuta los modelos LiteRT-LM importados por el usuario en un backend CPU seleccionado explícitamente o en una GPU compatible, acepta un historial de mensajes de texto plano y devuelve texto plano o texto JSON restringido por un schema mediante una sesión de streaming controlada. Toda la inferencia ocurre localmente: sin acceso a la red y sin subir datos.
 
 ******
 
@@ -58,7 +58,7 @@ On-Device AI es el plugin oficial de generación de texto con IA local para Auto
 - Inicializar opcionalmente cada modelo importado una vez, conservar su estado Disponible/Incompatible y repetir la comprobación desde el gestor de modelos.
 - Entregar chunks de texto en orden con contrapresión por credits y publicar un solo estado terminal completado, fallido o cancelado.
 - Enumerar, seleccionar y renombrar modelos importados, eliminar modelos no seleccionados y recuperar desde el gestor los archivos de modelos sin referencia.
-- Funcionar completamente en el dispositivo con un backend CPU, sin descargar modelos ni llamar a un servicio de inferencia remoto.
+- Seleccionar explícitamente `cpu`, `gpu` o `npu` desde AutoJs6; CPU es el valor predeterminado, GPU se expone solo tras una prueba de carga OpenCL y NPU se informa como no disponible porque su runtime EAP no está incluido.
 
 ******
 
@@ -89,11 +89,11 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1.2
+protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-El plugin declara ejecución ON_DEVICE y modo credential NONE. Declara las capacidades `streaming`, `usage`, `persistent-session` y `structured-json`, acepta mensajes `text/plain` y schemas de respuesta `application/json`, y emite texto `text/plain` o `application/json`.
+El plugin declara ejecución ON_DEVICE y modo credential NONE. Declara las capacidades `streaming`, `usage`, `persistent-session` y `structured-json`, acepta mensajes `text/plain` y schemas de respuesta `application/json`, y emite texto `text/plain` o `application/json`. El protocolo 1.3 añade perfiles backend explícitos y disponibilidad por dispositivo sin retorno silencioso a CPU.
 
 Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes APK arm64-v8a, x86_64, universal.
 
@@ -103,7 +103,7 @@ Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes
 
 ******
 
-> En AutoJs6 (compilación 5276 y posteriores), `ai.ask`, `ai.chat` y `ai.stream` admiten la ruta de plugin local. `ai.session({ plugin: true })` crea una Conversation persistente de varios turnos cuyas llamadas posteriores a `ask`, `chat` y `stream` solo envían el nuevo prompt de usuario. `ai.ask(messages, { plugin: true })` conserva en orden los mensajes de texto sin formato con roles `system`, `user` y `assistant`, y el último mensaje debe tener el rol `user`. `ai.chat` devuelve recuentos exactos de tokens en `usage` y la duración medida en `usage.raw.durationMillis`; `ai.stream` emite el mismo usage acumulado antes de completarse. Pase `plugin: true` para seleccionar este plugin, y el ID de modelo puede omitirse cuando solo hay un modelo importado; `ai.models({ plugin: true })` enumera los modelos importados. Si el plugin no está instalado, no está habilitado en el Centro de plugins o no tiene modelo, los scripts reciben un error claro. También se admite el selector explícito `plugin: { component, providerId, modelId }`. `responseSchema` activa implícitamente la salida estructurada; `structuredJson: true` sin schema usa uno predeterminado con raíz de objeto. `ai.ask` y `ai.chat().text` siguen devolviendo texto JSON, los deltas de streaming son texto JSON parcial y una sesión persistente conserva un único schema fijo en todos sus turnos.
+> En AutoJs6 (compilación 5276 y posteriores), `ai.ask`, `ai.chat` y `ai.stream` admiten la ruta de plugin local. `ai.session({ plugin: true })` crea una Conversation persistente de varios turnos cuyas llamadas posteriores a `ask`, `chat` y `stream` solo envían el nuevo prompt de usuario. `ai.ask(messages, { plugin: true })` conserva en orden los mensajes de texto sin formato con roles `system`, `user` y `assistant`, y el último mensaje debe tener el rol `user`. `ai.chat` devuelve recuentos exactos de tokens en `usage` y la duración medida en `usage.raw.durationMillis`; `ai.stream` emite el mismo usage acumulado antes de completarse. Pase `plugin: true` para seleccionar este plugin, y el ID de modelo puede omitirse cuando solo hay un modelo importado; `ai.models({ plugin: true })` enumera los modelos y sus `backendProfiles`. La generación acepta `backend: 'cpu' | 'gpu' | 'npu'`; un perfil no disponible falla explícitamente y nunca vuelve a CPU. Si el plugin no está instalado, no está habilitado en el Centro de plugins o no tiene modelo, los scripts reciben un error claro. También se admite el selector explícito `plugin: { component, providerId, modelId }`. `responseSchema` activa implícitamente la salida estructurada; `structuredJson: true` sin schema usa uno predeterminado con raíz de objeto. `ai.ask` y `ai.chat().text` siguen devolviendo texto JSON, los deltas de streaming son texto JSON parcial y una sesión persistente conserva un único schema y backend fijos en todos sus turnos.
 
 ******
 
@@ -123,7 +123,7 @@ El plugin no solicita permisos de red ni almacenamiento. Lee el modelo solo medi
 - Un coordinador de importación única con alcance de aplicación mantiene el trabajo durante la recreación de Activity. Un pending journal sincronizado con fsync permite la recuperación en arranque frío y limpia los archivos temporales stale `.incoming`, `.current` y `.pending`. La recuperación solo elimina un destination creado por el intento actual y nunca publicado mediante current metadata; se conservan las generaciones publicadas, current e históricas con nombre de hash.
 - Para evitar condiciones de carrera entre procesos con el proceso aislado `:provider`, las importaciones no eliminan automáticamente las generaciones anteriores con nombre de hash SHA-256. El gestor puede eliminar modelos no seleccionados del catálogo y recuperar archivos con nombre de hash que ya no estén referenciados.
 - Solo una sesión de generación puede estar activa en el proceso. Los descriptores se duplican antes del trabajo asíncrono y se cierran según las cuotas del protocolo.
-- El provider conserva como máximo un Engine inicializado. Las solicitudes consecutivas al mismo modelo lo reutilizan; se libera de inmediato al cambiar de modelo, tras cinco minutos de inactividad o, de forma segura, después de la sesión activa cuando Android informa de presión de memoria explícita.
+- El provider conserva como máximo un Engine inicializado, indexado por SHA-256 de modelo y perfil backend. Las solicitudes con la misma pareja lo reutilizan; cambiar cualquier clave, cinco minutos de inactividad o la presión de memoria explícita lo liberan de forma segura.
 - La comprobación de un modelo solo demuestra que `Engine.initialize()` funciona en el dispositivo y entorno incluidos actuales; no evalúa la calidad de la salida y puede repetirse tras cambios de dispositivo o entorno.
 - El provider anuncia un máximo de contexto de 256 KiB y un máximo de salida de 64 KiB. Las solicitudes y modelos pueden imponer límites menores.
 - El schema de respuesta debe ser un objeto JSON de no más de 64 KiB. Las palabras clave admitidas son las implementadas por el runtime LiteRT-LM/LLGuidance incluido; la salida completa se analiza y valida estrictamente, por lo que debe reservarse suficiente `maxTokens` para todo el valor JSON.
@@ -142,7 +142,7 @@ El plugin no solicita permisos de red ni almacenamiento. Lee el modelo solo medi
 - No se declaran reasoning ni tools.
 - No se aceptan mensajes con rol tool, schemas de herramientas, tool calls ni tool results.
 - No hay descubrimiento de modelos por red, descarga, inferencia cloud ni flujo credential.
-- No se declara backend GPU o NPU. La extensión `.litertlm` por sí sola no garantiza que el runtime LiteRT-LM actual pueda cargar el modelo.
+- No se declara inferencia NPU: el perfil es visible como `unavailable` con `npu-runtime-not-packaged`. GPU solo se declara si `libOpenCL.so` puede cargarse y la extensión `.litertlm` aún no garantiza que el modelo se inicialice.
 
 ******
 
@@ -162,7 +162,7 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 # v1.1.0
 
-###### 2026/08/20
+###### 2026/08/21
 
 * `Función` Plugin renombrado a On-Device AI, posicionado como el plugin oficial de IA local de AutoJs6
 * `Función` Compatible con el selector abreviado `plugin: true` de `ai.ask`/`ai.chat`/`ai.stream` y la enumeración de modelos `ai.models` de AutoJs6
@@ -170,6 +170,7 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Función` Informe de los recuentos exactos de tokens de entrada, salida y totales de LiteRT-LM, junto con la duración de generación medida por el proveedor, mediante `ai.chat().usage` y eventos usage de streaming
 * `Función` Sesiones persistentes del protocolo On-Device AI 1.2 y reutilización de Conversation de varios turnos con `ai.session` de AutoJs6 sin reenviar el historial anterior
 * `Función` Decodificación nativa restringida por JSON Schema de LiteRT-LM mediante `structuredJson` y `responseSchema` de AutoJs6, compatible con llamadas únicas, streaming y sesiones persistentes, con validación estricta del JSON completo
+* `Función` Perfiles backend explícitos `cpu`, `gpu` y `npu` mediante el protocolo 1.3 y las opciones de generación de AutoJs6, con informe de compatibilidad del dispositivo, aislamiento de caché por modelo/perfil y sin fallback desde perfiles no disponibles; GPU solo se declara tras una prueba de carga de OpenCL y NPU permanece no disponible porque su runtime EAP no está empaquetado
 * `Mejora` Descripción del plugin, instrucciones y README en 10 idiomas actualizados conforme a la formalización de la ruta de plugin local `ai.*`
 * `Mejora` ROADMAP reescrito como hoja de ruta de funciones con elementos verificables individualmente
 

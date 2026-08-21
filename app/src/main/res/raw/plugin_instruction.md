@@ -1,6 +1,6 @@
 # AutoJs6 On-Device AI
 
-This plugin imports one local `.litertlm` model package through the Android Storage Access Framework (SAF), copies it into app-private storage, and runs CPU-only LiteRT-LM generation with plain-text history plus streaming plain-text or schema-constrained JSON output.
+This plugin imports one local `.litertlm` model package through the Android Storage Access Framework (SAF), copies it into app-private storage, and runs LiteRT-LM generation on an explicitly selected CPU or compatible GPU backend with plain-text history plus streaming plain-text or schema-constrained JSON output.
 
 The plugin requires AutoJs6 host build 5276 or later and Android API 24 or later.
 
@@ -73,9 +73,29 @@ List imported models, or pin one explicitly with `plugin: { modelId: "..." }`:
 
 ```javascript
 ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+    models.forEach((m) => {
+        console.log(m.modelId, m.displayName);
+        console.log(m.backendProfiles);
+    });
 });
 ```
+
+CPU is the default. To request GPU explicitly, first select only a model whose `gpu` profile is reported as `available`; an unavailable profile is rejected and never falls back to CPU:
+
+```javascript
+ai.models({ plugin: true }).then((models) => {
+    let model = models.find((item) => item.backendProfiles.some((profile) => {
+        return profile.id === "gpu" && profile.availability === "available";
+    }));
+    if (!model) throw new Error("No compatible GPU backend is available");
+    return ai.ask("Hello", {
+        plugin: { modelId: model.modelId },
+        backend: "gpu",
+    });
+}).then((text) => console.log(text));
+```
+
+`available` confirms ABI and runtime-library prerequisites, not that every model can initialize on every driver. The official plugin exposes `npu` as `unavailable` with reason `npu-runtime-not-packaged`; it does not package or declare LiteRT-LM 0.15.0 EAP NPU inference.
 
 `ai.chat` and `ai.stream` accept the same `plugin` option. If the plugin is not installed, not enabled in Plugin Center, or has no imported model, the promise rejects with a clear error code such as `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND`, or `MODEL_AMBIGUOUS`.
 
@@ -377,12 +397,14 @@ try {
         java.util.Arrays.asList("streaming", "usage"),
         java.lang.Double.valueOf("0.7"), // temperature
         java.lang.Integer.valueOf("40"), // topK
-        java.lang.Double.valueOf("0.9")  // topP
+        java.lang.Double.valueOf("0.9"), // topP
+        false,  // persistent session
+        "cpu"   // explicit backend profile
     );
 
     var request = new TextApi.OnDeviceAiRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 1),
+        new CommonApi.AiProtocolVersion(1, 3),
         "autojs6.on-device-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
@@ -469,6 +491,7 @@ Safety and operational limits:
 - Context is limited to 256 KiB, output is limited to 64 KiB, and only one generation session may be active.
 - `maxTokens` (or raw-protocol `maximumOutputTokens`) accepts 1 through 2,147,483,647 and is enforced without requiring usage reporting. `temperature` must be finite and non-negative, `topK` positive, and `topP` finite from 0 through 1.
 - Streaming, usage, persistent sessions, structured JSON, `text/plain`, and `application/json` are declared. Reasoning and tools are unsupported.
+- CPU, GPU, and NPU backend profiles are explicit. GPU is available only when the plugin process can load system OpenCL; NPU is reported unavailable because its EAP runtime is not packaged. No unavailable profile falls back to CPU.
 - A response schema must be a JSON object no larger than 64 KiB; supported keywords follow the bundled LiteRT-LM/LLGuidance runtime. Completed structured output is parsed and validated strictly, so provide enough `maxTokens` for the entire JSON value.
 - Usage token counts come from LiteRT-LM Conversation KV-cache and decode counters without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, model listing, and dispatch time.
 - The plugin requests no network or storage permission.

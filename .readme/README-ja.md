@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを CPU 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません.
+On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません.
 
 ******
 
@@ -58,7 +58,7 @@ On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI 
 - インポートした各モデルを任意で一度初期化し, 「利用可能/互換性なし」の状態を保存して, モデル管理画面から再チェックできます.
 - credit バックプレッシャーでテキスト chunk を順番に配信し, 完了, 失敗, キャンセルのいずれか 1 つの終端状態だけを公開します.
 - インポート済みモデルの一覧表示, 選択, 名前変更, 未選択モデルの削除, 管理画面からの未参照モデルファイルの回収を行います.
-- モデルのダウンロードやリモート推論サービスを使わず, CPU backend で完全に端末内実行します.
+- AutoJs6 から `cpu`, `gpu`, `npu` backend を明示選択できます. CPU が既定で, GPU は OpenCL 読み込み検査の成功時だけ公開し, NPU は EAP runtime 未同梱のため利用不可と明示します.
 
 ******
 
@@ -89,11 +89,11 @@ plugin id: on-device-ai
 protocol provider id: autojs6.on-device-ai
 engine: on-device-ai
 variant: default
-protocol: V1.2
+protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-プラグインは ON_DEVICE 実行と NONE credential モードを宣言します. `streaming`, `usage`, `persistent-session`, `structured-json` 機能を宣言し, `text/plain` メッセージと `application/json` 応答 schema を受け取り, `text/plain` または `application/json` テキストを出力します.
+プラグインは ON_DEVICE 実行と NONE credential モードを宣言します. `streaming`, `usage`, `persistent-session`, `structured-json` 機能を宣言し, `text/plain` メッセージと `application/json` 応答 schema を受け取り, `text/plain` または `application/json` テキストを出力します. プロトコル 1.3 は明示 backend profile と端末別可用性を追加し, CPU への暗黙フォールバックを禁止します.
 
 ホスト build 5276 以降が必要です. リリースには arm64-v8a, x86_64, universal APK variant が含まれます.
 
@@ -103,7 +103,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応. `ai.session({ plugin: true })` は永続的な複数ターン Conversation を作成し, その後の `ask`, `chat`, `stream` は新しいユーザープロンプトだけを送信します. `ai.ask(messages, { plugin: true })` はプレーンテキストの `system`, `user`, `assistant` メッセージを順序どおり保持し, 最後のメッセージは `user` である必要があります. `ai.chat` は正確な token 数を `usage` に, 実測生成時間を `usage.raw.durationMillis` に返し, `ai.stream` は完了前に同じ累積 usage を送信します. `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でインポート済みモデルを列挙できます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です. `responseSchema` は構造化出力を暗黙に有効化し, schema なしの `structuredJson: true` は既定の object-root schema を使用します. `ai.ask` と `ai.chat().text` は引き続き JSON テキストを返し, ストリーム delta は部分的な JSON テキストです. 永続セッションでは全ターンで 1 つの固定 schema を使用します.
+> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応. `ai.session({ plugin: true })` は永続的な複数ターン Conversation を作成し, その後の `ask`, `chat`, `stream` は新しいユーザープロンプトだけを送信します. `ai.ask(messages, { plugin: true })` はプレーンテキストの `system`, `user`, `assistant` メッセージを順序どおり保持し, 最後のメッセージは `user` である必要があります. `ai.chat` は正確な token 数を `usage` に, 実測生成時間を `usage.raw.durationMillis` に返し, `ai.stream` は完了前に同じ累積 usage を送信します. `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でモデルと `backendProfiles` を列挙できます. 生成は `backend: 'cpu' | 'gpu' | 'npu'` を受け付け, 利用不可 profile は明示エラーとなり CPU へ戻りません. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です. `responseSchema` は構造化出力を暗黙に有効化し, schema なしの `structuredJson: true` は既定の object-root schema を使用します. `ai.ask` と `ai.chat().text` は引き続き JSON テキストを返し, ストリーム delta は部分的な JSON テキストです. 永続セッションでは全ターンで 1 つの固定 schema と backend を使用します.
 
 ******
 
@@ -123,7 +123,7 @@ required host build: 5276
 - Application scope の単一インポート coordinator により Activity 再作成中も処理を継続します. Fsync 済み pending journal でコールドスタート復旧と stale な `.incoming`, `.current`, `.pending` 一時ファイルの cleanup を行います. 復旧で削除するのは現在の試行が新規作成し current metadata で一度も公開していない destination だけで, 公開済み, current, 履歴 hash 世代は保持します.
 - 独立した `:provider` プロセスとのプロセス間競合を避けるため, インポート中には以前の SHA-256 hash 名モデル世代を自動削除しません. モデル管理画面では未選択の catalog モデルを削除し, catalog から参照されなくなった hash 名ファイルを回収できます.
 - プロセス内で同時に有効な生成セッションは 1 つだけです. リクエスト記述子は非同期処理前に複製され, プロトコルの quota に従って閉じられます.
-- Provider がキャッシュする初期化済み Engine は最大 1 つです. 同じモデルへの連続リクエストでは再利用し, モデル切り替え時は直ちに, 5 分間のアイドル後は自動的に, Android から明示的なメモリ圧迫通知を受けた場合は有効なセッション終了後に安全に解放します.
+- Provider はモデル SHA-256 と backend profile の組をキーに初期化済み Engine を最大 1 つキャッシュします. 同じ組は再利用し, いずれかのキー変更, 5 分間のアイドル, または明示的なメモリ圧迫時に安全に解放します.
 - モデルチェックが確認するのは, 現在のデバイスと同梱ランタイムで `Engine.initialize()` が成功することだけです. 出力品質は評価せず, デバイスまたはランタイムの変更後に再チェックできます.
 - Provider が宣言するコンテキスト上限は 256 KiB, 出力上限は 64 KiB です. リクエストとモデルはさらに低い上限を設定できます.
 - 応答 schema は 64 KiB 以下の JSON object である必要があります. 対応 keyword は同梱 LiteRT-LM/LLGuidance ランタイムの実装に従います. 完成出力は厳密に parse と検証を行うため, JSON 値全体に十分な `maxTokens` を確保してください.
@@ -142,7 +142,7 @@ required host build: 5276
 - Reasoning と tools は宣言しません.
 - Tool role メッセージ, tool schema, tool call, tool result は受け付けません.
 - ネットワークでのモデル探索, モデルダウンロード, cloud 推論, credential フローはありません.
-- GPU または NPU backend は宣言しません. `.litertlm` 拡張子だけでは現在の LiteRT-LM runtime がモデルを読み込める保証にはなりません.
+- NPU 推論は宣言しません. profile は `npu-runtime-not-packaged` 理由付きの `unavailable` として確認できます. GPU は `libOpenCL.so` を読み込める場合だけ宣言され, `.litertlm` 拡張子だけではモデル初期化を保証しません.
 
 ******
 
@@ -162,7 +162,7 @@ required host build: 5276
 
 # v1.1.0
 
-###### 2026/08/20
+###### 2026/08/21
 
 * `機能` プラグイン名を On-Device AI (オンデバイス AI) に変更し, AutoJs6 公式オンデバイス AI プラグインとして位置付け
 * `機能` AutoJs6 の `ai.ask`/`ai.chat`/`ai.stream` における `plugin: true` 短縮セレクターと `ai.models` モデル列挙に対応
@@ -170,6 +170,7 @@ required host build: 5276
 * `機能` LiteRT-LM の正確な入力, 出力, 合計 token 数とプロバイダー実測の生成時間を `ai.chat().usage` とストリーム usage イベントで報告
 * `機能` On-Device AI プロトコル 1.2 の永続セッションと AutoJs6 `ai.session` による複数ターン Conversation 再利用に対応し, 以前の履歴の再送信を不要化
 * `機能` AutoJs6 の `structuredJson` と `responseSchema` による LiteRT-LM ネイティブ JSON Schema 制約デコードを追加し, 単発呼び出し, ストリーミング, 永続セッションと完成 JSON の厳密な検証に対応
+* `機能` プロトコル 1.3 と AutoJs6 生成オプションで明示的な `cpu`, `gpu`, `npu` backend profile を提供し, デバイス互換性報告, モデル/profile 単位のキャッシュ分離, 使用不可 profile からのフォールバック禁止に対応; GPU は OpenCL ロード検査成功後のみ宣言し, NPU は EAP runtime 未同梱のため使用不可を維持
 * `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合
 * `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 

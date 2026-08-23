@@ -41,6 +41,31 @@ class StreamingMarkdownParserTest {
 
         assertEquals("Before\nval answer = 42", document.text)
         assertSpan(document, MarkdownSpanKind.CODE_BLOCK, "val answer = 42")
+        assertEquals(
+            "kotlin",
+            document.spans.single { span -> span.kind == MarkdownSpanKind.CODE_BLOCK }.metadata,
+        )
+    }
+
+    @Test
+    fun `parses adaptive table cells and column alignments`() {
+        val document = StreamingMarkdownParser.parse(
+            "| Name | Result | Notes |\n| :--- | ---: | :---: |\n| **A** | 42 | local |\n| B | 7 | wraps here |",
+        )
+
+        assertEquals("Name\tResult\tNotes\nA\t42\tlocal\nB\t7\twraps here", document.text)
+        val table = document.spans.single { span -> span.kind == MarkdownSpanKind.TABLE }
+        assertEquals("SEC", table.metadata)
+        assertEquals(document.text, document.text.substring(table.start, table.end))
+        assertSpan(document, MarkdownSpanKind.BOLD, "A")
+    }
+
+    @Test
+    fun `horizontal rule remains a structural full-width block`() {
+        val document = StreamingMarkdownParser.parse("Before\n---\nAfter")
+
+        assertEquals("Before\n────────\nAfter", document.text)
+        assertSpan(document, MarkdownSpanKind.HORIZONTAL_RULE, "────────")
     }
 
     @Test

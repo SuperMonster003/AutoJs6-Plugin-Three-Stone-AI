@@ -1,10 +1,13 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Typeface
+import android.net.Uri
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.BackgroundColorSpan
+import android.text.style.ClickableSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.QuoteSpan
 import android.text.style.RelativeSizeSpan
@@ -14,8 +17,10 @@ import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.TypefaceSpan
 import android.text.style.UnderlineSpan
+import android.text.TextPaint
+import android.view.View
 
-internal class MarkdownTextRenderer(context: Context, accentColor: Int? = null) {
+internal class MarkdownTextRenderer(private val context: Context, accentColor: Int? = null) {
     private val codeSurface = context.getColor(R.color.chat_markdown_code_surface)
     private val quoteColor = context.getColor(R.color.chat_markdown_quote)
     private val linkColor = accentColor ?: context.getColor(R.color.chat_markdown_link)
@@ -48,9 +53,14 @@ internal class MarkdownTextRenderer(context: Context, accentColor: Int? = null) 
                     }
                     MarkdownSpanKind.LIST_ITEM -> Unit
                     MarkdownSpanKind.LINK -> {
-                        add(span, ForegroundColorSpan(linkColor))
-                        add(span, UnderlineSpan())
+                        span.metadata?.let { destination ->
+                            add(span, SafeLinkSpan(context, destination, linkColor))
+                        } ?: run {
+                            add(span, ForegroundColorSpan(linkColor))
+                            add(span, UnderlineSpan())
+                        }
                     }
+                    MarkdownSpanKind.TABLE -> Unit
                     MarkdownSpanKind.HORIZONTAL_RULE -> add(
                         span,
                         ForegroundColorSpan(secondaryText),
@@ -77,5 +87,28 @@ internal class MarkdownTextRenderer(context: Context, accentColor: Int? = null) 
     private fun SpannableStringBuilder.add(span: MarkdownSpan, value: Any) {
         if (span.end <= span.start || span.end > length) return
         setSpan(value, span.start, span.end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+}
+
+private class SafeLinkSpan(
+    private val context: Context,
+    private val destination: String,
+    private val color: Int,
+) : ClickableSpan() {
+    override fun onClick(widget: View) {
+        val uri = runCatching { Uri.parse(destination) }.getOrNull() ?: return
+        if (uri.scheme?.lowercase() !in ALLOWED_SCHEMES) return
+        runCatching {
+            context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+        }
+    }
+
+    override fun updateDrawState(drawState: TextPaint) {
+        drawState.color = color
+        drawState.isUnderlineText = true
+    }
+
+    private companion object {
+        val ALLOWED_SCHEMES = setOf("http", "https", "mailto")
     }
 }

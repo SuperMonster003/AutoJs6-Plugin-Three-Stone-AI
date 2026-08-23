@@ -15,6 +15,7 @@ internal enum class MarkdownSpanKind {
     BLOCK_QUOTE,
     LIST_ITEM,
     LINK,
+    TABLE,
     HORIZONTAL_RULE,
     INLINE_MATH,
     MATH_TEXT,
@@ -56,9 +57,12 @@ internal object StreamingMarkdownParser {
         val spans = ArrayList<MarkdownSpan>()
         var visibleLineCount = 0
         var fenceMarker: String? = null
+        var fenceLanguage: String? = null
         var fenceStart = -1
-
-        splitLines(normalized).forEach { rawLine ->
+        val lines = splitLines(normalized)
+        var lineIndex = 0
+        while (lineIndex < lines.size) {
+            val rawLine = lines[lineIndex]
             val trimmed = rawLine.trimStart()
             val possibleFence = when {
                 trimmed.startsWith("```") -> "```"
@@ -68,20 +72,47 @@ internal object StreamingMarkdownParser {
             if (possibleFence != null) {
                 if (fenceMarker == null) {
                     fenceMarker = possibleFence
+                    fenceLanguage = trimmed.removePrefix(possibleFence).trim().takeIf(String::isNotEmpty)
                     fenceStart = output.length + if (visibleLineCount > 0) 1 else 0
                 } else if (fenceMarker == possibleFence) {
-                    addSpan(spans, fenceStart, output.length, MarkdownSpanKind.CODE_BLOCK)
+                    addSpan(
+                        spans,
+                        fenceStart,
+                        output.length,
+                        MarkdownSpanKind.CODE_BLOCK,
+                        fenceLanguage,
+                    )
                     fenceMarker = null
+                    fenceLanguage = null
                     fenceStart = -1
                 } else {
                     appendVisibleLine(output, rawLine, visibleLineCount++)
                 }
-                return@forEach
+                lineIndex++
+                continue
             }
 
             if (fenceMarker != null) {
                 appendVisibleLine(output, rawLine, visibleLineCount++)
-                return@forEach
+                lineIndex++
+                continue
+            }
+
+            val table = parseTable(lines, lineIndex)
+            if (table != null) {
+                val tableStart = output.length + if (visibleLineCount > 0) 1 else 0
+                table.rows.forEach { row ->
+                    appendTableRow(output, spans, row, visibleLineCount++)
+                }
+                addSpan(
+                    spans,
+                    tableStart,
+                    output.length,
+                    MarkdownSpanKind.TABLE,
+                    table.alignments.joinToString("") { alignment -> alignment.code },
+                )
+                lineIndex = table.endLineExclusive
+                continue
             }
 
             val headingLevel = headingLevel(rawLine)
@@ -96,7 +127,8 @@ internal object StreamingMarkdownParser {
                         MarkdownSpanKind.HEADING_1.ordinal + headingLevel - 1
                     ],
                 )
-                return@forEach
+                lineIndex++
+                continue
             }
 
             val quoteContent = blockQuoteContent(rawLine)
@@ -108,7 +140,8 @@ internal object StreamingMarkdownParser {
                     visibleLineCount++,
                     MarkdownSpanKind.BLOCK_QUOTE,
                 )
-                return@forEach
+                lineIndex++
+                continue
             }
 
             val unorderedContent = unorderedListContent(rawLine)
@@ -120,7 +153,8 @@ internal object StreamingMarkdownParser {
                     visibleLineCount++,
                     MarkdownSpanKind.LIST_ITEM,
                 )
-                return@forEach
+                lineIndex++
+                continue
             }
 
             val ordered = orderedListContent(rawLine)
@@ -132,7 +166,8 @@ internal object StreamingMarkdownParser {
                     visibleLineCount++,
                     MarkdownSpanKind.LIST_ITEM,
                 )
-                return@forEach
+                lineIndex++
+                continue
             }
 
             if (isHorizontalRule(rawLine)) {
@@ -143,16 +178,94 @@ internal object StreamingMarkdownParser {
                     start + HORIZONTAL_RULE_TEXT.length,
                     MarkdownSpanKind.HORIZONTAL_RULE,
                 )
-                return@forEach
+                lineIndex++
+                continue
             }
 
             appendInlineLine(output, spans, parseInline(rawLine), visibleLineCount++)
+            lineIndex++
         }
 
         if (fenceMarker != null) {
-            addSpan(spans, fenceStart, output.length, MarkdownSpanKind.CODE_BLOCK)
+            addSpan(
+                spans,
+                fenceStart,
+                output.length,
+                MarkdownSpanKind.CODE_BLOCK,
+                fenceLanguage,
+            )
         }
         return MarkdownDocument(output.toString(), spans.sortedWith(SPAN_ORDER))
+    }
+
+    private fun parseTable(lines: List<String>, start: Int): ParsedTable? {
+        val header = splitTableRow(lines.getOrNull(start) ?: return null) ?: return null
+        if (header.size < 2) return null
+        val delimiter = splitTableRow(lines.getOrNull(start + 1) ?: return null) ?: return null
+        if (delimiter.size != header.size) return null
+        val alignments = delimiter.map { cell -> tableAlignment(cell) ?: return null }
+        val rows = ArrayList<List<String>>()
+        rows += header
+        var index = start + 2
+        while (index < lines.size) {
+            val row = splitTableRow(lines[index]) ?: break
+            if (row.isEmpty()) break
+            rows += List(header.size) { column -> row.getOrElse(column) { "" } }
+            index++
+        }
+        return ParsedTable(rows, alignments, index)
+    }
+
+    private fun splitTableRow(line: String): List<String>? {
+        if ('|' !in line || line.isBlank()) return null
+        val cells = ArrayList<String>()
+        val cell = StringBuilder()
+        var escaped = false
+        line.forEach { character ->
+            when {
+                escaped -> {
+                    cell.append(character)
+                    escaped = false
+                }
+                character == '\\' -> escaped = true
+                character == '|' -> {
+                    cells += cell.toString().trim()
+                    cell.clear()
+                }
+                else -> cell.append(character)
+            }
+        }
+        if (escaped) cell.append('\\')
+        cells += cell.toString().trim()
+        if (line.trimStart().startsWith('|') && cells.firstOrNull().isNullOrEmpty()) cells.removeAt(0)
+        if (line.trimEnd().endsWith('|') && cells.lastOrNull().isNullOrEmpty()) cells.removeAt(cells.lastIndex)
+        return cells.takeIf { it.size >= 2 }
+    }
+
+    private fun tableAlignment(cell: String): TableAlignment? {
+        val compact = cell.replace(" ", "")
+        if (!TABLE_DELIMITER.matches(compact)) return null
+        return when {
+            compact.startsWith(':') && compact.endsWith(':') -> TableAlignment.CENTER
+            compact.endsWith(':') -> TableAlignment.END
+            else -> TableAlignment.START
+        }
+    }
+
+    private fun appendTableRow(
+        output: StringBuilder,
+        spans: MutableList<MarkdownSpan>,
+        cells: List<String>,
+        visibleLineIndex: Int,
+    ) {
+        if (visibleLineIndex > 0) output.append('\n')
+        cells.forEachIndexed { index, cell ->
+            if (index > 0) output.append('\t')
+            val inline = parseInline(cell)
+            val start = output.length
+            output.append(inline.text)
+            inline.spans.forEach { span -> spans += span.shifted(start) }
+        }
     }
 
     private fun parseInline(source: String): MarkdownDocument {
@@ -503,8 +616,21 @@ internal object StreamingMarkdownParser {
         val endExclusive: Int,
     )
 
+    private data class ParsedTable(
+        val rows: List<List<String>>,
+        val alignments: List<TableAlignment>,
+        val endLineExclusive: Int,
+    )
+
+    private enum class TableAlignment(val code: String) {
+        START("S"),
+        CENTER("C"),
+        END("E"),
+    }
+
     private val SPAN_ORDER = compareBy<MarkdownSpan>(MarkdownSpan::start, MarkdownSpan::end)
     private val UNORDERED_MARKERS = setOf('-', '+', '*')
+    private val TABLE_DELIMITER = Regex("^:?-{3,}:?$")
     private val ESCAPABLE_CHARACTERS = setOf(
         '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '#', '+', '-', '.', '!', '~', '$',
     )

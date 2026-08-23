@@ -22,6 +22,7 @@ import android.text.style.BackgroundColorSpan
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -575,7 +576,7 @@ class ChatActivity : ConfiguredActivity() {
                 inputType = InputType.TYPE_CLASS_TEXT or
                     InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
                     InputType.TYPE_TEXT_FLAG_MULTI_LINE
-                imeOptions = EditorInfo.IME_ACTION_SEND
+                imeOptions = editorImeOptions()
                 filters = arrayOf(
                     InputFilter.LengthFilter(ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS),
                 )
@@ -584,7 +585,25 @@ class ChatActivity : ConfiguredActivity() {
                 setPaddingRelative(dp(12), dp(9), dp(8), dp(9))
                 background = null
                 setOnEditorActionListener { _, actionId, _ ->
-                    if (actionId == EditorInfo.IME_ACTION_SEND) {
+                    if (
+                        uiSettings.enterKeyBehavior == EnterKeyBehavior.SEND &&
+                        actionId == EditorInfo.IME_ACTION_SEND
+                    ) {
+                        sendCurrentMessage()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                setOnKeyListener { _, keyCode, event ->
+                    if (keyCode != KeyEvent.KEYCODE_ENTER || event.action != KeyEvent.ACTION_DOWN) {
+                        return@setOnKeyListener false
+                    }
+                    val shouldSend = when (uiSettings.enterKeyBehavior) {
+                        EnterKeyBehavior.SEND -> !event.isShiftPressed
+                        EnterKeyBehavior.NEW_LINE -> event.isCtrlPressed
+                    }
+                    if (shouldSend) {
                         sendCurrentMessage()
                         true
                     } else {
@@ -1100,8 +1119,8 @@ class ChatActivity : ConfiguredActivity() {
     ) = GenerationRequest(
         history = history,
         prompt = prompt,
-        maximumOutputTokens = ChatConversationPolicy.MAXIMUM_OUTPUT_TOKENS,
-        samplingOptions = null,
+        maximumOutputTokens = uiSettings.maximumOutputTokens,
+        samplingOptions = uiSettings.samplingOptions(),
         reportUsage = true,
     )
 
@@ -1466,13 +1485,8 @@ class ChatActivity : ConfiguredActivity() {
             orientation = LinearLayout.VERTICAL
             setPaddingRelative(dp(22), dp(4), dp(22), 0)
         }
-        container.addView(TextView(this).apply {
-            text = getString(R.string.chat_font_size)
-            textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(getColor(R.color.text_color_secondary))
-            setPaddingRelative(0, dp(5), 0, dp(2))
-        })
+        container.addView(settingsSectionLabel(R.string.chat_settings_display_section))
+        container.addView(settingsFieldLabel(R.string.chat_font_size))
         val fontGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
         ChatFontSize.entries.forEach { fontSize ->
             fontGroup.addView(RadioButton(this).apply {
@@ -1497,6 +1511,89 @@ class ChatActivity : ConfiguredActivity() {
         }
         container.addView(showUsage)
 
+        container.addView(settingsSectionLabel(R.string.chat_settings_input_section))
+        container.addView(settingsFieldLabel(R.string.chat_enter_key_behavior))
+        val enterKeyGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
+        EnterKeyBehavior.entries.forEach { behavior ->
+            enterKeyGroup.addView(RadioButton(this).apply {
+                id = View.generateViewId()
+                tag = behavior
+                text = getString(
+                    when (behavior) {
+                        EnterKeyBehavior.SEND -> R.string.chat_enter_key_send
+                        EnterKeyBehavior.NEW_LINE -> R.string.chat_enter_key_new_line
+                    },
+                )
+                isChecked = behavior == workingSettings.enterKeyBehavior
+                setTextColor(appPalette.primaryText)
+            })
+        }
+        container.addView(enterKeyGroup)
+
+        container.addView(settingsSectionLabel(R.string.chat_settings_generation_section))
+        val unlimitedTokens = CheckBox(this).apply {
+            text = getString(R.string.chat_maximum_output_tokens_unlimited)
+            isChecked = workingSettings.maximumOutputTokens == null
+            setTextColor(appPalette.primaryText)
+        }
+        container.addView(unlimitedTokens)
+        container.addView(settingsFieldLabel(R.string.chat_maximum_output_tokens))
+        val maximumTokensInput = settingsEditText(
+            workingSettings.maximumOutputTokensDraft.toString(),
+            InputType.TYPE_CLASS_NUMBER,
+        )
+        container.addView(maximumTokensInput)
+        maximumTokensInput.isEnabled = !unlimitedTokens.isChecked
+        maximumTokensInput.alpha = if (maximumTokensInput.isEnabled) 1f else DISABLED_ALPHA
+        unlimitedTokens.setOnCheckedChangeListener { _, checked ->
+            maximumTokensInput.isEnabled = !checked
+            maximumTokensInput.alpha = if (checked) DISABLED_ALPHA else 1f
+        }
+
+        val useModelSamplingDefaults = CheckBox(this).apply {
+            text = getString(R.string.chat_use_model_sampling_defaults)
+            isChecked = workingSettings.useModelSamplingDefaults
+            setTextColor(appPalette.primaryText)
+            setPaddingRelative(0, dp(9), 0, 0)
+        }
+        container.addView(useModelSamplingDefaults)
+        container.addView(settingsFieldLabel(R.string.chat_temperature))
+        val temperatureInput = settingsEditText(
+            workingSettings.temperature.toString(),
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
+        )
+        container.addView(temperatureInput)
+        container.addView(settingsFieldLabel(R.string.chat_top_k))
+        val topKInput = settingsEditText(
+            workingSettings.topK.toString(),
+            InputType.TYPE_CLASS_NUMBER,
+        )
+        container.addView(topKInput)
+        container.addView(settingsFieldLabel(R.string.chat_top_p))
+        val topPInput = settingsEditText(
+            workingSettings.topP.toString(),
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
+        )
+        container.addView(topPInput)
+        container.addView(TextView(this).apply {
+            text = getString(R.string.chat_generation_settings_help)
+            textSize = 12f
+            setTextColor(appPalette.secondaryText)
+            setPaddingRelative(0, dp(7), 0, dp(8))
+            setLineSpacing(0f, 1.1f)
+        })
+        val samplingInputs = listOf(temperatureInput, topKInput, topPInput)
+        fun updateSamplingInputState(useDefaults: Boolean) {
+            samplingInputs.forEach { field ->
+                field.isEnabled = !useDefaults
+                field.alpha = if (useDefaults) DISABLED_ALPHA else 1f
+            }
+        }
+        updateSamplingInputState(useModelSamplingDefaults.isChecked)
+        useModelSamplingDefaults.setOnCheckedChangeListener { _, checked ->
+            updateSamplingInputState(checked)
+        }
+
         val settingsScroll = ScrollView(this).apply {
             addView(
                 container,
@@ -1506,22 +1603,112 @@ class ChatActivity : ConfiguredActivity() {
                 ),
             )
         }
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle(R.string.chat_settings_title)
             .setView(settingsScroll)
             .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.chat_settings_save) { _, _ ->
+            .setPositiveButton(R.string.chat_settings_save, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val selectedFont = fontGroup.findViewById<RadioButton>(fontGroup.checkedRadioButtonId)
                     ?.tag as? ChatFontSize ?: workingSettings.fontSize
+                val selectedEnterBehavior = enterKeyGroup.findViewById<RadioButton>(
+                    enterKeyGroup.checkedRadioButtonId,
+                )?.tag as? EnterKeyBehavior ?: workingSettings.enterKeyBehavior
+                val maximumTokens = if (unlimitedTokens.isChecked) {
+                    null
+                } else {
+                    maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
+                        ?: return@setOnClickListener showSettingError(
+                            maximumTokensInput,
+                            R.string.chat_positive_integer_error,
+                        )
+                }
+                val maximumTokensDraft = maximumTokens
+                    ?: maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
+                    ?: workingSettings.maximumOutputTokensDraft
+                val useDefaults = useModelSamplingDefaults.isChecked
+                val temperature = if (useDefaults) {
+                    workingSettings.temperature
+                } else {
+                    temperatureInput.text.toString().toDoubleOrNull()
+                        ?.takeIf { it.isFinite() && it >= 0.0 }
+                        ?: return@setOnClickListener showSettingError(
+                            temperatureInput,
+                            R.string.chat_nonnegative_number_error,
+                        )
+                }
+                val topK = if (useDefaults) {
+                    workingSettings.topK
+                } else {
+                    topKInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
+                        ?: return@setOnClickListener showSettingError(
+                            topKInput,
+                            R.string.chat_positive_integer_error,
+                        )
+                }
+                val topP = if (useDefaults) {
+                    workingSettings.topP
+                } else {
+                    topPInput.text.toString().toDoubleOrNull()
+                        ?.takeIf { it.isFinite() && it in 0.0..1.0 }
+                        ?: return@setOnClickListener showSettingError(
+                            topPInput,
+                            R.string.chat_probability_error,
+                        )
+                }
                 uiSettings = ChatUiSettings(
                     fontSize = selectedFont,
                     followStreamingOutput = followOutput.isChecked,
                     showGenerationUsage = showUsage.isChecked,
+                    enterKeyBehavior = selectedEnterBehavior,
+                    maximumOutputTokens = maximumTokens,
+                    maximumOutputTokensDraft = maximumTokensDraft,
+                    useModelSamplingDefaults = useDefaults,
+                    temperature = temperature,
+                    topK = topK,
+                    topP = topP,
                 )
                 uiSettingsStore.save(uiSettings)
                 applyUiSettings()
+                dialog.dismiss()
             }
-            .show()
+        }
+        dialog.show()
+    }
+
+    private fun settingsSectionLabel(textResource: Int) = TextView(this).apply {
+        text = getString(textResource)
+        textSize = 13f
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(appPalette.accent)
+        setPaddingRelative(0, dp(13), 0, dp(3))
+    }
+
+    private fun settingsFieldLabel(textResource: Int) = TextView(this).apply {
+        text = getString(textResource)
+        textSize = 12.5f
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(appPalette.secondaryText)
+        setPaddingRelative(0, dp(6), 0, dp(2))
+    }
+
+    private fun settingsEditText(value: String, fieldInputType: Int) = EditText(this).apply {
+        setText(value)
+        setSelection(text.length)
+        inputType = fieldInputType
+        maxLines = 1
+        setSingleLine(true)
+        setTextColor(appPalette.primaryText)
+        setHintTextColor(appPalette.secondaryText)
+        backgroundTintList = ColorStateList.valueOf(appPalette.accent)
+        setPaddingRelative(dp(4), dp(5), dp(4), dp(5))
+    }
+
+    private fun showSettingError(field: EditText, messageResource: Int) {
+        field.error = getString(messageResource)
+        field.requestFocus()
     }
 
     private fun ChatFontSize.labelResource(): Int = when (this) {
@@ -1534,12 +1721,19 @@ class ChatActivity : ConfiguredActivity() {
     private fun applyUiSettings() {
         if (::input.isInitialized) {
             input.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiSettings.fontSize.inputSp)
+            input.imeOptions = editorImeOptions()
+            getSystemService(InputMethodManager::class.java).restartInput(input)
         }
         messageViews.values.forEach { holder ->
             holder.body.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiSettings.fontSize.messageSp)
         }
         messages.forEach(::updateMessageView)
         if (currentSearchMatchIndex >= 0) locateCurrentSearchResult()
+    }
+
+    private fun editorImeOptions(): Int = when (uiSettings.enterKeyBehavior) {
+        EnterKeyBehavior.SEND -> EditorInfo.IME_ACTION_SEND
+        EnterKeyBehavior.NEW_LINE -> EditorInfo.IME_ACTION_NONE
     }
 
     private fun markConversationChanged(schedulePersistence: Boolean = true) {

@@ -49,7 +49,6 @@ internal data class ChatMessage(
 /** Pure transcript rules shared by the launcher UI and its local unit tests. */
 internal object ChatConversationPolicy {
     const val MAXIMUM_INPUT_CHARACTERS = 16_384
-    const val MAXIMUM_OUTPUT_TOKENS = 1_024
     const val MAXIMUM_BACKEND_TURNS = 32
     const val MAXIMUM_RETAINED_TURNS = 24
     const val MAXIMUM_RETAINED_HISTORY_BYTES = 192 * 1_024

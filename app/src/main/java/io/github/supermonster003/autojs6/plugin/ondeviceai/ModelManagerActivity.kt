@@ -1,11 +1,11 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputFilter
@@ -46,7 +46,7 @@ import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelRenameStat
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelSelectionState
 import io.github.supermonster003.autojs6.plugin.ondeviceai.model.ModelStorageCleanupState
 
-class ModelManagerActivity : Activity() {
+class ModelManagerActivity : ConfiguredActivity() {
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var downloadCoordinator: ModelDownloadCoordinator
     private lateinit var downloadStatus: TextView
@@ -181,19 +181,27 @@ class ModelManagerActivity : Activity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
+            setBackgroundColor(appPalette.windowBackground)
             setPadding(dp(24), dp(16), dp(24), dp(24))
 
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
+                setBackgroundColor(appPalette.primary)
+                setPaddingRelative(dp(8), dp(4), dp(12), dp(4))
                 addView(Button(context).apply {
                     text = getString(R.string.navigation_back)
                     isAllCaps = false
+                    setTextColor(appPalette.onPrimary)
+                    backgroundTintList = ColorStateList.valueOf(
+                        AppColorPolicy.withAlpha(appPalette.primary, 0x00),
+                    )
                     setOnClickListener { finish() }
                 })
                 addView(TextView(context).apply {
                     text = getString(R.string.model_manager_title)
                     textSize = 22f
+                    setTextColor(appPalette.onPrimary)
                 }, LinearLayout.LayoutParams(
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,

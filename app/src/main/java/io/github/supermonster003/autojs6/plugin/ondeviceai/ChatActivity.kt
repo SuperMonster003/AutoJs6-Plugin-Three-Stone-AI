@@ -55,7 +55,7 @@ import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicLong
 
 /** Launcher surface for direct, private, multi-turn interaction with the selected local model. */
-class ChatActivity : Activity() {
+class ChatActivity : ConfiguredActivity() {
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var historyStore: ConversationHistoryStore
     private lateinit var uiSettingsStore: ChatUiSettingsStore
@@ -137,7 +137,7 @@ class ChatActivity : Activity() {
         importCoordinator = ModelImportCoordinator.get(applicationContext)
         historyStore = ConversationHistoryStore(applicationContext)
         uiSettingsStore = ChatUiSettingsStore(applicationContext)
-        markdownRenderer = MarkdownTextRenderer(this)
+        markdownRenderer = MarkdownTextRenderer(this, appPalette.accent)
         uiSettings = uiSettingsStore.load()
         if (!restoreTranscript(savedInstanceState)) {
             restoreStoredConversation(
@@ -315,6 +315,7 @@ class ChatActivity : Activity() {
         gravity = Gravity.CENTER_VERTICAL
         minimumHeight = dp(58)
         setPaddingRelative(dp(20), dp(6), dp(8), dp(4))
+        setBackgroundColor(appPalette.primary)
 
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -322,12 +323,12 @@ class ChatActivity : Activity() {
                 text = getString(R.string.app_name)
                 textSize = 20f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(getColor(R.color.text_color_primary))
+                setTextColor(appPalette.onPrimary)
             })
             addView(TextView(context).apply {
                 text = getString(R.string.chat_screen_title)
                 textSize = 12f
-                setTextColor(getColor(R.color.text_color_secondary))
+                setTextColor(AppColorPolicy.withAlpha(appPalette.onPrimary, 0xB3))
             })
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
@@ -338,7 +339,7 @@ class ChatActivity : Activity() {
             minimumWidth = dp(48)
             minimumHeight = dp(48)
             contentDescription = getString(R.string.chat_open_menu)
-            setTextColor(getColor(R.color.text_color_primary))
+            setTextColor(appPalette.onPrimary)
             applySelectableBackground(this)
             setOnClickListener(::showChatMenu)
         })
@@ -361,7 +362,7 @@ class ChatActivity : Activity() {
         addView(TextView(context).apply {
             text = "\u25cf"
             textSize = 10f
-            setTextColor(getColor(R.color.chat_accent))
+            setTextColor(appPalette.accent)
         }, LinearLayout.LayoutParams(dp(18), LinearLayout.LayoutParams.WRAP_CONTENT))
         modelStatus = TextView(context).apply {
             textSize = 13f
@@ -459,7 +460,7 @@ class ChatActivity : Activity() {
                 text = "\u2726"
                 textSize = 32f
                 gravity = Gravity.CENTER
-                setTextColor(getColor(R.color.chat_accent))
+                setTextColor(appPalette.accent)
             })
             emptyTitle = TextView(context).apply {
                 textSize = 22f
@@ -533,7 +534,7 @@ class ChatActivity : Activity() {
                 text = getString(R.string.chat_editing_message)
                 textSize = 12.5f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(getColor(R.color.chat_accent))
+                setTextColor(appPalette.accent)
             }
             addView(
                 editingLabel,
@@ -543,7 +544,7 @@ class ChatActivity : Activity() {
                 text = getString(R.string.chat_cancel_editing)
                 textSize = 12.5f
                 gravity = Gravity.CENTER
-                setTextColor(getColor(R.color.chat_accent))
+                setTextColor(appPalette.accent)
                 setPaddingRelative(dp(10), dp(5), dp(10), dp(5))
                 applySelectableBackground(this)
                 setOnClickListener { cancelEditing() }
@@ -605,10 +606,10 @@ class ChatActivity : Activity() {
                 isAllCaps = false
                 minWidth = dp(72)
                 minimumHeight = dp(46)
-                setTextColor(getColor(R.color.chat_on_action))
-                background = roundedRipple(
-                    fillColor = R.color.chat_action,
-                    rippleColor = R.color.chat_action_ripple,
+                setTextColor(appPalette.onPrimary)
+                background = roundedRippleColor(
+                    fillColor = appPalette.primary,
+                    rippleColor = AppColorPolicy.withAlpha(appPalette.onPrimary, 0x40),
                     radiusDp = 14,
                 )
                 setOnClickListener {
@@ -955,11 +956,7 @@ class ChatActivity : Activity() {
         }
         meta.text = value
         meta.isClickable = message.role == ChatMessageRole.USER && value.isNotEmpty()
-        meta.setTextColor(
-            getColor(
-                if (meta.isClickable) R.color.chat_accent else R.color.text_color_secondary,
-            ),
-        )
+        meta.setTextColor(if (meta.isClickable) appPalette.accent else appPalette.secondaryText)
         meta.visibility = if (value.isEmpty()) View.GONE else View.VISIBLE
     }
 
@@ -1638,7 +1635,8 @@ class ChatActivity : Activity() {
             menu.add(0, MENU_SEARCH, 2, R.string.chat_search_menu).isEnabled =
                 messages.any { message -> message.text.isNotBlank() }
             menu.add(0, MENU_CHAT_SETTINGS, 3, R.string.chat_settings_title)
-            menu.add(0, MENU_MODEL_SETTINGS, 4, R.string.chat_model_settings)
+            menu.add(0, MENU_APP_SETTINGS, 4, R.string.app_settings_title)
+            menu.add(0, MENU_MODEL_SETTINGS, 5, R.string.chat_model_settings)
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     MENU_NEW_CONVERSATION -> {
@@ -1656,6 +1654,10 @@ class ChatActivity : Activity() {
                     }
                     MENU_CHAT_SETTINGS -> {
                         showChatSettings()
+                        true
+                    }
+                    MENU_APP_SETTINGS -> {
+                        startActivity(Intent(this@ChatActivity, AppSettingsActivity::class.java))
                         true
                     }
                     MENU_MODEL_SETTINGS -> {
@@ -1839,6 +1841,20 @@ class ChatActivity : Activity() {
         null,
     )
 
+    private fun roundedRippleColor(
+        fillColor: Int,
+        rippleColor: Int,
+        radiusDp: Int,
+    ) = RippleDrawable(
+        ColorStateList.valueOf(rippleColor),
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(fillColor)
+            cornerRadius = dp(radiusDp).toFloat()
+        },
+        null,
+    )
+
     private fun applySelectableBackground(view: View) {
         val value = TypedValue()
         if (theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, value, true)) {
@@ -1871,6 +1887,7 @@ class ChatActivity : Activity() {
         const val MENU_CONVERSATION_HISTORY = 3
         const val MENU_SEARCH = 4
         const val MENU_CHAT_SETTINGS = 5
+        const val MENU_APP_SETTINGS = 6
         const val MESSAGES_PER_TURN = 2
         const val MILLIS_PER_SECOND = 1_000L
         const val DELTA_FLUSH_INTERVAL_MILLIS = 32L

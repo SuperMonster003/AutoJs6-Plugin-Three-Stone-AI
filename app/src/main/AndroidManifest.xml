@@ -54,6 +54,24 @@
             android:parentActivityName=".ChatActivity" />
 
         <activity
+            android:name=".AppSettingsActivity"
+            android:exported="false"
+            android:label="@string/app_settings_title"
+            android:parentActivityName=".ChatActivity" />
+
+        <activity
+            android:name=".AboutActivity"
+            android:exported="false"
+            android:label="@string/about_app_and_developer"
+            android:parentActivityName=".AppSettingsActivity" />
+
+        <activity
+            android:name=".ReleaseHistoryActivity"
+            android:exported="false"
+            android:label="@string/release_history_title"
+            android:parentActivityName=".AppSettingsActivity" />
+
+        <activity
             android:name=".ModelManagerActivity"
             android:exported="true"
             android:label="@string/model_manager_title"

@@ -1,6 +1,5 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
-import android.app.Activity
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Typeface
@@ -18,7 +17,7 @@ import android.widget.TextView
 import java.text.DateFormat
 import java.util.Date
 
-class ConversationHistoryActivity : Activity() {
+class ConversationHistoryActivity : ConfiguredActivity() {
     private lateinit var historyStore: ConversationHistoryStore
     private lateinit var historyColumn: LinearLayout
 
@@ -37,10 +36,10 @@ class ConversationHistoryActivity : Activity() {
     private fun createContentView(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(getColor(R.color.window_background))
+            setBackgroundColor(appPalette.windowBackground)
             addView(createToolbar())
             addView(
-                View(context).apply { setBackgroundColor(getColor(R.color.divider)) },
+                View(context).apply { setBackgroundColor(appPalette.divider) },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)),
             )
         }
@@ -69,15 +68,16 @@ class ConversationHistoryActivity : Activity() {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         minimumHeight = dp(58)
-        setPaddingRelative(dp(4), dp(5), dp(16), dp(4))
+        setPaddingRelative(dp(8), dp(5), dp(16), dp(4))
+        setBackgroundColor(appPalette.primary)
         addView(TextView(context).apply {
-            text = "‹"
-            textSize = 36f
+            text = getString(R.string.navigation_back)
+            textSize = 14f
             gravity = Gravity.CENTER
             minimumWidth = dp(48)
             minimumHeight = dp(48)
             contentDescription = getString(R.string.navigation_back)
-            setTextColor(getColor(R.color.text_color_primary))
+            setTextColor(appPalette.onPrimary)
             applySelectableBackground(this)
             setOnClickListener { finish() }
         })
@@ -85,7 +85,7 @@ class ConversationHistoryActivity : Activity() {
             text = getString(R.string.chat_history_title)
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(getColor(R.color.text_color_primary))
+            setTextColor(appPalette.onPrimary)
         })
     }
 

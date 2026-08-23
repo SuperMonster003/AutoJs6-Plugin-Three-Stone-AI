@@ -13,10 +13,10 @@ import android.text.style.StyleSpan
 import android.text.style.TypefaceSpan
 import android.text.style.UnderlineSpan
 
-internal class MarkdownTextRenderer(context: Context) {
+internal class MarkdownTextRenderer(context: Context, accentColor: Int? = null) {
     private val codeSurface = context.getColor(R.color.chat_markdown_code_surface)
     private val quoteColor = context.getColor(R.color.chat_markdown_quote)
-    private val linkColor = context.getColor(R.color.chat_markdown_link)
+    private val linkColor = accentColor ?: context.getColor(R.color.chat_markdown_link)
     private val secondaryText = context.getColor(R.color.text_color_secondary)
 
     fun render(document: MarkdownDocument): SpannableStringBuilder =

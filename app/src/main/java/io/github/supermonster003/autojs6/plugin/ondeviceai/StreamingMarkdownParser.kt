@@ -16,6 +16,10 @@ internal enum class MarkdownSpanKind {
     LIST_ITEM,
     LINK,
     HORIZONTAL_RULE,
+    INLINE_MATH,
+    MATH_TEXT,
+    MATH_SUPERSCRIPT,
+    MATH_SUBSCRIPT,
 }
 
 internal data class MarkdownSpan(
@@ -175,6 +179,28 @@ internal object StreamingMarkdownParser {
                 continue
             }
 
+            if (source[index] == '$') {
+                if (source.getOrNull(index + 1) == '$') {
+                    output.append("$$")
+                    index += 2
+                    continue
+                }
+                val closing = findUnescapedDollar(source, index + 1)
+                val provisional = closing < 0 && source.getOrNull(index + 1) == '\\'
+                if (closing >= 0 || provisional) {
+                    val contentEnd = if (closing >= 0) closing else source.length
+                    val math = parseInlineMath(source.substring(index + 1, contentEnd))
+                    if (math.text.isNotEmpty()) {
+                        val start = output.length
+                        output.append(math.text)
+                        addSpan(spans, start, output.length, MarkdownSpanKind.INLINE_MATH)
+                        math.spans.forEach { span -> spans += span.shifted(start) }
+                        index = if (closing >= 0) closing + 1 else source.length
+                        continue
+                    }
+                }
+            }
+
             if (source[index] == '`') {
                 val markerLength = consecutiveCount(source, index, '`').coerceAtMost(MAXIMUM_CODE_MARKER)
                 val marker = "`".repeat(markerLength)
@@ -217,6 +243,106 @@ internal object StreamingMarkdownParser {
             addSpan(spans, open.outputStart, output.length, open.kind)
         }
         return MarkdownDocument(output.toString(), spans.sortedWith(SPAN_ORDER))
+    }
+
+    private fun parseInlineMath(source: String): MarkdownDocument {
+        val output = StringBuilder(source.length)
+        val spans = ArrayList<MarkdownSpan>()
+        var index = 0
+        while (index < source.length) {
+            if (source.startsWith("\\text{", index)) {
+                val contentStart = index + MATH_TEXT_PREFIX.length
+                val contentEnd = matchingBraceEnd(source, contentStart)
+                val end = if (contentEnd >= 0) contentEnd else source.length
+                val start = output.length
+                output.append(source, contentStart, end)
+                addSpan(spans, start, output.length, MarkdownSpanKind.MATH_TEXT)
+                index = if (contentEnd >= 0) contentEnd + 1 else source.length
+                continue
+            }
+
+            val scriptKind = when (source[index]) {
+                '^' -> MarkdownSpanKind.MATH_SUPERSCRIPT
+                '_' -> MarkdownSpanKind.MATH_SUBSCRIPT
+                else -> null
+            }
+            if (scriptKind != null) {
+                val atom = parseMathAtom(source, index + 1)
+                if (atom != null) {
+                    val start = output.length
+                    output.append(atom.text)
+                    addSpan(spans, start, output.length, scriptKind)
+                    index = atom.endExclusive
+                    continue
+                }
+            }
+
+            if (source[index] == '\\') {
+                val commandEnd = (index + 1 until source.length)
+                    .firstOrNull { commandIndex -> !source[commandIndex].isLetter() }
+                    ?: source.length
+                val command = source.substring(index + 1, commandEnd)
+                val replacement = MATH_COMMANDS[command]
+                if (replacement != null) {
+                    output.append(replacement)
+                    index = commandEnd
+                    continue
+                }
+                if (index + 1 < source.length && source[index + 1] in MATH_ESCAPABLE) {
+                    output.append(source[index + 1])
+                    index += 2
+                    continue
+                }
+            }
+
+            if (source[index] != '{' && source[index] != '}') output.append(source[index])
+            index++
+        }
+        return MarkdownDocument(output.toString(), spans.sortedWith(SPAN_ORDER))
+    }
+
+    private fun parseMathAtom(source: String, start: Int): ParsedMathAtom? {
+        if (start >= source.length) return null
+        if (source[start] == '{') {
+            val end = matchingBraceEnd(source, start + 1)
+            val contentEnd = if (end >= 0) end else source.length
+            val parsed = parseInlineMath(source.substring(start + 1, contentEnd))
+            return ParsedMathAtom(
+                text = parsed.text,
+                endExclusive = if (end >= 0) end + 1 else source.length,
+            ).takeIf { it.text.isNotEmpty() }
+        }
+        return ParsedMathAtom(source[start].toString(), start + 1)
+    }
+
+    private fun matchingBraceEnd(source: String, contentStart: Int): Int {
+        var depth = 1
+        var index = contentStart
+        while (index < source.length) {
+            when (source[index]) {
+                '{' -> depth++
+                '}' -> if (--depth == 0) return index
+            }
+            index++
+        }
+        return -1
+    }
+
+    private fun findUnescapedDollar(source: String, start: Int): Int {
+        var index = start
+        while (index < source.length) {
+            if (source[index] == '$') {
+                var slashCount = 0
+                var previous = index - 1
+                while (previous >= 0 && source[previous] == '\\') {
+                    slashCount++
+                    previous--
+                }
+                if (slashCount % 2 == 0) return index
+            }
+            index++
+        }
+        return -1
     }
 
     private fun parseLink(source: String, start: Int): ParsedLink? {
@@ -372,13 +498,42 @@ internal object StreamingMarkdownParser {
         val endExclusive: Int,
     )
 
+    private data class ParsedMathAtom(
+        val text: String,
+        val endExclusive: Int,
+    )
+
     private val SPAN_ORDER = compareBy<MarkdownSpan>(MarkdownSpan::start, MarkdownSpan::end)
     private val UNORDERED_MARKERS = setOf('-', '+', '*')
     private val ESCAPABLE_CHARACTERS = setOf(
-        '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '#', '+', '-', '.', '!', '~',
+        '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '#', '+', '-', '.', '!', '~', '$',
+    )
+    private val MATH_ESCAPABLE = setOf('\\', '{', '}', '$', '_', '^', '%', '#', '&')
+    private val MATH_COMMANDS = mapOf(
+        "alpha" to "α",
+        "beta" to "β",
+        "gamma" to "γ",
+        "delta" to "δ",
+        "theta" to "θ",
+        "lambda" to "λ",
+        "mu" to "μ",
+        "pi" to "π",
+        "sigma" to "σ",
+        "phi" to "φ",
+        "omega" to "ω",
+        "times" to "×",
+        "cdot" to "·",
+        "le" to "≤",
+        "leq" to "≤",
+        "ge" to "≥",
+        "geq" to "≥",
+        "neq" to "≠",
+        "infty" to "∞",
+        "sqrt" to "√",
     )
     private const val MAXIMUM_CODE_MARKER = 3
     private const val MAXIMUM_HEADING_LEVEL = 6
     private const val MAXIMUM_ORDERED_DIGITS = 4
     private const val HORIZONTAL_RULE_TEXT = "────────"
+    private const val MATH_TEXT_PREFIX = "\\text{"
 }

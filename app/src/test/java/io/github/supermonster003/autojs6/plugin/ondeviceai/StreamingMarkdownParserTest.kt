@@ -60,6 +60,31 @@ class StreamingMarkdownParserTest {
         assertSpan(document, MarkdownSpanKind.ITALIC, "italic")
     }
 
+    @Test
+    fun `renders text commands inside complete and streaming inline math`() {
+        val complete = StreamingMarkdownParser.parse("Use \$\\text{local model}\$ now")
+        val streaming = StreamingMarkdownParser.parse("Use \$\\text{partial")
+
+        assertEquals("Use local model now", complete.text)
+        assertSpan(complete, MarkdownSpanKind.INLINE_MATH, "local model")
+        assertSpan(complete, MarkdownSpanKind.MATH_TEXT, "local model")
+        assertEquals("Use partial", streaming.text)
+        assertSpan(streaming, MarkdownSpanKind.INLINE_MATH, "partial")
+        assertSpan(streaming, MarkdownSpanKind.MATH_TEXT, "partial")
+    }
+
+    @Test
+    fun `renders common math symbols and scripts while preserving currency`() {
+        val document = StreamingMarkdownParser.parse(
+            "Value \$x^2 + y_1 \\le \\pi\$; price \$5; escaped \\\$7",
+        )
+
+        assertEquals("Value x2 + y1 ≤ π; price \$5; escaped \$7", document.text)
+        assertSpan(document, MarkdownSpanKind.MATH_SUPERSCRIPT, "2")
+        assertSpan(document, MarkdownSpanKind.MATH_SUBSCRIPT, "1")
+        assertSpan(document, MarkdownSpanKind.INLINE_MATH, "x2 + y1 ≤ π")
+    }
+
     private fun assertSpan(
         document: MarkdownDocument,
         kind: MarkdownSpanKind,

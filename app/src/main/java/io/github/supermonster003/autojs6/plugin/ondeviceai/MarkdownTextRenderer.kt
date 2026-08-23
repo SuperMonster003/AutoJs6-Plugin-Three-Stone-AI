@@ -8,6 +8,8 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.QuoteSpan
 import android.text.style.RelativeSizeSpan
+import android.text.style.SubscriptSpan
+import android.text.style.SuperscriptSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.TypefaceSpan
@@ -53,6 +55,16 @@ internal class MarkdownTextRenderer(context: Context, accentColor: Int? = null) 
                         span,
                         ForegroundColorSpan(secondaryText),
                     )
+                    MarkdownSpanKind.INLINE_MATH -> add(span, TypefaceSpan("serif"))
+                    MarkdownSpanKind.MATH_TEXT -> add(span, TypefaceSpan("sans-serif"))
+                    MarkdownSpanKind.MATH_SUPERSCRIPT -> {
+                        add(span, SuperscriptSpan())
+                        add(span, RelativeSizeSpan(0.78f))
+                    }
+                    MarkdownSpanKind.MATH_SUBSCRIPT -> {
+                        add(span, SubscriptSpan())
+                        add(span, RelativeSizeSpan(0.78f))
+                    }
                 }
             }
         }

@@ -65,8 +65,8 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var searchBar: LinearLayout
     private lateinit var searchInput: EditText
     private lateinit var searchResultCount: TextView
-    private lateinit var searchPrevious: TextView
-    private lateinit var searchNext: TextView
+    private lateinit var searchPrevious: SearchActionView
+    private lateinit var searchNext: SearchActionView
     private lateinit var messagesScroll: ScrollView
     private lateinit var messagesColumn: LinearLayout
     private lateinit var emptyState: LinearLayout
@@ -418,31 +418,27 @@ class ChatActivity : ConfiguredActivity() {
             setPaddingRelative(dp(7), 0, dp(5), 0)
         }
         addView(searchResultCount, LinearLayout.LayoutParams(dp(58), dp(42)))
-        searchPrevious = searchAction("↑", R.string.chat_search_previous) {
+        searchPrevious = searchAction(SearchActionIcon.PREVIOUS, R.string.chat_search_previous) {
             moveSearchResult(-1)
         }
         addView(searchPrevious, LinearLayout.LayoutParams(dp(42), dp(42)))
-        searchNext = searchAction("↓", R.string.chat_search_next) {
+        searchNext = searchAction(SearchActionIcon.NEXT, R.string.chat_search_next) {
             moveSearchResult(1)
         }
         addView(searchNext, LinearLayout.LayoutParams(dp(42), dp(42)))
         addView(
-            searchAction("×", R.string.chat_search_close) { closeSearch() },
+            searchAction(SearchActionIcon.CLOSE, R.string.chat_search_close) { closeSearch() },
             LinearLayout.LayoutParams(dp(42), dp(42)),
         )
         updateSearchControls()
     }
 
     private fun searchAction(
-        glyph: String,
+        icon: SearchActionIcon,
         descriptionResource: Int,
         action: () -> Unit,
-    ) = TextView(this).apply {
-        text = glyph
-        textSize = 23f
-        gravity = Gravity.CENTER
+    ) = SearchActionView(this, icon, appPalette.primaryText).apply {
         contentDescription = getString(descriptionResource)
-        setTextColor(getColor(R.color.text_color_primary))
         applySelectableBackground(this)
         setOnClickListener { action() }
     }

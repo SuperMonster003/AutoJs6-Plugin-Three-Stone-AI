@@ -38,13 +38,26 @@
             android:value="@string/plugin_author" />
 
         <activity
-            android:name=".ModelManagerActivity"
-            android:exported="true">
+            android:name=".ChatActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ConversationHistoryActivity"
+            android:exported="false"
+            android:label="@string/chat_history_title"
+            android:parentActivityName=".ChatActivity" />
+
+        <activity
+            android:name=".ModelManagerActivity"
+            android:exported="true"
+            android:label="@string/model_manager_title"
+            android:parentActivityName=".ChatActivity" />
 
         <activity
             android:name=".WakeActivity"

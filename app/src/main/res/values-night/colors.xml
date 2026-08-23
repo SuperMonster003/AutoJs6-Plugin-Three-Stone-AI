@@ -11,4 +11,19 @@
     <color name="text_color_secondary">#B3FFFFFF</color>
     <color name="divider">#33FFFFFF</color>
     <color name="validation_error">#FFEF9A9A</color>
+    <color name="chat_accent">#FF4DD0E1</color>
+    <color name="chat_action">#FF4DD0E1</color>
+    <color name="chat_on_action">#FF082A2F</color>
+    <color name="chat_user_surface">#FF163F45</color>
+    <color name="chat_assistant_surface">#FF1A222C</color>
+    <color name="chat_notice_surface">#FF152A30</color>
+    <color name="chat_input_surface">#FF151C24</color>
+    <color name="chat_border">#3D9EB6BC</color>
+    <color name="chat_ripple">#334DD0E1</color>
+    <color name="chat_action_ripple">#33000000</color>
+    <color name="chat_markdown_code_surface">#2FFFFFFF</color>
+    <color name="chat_markdown_quote">#FF90A4AE</color>
+    <color name="chat_markdown_link">#FF80DEEA</color>
+    <color name="chat_search_match">#66827A00</color>
+    <color name="chat_search_match_current">#B3E65100</color>
 </resources>

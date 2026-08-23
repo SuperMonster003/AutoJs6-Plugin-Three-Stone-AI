@@ -181,12 +181,28 @@ class ModelManagerActivity : Activity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(24), dp(48), dp(24), dp(24))
+            setPadding(dp(24), dp(16), dp(24), dp(24))
 
-            addView(TextView(context).apply {
-                text = getString(R.string.app_name)
-                textSize = 24f
-            })
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(Button(context).apply {
+                    text = getString(R.string.navigation_back)
+                    isAllCaps = false
+                    setOnClickListener { finish() }
+                })
+                addView(TextView(context).apply {
+                    text = getString(R.string.model_manager_title)
+                    textSize = 22f
+                }, LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f,
+                ).apply { marginStart = dp(12) })
+            }, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ))
             addView(TextView(context).apply {
                 text = getString(R.string.screen_description)
                 textSize = 16f
@@ -305,7 +321,10 @@ class ModelManagerActivity : Activity() {
             catalogRows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
             addView(catalogRows, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
-        return ScrollView(this).apply { addView(content) }
+        return ScrollView(this).apply {
+            addView(content)
+            applySystemBarInsets(this)
+        }
     }
 
     private fun chooseRecommendedModel() {

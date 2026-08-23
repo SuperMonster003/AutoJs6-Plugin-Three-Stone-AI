@@ -6,7 +6,7 @@
 
 # v1.1.0
 
-###### 2026/08/21
+###### 2026/08/23
 
 * `Función` Plugin renombrado a On-Device AI, posicionado como el plugin oficial de IA local de AutoJs6
 * `Función` Compatible con el selector abreviado `plugin: true` de `ai.ask`/`ai.chat`/`ai.stream` y la enumeración de modelos `ai.models` de AutoJs6
@@ -16,11 +16,17 @@
 * `Función` Decodificación nativa restringida por JSON Schema de LiteRT-LM mediante `structuredJson` y `responseSchema` de AutoJs6, compatible con llamadas únicas, streaming y sesiones persistentes, con validación estricta del JSON completo
 * `Función` Perfiles backend explícitos `cpu`, `gpu` y `npu` mediante el protocolo 1.3 y las opciones de generación de AutoJs6, con informe de compatibilidad del dispositivo, aislamiento de caché por modelo/perfil y sin fallback desde perfiles no disponibles; GPU solo se declara tras una prueba de carga de OpenCL y NPU permanece no disponible porque su runtime EAP no está empaquetado
 * `Función` Descarga directa de modelos LiteRT Community fijados a una ubicación SAF elegida, con progreso, cancelación precisa, limpieza, verificación de cabecera LiteRT-LM, tamaño y SHA-256, e importación directa posterior
+* `Función` Se añadió un espacio de conversación iniciable con Markdown en streaming, historial persistente, aviso al sustituir una rama tras editar mensajes anteriores, búsqueda con varios resultados y entrada adaptada al teclado
+* `Función` Se añadieron ajustes de aplicación para color del tema, modo oscuro, idioma, información de la aplicación y del desarrollador e historial de versiones, con Seguir AutoJs6 como valor predeterminado cuando sea posible
+* `Función` Se añadieron ajustes de conversación para tamaño de fuente, comportamiento de Enter, output tokens ilimitados o personalizados y muestreo `temperature`, `topK` y `topP` predeterminado por el modelo o personalizado
+* `Función` Se renderiza contenido `$\text{...}$` en línea durante el streaming, con comandos matemáticos comunes y estilos de superíndice y subíndice
 * `Corrección` Se eliminaron los límites implícitos de 256 tokens y 4 KiB de los ejemplos ejecutables: omitir `maxTokens` usa ahora el valor predeterminado del modelo o motor y el ejemplo Binder directo usa los 64 KiB completos permitidos por el proveedor
 * `Corrección` Se corrigió el ejemplo Binder de bajo nivel de las instrucciones localizadas en 10 idiomas, que aún invocaba el constructor `AiGenerationOptions` de 14 argumentos del protocolo 1.1 y fallaba con la API del protocolo 1.3
 * `Corrección` Se corrigió que el gestor de modelos conservara los colores de texto del tema claro en el modo oscuro del sistema, lo que hacía ilegibles el texto, las casillas y las filas de modelos sobre el fondo oscuro
+* `Corrección` Se mantuvo el editor visible sobre el teclado, se eligió el texto del botón Enviar según el contraste con el color del tema y se unificaron los controles de búsqueda anterior, siguiente y cerrar
 * `Mejora` Descripción del plugin, instrucciones y README en 10 idiomas actualizados conforme a la formalización de la ruta de plugin local `ai.*`
 * `Mejora` ROADMAP reescrito como hoja de ruta de funciones con elementos verificables individualmente
+* `Mejora` Se normalizó la puntuación ASCII en la aplicación y en el texto localizado generado, con una prueba de regresión para el texto empaquetado y generado
 
 # v1.0.0
 

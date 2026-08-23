@@ -198,6 +198,22 @@ abstract class ConfiguredActivity : Activity() {
         window.navigationBarColor = appPalette.windowBackground
         val lightStatusBackground = AppColorPolicy.luminance(appPalette.primary) >= 0.179
         val lightNavigationBackground = AppColorPolicy.luminance(appPalette.windowBackground) >= 0.179
+        val decorView = window.decorView
+        decorView.post {
+            if (isFinishing || isDestroyed) return@post
+            applySystemBarIconAppearance(
+                decorView,
+                lightStatusBackground,
+                lightNavigationBackground,
+            )
+        }
+    }
+
+    private fun applySystemBarIconAppearance(
+        decorView: View,
+        lightStatusBackground: Boolean,
+        lightNavigationBackground: Boolean,
+    ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             var appearance = 0
             var mask = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
@@ -208,10 +224,10 @@ abstract class ConfiguredActivity : Activity() {
                 if (lightNavigationBackground) appearance = appearance or
                     WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
             }
-            window.insetsController?.setSystemBarsAppearance(appearance, mask)
+            decorView.windowInsetsController?.setSystemBarsAppearance(appearance, mask)
         } else {
             @Suppress("DEPRECATION")
-            var visibility = window.decorView.systemUiVisibility
+            var visibility = decorView.systemUiVisibility
             @Suppress("DEPRECATION")
             visibility = if (lightStatusBackground) {
                 visibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
@@ -227,7 +243,7 @@ abstract class ConfiguredActivity : Activity() {
                 }
             }
             @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = visibility
+            decorView.systemUiVisibility = visibility
         }
     }
 }

@@ -37,6 +37,8 @@ android {
 
     lint {
         abortOnError = true
+        // Product text intentionally uses ASCII punctuation in every locale.
+        disable += "TypographyEllipsis"
     }
 
     signingConfigs {

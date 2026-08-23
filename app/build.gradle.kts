@@ -135,6 +135,7 @@ androidComponents {
 }
 
 dependencies {
+    implementation(libs.appcompat)
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.2.21")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.15.0")

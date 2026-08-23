@@ -58,6 +58,34 @@ internal object AppSettingsPolicy {
         AppDarkMode.DARK -> true
     }
 
+    fun resolveLanguageTag(
+        language: AppLanguage,
+        autoJs6ResolvedLanguageTag: String?,
+    ): String? = when (language) {
+        AppLanguage.FOLLOW_AUTOJS6 -> autoJs6ResolvedLanguageTag?.takeIf(String::isNotBlank)
+        AppLanguage.FOLLOW_SYSTEM -> null
+        else -> language.languageTag
+    }
+
+    fun fallbackWithoutAutoJs6(settings: ApplicationSettings): ApplicationSettings = settings.copy(
+        themeSelection = when (settings.themeSelection) {
+            AppThemeSelection.FOLLOW_AUTOJS6 -> AppThemeSelection.CUSTOM
+            AppThemeSelection.CUSTOM -> settings.themeSelection
+        },
+        customThemeColor = when (settings.themeSelection) {
+            AppThemeSelection.FOLLOW_AUTOJS6 -> ON_DEVICE_AI_THEME_COLOR
+            AppThemeSelection.CUSTOM -> settings.customThemeColor
+        },
+        darkMode = when (settings.darkMode) {
+            AppDarkMode.FOLLOW_AUTOJS6 -> AppDarkMode.FOLLOW_SYSTEM
+            else -> settings.darkMode
+        },
+        language = when (settings.language) {
+            AppLanguage.FOLLOW_AUTOJS6 -> AppLanguage.FOLLOW_SYSTEM
+            else -> settings.language
+        },
+    )
+
     fun storedEnum(value: String?, fallback: AppThemeSelection): AppThemeSelection =
         value?.let { runCatching { AppThemeSelection.valueOf(it) }.getOrNull() } ?: fallback
 

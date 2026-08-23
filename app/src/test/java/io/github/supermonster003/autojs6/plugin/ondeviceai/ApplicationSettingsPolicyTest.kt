@@ -47,6 +47,38 @@ class ApplicationSettingsPolicyTest {
     }
 
     @Test
+    fun `follow AutoJs6 language uses the host resolved compatible tag`() {
+        assertEquals(
+            "zh-Hans",
+            AppSettingsPolicy.resolveLanguageTag(AppLanguage.FOLLOW_AUTOJS6, "zh-Hans"),
+        )
+        assertNull(AppSettingsPolicy.resolveLanguageTag(AppLanguage.FOLLOW_AUTOJS6, ""))
+        assertNull(AppSettingsPolicy.resolveLanguageTag(AppLanguage.FOLLOW_SYSTEM, "ja"))
+        assertEquals(
+            "fr",
+            AppSettingsPolicy.resolveLanguageTag(AppLanguage.FRENCH, "zh-Hans"),
+        )
+    }
+
+    @Test
+    fun `missing or disabled host migrates only follow selections to app defaults`() {
+        val fallback = AppSettingsPolicy.fallbackWithoutAutoJs6(ApplicationSettings())
+
+        assertEquals(AppThemeSelection.CUSTOM, fallback.themeSelection)
+        assertEquals(AppSettingsPolicy.ON_DEVICE_AI_THEME_COLOR, fallback.customThemeColor)
+        assertEquals(AppDarkMode.FOLLOW_SYSTEM, fallback.darkMode)
+        assertEquals(AppLanguage.FOLLOW_SYSTEM, fallback.language)
+
+        val explicit = ApplicationSettings(
+            themeSelection = AppThemeSelection.CUSTOM,
+            customThemeColor = 0xFF123456.toInt(),
+            darkMode = AppDarkMode.DARK,
+            language = AppLanguage.JAPANESE,
+        )
+        assertEquals(explicit, AppSettingsPolicy.fallbackWithoutAutoJs6(explicit))
+    }
+
+    @Test
     fun `release history resolves every supported locale`() {
         assertEquals("CHANGELOG-zh-Hans.md", ReleaseHistoryAssetPolicy.assetFor(Locale.forLanguageTag("zh-CN")))
         assertEquals("CHANGELOG-zh-Hant-HK.md", ReleaseHistoryAssetPolicy.assetFor(Locale.forLanguageTag("zh-Hant-HK")))

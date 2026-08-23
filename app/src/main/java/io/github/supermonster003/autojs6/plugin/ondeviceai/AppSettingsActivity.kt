@@ -1,6 +1,5 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Typeface
@@ -9,29 +8,39 @@ import android.os.Bundle
 import android.text.InputFilter
 import android.text.InputType
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.CheckedTextView
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 
 class AppSettingsActivity : ConfiguredActivity() {
     private lateinit var settingsStore: ApplicationSettingsStore
     private lateinit var settings: ApplicationSettings
+    private lateinit var hostResult: AutoJs6HostSettingsResult
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         settingsStore = ApplicationSettingsStore(applicationContext)
-        settings = settingsStore.load()
+        hostResult = AutoJs6HostSettingsClient.query(this)
+        val stored = settingsStore.load()
+        settings = if (hostResult.selectable) stored else {
+            AppSettingsPolicy.fallbackWithoutAutoJs6(stored).also { fallback ->
+                if (hostResult.definitiveAbsence && fallback != stored) settingsStore.save(fallback)
+            }
+        }
         setContentView(createContentView())
     }
 
     private fun createContentView(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setBackgroundColor(appPalette.windowBackground)
-        addView(createToolbar())
+        addView(createAppToolbar(R.string.app_settings_title, showBack = true))
         addView(ScrollView(context).apply {
             isFillViewport = true
             addView(createSettingsContent())
@@ -41,30 +50,6 @@ class AppSettingsActivity : ConfiguredActivity() {
             1f,
         ))
         applySystemBarInsets(this)
-    }
-
-    private fun createToolbar(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = dp(58)
-        setPaddingRelative(dp(8), dp(4), dp(18), dp(4))
-        setBackgroundColor(appPalette.primary)
-        addView(TextView(context).apply {
-            text = getString(R.string.navigation_back)
-            textSize = 14f
-            gravity = Gravity.CENTER
-            setTextColor(appPalette.onPrimary)
-            setPaddingRelative(dp(12), dp(10), dp(12), dp(10))
-            applySelectableBackground(this)
-            setOnClickListener { finish() }
-        })
-        addView(TextView(context).apply {
-            text = getString(R.string.app_settings_title)
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(appPalette.onPrimary)
-            setPaddingRelative(dp(8), 0, 0, 0)
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
     }
 
     private fun createSettingsContent(): View = LinearLayout(this).apply {
@@ -90,7 +75,13 @@ class AppSettingsActivity : ConfiguredActivity() {
             onClick = ::showLanguageDialog,
         ))
         addView(TextView(context).apply {
-            text = getString(R.string.app_settings_follow_autojs6_explanation)
+            text = getString(
+                if (hostResult.selectable) {
+                    R.string.app_settings_follow_autojs6_explanation
+                } else {
+                    R.string.app_settings_follow_autojs6_unavailable_explanation
+                },
+            )
             textSize = 12.5f
             setTextColor(appPalette.secondaryText)
             setLineSpacing(0f, 1.12f)
@@ -170,13 +161,21 @@ class AppSettingsActivity : ConfiguredActivity() {
             AppThemeSelection.CUSTOM -> choices.indexOfFirst { it.color == settings.customThemeColor }
                 .takeIf { it >= 1 } ?: choices.lastIndex
         }
-        val labels = choices.map { choice ->
+        val labels = choices.mapIndexed { index, choice ->
             val title = getString(choice.labelResource)
-            choice.color?.let { "$title (${AppSettingsPolicy.colorHex(it)})" } ?: title
+            when {
+                index == 0 && !hostResult.selectable -> getString(
+                    R.string.app_settings_follow_autojs6_unavailable,
+                )
+                choice.color != null -> "$title (${AppSettingsPolicy.colorHex(choice.color)})"
+                else -> title
+            }
         }.toTypedArray()
+        val adapter = ChoiceAdapter(labels, disabledIndex = 0.takeUnless { hostResult.selectable })
         AlertDialog.Builder(this)
             .setTitle(R.string.app_settings_theme_color)
-            .setSingleChoiceItems(labels, selected) { dialog, index ->
+            .setSingleChoiceItems(adapter, selected) { dialog, index ->
+                if (!adapter.isEnabled(index)) return@setSingleChoiceItems
                 dialog.dismiss()
                 val choice = choices[index]
                 when {
@@ -194,6 +193,7 @@ class AppSettingsActivity : ConfiguredActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+            .also(::tintDialogButtons)
     }
 
     private fun showCustomThemeColorDialog() {
@@ -238,33 +238,52 @@ class AppSettingsActivity : ConfiguredActivity() {
             }
         }
         dialog.show()
+        tintDialogButtons(dialog)
         input.requestFocus()
     }
 
     private fun showDarkModeDialog() {
         val values = AppDarkMode.entries
-        val labels = values.map { getString(it.labelResource()) }.toTypedArray()
+        val labels = values.mapIndexed { index, value ->
+            if (index == 0 && !hostResult.selectable) {
+                getString(R.string.app_settings_follow_autojs6_unavailable)
+            } else {
+                getString(value.labelResource())
+            }
+        }.toTypedArray()
+        val adapter = ChoiceAdapter(labels, disabledIndex = 0.takeUnless { hostResult.selectable })
         AlertDialog.Builder(this)
             .setTitle(R.string.app_settings_dark_mode)
-            .setSingleChoiceItems(labels, values.indexOf(settings.darkMode)) { dialog, index ->
+            .setSingleChoiceItems(adapter, values.indexOf(settings.darkMode)) { dialog, index ->
+                if (!adapter.isEnabled(index)) return@setSingleChoiceItems
                 dialog.dismiss()
                 saveSettings(settings.copy(darkMode = values[index]))
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+            .also(::tintDialogButtons)
     }
 
     private fun showLanguageDialog() {
         val values = AppLanguage.entries
-        val labels = values.map { getString(it.labelResource()) }.toTypedArray()
+        val labels = values.mapIndexed { index, value ->
+            if (index == 0 && !hostResult.selectable) {
+                getString(R.string.app_settings_follow_autojs6_unavailable)
+            } else {
+                getString(value.labelResource())
+            }
+        }.toTypedArray()
+        val adapter = ChoiceAdapter(labels, disabledIndex = 0.takeUnless { hostResult.selectable })
         AlertDialog.Builder(this)
             .setTitle(R.string.app_settings_language)
-            .setSingleChoiceItems(labels, values.indexOf(settings.language)) { dialog, index ->
+            .setSingleChoiceItems(adapter, values.indexOf(settings.language)) { dialog, index ->
+                if (!adapter.isEnabled(index)) return@setSingleChoiceItems
                 dialog.dismiss()
                 saveSettings(settings.copy(language = values[index]))
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+            .also(::tintDialogButtons)
     }
 
     private fun saveSettings(updated: ApplicationSettings) {
@@ -277,7 +296,10 @@ class AppSettingsActivity : ConfiguredActivity() {
     private fun themeSummary(value: ApplicationSettings): String = when (value.themeSelection) {
         AppThemeSelection.FOLLOW_AUTOJS6 -> getString(
             R.string.app_settings_theme_follow_summary,
-            AppSettingsPolicy.colorHex(HostAppearanceResolver.themeColor(this)),
+            AppSettingsPolicy.colorHex(
+                hostResult.snapshot?.themeColorPrimary
+                    ?: AppSettingsPolicy.AUTOJS6_DEFAULT_THEME_COLOR,
+            ),
         )
         AppThemeSelection.CUSTOM -> AppSettingsPolicy.colorHex(value.customThemeColor)
     }
@@ -323,4 +345,25 @@ class AppSettingsActivity : ConfiguredActivity() {
         val color: Int?,
         val followAutoJs6: Boolean = false,
     )
+
+    private inner class ChoiceAdapter(
+        labels: Array<String>,
+        private val disabledIndex: Int?,
+    ) : ArrayAdapter<String>(this, android.R.layout.simple_list_item_single_choice, labels) {
+        override fun isEnabled(position: Int): Boolean = position != disabledIndex
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
+            super.getView(position, convertView, parent).apply {
+                alpha = if (isEnabled(position)) 1f else DISABLED_ALPHA
+                isEnabled = isEnabled(position)
+                (this as? CheckedTextView)?.apply {
+                    setTextColor(if (isEnabled(position)) appPalette.primaryText else appPalette.secondaryText)
+                    checkMarkTintList = controlTintList()
+                }
+            }
+    }
+
+    private companion object {
+        const val DISABLED_ALPHA = 0.42f
+    }
 }

@@ -56,7 +56,7 @@ On-Device AI (裝置端 AI) 是 AutoJs6 的官方裝置端 AI 文字生成外掛
 - 透過 AutoJs6 `ai.chat().usage` 與串流 usage 事件回傳 LiteRT-LM 精確的輸入, 輸出及總 token 數, 以及外掛端生成耗時.
 - 透過 AutoJs6 `ai.session` 在同一個 LiteRT-LM 原生 Conversation 保留多輪上下文, 後續輪次只傳送新的使用者提示詞.
 - 依模型 SHA-256 重複使用已初始化 Engine, 消除同一模型連續請求的重複冷啟動.
-- 可選擇將每個匯入模型初始化一次, 持久保存其「可用/不相容」狀態, 並可在模型管理介面重新檢查.
+- 可選擇將每個匯入模型初始化一次, 持久保存其"可用/不相容"狀態, 並可在模型管理介面重新檢查.
 - 透過 credit 背壓依序傳送文字 chunk, 並只發布一個完成, 錯誤或取消終態.
 - 列出, 選取及重新命名已匯入模型, 刪除未選取模型, 並在管理介面一鍵回收未參照模型檔案.
 - 透過 AutoJs6 明確選擇 `cpu`, `gpu` 或 `npu` backend; CPU 為預設值, GPU 僅在 OpenCL 載入探測通過後開放, NPU 因未封裝 EAP runtime 而明確回報不可用.

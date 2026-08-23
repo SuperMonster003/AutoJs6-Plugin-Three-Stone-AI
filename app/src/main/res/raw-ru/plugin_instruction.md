@@ -88,7 +88,7 @@ ai.models({ plugin: true }).then((models) => {
 
 ## Пример использования
 
-Полный скрипт Rhino ниже использует в качестве примера модель **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)**. Закреплённая загрузка имеет SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, поэтому ID импортированной модели — `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. Загруженный файл может называться `gemma-4-E2B-it.litertlm`; имя файла не влияет на ID модели. После импорта используйте действие копирования в правом верхнем углу инструкции плагина, чтобы скопировать скрипт целиком. Запускайте его как обычный скрипт Rhino в AutoJs6, а не в режиме Node.js. Для другого запроса измените только `PROMPT`.
+Полный скрипт Rhino ниже использует в качестве примера модель **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)**. Закреплённая загрузка имеет SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, поэтому ID импортированной модели - `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. Загруженный файл может называться `gemma-4-E2B-it.litertlm`; имя файла не влияет на ID модели. После импорта используйте действие копирования в правом верхнем углу инструкции плагина, чтобы скопировать скрипт целиком. Запускайте его как обычный скрипт Rhino в AutoJs6, а не в режиме Node.js. Для другого запроса измените только `PROMPT`.
 
 При использовании другой модели скопируйте её Model ID на экране управления моделями и замените `MODEL_ID` в скрипте. Не используйте значение из примера.
 
@@ -104,7 +104,7 @@ var MODEL_ID =
     "litertlm.ab7838cdfc8f77e54d8ca45eadceb204";
 
 var PROMPT =
-    "请用中文列出三条 Android 自动化脚本执行危险操作前应增加确认步骤的理由。每条一句话。";
+    "请用中文列出三条 Android 自动化脚本执行危险操作前应增加确认步骤的理由. 每条一句话.";
 
 var TextApi =
     Packages.org.autojs.plugin.ondeviceai.api;
@@ -196,7 +196,7 @@ var textCallback = new JavaAdapter(
                     chunk.getTextDelta()
                 );
 
-                // 只记录待补 credit，不在 Binder 回调线程反向调用插件
+                // 只记录待补 credit, 不在 Binder 回调线程反向调用插件
                 returnedCredits.incrementAndGet();
             } catch (e) {
                 failTerminal("无法解析流式文本: " + e);

@@ -116,7 +116,7 @@ internal object StreamingMarkdownParser {
                 appendInlineLine(
                     output,
                     spans,
-                    prefixDocument("• ", parseInline(unorderedContent)),
+                    prefixDocument("- ", parseInline(unorderedContent)),
                     visibleLineCount++,
                     MarkdownSpanKind.LIST_ITEM,
                 )

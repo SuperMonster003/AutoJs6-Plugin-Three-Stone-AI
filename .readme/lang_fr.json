@@ -10,7 +10,7 @@
   "features": [
     "Importer un paquet de modèle `.litertlm` avec le sélecteur système Android et conserver une copie vérifiée dans le stockage privé de l'application.",
     "Télécharger un modèle LiteRT Community épinglé et sans authentification vers un emplacement SAF choisi par l'utilisateur, avec progression, annulation, nettoyage et vérification exacte de la taille et du SHA-256.",
-    "Contrôler le stockage privé avant d’ouvrir le sélecteur, afficher le budget d’import actuel et l’espace estimé de la copie privée, puis revérifier le fichier sélectionné avant la copie.",
+    "Contrôler le stockage privé avant d'ouvrir le sélecteur, afficher le budget d'import actuel et l'espace estimé de la copie privée, puis revérifier le fichier sélectionné avant la copie.",
     "Créer des requêtes de génération locale avec un historique system, user et assistant en texte brut.",
     "Transmettre `temperature`, `topK`, `topP` et `maxTokens` depuis `ai.ask`, `ai.chat` et `ai.stream` d'AutoJs6 jusqu'à LiteRT-LM.",
     "Contraindre nativement la sortie avec JSON Schema de LiteRT-LM via `structuredJson` et `responseSchema` d'AutoJs6; les valeurs complètes restent du texte JSON pour `JSON.parse`.",

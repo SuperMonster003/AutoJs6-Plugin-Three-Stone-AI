@@ -36,8 +36,11 @@ internal object ConversationHistoryPolicy {
         return if (codePointCount <= MAXIMUM_TITLE_CHARACTERS) {
             compact
         } else {
-            val end = compact.offsetByCodePoints(0, MAXIMUM_TITLE_CHARACTERS - 1)
-            compact.substring(0, end).trimEnd() + "…"
+            val end = compact.offsetByCodePoints(
+                0,
+                MAXIMUM_TITLE_CHARACTERS - TITLE_ELLIPSIS.length,
+            )
+            compact.substring(0, end).trimEnd() + TITLE_ELLIPSIS
         }
     }
 
@@ -94,6 +97,7 @@ internal object ConversationHistoryPolicy {
 
     private val WHITESPACE = Regex("\\s+")
     private const val MAXIMUM_TITLE_CHARACTERS = 64
+    private const val TITLE_ELLIPSIS = "..."
     private const val MAXIMUM_CONVERSATION_MESSAGE_BYTES = 1 * 1_024 * 1_024
     private const val MAXIMUM_HISTORY_BYTES = 24 * 1_024 * 1_024
     private const val MESSAGE_OVERHEAD_BYTES = 80

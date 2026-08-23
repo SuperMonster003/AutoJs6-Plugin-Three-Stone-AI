@@ -104,7 +104,7 @@ var MODEL_ID =
     "litertlm.ab7838cdfc8f77e54d8ca45eadceb204";
 
 var PROMPT =
-    "请用中文列出三条 Android 自动化脚本执行危险操作前应增加确认步骤的理由。每条一句话。";
+    "请用中文列出三条 Android 自动化脚本执行危险操作前应增加确认步骤的理由. 每条一句话.";
 
 var TextApi =
     Packages.org.autojs.plugin.ondeviceai.api;
@@ -196,7 +196,7 @@ var textCallback = new JavaAdapter(
                     chunk.getTextDelta()
                 );
 
-                // 只记录待补 credit，不在 Binder 回调线程反向调用插件
+                // 只记录待补 credit, 不在 Binder 回调线程反向调用插件
                 returnedCredits.incrementAndGet();
             } catch (e) {
                 failTerminal("无法解析流式文本: " + e);

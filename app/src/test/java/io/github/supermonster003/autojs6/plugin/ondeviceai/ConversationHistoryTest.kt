@@ -67,7 +67,7 @@ class ConversationHistoryTest {
         )
 
         assertTrue(title.startsWith("A first question with spacing"))
-        assertEquals('…', title.last())
+        assertTrue(title.endsWith("..."))
         assertTrue(title.length <= 64)
     }
 

@@ -24,11 +24,11 @@ class StreamingMarkdownParserTest {
         )
 
         assertEquals(
-            "Heading\n• item\nquote\nUse value and code",
+            "Heading\n- item\nquote\nUse value and code",
             document.text,
         )
         assertSpan(document, MarkdownSpanKind.HEADING_1, "Heading")
-        assertSpan(document, MarkdownSpanKind.LIST_ITEM, "• item")
+        assertSpan(document, MarkdownSpanKind.LIST_ITEM, "- item")
         assertSpan(document, MarkdownSpanKind.BOLD, "item")
         assertSpan(document, MarkdownSpanKind.BLOCK_QUOTE, "quote")
         assertSpan(document, MarkdownSpanKind.LINK, "value")

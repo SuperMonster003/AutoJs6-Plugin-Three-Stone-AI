@@ -209,7 +209,7 @@
     <string name="app_settings_custom_color_title">Color de tema personalizado</string>
     <string name="app_settings_dark_mode">Modo oscuro</string>
     <string name="app_settings_follow_autojs6">Seguir AutoJs6</string>
-    <string name="app_settings_follow_autojs6_explanation">AutoJs6 guarda las preferencias de apariencia en almacenamiento privado. Seguir AutoJs6 usa la configuración pública disponible y después los valores predeterminados: tema #FFDEAD, modo oscuro del sistema e idioma del sistema.</string>
+    <string name="app_settings_follow_autojs6_explanation">Seguir AutoJs6 lee el color del tema, la política del modo oscuro y el idioma del host mediante el contrato de solo lectura para plugins oficiales.</string>
     <string name="app_settings_follow_system">Seguir el sistema</string>
     <string name="app_settings_information">Información</string>
     <string name="app_settings_language">Idioma</string>
@@ -226,4 +226,24 @@
     <string name="release_history_load_failed">No se pudo cargar el historial de versiones local</string>
     <string name="release_history_title">Historial de versiones</string>
     <string name="navigation_back">Atrás</string>
+    <string name="chat_message_copy">Copiar</string>
+    <string name="chat_message_edit">Editar</string>
+    <string name="chat_message_regenerate">Regenerar</string>
+    <string name="chat_regenerate_warning_title">Regenerar esta respuesta?</string>
+    <string name="chat_regenerate_warning_message">Regenerar aquí eliminará permanentemente todos los mensajes posteriores (%1$d en total) y reemplazará esa rama de la conversación.</string>
+    <string name="chat_history_select">Seleccionar conversaciones</string>
+    <string name="chat_history_select_all">Seleccionar todo</string>
+    <string name="chat_history_selected_count">Seleccionadas: %1$d</string>
+    <string name="chat_history_delete_selected">Eliminar</string>
+    <string name="chat_history_delete_title">Eliminar las conversaciones seleccionadas?</string>
+    <string name="chat_history_delete_message">Eliminar %1$d conversaciones seleccionadas? Esta acción no se puede deshacer.</string>
+    <string name="chat_history_clear_all">Borrar todo</string>
+    <string name="chat_history_clear_title">Borrar el historial de conversaciones?</string>
+    <string name="chat_history_clear_message">Eliminar todas las conversaciones guardadas? Esta acción no se puede deshacer.</string>
+    <string name="chat_code_block">Código</string>
+    <string name="chat_code_copy">Copiar código</string>
+    <string name="chat_code_copied">Código copiado</string>
+    <string name="chat_code_clipboard_label">código de IA local</string>
+    <string name="app_settings_follow_autojs6_unavailable">Seguir AutoJs6 (no disponible)</string>
+    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 no está instalado, está deshabilitado, o no proporciona el contrato de configuración para plugins oficiales. Seguir AutoJs6 sigue visible pero no se puede seleccionar. Se usan los valores predeterminados de la aplicación.</string>
 </resources>

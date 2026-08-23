@@ -104,6 +104,25 @@ class ConversationHistoryTest {
         assertNull(ConversationEditPolicy.impact(messages, 2))
     }
 
+    @Test
+    fun `regeneration locates the paired user and reports later branch size`() {
+        val messages = listOf(
+            ChatMessage(1, ChatMessageRole.USER, "first"),
+            ChatMessage(2, ChatMessageRole.ASSISTANT, "answer"),
+            ChatMessage(3, ChatMessageRole.NOTICE, "model unchanged"),
+            ChatMessage(4, ChatMessageRole.USER, "second"),
+            ChatMessage(5, ChatMessageRole.NOTICE, "notice"),
+            ChatMessage(6, ChatMessageRole.ASSISTANT, "second answer"),
+            ChatMessage(7, ChatMessageRole.USER, "later"),
+        )
+
+        assertEquals(
+            MessageRegenerationImpact(userMessageId = 4, laterMessageCount = 1),
+            ConversationRegenerationPolicy.impact(messages, 6),
+        )
+        assertNull(ConversationRegenerationPolicy.impact(messages, 4))
+    }
+
     private fun conversation(id: String, updatedAt: Long) = StoredConversation(
         id = id,
         title = id,

@@ -209,7 +209,7 @@
     <string name="app_settings_custom_color_title">لون سمة مخصص</string>
     <string name="app_settings_dark_mode">الوضع الداكن</string>
     <string name="app_settings_follow_autojs6">اتباع AutoJs6</string>
-    <string name="app_settings_follow_autojs6_explanation">يحفظ AutoJs6 تفضيلات المظهر في تخزين خاص. يستخدم اتباع AutoJs6 إعداد المضيف العام إن توفر, ثم قيم AutoJs6 الافتراضية: لون #FFDEAD, والوضع الداكن للنظام, ولغة النظام.</string>
+    <string name="app_settings_follow_autojs6_explanation">يقرأ خيار اتباع AutoJs6 لون سمة المضيف وسياسة الوضع الداكن واللغة عبر عقد إعدادات رسمي للملحقات للقراءة فقط.</string>
     <string name="app_settings_follow_system">اتباع النظام</string>
     <string name="app_settings_information">المعلومات</string>
     <string name="app_settings_language">اللغة</string>
@@ -226,4 +226,24 @@
     <string name="release_history_load_failed">تعذر تحميل سجل الإصدارات المحلي</string>
     <string name="release_history_title">سجل الإصدارات</string>
     <string name="navigation_back">رجوع</string>
+    <string name="chat_message_copy">نسخ</string>
+    <string name="chat_message_edit">تحرير</string>
+    <string name="chat_message_regenerate">إعادة التوليد</string>
+    <string name="chat_regenerate_warning_title">هل تريد إعادة توليد هذا الرد?</string>
+    <string name="chat_regenerate_warning_message">ستؤدي إعادة التوليد من هنا إلى حذف كل الرسائل اللاحقة نهائيا (عددها %1$d) واستبدال هذا الفرع من المحادثة.</string>
+    <string name="chat_history_select">تحديد المحادثات</string>
+    <string name="chat_history_select_all">تحديد الكل</string>
+    <string name="chat_history_selected_count">المحدد: %1$d</string>
+    <string name="chat_history_delete_selected">حذف</string>
+    <string name="chat_history_delete_title">هل تريد حذف المحادثات المحددة?</string>
+    <string name="chat_history_delete_message">هل تريد حذف %1$d من المحادثات المحددة? لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="chat_history_clear_all">مسح الكل</string>
+    <string name="chat_history_clear_title">هل تريد مسح سجل المحادثات?</string>
+    <string name="chat_history_clear_message">هل تريد حذف كل المحادثات المحفوظة? لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="chat_code_block">الرمز البرمجي</string>
+    <string name="chat_code_copy">نسخ الرمز البرمجي</string>
+    <string name="chat_code_copied">تم نسخ الرمز البرمجي</string>
+    <string name="chat_code_clipboard_label">رمز الذكاء الاصطناعي المحلي</string>
+    <string name="app_settings_follow_autojs6_unavailable">اتباع AutoJs6 (غير متاح)</string>
+    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 غير مثبت أو معطل أو لا يوفر عقد الإعدادات الرسمي للملحقات. يبقى خيار اتباع AutoJs6 ظاهرا ولكن لا يمكن تحديده. تستخدم إعدادات التطبيق الافتراضية بدلا منه.</string>
 </resources>

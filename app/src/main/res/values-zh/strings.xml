@@ -209,7 +209,7 @@
     <string name="app_settings_custom_color_title">自定义主题色</string>
     <string name="app_settings_dark_mode">暗色模式</string>
     <string name="app_settings_follow_autojs6">跟随 AutoJs6</string>
-    <string name="app_settings_follow_autojs6_explanation">AutoJs6 将自定义外观偏好保存在应用私有存储中. 跟随 AutoJs6 会优先使用宿主公开的配置, 无法取得时使用 AutoJs6 默认值: #FFDEAD 主题色, 跟随系统暗色模式与系统语言.</string>
+    <string name="app_settings_follow_autojs6_explanation">跟随 AutoJs6 会通过只读的官方插件设置契约读取宿主的主题色, 暗色模式策略和语言.</string>
     <string name="app_settings_follow_system">跟随系统</string>
     <string name="app_settings_information">信息</string>
     <string name="app_settings_language">语言</string>
@@ -226,4 +226,24 @@
     <string name="release_history_load_failed">无法加载本地版本历史</string>
     <string name="release_history_title">版本历史</string>
     <string name="navigation_back">返回</string>
+    <string name="chat_message_copy">复制</string>
+    <string name="chat_message_edit">编辑</string>
+    <string name="chat_message_regenerate">重新生成</string>
+    <string name="chat_regenerate_warning_title">重新生成此回复?</string>
+    <string name="chat_regenerate_warning_message">从此处重新生成将永久删除后续所有消息 (共 %1$d 条), 并替换该会话分支.</string>
+    <string name="chat_history_select">选择会话</string>
+    <string name="chat_history_select_all">全选</string>
+    <string name="chat_history_selected_count">已选择: %1$d</string>
+    <string name="chat_history_delete_selected">删除</string>
+    <string name="chat_history_delete_title">删除所选会话?</string>
+    <string name="chat_history_delete_message">删除选中的 %1$d 个会话? 此操作无法撤销.</string>
+    <string name="chat_history_clear_all">清空全部</string>
+    <string name="chat_history_clear_title">清空会话历史?</string>
+    <string name="chat_history_clear_message">删除所有已保存的会话? 此操作无法撤销.</string>
+    <string name="chat_code_block">代码</string>
+    <string name="chat_code_copy">复制代码</string>
+    <string name="chat_code_copied">代码已复制</string>
+    <string name="chat_code_clipboard_label">本地 AI 代码</string>
+    <string name="app_settings_follow_autojs6_unavailable">跟随 AutoJs6 (不可用)</string>
+    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 未安装, 已被禁用, 或未提供官方插件设置契约. 跟随 AutoJs6 仍会显示, 但无法选择. 应用将改用自身默认设置.</string>
 </resources>

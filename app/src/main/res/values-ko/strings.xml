@@ -209,7 +209,7 @@
     <string name="app_settings_custom_color_title">사용자 지정 테마 색상</string>
     <string name="app_settings_dark_mode">다크 모드</string>
     <string name="app_settings_follow_autojs6">AutoJs6 따르기</string>
-    <string name="app_settings_follow_autojs6_explanation">AutoJs6는 모양 설정을 비공개 앱 저장소에 보관합니다. AutoJs6 따르기는 공개된 호스트 구성을 우선 사용하고, 사용할 수 없으면 AutoJs6 기본값을 사용합니다: #FFDEAD 테마 색상, 시스템 다크 모드, 시스템 언어.</string>
+    <string name="app_settings_follow_autojs6_explanation">AutoJs6 따르기는 읽기 전용 공식 플러그인 설정 계약을 통해 호스트의 테마 색상, 다크 모드 정책, 언어를 읽습니다.</string>
     <string name="app_settings_follow_system">시스템 따르기</string>
     <string name="app_settings_information">정보</string>
     <string name="app_settings_language">언어</string>
@@ -226,4 +226,24 @@
     <string name="release_history_load_failed">로컬 버전 기록을 불러올 수 없습니다</string>
     <string name="release_history_title">버전 기록</string>
     <string name="navigation_back">뒤로</string>
+    <string name="chat_message_copy">복사</string>
+    <string name="chat_message_edit">편집</string>
+    <string name="chat_message_regenerate">다시 생성</string>
+    <string name="chat_regenerate_warning_title">이 응답을 다시 생성할까요?</string>
+    <string name="chat_regenerate_warning_message">여기에서 다시 생성하면 이후 모든 메시지 (총 %1$d개)가 영구적으로 삭제되고 이 대화 분기가 교체됩니다.</string>
+    <string name="chat_history_select">대화 선택</string>
+    <string name="chat_history_select_all">모두 선택</string>
+    <string name="chat_history_selected_count">선택됨: %1$d</string>
+    <string name="chat_history_delete_selected">삭제</string>
+    <string name="chat_history_delete_title">선택한 대화를 삭제할까요?</string>
+    <string name="chat_history_delete_message">선택한 대화 %1$d개를 삭제할까요? 이 작업은 취소할 수 없습니다.</string>
+    <string name="chat_history_clear_all">모두 지우기</string>
+    <string name="chat_history_clear_title">대화 기록을 지울까요?</string>
+    <string name="chat_history_clear_message">저장된 모든 대화를 삭제할까요? 이 작업은 취소할 수 없습니다.</string>
+    <string name="chat_code_block">코드</string>
+    <string name="chat_code_copy">코드 복사</string>
+    <string name="chat_code_copied">코드를 복사했습니다</string>
+    <string name="chat_code_clipboard_label">로컬 AI 코드</string>
+    <string name="app_settings_follow_autojs6_unavailable">AutoJs6 따르기 (사용할 수 없음)</string>
+    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6가 설치되지 않았거나 비활성화되었거나 공식 플러그인 설정 계약을 제공하지 않습니다. AutoJs6 따르기 항목은 계속 표시되지만 선택할 수 없습니다. 대신 앱 기본 설정을 사용합니다.</string>
 </resources>

@@ -20,11 +20,15 @@
 * `Función` Se añadieron ajustes de aplicación para color del tema, modo oscuro, idioma, información de la aplicación y del desarrollador e historial de versiones, con Seguir AutoJs6 como valor predeterminado cuando sea posible
 * `Función` Se añadieron ajustes de conversación para tamaño de fuente, comportamiento de Enter, output tokens ilimitados o personalizados y muestreo `temperature`, `topK` y `topP` predeterminado por el modelo o personalizado
 * `Función` Se renderiza contenido `$\text{...}$` en línea durante el streaming, con comandos matemáticos comunes y estilos de superíndice y subíndice
+* `Función` Seguir AutoJs6 consume ahora el contrato versionado y de solo lectura para plugins oficiales del host y obtiene valores activos de tema, modo oscuro e idioma; si el host no está disponible, la opción permanece visible pero deshabilitada y se usan los valores predeterminados de la aplicación
+* `Función` El historial de conversaciones admite modo de selección, seleccionar todo, eliminación por lotes y borrar todo; las acciones de mensaje pasan a menús de pulsación larga según el rol para copiar, editar y regenerar
+* `Función` Markdown en streaming renderiza tablas adaptables con desplazamiento horizontal, tarjetas de código cercado con copia, enlaces seguros y pulsables y separadores horizontales de ancho completo
 * `Corrección` Se eliminaron los límites implícitos de 256 tokens y 4 KiB de los ejemplos ejecutables: omitir `maxTokens` usa ahora el valor predeterminado del modelo o motor y el ejemplo Binder directo usa los 64 KiB completos permitidos por el proveedor
 * `Corrección` Se corrigió el ejemplo Binder de bajo nivel de las instrucciones localizadas en 10 idiomas, que aún invocaba el constructor `AiGenerationOptions` de 14 argumentos del protocolo 1.1 y fallaba con la API del protocolo 1.3
 * `Corrección` Se corrigió que el gestor de modelos conservara los colores de texto del tema claro en el modo oscuro del sistema, lo que hacía ilegibles el texto, las casillas y las filas de modelos sobre el fondo oscuro
 * `Corrección` Se mantuvo el editor visible sobre el teclado, se eligió el texto del botón Enviar según el contraste con el color del tema y se unificaron los controles de búsqueda anterior, siguiente y cerrar
 * `Mejora` Descripción del plugin, instrucciones y README en 10 idiomas actualizados conforme a la formalización de la ruta de plugin local `ai.*`
+* `Mejora` Navegación y apariencia reorganizadas con barras nativas y flechas Atrás, acciones principales de nueva conversación/historial/SearchView, estado de modelo compacto, fondos y cursor armonizados con el tema, ajustes rediseñados y menú adicional en Acerca de
 * `Mejora` ROADMAP reescrito como hoja de ruta de funciones con elementos verificables individualmente
 * `Mejora` Se normalizó la puntuación ASCII en la aplicación y en el texto localizado generado, con una prueba de regresión para el texto empaquetado y generado
 

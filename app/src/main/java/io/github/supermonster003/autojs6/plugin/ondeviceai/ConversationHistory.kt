@@ -159,6 +159,27 @@ internal object ConversationEditPolicy {
     }
 }
 
+internal data class MessageRegenerationImpact(
+    val userMessageId: Long,
+    val laterMessageCount: Int,
+)
+
+internal object ConversationRegenerationPolicy {
+    fun impact(messages: List<ChatMessage>, assistantMessageId: Long): MessageRegenerationImpact? {
+        val assistantIndex = messages.indexOfFirst { message -> message.id == assistantMessageId }
+        if (assistantIndex < 0 || messages[assistantIndex].role != ChatMessageRole.ASSISTANT) return null
+        var userIndex = assistantIndex - 1
+        while (userIndex >= 0 && messages[userIndex].role == ChatMessageRole.NOTICE) userIndex--
+        val user = messages.getOrNull(userIndex)?.takeIf { message ->
+            message.role == ChatMessageRole.USER
+        } ?: return null
+        return MessageRegenerationImpact(
+            userMessageId = user.id,
+            laterMessageCount = messages.lastIndex - assistantIndex,
+        )
+    }
+}
+
 /** Versioned, bounded binary persistence format independent of Android framework classes. */
 internal object ConversationHistoryCodec {
     fun encode(conversations: List<StoredConversation>): ByteArray {

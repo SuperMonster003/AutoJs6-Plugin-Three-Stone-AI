@@ -1,12 +1,9 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
-import android.app.Activity
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
@@ -16,13 +13,13 @@ import android.os.Looper
 import android.text.Editable
 import android.text.InputFilter
 import android.text.InputType
-import android.text.Spannable
 import android.text.TextWatcher
-import android.text.style.BackgroundColorSpan
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -30,13 +27,16 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.PopupMenu
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.Toolbar
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationBackend
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationListener
 import io.github.supermonster003.autojs6.plugin.ondeviceai.backend.GenerationMessage
@@ -60,10 +60,10 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var historyStore: ConversationHistoryStore
     private lateinit var uiSettingsStore: ChatUiSettingsStore
-    private lateinit var markdownRenderer: MarkdownTextRenderer
+    private lateinit var toolbar: Toolbar
     private lateinit var modelStatus: TextView
-    private lateinit var searchBar: LinearLayout
-    private lateinit var searchInput: EditText
+    private lateinit var searchNavigationBar: LinearLayout
+    private lateinit var searchView: SearchView
     private lateinit var searchResultCount: TextView
     private lateinit var searchPrevious: SearchActionView
     private lateinit var searchNext: SearchActionView
@@ -101,9 +101,12 @@ class ChatActivity : ConfiguredActivity() {
     private var draftBeforeEditing: String? = null
     private var restoredComposerText: String? = null
     private var restoredSearchQuery: String? = null
+    private var searchMenuItem: MenuItem? = null
+    private var searchExpanded = false
     private var searchMatches: List<ConversationSearchMatch> = emptyList()
     private var currentSearchMatchIndex = -1
     private var persistenceScheduled = false
+    private var allowDeletedConversationRevival = false
     private var catalogAvailability = CatalogAvailability.LOADING
     private var selectedModel: ImportedModel? = null
     private var resolvedCatalogObserved = false
@@ -138,7 +141,6 @@ class ChatActivity : ConfiguredActivity() {
         importCoordinator = ModelImportCoordinator.get(applicationContext)
         historyStore = ConversationHistoryStore(applicationContext)
         uiSettingsStore = ChatUiSettingsStore(applicationContext)
-        markdownRenderer = MarkdownTextRenderer(this, appPalette.accent)
         uiSettings = uiSettingsStore.load()
         if (!restoreTranscript(savedInstanceState)) {
             restoreStoredConversation(
@@ -150,9 +152,10 @@ class ChatActivity : ConfiguredActivity() {
         setContentView(createContentView())
         restoredComposerText?.let(input::setText)
         restoredSearchQuery?.takeIf(String::isNotBlank)?.let { query ->
-            showSearch()
-            searchInput.setText(query)
-            searchInput.setSelection(query.length)
+            toolbar.post {
+                showSearch()
+                searchView.setQuery(query, false)
+            }
         }
         renderEditingState()
         renderTranscript()
@@ -167,6 +170,78 @@ class ChatActivity : ConfiguredActivity() {
         val conversationId = intent.getStringExtra(ConversationNavigation.EXTRA_CONVERSATION_ID)
             ?: return
         if (conversationId != currentConversationId) switchConversation(conversationId)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menu.add(0, MENU_NEW_CONVERSATION, 0, R.string.chat_new_conversation).apply {
+            icon = tintedDrawable(R.drawable.ic_add_24, appPalette.onPrimary)
+            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        }
+        menu.add(0, MENU_CONVERSATION_HISTORY, 1, R.string.chat_history_title).apply {
+            icon = tintedDrawable(R.drawable.ic_history_24, appPalette.onPrimary)
+            setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        }
+        searchMenuItem = menu.add(0, MENU_SEARCH, 2, R.string.chat_search_menu).apply {
+            icon = tintedDrawable(R.drawable.ic_search_24, appPalette.onPrimary)
+            setShowAsAction(
+                MenuItem.SHOW_AS_ACTION_IF_ROOM or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW,
+            )
+            actionView = createSearchView()
+            setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
+                override fun onMenuItemActionExpand(item: MenuItem): Boolean {
+                    searchExpanded = true
+                    searchNavigationBar.visibility = View.VISIBLE
+                    toolbar.post { tintToolbarIcons(toolbar) }
+                    return true
+                }
+
+                override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
+                    clearSearchState()
+                    return true
+                }
+            })
+        }
+        menu.add(0, MENU_CHAT_SETTINGS, 3, R.string.chat_settings_title)
+        menu.add(0, MENU_APP_SETTINGS, 4, R.string.app_settings_title)
+        menu.add(0, MENU_MODEL_SETTINGS, 5, R.string.chat_model_settings)
+        toolbar.post { tintToolbarIcons(toolbar) }
+        return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        menu.findItem(MENU_NEW_CONVERSATION)?.isEnabled = messages.isNotEmpty()
+        menu.findItem(MENU_SEARCH)?.isEnabled = messages.any { message -> message.text.isNotBlank() }
+        toolbar.post { tintToolbarIcons(toolbar) }
+        return super.onPrepareOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        MENU_NEW_CONVERSATION -> {
+            startNewConversation()
+            true
+        }
+        MENU_CONVERSATION_HISTORY -> {
+            persistConversationNow()
+            startActivity(Intent(this, ConversationHistoryActivity::class.java))
+            true
+        }
+        MENU_SEARCH -> {
+            showSearch()
+            true
+        }
+        MENU_CHAT_SETTINGS -> {
+            showChatSettings()
+            true
+        }
+        MENU_APP_SETTINGS -> {
+            startActivity(Intent(this, AppSettingsActivity::class.java))
+            true
+        }
+        MENU_MODEL_SETTINGS -> {
+            openModelManager()
+            true
+        }
+        else -> super.onOptionsItemSelected(item)
     }
 
     override fun onStart() {
@@ -219,7 +294,10 @@ class ChatActivity : ConfiguredActivity() {
         outState.putString(STATE_CONVERSATION_MODEL_ID, conversationModelId)
         outState.putString(STATE_CONVERSATION_MODEL_NAME, conversationModelDisplayName)
         outState.putString(STATE_COMPOSER_TEXT, input.text.toString())
-        outState.putString(STATE_SEARCH_QUERY, searchInput.text.toString())
+        outState.putString(
+            STATE_SEARCH_QUERY,
+            if (::searchView.isInitialized) searchView.query.toString() else restoredSearchQuery,
+        )
         editingMessageId?.let { id -> outState.putLong(STATE_EDITING_MESSAGE_ID, id) }
         outState.putString(STATE_DRAFT_BEFORE_EDITING, draftBeforeEditing)
         super.onSaveInstanceState(outState)
@@ -256,9 +334,13 @@ class ChatActivity : ConfiguredActivity() {
             setBackgroundColor(getColor(R.color.window_background))
         }
 
-        root.addView(createToolbar())
+        toolbar = createAppToolbar(
+            R.string.app_name,
+            showBack = false,
+        )
+        root.addView(toolbar)
         root.addView(createModelBar())
-        root.addView(createSearchBar())
+        root.addView(createSearchNavigationBar())
         root.addView(View(this).apply { setBackgroundColor(getColor(R.color.divider)) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
 
@@ -311,48 +393,14 @@ class ChatActivity : ConfiguredActivity() {
         return root
     }
 
-    private fun createToolbar(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = dp(58)
-        setPaddingRelative(dp(20), dp(6), dp(8), dp(4))
-        setBackgroundColor(appPalette.primary)
-
-        addView(LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(TextView(context).apply {
-                text = getString(R.string.app_name)
-                textSize = 20f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(appPalette.onPrimary)
-            })
-            addView(TextView(context).apply {
-                text = getString(R.string.chat_screen_title)
-                textSize = 12f
-                setTextColor(AppColorPolicy.withAlpha(appPalette.onPrimary, 0xB3))
-            })
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-
-        addView(TextView(context).apply {
-            text = "\u22ee"
-            textSize = 28f
-            gravity = Gravity.CENTER
-            minimumWidth = dp(48)
-            minimumHeight = dp(48)
-            contentDescription = getString(R.string.chat_open_menu)
-            setTextColor(appPalette.onPrimary)
-            applySelectableBackground(this)
-            setOnClickListener(::showChatMenu)
-        })
-    }
-
     private fun createModelBar(): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         isClickable = true
         isFocusable = true
         contentDescription = getString(R.string.chat_open_model_settings)
-        setPaddingRelative(dp(20), dp(7), dp(16), dp(9))
+        minimumHeight = dp(36)
+        setPaddingRelative(dp(18), dp(3), dp(12), dp(3))
         background = roundedRipple(
             fillColor = R.color.window_background,
             rippleColor = R.color.chat_ripple,
@@ -366,7 +414,7 @@ class ChatActivity : ConfiguredActivity() {
             setTextColor(appPalette.accent)
         }, LinearLayout.LayoutParams(dp(18), LinearLayout.LayoutParams.WRAP_CONTENT))
         modelStatus = TextView(context).apply {
-            textSize = 13f
+            textSize = 12f
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
             setTextColor(getColor(R.color.text_color_secondary))
@@ -380,56 +428,28 @@ class ChatActivity : ConfiguredActivity() {
         })
     }
 
-    private fun createSearchBar(): View = LinearLayout(this).apply {
-        searchBar = this
+    private fun createSearchNavigationBar(): View = LinearLayout(this).apply {
+        searchNavigationBar = this
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         visibility = View.GONE
-        setPaddingRelative(dp(12), dp(5), dp(8), dp(8))
-
-        searchInput = EditText(context).apply {
-            textSize = 15f
-            maxLines = 1
-            setSingleLine(true)
-            hint = getString(R.string.chat_search_hint)
-            inputType = InputType.TYPE_CLASS_TEXT
-            imeOptions = EditorInfo.IME_ACTION_SEARCH
-            setTextColor(getColor(R.color.text_color_primary))
-            setHintTextColor(getColor(R.color.text_color_secondary))
-            setPaddingRelative(dp(12), dp(7), dp(8), dp(7))
-            background = roundedDrawable(
-                R.color.chat_input_surface,
-                12,
-                R.color.chat_border,
-            )
-            addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(value: CharSequence?, start: Int, count: Int, after: Int) = Unit
-                override fun onTextChanged(value: CharSequence?, start: Int, before: Int, count: Int) {
-                    refreshSearchResults(selectFirst = true, locate = true)
-                }
-                override fun afterTextChanged(value: Editable?) = Unit
-            })
-        }
-        addView(searchInput, LinearLayout.LayoutParams(0, dp(42), 1f))
+        gravity = Gravity.END or Gravity.CENTER_VERTICAL
+        setPaddingRelative(dp(12), dp(2), dp(8), dp(3))
         searchResultCount = TextView(context).apply {
             textSize = 12f
             gravity = Gravity.CENTER
             setTextColor(getColor(R.color.text_color_secondary))
             setPaddingRelative(dp(7), 0, dp(5), 0)
         }
-        addView(searchResultCount, LinearLayout.LayoutParams(dp(58), dp(42)))
+        addView(searchResultCount, LinearLayout.LayoutParams(dp(64), dp(38)))
         searchPrevious = searchAction(SearchActionIcon.PREVIOUS, R.string.chat_search_previous) {
             moveSearchResult(-1)
         }
-        addView(searchPrevious, LinearLayout.LayoutParams(dp(42), dp(42)))
+        addView(searchPrevious, LinearLayout.LayoutParams(dp(40), dp(38)))
         searchNext = searchAction(SearchActionIcon.NEXT, R.string.chat_search_next) {
             moveSearchResult(1)
         }
-        addView(searchNext, LinearLayout.LayoutParams(dp(42), dp(42)))
-        addView(
-            searchAction(SearchActionIcon.CLOSE, R.string.chat_search_close) { closeSearch() },
-            LinearLayout.LayoutParams(dp(42), dp(42)),
-        )
+        addView(searchNext, LinearLayout.LayoutParams(dp(40), dp(38)))
         updateSearchControls()
     }
 
@@ -437,10 +457,41 @@ class ChatActivity : ConfiguredActivity() {
         icon: SearchActionIcon,
         descriptionResource: Int,
         action: () -> Unit,
-    ) = SearchActionView(this, icon, appPalette.primaryText).apply {
+    ) = SearchActionView(this, icon, appPalette.accent).apply {
         contentDescription = getString(descriptionResource)
         applySelectableBackground(this)
         setOnClickListener { action() }
+    }
+
+    private fun createSearchView() = SearchView(this).apply {
+        searchView = this
+        queryHint = getString(R.string.chat_search_hint)
+        maxWidth = Int.MAX_VALUE
+        isSubmitButtonEnabled = false
+        setIconifiedByDefault(false)
+        setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                hideKeyboard(this@apply)
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                refreshSearchResults(selectFirst = true, locate = true)
+                return true
+            }
+        })
+        findViewById<EditText?>(androidx.appcompat.R.id.search_src_text)?.apply {
+            setTextColor(appPalette.onPrimary)
+            setHintTextColor(AppColorPolicy.withAlpha(appPalette.onPrimary, 0xB3))
+            tintEditText(this)
+        }
+        listOf(
+            androidx.appcompat.R.id.search_close_btn,
+            androidx.appcompat.R.id.search_mag_icon,
+            androidx.appcompat.R.id.search_go_btn,
+        ).forEach { identifier ->
+            findViewById<ImageView?>(identifier)?.setColorFilter(appPalette.onPrimary)
+        }
     }
 
     private fun createEmptyState(): LinearLayout {
@@ -559,10 +610,10 @@ class ChatActivity : ConfiguredActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.BOTTOM
             setPaddingRelative(dp(6), dp(4), dp(6), dp(4))
-            background = roundedDrawable(
-                fillColor = R.color.chat_input_surface,
+            background = roundedDrawableColor(
+                fillColor = appPalette.inputSurface,
                 radiusDp = 18,
-                strokeColor = R.color.chat_border,
+                strokeColor = appPalette.chatBorder,
             )
 
             input = EditText(context).apply {
@@ -580,6 +631,7 @@ class ChatActivity : ConfiguredActivity() {
                 setHintTextColor(getColor(R.color.text_color_secondary))
                 setPaddingRelative(dp(12), dp(9), dp(8), dp(9))
                 background = null
+                tintEditText(this)
                 setOnEditorActionListener { _, actionId, _ ->
                     if (
                         uiSettings.enterKeyBehavior == EnterKeyBehavior.SEND &&
@@ -644,16 +696,7 @@ class ChatActivity : ConfiguredActivity() {
             topMargin = dp(10)
         })
 
-        addView(TextView(context).apply {
-            text = getString(R.string.chat_privacy_note)
-            textSize = 11f
-            gravity = Gravity.CENTER
-            setTextColor(getColor(R.color.text_color_secondary))
-            setPaddingRelative(dp(12), dp(5), dp(12), dp(9))
-        }, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ))
+        setPaddingRelative(0, 0, 0, dp(8))
     }
 
     private fun renderManagerState(state: ModelManagerState) {
@@ -706,12 +749,13 @@ class ChatActivity : ConfiguredActivity() {
             catalogAvailability == CatalogAvailability.UNAVAILABLE ->
                 getString(R.string.chat_model_unavailable)
             model == null -> getString(R.string.chat_no_model)
+            model.healthStatus == ModelHealthStatus.AVAILABLE -> model.displayName
             else -> getString(
                 R.string.chat_model_format,
                 model.displayName,
                 getString(
                     when (model.healthStatus) {
-                        ModelHealthStatus.AVAILABLE -> R.string.model_health_available
+                        ModelHealthStatus.AVAILABLE -> error("Handled above")
                         ModelHealthStatus.INCOMPATIBLE -> R.string.model_health_incompatible
                         ModelHealthStatus.NOT_CHECKED -> R.string.model_health_not_checked
                     },
@@ -784,6 +828,7 @@ class ChatActivity : ConfiguredActivity() {
         messageViews.clear()
         markdownCache.keys.retainAll(messages.map(ChatMessage::id).toSet())
         messages.forEach(::addMessageView)
+        invalidateOptionsMenu()
         renderEmptyState()
         if (messages.isNotEmpty()) scrollToBottom()
     }
@@ -794,6 +839,7 @@ class ChatActivity : ConfiguredActivity() {
         markConversationChanged()
         renderEmptyState()
         refreshActiveSearchResults()
+        invalidateOptionsMenu()
         scrollToBottom()
     }
 
@@ -809,13 +855,11 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun addMessageView(message: ChatMessage) {
         if (message.role == ChatMessageRole.NOTICE) {
-            val notice = TextView(this).apply {
-                text = message.text
-                textSize = 12f
+            val notice = MarkdownMessageView(this, appPalette).apply {
                 gravity = Gravity.CENTER
-                setTextColor(getColor(R.color.text_color_secondary))
                 setPaddingRelative(dp(12), dp(7), dp(12), dp(7))
-                background = roundedDrawable(R.color.chat_notice_surface, 12)
+                background = roundedDrawableColor(appPalette.noticeSurface, 12)
+                showPlainText(message.text, 12f)
             }
             messagesColumn.addView(
                 notice,
@@ -845,29 +889,22 @@ class ChatActivity : ConfiguredActivity() {
             setPaddingRelative(dp(4), 0, dp(4), dp(4))
         }
         row.addView(label)
-        val body = TextView(this).apply {
-            textSize = uiSettings.fontSize.messageSp
-            setTextColor(getColor(R.color.text_color_primary))
-            setLineSpacing(0f, 1.12f)
-            setTextIsSelectable(true)
-            maxWidth = resources.displayMetrics.widthPixels - dp(56)
+        val body = MarkdownMessageView(this, appPalette).apply {
+            maximumWidth = resources.displayMetrics.widthPixels - dp(56)
             setPaddingRelative(dp(14), dp(11), dp(14), dp(11))
-            background = roundedDrawable(
-                if (userMessage) R.color.chat_user_surface else R.color.chat_assistant_surface,
+            background = roundedDrawableColor(
+                if (userMessage) appPalette.userSurface else appPalette.assistantSurface,
                 16,
-                R.color.chat_border,
+                appPalette.chatBorder,
             )
-            setOnLongClickListener { copyMessage(message.id) }
+            setMessageLongClickListener { showMessageActions(message.id) }
         }
         row.addView(body)
         val meta = TextView(this).apply {
             textSize = 11f
             setTextColor(getColor(R.color.text_color_secondary))
             setPaddingRelative(dp(4), dp(4), dp(4), 0)
-            if (userMessage) {
-                gravity = Gravity.END
-                setOnClickListener { requestEditMessage(message.id) }
-            }
+            if (userMessage) gravity = Gravity.END
         }
         row.addView(meta)
         messagesColumn.addView(
@@ -887,7 +924,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun updateMessageView(message: ChatMessage) {
         val holder = messageViews[message.id] ?: return
         if (message.role == ChatMessageRole.NOTICE) {
-            holder.body.text = message.text
+            holder.body.showPlainText(message.text, 12f)
             return
         }
         val visibleText = message.text.ifEmpty {
@@ -902,31 +939,21 @@ class ChatActivity : ConfiguredActivity() {
         }
         if (message.text.isNotEmpty()) {
             val document = markdownDocument(message)
-            val rendered = markdownRenderer.render(document)
-            searchMatches.forEachIndexed { index, match ->
-                if (
-                    match.messageId == message.id && match.end <= rendered.length &&
-                    match.end > match.start
-                ) {
-                    rendered.setSpan(
-                        BackgroundColorSpan(
-                            getColor(
-                                if (index == currentSearchMatchIndex) {
-                                    R.color.chat_search_match_current
-                                } else {
-                                    R.color.chat_search_match
-                                },
-                            ),
-                        ),
-                        match.start,
-                        match.end,
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-                    )
-                }
-            }
-            holder.body.text = rendered
+            holder.body.showDocument(
+                document = document,
+                textSizeSp = uiSettings.fontSize.messageSp,
+                highlights = searchMatches.mapIndexedNotNull { index, match ->
+                    match.takeIf { candidate -> candidate.messageId == message.id }?.let {
+                        MarkdownSearchHighlight(
+                            start = it.start,
+                            end = it.end,
+                            current = index == currentSearchMatchIndex,
+                        )
+                    }
+                },
+            )
         } else {
-            holder.body.text = visibleText
+            holder.body.showPlainText(visibleText, uiSettings.fontSize.messageSp)
         }
         holder.body.alpha = if (
             message.text.isEmpty() && message.status == ChatMessageStatus.GENERATING
@@ -952,11 +979,7 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun updateMessageMeta(message: ChatMessage, meta: TextView) {
         val value = if (message.role == ChatMessageRole.USER) {
-            if (!isGenerating && editingMessageId == null) {
-                getString(R.string.chat_edit_message)
-            } else {
-                ""
-            }
+            ""
         } else {
             when (message.status) {
                 ChatMessageStatus.GENERATING -> getString(R.string.chat_streaming)
@@ -970,8 +993,8 @@ class ChatActivity : ConfiguredActivity() {
             }
         }
         meta.text = value
-        meta.isClickable = message.role == ChatMessageRole.USER && value.isNotEmpty()
-        meta.setTextColor(if (meta.isClickable) appPalette.accent else appPalette.secondaryText)
+        meta.isClickable = false
+        meta.setTextColor(appPalette.secondaryText)
         meta.visibility = if (value.isEmpty()) View.GONE else View.VISIBLE
     }
 
@@ -999,6 +1022,7 @@ class ChatActivity : ConfiguredActivity() {
             cancelEditing()
             return
         }
+        allowDeletedConversationRevival = true
         input.text.clear()
         hideKeyboard()
 
@@ -1190,8 +1214,7 @@ class ChatActivity : ConfiguredActivity() {
         if (delta.isEmpty() || !isGenerationCurrent(generationId)) return
         val current = messages.singleOrNull { message -> message.id == assistantMessageId } ?: return
         if (current.status != ChatMessageStatus.GENERATING) return
-        val followOutput = uiSettings.followStreamingOutput &&
-            searchBar.visibility != View.VISIBLE && isNearBottom()
+        val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
         replaceMessage(current.copy(text = current.text + delta))
         if (followOutput) scrollToBottom()
     }
@@ -1267,8 +1290,7 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun stopGeneration(showToast: Boolean = true) {
         val generationId = activeGenerationId ?: return
-        val followOutput = uiSettings.followStreamingOutput &&
-            searchBar.visibility != View.VISIBLE && isNearBottom()
+        val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
         val assistantMessageId = activeAssistantMessageId
         if (assistantMessageId != null) {
             val delta = takePendingDelta(generationId, assistantMessageId)
@@ -1310,6 +1332,7 @@ class ChatActivity : ConfiguredActivity() {
         conversationUpdatedAtMillis = conversationCreatedAtMillis
         conversationModelId = selectedModel?.modelId
         conversationModelDisplayName = selectedModel?.displayName
+        allowDeletedConversationRevival = false
         cancelEditing(restoreDraft = false)
         closeSearch()
         input.text.clear()
@@ -1354,6 +1377,7 @@ class ChatActivity : ConfiguredActivity() {
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.chat_edit_continue) { _, _ -> enterEditing(messageId) }
             .show()
+            .also(::tintDialogButtons)
     }
 
     private fun enterEditing(messageId: Long) {
@@ -1388,30 +1412,35 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun showSearch() {
-        if (!::searchBar.isInitialized) return
-        searchBar.visibility = View.VISIBLE
-        refreshSearchResults(selectFirst = true, locate = true)
-        searchInput.requestFocus()
-        scheduleKeyboard(searchInput)
+        val item = searchMenuItem ?: return
+        if (!item.isActionViewExpanded) item.expandActionView()
+        searchView.requestFocus()
+        scheduleKeyboard(searchView.findViewById(androidx.appcompat.R.id.search_src_text))
     }
 
     private fun closeSearch() {
-        if (!::searchBar.isInitialized) return
-        val ownedKeyboardFocus = searchInput.hasFocus()
-        searchBar.visibility = View.GONE
-        searchInput.text.clear()
-        searchInput.clearFocus()
+        val item = searchMenuItem
+        if (item?.isActionViewExpanded == true) item.collapseActionView() else clearSearchState()
+    }
+
+    private fun clearSearchState() {
+        if (!::searchView.isInitialized) return
+        val ownedKeyboardFocus = searchView.hasFocus()
+        searchExpanded = false
+        searchNavigationBar.visibility = View.GONE
+        searchView.setQuery("", false)
+        searchView.clearFocus()
         searchMatches = emptyList()
         currentSearchMatchIndex = -1
         updateSearchControls()
         messages.forEach(::updateMessageView)
-        if (ownedKeyboardFocus) hideKeyboard(searchInput)
+        if (ownedKeyboardFocus) hideKeyboard(searchView)
     }
 
     private fun refreshSearchResults(selectFirst: Boolean, locate: Boolean) {
-        if (!::searchInput.isInitialized || !::messagesColumn.isInitialized) return
+        if (!::searchView.isInitialized || !::messagesColumn.isInitialized) return
         val previous = searchMatches.getOrNull(currentSearchMatchIndex)
-        val refreshed = ConversationSearchPolicy.find(messages, searchInput.text.toString())
+        val refreshed = ConversationSearchPolicy.find(messages, searchView.query.toString())
         searchMatches = refreshed
         currentSearchMatchIndex = when {
             refreshed.isEmpty() -> -1
@@ -1426,8 +1455,7 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun refreshActiveSearchResults() {
         if (
-            ::searchBar.isInitialized && searchBar.visibility == View.VISIBLE &&
-            searchInput.text.toString().isNotBlank()
+            ::searchView.isInitialized && searchExpanded && searchView.query.isNotBlank()
         ) {
             refreshSearchResults(selectFirst = false, locate = false)
         }
@@ -1460,29 +1488,18 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun locateCurrentSearchResult() {
         val match = searchMatches.getOrNull(currentSearchMatchIndex) ?: return
-        val body = messageViews[match.messageId]?.body ?: return
-        body.post {
-            val layout = body.layout ?: return@post
-            if (match.start >= body.text.length) return@post
-            val line = layout.getLineForOffset(match.start)
-            val rectangle = Rect(
-                0,
-                body.paddingTop + layout.getLineTop(line),
-                body.width,
-                body.paddingTop + layout.getLineBottom(line),
-            )
-            body.requestRectangleOnScreen(rectangle, true)
-        }
+        messageViews[match.messageId]?.body?.locate(match.start)
     }
 
     private fun showChatSettings() {
         val workingSettings = uiSettings
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPaddingRelative(dp(22), dp(4), dp(22), 0)
+            setPaddingRelative(dp(12), dp(4), dp(12), dp(12))
         }
-        container.addView(settingsSectionLabel(R.string.chat_settings_display_section))
-        container.addView(settingsFieldLabel(R.string.chat_font_size))
+        val displaySection = settingsSection(R.string.chat_settings_display_section)
+        container.addView(displaySection)
+        displaySection.addView(settingsFieldLabel(R.string.chat_font_size))
         val fontGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
         ChatFontSize.entries.forEach { fontSize ->
             fontGroup.addView(RadioButton(this).apply {
@@ -1490,25 +1507,32 @@ class ChatActivity : ConfiguredActivity() {
                 tag = fontSize
                 text = getString(fontSize.labelResource())
                 isChecked = fontSize == workingSettings.fontSize
-                setTextColor(getColor(R.color.text_color_primary))
+                setTextColor(appPalette.primaryText)
+                buttonTintList = controlTintList()
+                minimumHeight = dp(52)
             })
         }
-        container.addView(fontGroup)
+        displaySection.addView(fontGroup)
         val followOutput = CheckBox(this).apply {
             text = getString(R.string.chat_follow_streaming_output)
             isChecked = workingSettings.followStreamingOutput
-            setTextColor(getColor(R.color.text_color_primary))
+            setTextColor(appPalette.primaryText)
+            buttonTintList = controlTintList()
+            minimumHeight = dp(52)
         }
-        container.addView(followOutput)
+        displaySection.addView(followOutput)
         val showUsage = CheckBox(this).apply {
             text = getString(R.string.chat_show_generation_usage)
             isChecked = workingSettings.showGenerationUsage
-            setTextColor(getColor(R.color.text_color_primary))
+            setTextColor(appPalette.primaryText)
+            buttonTintList = controlTintList()
+            minimumHeight = dp(52)
         }
-        container.addView(showUsage)
+        displaySection.addView(showUsage)
 
-        container.addView(settingsSectionLabel(R.string.chat_settings_input_section))
-        container.addView(settingsFieldLabel(R.string.chat_enter_key_behavior))
+        val inputSection = settingsSection(R.string.chat_settings_input_section)
+        container.addView(inputSection)
+        inputSection.addView(settingsFieldLabel(R.string.chat_enter_key_behavior))
         val enterKeyGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
         EnterKeyBehavior.entries.forEach { behavior ->
             enterKeyGroup.addView(RadioButton(this).apply {
@@ -1522,23 +1546,28 @@ class ChatActivity : ConfiguredActivity() {
                 )
                 isChecked = behavior == workingSettings.enterKeyBehavior
                 setTextColor(appPalette.primaryText)
+                buttonTintList = controlTintList()
+                minimumHeight = dp(52)
             })
         }
-        container.addView(enterKeyGroup)
+        inputSection.addView(enterKeyGroup)
 
-        container.addView(settingsSectionLabel(R.string.chat_settings_generation_section))
+        val generationSection = settingsSection(R.string.chat_settings_generation_section)
+        container.addView(generationSection)
         val unlimitedTokens = CheckBox(this).apply {
             text = getString(R.string.chat_maximum_output_tokens_unlimited)
             isChecked = workingSettings.maximumOutputTokens == null
             setTextColor(appPalette.primaryText)
+            buttonTintList = controlTintList()
+            minimumHeight = dp(52)
         }
-        container.addView(unlimitedTokens)
-        container.addView(settingsFieldLabel(R.string.chat_maximum_output_tokens))
+        generationSection.addView(unlimitedTokens)
+        generationSection.addView(settingsFieldLabel(R.string.chat_maximum_output_tokens))
         val maximumTokensInput = settingsEditText(
             workingSettings.maximumOutputTokensDraft.toString(),
             InputType.TYPE_CLASS_NUMBER,
         )
-        container.addView(maximumTokensInput)
+        generationSection.addView(maximumTokensInput)
         maximumTokensInput.isEnabled = !unlimitedTokens.isChecked
         maximumTokensInput.alpha = if (maximumTokensInput.isEnabled) 1f else DISABLED_ALPHA
         unlimitedTokens.setOnCheckedChangeListener { _, checked ->
@@ -1550,28 +1579,30 @@ class ChatActivity : ConfiguredActivity() {
             text = getString(R.string.chat_use_model_sampling_defaults)
             isChecked = workingSettings.useModelSamplingDefaults
             setTextColor(appPalette.primaryText)
-            setPaddingRelative(0, dp(9), 0, 0)
+            buttonTintList = controlTintList()
+            minimumHeight = dp(52)
+            setPaddingRelative(0, dp(8), 0, 0)
         }
-        container.addView(useModelSamplingDefaults)
-        container.addView(settingsFieldLabel(R.string.chat_temperature))
+        generationSection.addView(useModelSamplingDefaults)
+        generationSection.addView(settingsFieldLabel(R.string.chat_temperature))
         val temperatureInput = settingsEditText(
             workingSettings.temperature.toString(),
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
         )
-        container.addView(temperatureInput)
-        container.addView(settingsFieldLabel(R.string.chat_top_k))
+        generationSection.addView(temperatureInput)
+        generationSection.addView(settingsFieldLabel(R.string.chat_top_k))
         val topKInput = settingsEditText(
             workingSettings.topK.toString(),
             InputType.TYPE_CLASS_NUMBER,
         )
-        container.addView(topKInput)
-        container.addView(settingsFieldLabel(R.string.chat_top_p))
+        generationSection.addView(topKInput)
+        generationSection.addView(settingsFieldLabel(R.string.chat_top_p))
         val topPInput = settingsEditText(
             workingSettings.topP.toString(),
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
         )
-        container.addView(topPInput)
-        container.addView(TextView(this).apply {
+        generationSection.addView(topPInput)
+        generationSection.addView(TextView(this).apply {
             text = getString(R.string.chat_generation_settings_help)
             textSize = 12f
             setTextColor(appPalette.secondaryText)
@@ -1591,12 +1622,17 @@ class ChatActivity : ConfiguredActivity() {
         }
 
         val settingsScroll = ScrollView(this).apply {
+            setBackgroundColor(appPalette.windowBackground)
             addView(
                 container,
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT,
                 ),
+            )
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                minOf((resources.displayMetrics.heightPixels * 0.68f).toInt(), dp(560)),
             )
         }
         val dialog = AlertDialog.Builder(this)
@@ -1606,6 +1642,13 @@ class ChatActivity : ConfiguredActivity() {
             .setPositiveButton(R.string.chat_settings_save, null)
             .create()
         dialog.setOnShowListener {
+            dialog.window?.setLayout(
+                minOf((resources.displayMetrics.widthPixels * 0.94f).toInt(), dp(720)),
+                android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+            )
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(appPalette.accent)
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(appPalette.accent)
+            applyThemeToControls(container)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val selectedFont = fontGroup.findViewById<RadioButton>(fontGroup.checkedRadioButtonId)
                     ?.tag as? ChatFontSize ?: workingSettings.fontSize
@@ -1672,14 +1715,30 @@ class ChatActivity : ConfiguredActivity() {
             }
         }
         dialog.show()
+        tintDialogButtons(dialog)
     }
 
-    private fun settingsSectionLabel(textResource: Int) = TextView(this).apply {
-        text = getString(textResource)
-        textSize = 13f
-        typeface = Typeface.DEFAULT_BOLD
-        setTextColor(appPalette.accent)
-        setPaddingRelative(0, dp(13), 0, dp(3))
+    private fun settingsSection(textResource: Int) = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        background = roundedDrawableColor(
+            fillColor = appPalette.assistantSurface,
+            radiusDp = 14,
+            strokeColor = appPalette.chatBorder,
+        )
+        setPaddingRelative(dp(16), dp(6), dp(16), dp(12))
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply {
+            setMargins(0, dp(8), 0, dp(4))
+        }
+        addView(TextView(this@ChatActivity).apply {
+            text = getString(textResource)
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(appPalette.accent)
+            setPaddingRelative(0, dp(6), 0, dp(7))
+        })
     }
 
     private fun settingsFieldLabel(textResource: Int) = TextView(this).apply {
@@ -1687,7 +1746,7 @@ class ChatActivity : ConfiguredActivity() {
         textSize = 12.5f
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(appPalette.secondaryText)
-        setPaddingRelative(0, dp(6), 0, dp(2))
+        setPaddingRelative(0, dp(9), 0, dp(3))
     }
 
     private fun settingsEditText(value: String, fieldInputType: Int) = EditText(this).apply {
@@ -1721,7 +1780,7 @@ class ChatActivity : ConfiguredActivity() {
             getSystemService(InputMethodManager::class.java).restartInput(input)
         }
         messageViews.values.forEach { holder ->
-            holder.body.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiSettings.fontSize.messageSp)
+            holder.body.setMessageTextSize(uiSettings.fontSize.messageSp)
         }
         messages.forEach(::updateMessageView)
         if (currentSearchMatchIndex >= 0) locateCurrentSearchResult()
@@ -1745,7 +1804,6 @@ class ChatActivity : ConfiguredActivity() {
     private fun persistConversationNow() {
         mainHandler.removeCallbacks(persistConversationRunnable)
         persistenceScheduled = false
-        historyStore.rememberLastConversation(currentConversationId)
         if (messages.isEmpty()) return
         val conversation = StoredConversation(
             id = currentConversationId,
@@ -1759,8 +1817,15 @@ class ChatActivity : ConfiguredActivity() {
             modelDisplayName = conversationModelDisplayName,
             messages = messages.toList(),
         )
-        runCatching { historyStore.upsert(conversation) }
+        val persisted = runCatching {
+            historyStore.upsert(
+                conversation,
+                reviveDeleted = allowDeletedConversationRevival,
+            )
+        }
             .onFailure { error -> Log.e(TAG, "Unable to persist launcher conversation", error) }
+            .getOrDefault(false)
+        if (persisted) allowDeletedConversationRevival = false
     }
 
     private fun restoreStoredConversation(conversationId: String?): Boolean {
@@ -1779,6 +1844,7 @@ class ChatActivity : ConfiguredActivity() {
         conversationModelDisplayName = conversation.modelDisplayName
         nextMessageId = (messages.maxOfOrNull(ChatMessage::id) ?: 0L) + 1L
         markdownCache.clear()
+        allowDeletedConversationRevival = false
         historyStore.rememberLastConversation(currentConversationId)
     }
 
@@ -1817,50 +1883,6 @@ class ChatActivity : ConfiguredActivity() {
         )
     }
 
-    private fun showChatMenu(anchor: View) {
-        PopupMenu(this, anchor).apply {
-            menu.add(0, MENU_NEW_CONVERSATION, 0, R.string.chat_new_conversation).isEnabled =
-                messages.isNotEmpty()
-            menu.add(0, MENU_CONVERSATION_HISTORY, 1, R.string.chat_history_title)
-            menu.add(0, MENU_SEARCH, 2, R.string.chat_search_menu).isEnabled =
-                messages.any { message -> message.text.isNotBlank() }
-            menu.add(0, MENU_CHAT_SETTINGS, 3, R.string.chat_settings_title)
-            menu.add(0, MENU_APP_SETTINGS, 4, R.string.app_settings_title)
-            menu.add(0, MENU_MODEL_SETTINGS, 5, R.string.chat_model_settings)
-            setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    MENU_NEW_CONVERSATION -> {
-                        startNewConversation()
-                        true
-                    }
-                    MENU_CONVERSATION_HISTORY -> {
-                        persistConversationNow()
-                        startActivity(Intent(this@ChatActivity, ConversationHistoryActivity::class.java))
-                        true
-                    }
-                    MENU_SEARCH -> {
-                        showSearch()
-                        true
-                    }
-                    MENU_CHAT_SETTINGS -> {
-                        showChatSettings()
-                        true
-                    }
-                    MENU_APP_SETTINGS -> {
-                        startActivity(Intent(this@ChatActivity, AppSettingsActivity::class.java))
-                        true
-                    }
-                    MENU_MODEL_SETTINGS -> {
-                        openModelManager()
-                        true
-                    }
-                    else -> false
-                }
-            }
-            show()
-        }
-    }
-
     private fun openModelManager() {
         startActivity(Intent(this, ModelManagerActivity::class.java))
     }
@@ -1873,6 +1895,66 @@ class ChatActivity : ConfiguredActivity() {
         )
         Toast.makeText(this, R.string.chat_message_copied, Toast.LENGTH_SHORT).show()
         return true
+    }
+
+    private fun showMessageActions(messageId: Long) {
+        val message = messages.singleOrNull { candidate -> candidate.id == messageId } ?: return
+        if (message.text.isEmpty()) return
+        val actions = when (message.role) {
+            ChatMessageRole.USER -> intArrayOf(
+                R.string.chat_message_copy,
+                R.string.chat_message_edit,
+            )
+            ChatMessageRole.ASSISTANT -> intArrayOf(
+                R.string.chat_message_copy,
+                R.string.chat_message_regenerate,
+            )
+            ChatMessageRole.NOTICE -> return
+        }
+        AlertDialog.Builder(this)
+            .setItems(actions.map(::getString).toTypedArray()) { _, index ->
+                when (index) {
+                    0 -> copyMessage(messageId)
+                    1 -> when (message.role) {
+                        ChatMessageRole.USER -> requestEditMessage(messageId)
+                        ChatMessageRole.ASSISTANT -> requestRegenerateMessage(messageId)
+                        ChatMessageRole.NOTICE -> Unit
+                    }
+                }
+            }
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun requestRegenerateMessage(messageId: Long) {
+        val impact = ConversationRegenerationPolicy.impact(messages, messageId) ?: return
+        if (impact.laterMessageCount == 0) {
+            regenerateMessage(impact.userMessageId)
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.chat_regenerate_warning_title)
+            .setMessage(
+                getString(R.string.chat_regenerate_warning_message, impact.laterMessageCount),
+            )
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.chat_message_regenerate) { _, _ ->
+                regenerateMessage(impact.userMessageId)
+            }
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun regenerateMessage(userMessageId: Long) {
+        val userMessage = messages.singleOrNull { message -> message.id == userMessageId }
+            ?.takeIf { message -> message.role == ChatMessageRole.USER }
+            ?: return
+        if (isGenerating) stopGeneration(showToast = false)
+        draftBeforeEditing = null
+        editingMessageId = userMessage.id
+        input.setText(userMessage.text)
+        input.setSelection(input.text.length)
+        sendCurrentMessage()
     }
 
     private fun formatUsage(usage: ChatMessageUsage): String {
@@ -2020,6 +2102,17 @@ class ChatActivity : ConfiguredActivity() {
         strokeColor?.let { color -> setStroke(dp(1), getColor(color)) }
     }
 
+    private fun roundedDrawableColor(
+        fillColor: Int,
+        radiusDp: Int,
+        strokeColor: Int? = null,
+    ) = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        setColor(fillColor)
+        cornerRadius = dp(radiusDp).toFloat()
+        strokeColor?.let { color -> setStroke(dp(1), color) }
+    }
+
     private fun roundedRipple(
         fillColor: Int,
         rippleColor: Int,
@@ -2055,7 +2148,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private data class MessageViewHolder(
-        val body: TextView,
+        val body: MarkdownMessageView,
         val meta: TextView?,
     )
 

@@ -20,11 +20,15 @@
 * `Fonction` Ajout de paramètres d'application pour la couleur du thème, le mode sombre, la langue, les informations sur l'application et le développeur, et l'historique des versions, avec Suivre AutoJs6 par défaut lorsque possible
 * `Fonction` Ajout de paramètres de conversation pour la taille de police, le comportement de la touche Entrée, les output tokens illimités ou personnalisés et l'échantillonnage `temperature`, `topK` et `topP` par défaut du modèle ou personnalisé
 * `Fonction` Rendu du contenu en ligne `$\text{...}$` pendant le streaming, avec des commandes mathématiques courantes et des styles exposant et indice
+* `Fonction` Suivre AutoJs6 utilise désormais le contrat versionné et en lecture seule des plugins officiels de l'hôte pour obtenir les valeurs actives de thème, mode sombre et langue; si l'hôte est indisponible, le choix reste visible mais désactivé et les valeurs par défaut de l'application sont utilisées
+* `Fonction` Historique des conversations avec mode de sélection, tout sélectionner, suppression par lot et tout effacer; les actions de message passent dans des menus par appui long adaptés au rôle pour copier, modifier et régénérer
+* `Fonction` Markdown en streaming avec tableaux adaptatifs à défilement horizontal, cartes de code clôturé avec copie, liens sûrs et cliquables et séparateurs horizontaux pleine largeur
 * `Correction` Suppression des limites implicites de 256 tokens et 4 KiB des exemples exécutables: l'omission de `maxTokens` utilise désormais la valeur par défaut du modèle ou du moteur, et l'exemple Binder direct utilise les 64 KiB complets autorisés par le fournisseur
 * `Correction` Correction de l'exemple Binder de bas niveau dans les instructions localisées en 10 langues, qui appelait encore le constructeur `AiGenerationOptions` à 14 arguments du protocole 1.1 et échouait avec l'API du protocole 1.3
 * `Correction` Correction du gestionnaire de modèles qui conservait les couleurs de texte du thème clair en mode sombre système, rendant le texte, les cases à cocher et les lignes de modèles illisibles sur l'arrière-plan sombre
 * `Correction` Maintien de l'éditeur au-dessus du clavier logiciel, choix du texte du bouton Envoyer selon le contraste avec la couleur du thème et harmonisation des contrôles de recherche précédent, suivant et fermer
 * `Amélioration` Description du plugin, instructions et README en 10 langues mis à jour pour refléter la formalisation de la route de plugin local `ai.*`
+* `Amélioration` Navigation et apparence réorganisées avec barres natives et flèches Retour, actions principales nouvelle conversation/historique/SearchView, état du modèle compact, surfaces et curseur harmonisés avec le thème, paramètres remaniés et menu supplémentaire dans À propos
 * `Amélioration` ROADMAP réécrite comme feuille de route de fonctionnalités avec des éléments vérifiables individuellement
 * `Amélioration` Normalisation de la ponctuation ASCII dans l'application et les textes localisés générés, avec un test de régression pour les textes empaquetés et générés
 

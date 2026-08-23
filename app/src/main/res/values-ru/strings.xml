@@ -209,7 +209,7 @@
     <string name="app_settings_custom_color_title">Свой цвет темы</string>
     <string name="app_settings_dark_mode">Темная тема</string>
     <string name="app_settings_follow_autojs6">Следовать AutoJs6</string>
-    <string name="app_settings_follow_autojs6_explanation">AutoJs6 хранит настройки оформления в закрытом хранилище. Режим следования использует доступную открытую конфигурацию, затем значения AutoJs6 по умолчанию: цвет #FFDEAD, системную темную тему и системный язык.</string>
+    <string name="app_settings_follow_autojs6_explanation">Режим следования AutoJs6 читает цвет темы хоста, политику темного режима и язык через доступный только для чтения контракт настроек официальных плагинов.</string>
     <string name="app_settings_follow_system">Следовать системе</string>
     <string name="app_settings_information">Информация</string>
     <string name="app_settings_language">Язык</string>
@@ -226,4 +226,24 @@
     <string name="release_history_load_failed">Не удалось загрузить локальную историю версий</string>
     <string name="release_history_title">История версий</string>
     <string name="navigation_back">Назад</string>
+    <string name="chat_message_copy">Копировать</string>
+    <string name="chat_message_edit">Редактировать</string>
+    <string name="chat_message_regenerate">Повторить генерацию</string>
+    <string name="chat_regenerate_warning_title">Повторить генерацию ответа?</string>
+    <string name="chat_regenerate_warning_message">Повторная генерация отсюда безвозвратно удалит все последующие сообщения (всего %1$d) и заменит эту ветвь разговора.</string>
+    <string name="chat_history_select">Выбрать разговоры</string>
+    <string name="chat_history_select_all">Выбрать все</string>
+    <string name="chat_history_selected_count">Выбрано: %1$d</string>
+    <string name="chat_history_delete_selected">Удалить</string>
+    <string name="chat_history_delete_title">Удалить выбранные разговоры?</string>
+    <string name="chat_history_delete_message">Удалить выбранные разговоры (%1$d)? Это действие нельзя отменить.</string>
+    <string name="chat_history_clear_all">Очистить все</string>
+    <string name="chat_history_clear_title">Очистить историю разговоров?</string>
+    <string name="chat_history_clear_message">Удалить все сохраненные разговоры? Это действие нельзя отменить.</string>
+    <string name="chat_code_block">Код</string>
+    <string name="chat_code_copy">Копировать код</string>
+    <string name="chat_code_copied">Код скопирован</string>
+    <string name="chat_code_clipboard_label">код локального ИИ</string>
+    <string name="app_settings_follow_autojs6_unavailable">Следовать AutoJs6 (недоступно)</string>
+    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 не установлен, отключен, или не предоставляет контракт настроек официальных плагинов. Пункт следования AutoJs6 остается видимым, но его нельзя выбрать. Вместо него используются настройки приложения по умолчанию.</string>
 </resources>

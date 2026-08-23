@@ -6,8 +6,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -19,10 +20,38 @@ class AboutActivity : ConfiguredActivity() {
         setContentView(createContentView())
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menu.add(0, MENU_RELEASE_HISTORY, 0, R.string.release_history_title)
+        menu.add(0, MENU_PROJECT, 1, R.string.about_project_source)
+        menu.add(0, MENU_DEVELOPER, 2, R.string.about_developer_page)
+        menu.add(0, MENU_LICENSE, 3, R.string.about_license_link)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        MENU_RELEASE_HISTORY -> {
+            startActivity(Intent(this, ReleaseHistoryActivity::class.java))
+            true
+        }
+        MENU_PROJECT -> {
+            openUri(PROJECT_URI)
+            true
+        }
+        MENU_DEVELOPER -> {
+            openUri(DEVELOPER_URI)
+            true
+        }
+        MENU_LICENSE -> {
+            openUri(LICENSE_URI)
+            true
+        }
+        else -> super.onOptionsItemSelected(item)
+    }
+
     private fun createContentView(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setBackgroundColor(appPalette.windowBackground)
-        addView(createToolbar())
+        addView(createAppToolbar(R.string.about_app_and_developer, showBack = true))
         addView(ScrollView(context).apply {
             addView(createAboutContent())
         }, LinearLayout.LayoutParams(
@@ -33,33 +62,10 @@ class AboutActivity : ConfiguredActivity() {
         applySystemBarInsets(this)
     }
 
-    private fun createToolbar(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = dp(58)
-        setPaddingRelative(dp(8), dp(4), dp(18), dp(4))
-        setBackgroundColor(appPalette.primary)
-        addView(TextView(context).apply {
-            text = getString(R.string.navigation_back)
-            textSize = 14f
-            gravity = Gravity.CENTER
-            setTextColor(appPalette.onPrimary)
-            setPaddingRelative(dp(12), dp(10), dp(12), dp(10))
-            setOnClickListener { finish() }
-        })
-        addView(TextView(context).apply {
-            text = getString(R.string.about_app_and_developer)
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(appPalette.onPrimary)
-            setPaddingRelative(dp(8), 0, 0, 0)
-        })
-    }
-
     private fun createAboutContent(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
-        setPaddingRelative(dp(24), dp(26), dp(24), dp(30))
+        setPaddingRelative(dp(28), dp(34), dp(28), dp(40))
         addView(ImageView(context).apply {
             setImageResource(R.mipmap.ic_launcher_on_device_ai)
             contentDescription = getString(R.string.app_name)
@@ -70,7 +76,7 @@ class AboutActivity : ConfiguredActivity() {
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             setTextColor(appPalette.primaryText)
-            setPaddingRelative(0, dp(16), 0, dp(5))
+            setPaddingRelative(0, dp(20), 0, dp(8))
         })
         addView(TextView(context).apply {
             text = getString(R.string.about_app_summary)
@@ -105,17 +111,11 @@ class AboutActivity : ConfiguredActivity() {
             getString(R.string.about_license_summary),
         ))
 
-        addView(actionButton(R.string.release_history_title) {
-            startActivity(Intent(this@AboutActivity, ReleaseHistoryActivity::class.java))
-        })
-        addView(actionButton(R.string.about_project_source) { openUri(PROJECT_URI) })
-        addView(actionButton(R.string.about_developer_page) { openUri(DEVELOPER_URI) })
-        addView(actionButton(R.string.about_license_link) { openUri(LICENSE_URI) })
     }
 
     private fun infoBlock(title: String, value: String) = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPaddingRelative(0, dp(20), 0, 0)
+        setPaddingRelative(0, dp(26), 0, dp(2))
         addView(TextView(context).apply {
             text = title
             textSize = 13f
@@ -131,18 +131,6 @@ class AboutActivity : ConfiguredActivity() {
         })
     }
 
-    private fun actionButton(labelResource: Int, action: () -> Unit) = Button(this).apply {
-        text = getString(labelResource)
-        isAllCaps = false
-        setTextColor(appPalette.onPrimary)
-        backgroundTintList = android.content.res.ColorStateList.valueOf(appPalette.primary)
-        setOnClickListener { action() }
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = dp(12) }
-    }
-
     private fun openUri(uri: String) {
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
     }
@@ -150,6 +138,10 @@ class AboutActivity : ConfiguredActivity() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private companion object {
+        const val MENU_RELEASE_HISTORY = 1
+        const val MENU_PROJECT = 2
+        const val MENU_DEVELOPER = 3
+        const val MENU_LICENSE = 4
         const val PROJECT_URI = "https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI"
         const val DEVELOPER_URI = "https://github.com/SuperMonster003"
         const val LICENSE_URI = "$PROJECT_URI/blob/master/LICENSE"

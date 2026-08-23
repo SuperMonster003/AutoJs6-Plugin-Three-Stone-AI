@@ -1,7 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.ondeviceai
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -22,6 +21,7 @@ import android.widget.RadioButton
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import io.github.supermonster003.autojs6.plugin.ondeviceai.download.ModelDownloadCleanupResult
 import io.github.supermonster003.autojs6.plugin.ondeviceai.download.ModelDownloadCoordinator
 import io.github.supermonster003.autojs6.plugin.ondeviceai.download.ModelDownloadFailureReason
@@ -182,35 +182,7 @@ class ModelManagerActivity : ConfiguredActivity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setBackgroundColor(appPalette.windowBackground)
-            setPadding(dp(24), dp(16), dp(24), dp(24))
-
-            addView(LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setBackgroundColor(appPalette.primary)
-                setPaddingRelative(dp(8), dp(4), dp(12), dp(4))
-                addView(Button(context).apply {
-                    text = getString(R.string.navigation_back)
-                    isAllCaps = false
-                    setTextColor(appPalette.onPrimary)
-                    backgroundTintList = ColorStateList.valueOf(
-                        AppColorPolicy.withAlpha(appPalette.primary, 0x00),
-                    )
-                    setOnClickListener { finish() }
-                })
-                addView(TextView(context).apply {
-                    text = getString(R.string.model_manager_title)
-                    textSize = 22f
-                    setTextColor(appPalette.onPrimary)
-                }, LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f,
-                ).apply { marginStart = dp(12) })
-            }, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ))
+            setPadding(dp(24), dp(12), dp(24), dp(32))
             addView(TextView(context).apply {
                 text = getString(R.string.screen_description)
                 textSize = 16f
@@ -329,8 +301,22 @@ class ModelManagerActivity : ConfiguredActivity() {
             catalogRows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
             addView(catalogRows, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
-        return ScrollView(this).apply {
-            addView(content)
+        applyThemeToControls(content)
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(appPalette.windowBackground)
+            addView(createAppToolbar(R.string.model_manager_title, showBack = true))
+            addView(
+                ScrollView(context).apply {
+                    isFillViewport = true
+                    addView(content)
+                },
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f,
+                ),
+            )
             applySystemBarInsets(this)
         }
     }
@@ -350,6 +336,7 @@ class ModelManagerActivity : ConfiguredActivity() {
             .setNegativeButton(android.R.string.cancel, null)
             .setItems(labels) { _, index -> confirmRecommendedModel(models[index]) }
             .show()
+            .also(::tintDialogButtons)
     }
 
     private fun confirmRecommendedModel(model: RecommendedModel) {
@@ -371,6 +358,7 @@ class ModelManagerActivity : ConfiguredActivity() {
                 openDownloadDestinationPicker(model)
             }
             .show()
+            .also(::tintDialogButtons)
     }
 
     private fun openModelSource(model: RecommendedModel) {
@@ -864,6 +852,7 @@ class ModelManagerActivity : ConfiguredActivity() {
                 ),
             )
         }
+        applyThemeToControls(catalogRows)
     }
 
     private fun checkModel(modelId: String) {
@@ -891,6 +880,7 @@ class ModelManagerActivity : ConfiguredActivity() {
                 renameModel(row.modelId, input.text.toString())
             }
             .show()
+            .also(::tintDialogButtons)
     }
 
     private fun renameModel(modelId: String, requestedName: String) {
@@ -918,6 +908,7 @@ class ModelManagerActivity : ConfiguredActivity() {
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.button_delete_model) { _, _ -> deleteModel(row.modelId) }
             .show()
+            .also(::tintDialogButtons)
     }
 
     private fun deleteModel(modelId: String) {

@@ -1,11 +1,11 @@
 {
   "$name": "日本語",
   "text_current_lowercase": "現在",
-  "text_plugin_synopsis": "オンデバイス AI プラグイン. LiteRT-LM 推論は常にローカルで, モデルのダウンロードは明示操作のみ",
+  "text_plugin_synopsis": "ローカル AI プラグイン. LiteRT-LM 推論は常にローカルで, モデルのダウンロードは明示操作のみ",
   "h3_languages_with_ascii": "言語",
   "p_languages_all_supported_for_readme": "現在の README.md は次の言語に対応しています",
   "h3_introduction": "概要",
-  "p_introduction": "On-Device AI (オンデバイス AI) は AutoJs6 の公式オンデバイス AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません; ネットワークはユーザーが推奨モデルを明示的にダウンロードするときだけ使用します.",
+  "p_introduction": "3-Stone AI は AutoJs6 の公式ローカル AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません; ネットワークはユーザーが推奨モデルを明示的にダウンロードするときだけ使用します.",
   "h3_functions": "機能",
   "features": [
     "Android システムピッカーから `.litertlm` モデルパッケージをインポートし, 検証済みコピーをアプリ専用ストレージに保存します.",

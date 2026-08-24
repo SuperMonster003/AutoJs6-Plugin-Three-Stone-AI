@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">On-Device AI</string>
+    <string name="app_name" translatable="false">3-Stone AI</string>
     <string name="button_cancel_download">Cancel download</string>
     <string name="button_choose_download_location">Choose save location</string>
     <string name="button_copy_model_id">Copy model ID</string>
@@ -58,7 +58,7 @@
     <string name="import_storage_preflight_ready">Import preflight: %1$s available; up to %2$s can be added now; %3$s remains reserved. The private copy uses approximately the selected file size.</string>
     <string name="import_storage_preflight_unavailable">Import unavailable: %1$s available; free space must exceed the %2$s reserve.</string>
     <string name="import_succeeded">Model imported</string>
-    <string name="model_id_clipboard_label">on-device AI model ID</string>
+    <string name="model_id_clipboard_label">local AI model ID</string>
     <string name="model_id_copied">Model ID copied</string>
     <string name="model_catalog_empty">No imported models</string>
     <string name="model_catalog_loading">Loading model catalog</string>
@@ -91,7 +91,7 @@
     <string name="model_selection_succeeded">Model selected</string>
     <string name="model_status_format">Model: %1$s\nSize: %2$s\nSHA-256: %3$s\nModel ID: %4$s\nStatus: %5$s</string>
     <string name="option_check_after_import">Check compatibility after import (initializes and closes the model once)</string>
-    <string name="plugin_description">On-device on-device AI with local LiteRT-LM models</string>
+    <string name="plugin_description">Local AI text generation with local LiteRT-LM models</string>
     <string name="screen_description">Choose a local LiteRT-LM model. The file is copied into private app storage and is never uploaded</string>
     <string name="chat_screen_title">Local chat</string>
     <string name="chat_open_menu">Open conversation menu</string>
@@ -118,7 +118,7 @@
     <string name="chat_stop">Stop</string>
     <string name="chat_privacy_note">Generation runs on this device. Conversation text is not uploaded.</string>
     <string name="chat_role_user">You</string>
-    <string name="chat_role_assistant">On-Device AI</string>
+    <string name="chat_role_assistant" translatable="false">3-Stone AI</string>
     <string name="chat_thinking">Preparing the model...</string>
     <string name="chat_streaming">Generating...</string>
     <string name="chat_empty_response">The model completed without returning text.</string>
@@ -199,7 +199,7 @@
     <string name="chat_code_clipboard_label">local AI code</string>
     <string name="model_manager_title">Model and storage settings</string>
     <string name="about_app_and_developer">About app and developer</string>
-    <string name="about_app_summary">Private on-device AI chat and model management for AutoJs6</string>
+    <string name="about_app_summary">Private local AI chat and model management for AutoJs6</string>
     <string name="about_developer">Developer</string>
     <string name="about_developer_page">Developer page</string>
     <string name="about_license">Open source license</string>
@@ -239,7 +239,7 @@
     <string name="app_settings_theme_custom">Custom</string>
     <string name="app_settings_theme_follow_summary">Follow AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">Green</string>
-    <string name="app_settings_theme_on_device_ai">On-Device AI orange</string>
+    <string name="app_settings_theme_three_stone_ai">3-Stone AI orange</string>
     <string name="app_settings_theme_purple">Purple</string>
     <string name="app_settings_theme_teal">Teal</string>
     <string name="app_settings_title">Application settings</string>

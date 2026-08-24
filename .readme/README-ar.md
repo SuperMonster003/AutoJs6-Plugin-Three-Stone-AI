@@ -2,15 +2,15 @@
 
 <div align="center">
   <p>
-    <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/app/src/main/res/mipmap/ic_launcher_on_device_ai.png?raw=true" alt="on-device-ai-ic-launcher" border="0" width="128" />
+    <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="three-stone-ai-ic-launcher" border="0" width="128" />
   </p>
 
   <p>اضافة ذكاء اصطناعي محلية. يبقى استدلال LiteRT-LM محليا وتبدأ التنزيلات باختيار صريح</p>
 
   <p>
-    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-On-Device-AI?label=Release"/></a>
-    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/issues"><img alt="GitHub closed issues" src="https://img.shields.io/github/issues/SuperMonster003/AutoJs6-Plugin-On-Device-AI?color=A24232&label=Issues"/></a>
-    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/LICENSE"><img alt="GitHub License" src="https://img.shields.io/github/license/SuperMonster003/AutoJs6-Plugin-On-Device-AI?color=534BAE&label=License"/></a>
+    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI?label=Release"/></a>
+    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/issues"><img alt="GitHub closed issues" src="https://img.shields.io/github/issues/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI?color=A24232&label=Issues"/></a>
+    <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/LICENSE"><img alt="GitHub License" src="https://img.shields.io/github/license/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI?color=534BAE&label=License"/></a>
   </p>
 </div>
 
@@ -22,15 +22,15 @@
 
 يدعم README.md الحالي اللغات التالية:
 
-- [简体中文 [zh-Hans]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-zh-Hans.md)
-- [繁體中文 (香港) [zh-Hant-HK]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-zh-Hant-HK.md)
-- [繁體中文 (台灣) [zh-Hant-TW]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-zh-Hant-TW.md)
-- [English [en]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-en.md)
-- [Français [fr]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-fr.md)
-- [Español [es]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-es.md)
-- [日本語 [ja]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-ja.md)
-- [한국어 [ko]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-ko.md)
-- [Русский [ru]](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/.readme/README-ru.md)
+- [简体中文 [zh-Hans]](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/.readme/README-zh-Hans.md)
+- [繁體中文 (香港) [zh-Hant-HK]](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/.readme/README-zh-Hant-HK.md)
+- [繁體中文 (台灣) [zh-Hant-TW]](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/.readme/README-zh-Hant-TW.md)
+- [English [en]](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/.readme/README-en.md)
+- [Français [fr]](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/.readme/README-fr.md)
+- [Español [es]](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/.readme/README-es.md)
+- [日本語 [ja]](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/.readme/README-ja.md)
+- [한국어 [ko]](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/.readme/README-ko.md)
+- [Русский [ru]](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/.readme/README-ru.md)
 - العربية [ar] # الحالي
 
 ******
@@ -39,7 +39,7 @@
 
 ******
 
-On-Device AI هي اضافة AutoJs6 الرسمية لتوليد النص بالذكاء الاصطناعي على الجهاز. تشغل نماذج LiteRT-LM المستوردة من المستخدم على backend للمعالج محدد صراحة أو GPU متوافق, وتستقبل سجل رسائل نصية عادية, وتعيد نصا عاديا او نص JSON مقيدا بواسطة schema عبر جلسة بث متحكم بها. يتم كل الاستدلال محليا دون شبكة أو رفع بيانات; ولا تستخدم الشبكة إلا عندما يختار المستخدم صراحة تنزيل نموذج موصى به.
+3-Stone AI هي اضافة AutoJs6 الرسمية لتوليد النص بالذكاء الاصطناعي على الجهاز. تشغل نماذج LiteRT-LM المستوردة من المستخدم على backend للمعالج محدد صراحة أو GPU متوافق, وتستقبل سجل رسائل نصية عادية, وتعيد نصا عاديا او نص JSON مقيدا بواسطة schema عبر جلسة بث متحكم بها. يتم كل الاستدلال محليا دون شبكة أو رفع بيانات; ولا تستخدم الشبكة إلا عندما يختار المستخدم صراحة تنزيل نموذج موصى به.
 
 ******
 
@@ -85,10 +85,10 @@ runtime: LiteRT-LM 0.15.0
 يكتشف المضيف الملحق ويستدعيه بالهويات التالية:
 
 ```text
-service action: org.autojs.plugin.ON_DEVICE_AI
-plugin id: on-device-ai
-protocol provider id: autojs6.on-device-ai
-engine: on-device-ai
+service action: org.autojs.plugin.AI_PROVIDER
+plugin id: three-stone-ai
+protocol provider id: autojs6.three-stone-ai
+engine: three-stone-ai
 variant: default
 protocol: V1.2-V1.3
 required host build: 5276
@@ -154,7 +154,7 @@ required host build: 5276
 
 خارطة الطريق منظمة حول ميزات قابلة للتسليم للمستخدم, وكل بند قابل للتحقق على حدة
 
-- [عرض ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/ROADMAP.md)
+- [عرض ROADMAP.md](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/ROADMAP.md)
 
 ******
 
@@ -164,13 +164,14 @@ required host build: 5276
 
 # v1.1.0
 
-###### 2026/08/23
+###### 2026/08/24
 
-* `ميزة` اعادة تسمية الاضافة الى On-Device AI وتحديد موقعها كاضافة الذكاء الاصطناعي المحلية الرسمية لـ AutoJs6
+* `ميزة` اعتماد 3-Stone AI كهوية نهائية للعلامة التجارية ووقت التشغيل لاضافة الذكاء الاصطناعي المحلية الرسمية في AutoJs6
+* `ميزة` يستخدم التكامل بين العمليات هويات `ai-provider-api` و `org.autojs.plugin.ai.provider.api` و `org.autojs.plugin.AI_PROVIDER` و `IAiProvider`/`IAiSession`/`IAiCallback` المحايدة من دون الاحتفاظ باسماء بديلة للهويات المستبدلة
 * `ميزة` التوافق مع المحدد المختصر `plugin: true` لـ `ai.ask`/`ai.chat`/`ai.stream` وتعداد النماذج `ai.models` في AutoJs6
-* `ميزة` تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر بروتوكول On-Device AI 1.1 إلى عناصر تحكم sampling و output tokens في LiteRT-LM
+* `ميزة` تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر بروتوكول AI Provider 1.1 إلى عناصر تحكم sampling و output tokens في LiteRT-LM
 * `ميزة` إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد المقاسة لدى المزود عبر `ai.chat().usage` وأحداث usage للبث
-* `ميزة` إضافة جلسات مستمرة في بروتوكول On-Device AI 1.2 وإعادة استخدام Conversation متعددة الجولات عبر `ai.session` في AutoJs6 دون إعادة إرسال السجل السابق
+* `ميزة` إضافة جلسات مستمرة في بروتوكول AI Provider 1.2 وإعادة استخدام Conversation متعددة الجولات عبر `ai.session` في AutoJs6 دون إعادة إرسال السجل السابق
 * `ميزة` إضافة فك ترميز LiteRT-LM أصلي مقيد بواسطة JSON Schema عبر `structuredJson` و `responseSchema` في AutoJs6, مع دعم الاستدعاء الواحد والبث والجلسات المستمرة والتحقق الصارم من JSON المكتمل
 * `ميزة` ملفات backend profile صريحة من `cpu` و `gpu` و `npu` عبر البروتوكول 1.3 وخيارات توليد AutoJs6, مع تقرير توافق الجهاز وعزل cache لكل نموذج/profile ومنع الرجوع من profile غير المتاح; لا يعلن GPU إلا بعد نجاح فحص تحميل OpenCL, ويبقى NPU غير متاح لأن EAP runtime غير مضمن
 * `ميزة` تنزيل مباشر لنماذج LiteRT Community المثبتة إلى موقع SAF يختاره المستخدم, مع التقدم والإلغاء الدقيق وتنظيف الملف الناقص والتحقق من ترويسة LiteRT-LM والحجم و SHA-256 والاستيراد المباشر بعد التنزيل
@@ -190,7 +191,7 @@ required host build: 5276
 
 ###### 2026/08/08
 
-* `ميزة` Provider على الجهاز لبروتوكول On-Device AI V1 بمعرف ومحرك `on-device-ai` و provider ID هو `autojs6.on-device-ai` ومتغير `default`
+* `ميزة` Provider على الجهاز لبروتوكول AI Provider V1 بمعرف ومحرك `three-stone-ai` و provider ID هو `autojs6.three-stone-ai` ومتغير `default`
 * `ميزة` توليد نص عادي باستخدام LiteRT-LM على CPU فقط مع سجل system و user و assistant و streaming محكوم بواسطة credits
 * `ميزة` استيراد `.litertlm` عبر SAF إلى مساحة التطبيق الخاصة مع حد 8 GiB واحتياطي مساحة و SHA-256 و fsync وتفعيل ذري
 * `ميزة` جلسة نشطة واحدة و I/O مقيد و quotas للـ descriptors وإلغاء و timeout وحالة نهائية واحدة والتحقق من متصل AutoJs6 ذي التوقيع نفسه
@@ -203,7 +204,7 @@ required host build: 5276
 
 ##### إصدارات أخرى
 
-* [CHANGELOG-ar.md](https://github.com/SuperMonster003/AutoJs6-Plugin-On-Device-AI/blob/master/app/src/main/assets/doc/CHANGELOG-ar.md)
+* [CHANGELOG-ar.md](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/assets/doc/CHANGELOG-ar.md)
 
 ******
 
@@ -229,7 +230,7 @@ required host build: 5276
 common-plugin-api.aar
 protocol-wire-api.aar
 ai-common-api.aar
-on-device-ai-api.aar
+ai-provider-api.aar
 ```
 
 يستخدم runtime الحزمة LiteRT-LM 0.15.0 من Maven. تحتفظ بنى الإصدار بفئات LiteRT-LM وتنتج ملفي APK للـ ABI وملف universal APK واحدا.

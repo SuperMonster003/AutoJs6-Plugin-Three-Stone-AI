@@ -1,4 +1,4 @@
-# AutoJs6 裝置端 AI
+# AutoJs6 3-Stone AI
 
 此插件透過 Android Storage Access Framework (SAF) 匯入一個本地 `.litertlm` 模型套件, 將其複製到應用程式私人儲存空間, 並使用 CPU-only LiteRT-LM 根據純文字歷史產生串流純文字或受 schema 約束嘅 JSON 文本.
 
@@ -94,10 +94,10 @@ ai.models({ plugin: true }).then((models) => {
 
 ```javascript
 var PLUGIN_PACKAGE =
-    "io.github.supermonster003.autojs6.plugin.ondeviceai";
+    "io.github.supermonster003.autojs6.plugin.threestoneai";
 
 var SERVICE_CLASS =
-    PLUGIN_PACKAGE + ".provider.OnDeviceAiProviderService";
+    PLUGIN_PACKAGE + ".provider.ThreeStoneAiProviderService";
 
 // 对应本次模型 SHA-256 的前 32 位
 var MODEL_ID =
@@ -107,12 +107,12 @@ var PROMPT =
     "请用中文列出三条 Android 自动化脚本执行危险操作前应增加确认步骤的理由. 每条一句话.";
 
 var TextApi =
-    Packages.org.autojs.plugin.ondeviceai.api;
+    Packages.org.autojs.plugin.ai.provider.api;
 
 var CommonApi =
     Packages.org.autojs.plugin.ai.common.api;
 
-var OnDeviceAiCodec = TextApi.OnDeviceAiCodec.INSTANCE;
+var AiProviderCodec = TextApi.AiProviderCodec.INSTANCE;
 var AiCommonCodec = CommonApi.AiCommonCodec.INSTANCE;
 
 var TimeUnit = java.util.concurrent.TimeUnit;
@@ -171,12 +171,12 @@ function closeDescriptors(fds) {
 }
 
 var textCallback = new JavaAdapter(
-    TextApi.IOnDeviceAiCallback.Stub,
+    TextApi.IAiCallback.Stub,
     {
         onStarted: function (raw) {
             try {
                 var started =
-                    OnDeviceAiCodec.decodeSessionStarted(raw);
+                    AiProviderCodec.decodeSessionStarted(raw);
 
                 console.log(
                     "会话已启动: " + started.getSessionId()
@@ -189,7 +189,7 @@ var textCallback = new JavaAdapter(
         onChunk: function (raw) {
             try {
                 var chunk =
-                    OnDeviceAiCodec.decodeTextChunk(raw);
+                    AiProviderCodec.decodeTextChunk(raw);
 
                 console.log(
                     "chunk[" + chunk.getSequence() + "]: " +
@@ -224,7 +224,7 @@ var textCallback = new JavaAdapter(
 
                 try {
                     var result =
-                        OnDeviceAiCodec.decodeCompletionResult(raw);
+                        AiProviderCodec.decodeCompletionResult(raw);
 
                     var bytes =
                         result.getOutput().getInlineBytes();
@@ -267,7 +267,7 @@ var connection = new JavaAdapter(
         onServiceConnected: function (name, binder) {
             try {
                 providerRef.set(
-                    TextApi.IOnDeviceAiProvider.Stub.asInterface(binder)
+                    TextApi.IAiProvider.Stub.asInterface(binder)
                 );
             } catch (e) {
                 bindError.set(
@@ -326,7 +326,7 @@ try {
     );
 
     if (!bound) {
-        throw new Error("无法绑定 On-Device AI 插件");
+        throw new Error("无法绑定 3-Stone AI 插件");
     }
 
     if (!connected.await(10, TimeUnit.SECONDS)) {
@@ -385,10 +385,10 @@ try {
         "cpu"   // explicit backend profile
     );
 
-    var request = new TextApi.OnDeviceAiRequest(
+    var request = new TextApi.AiProviderRequest(
         java.util.UUID.randomUUID().toString(),
         new CommonApi.AiProtocolVersion(1, 3),
-        "autojs6.on-device-ai",
+        "autojs6.three-stone-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
         options,
@@ -403,7 +403,7 @@ try {
 
     // openSession 会立即开始模型生成
     session = provider.openSession(
-        OnDeviceAiCodec.encodeTextRequest(request),
+        AiProviderCodec.encodeTextRequest(request),
         noDescriptors,
         textCallback
     );

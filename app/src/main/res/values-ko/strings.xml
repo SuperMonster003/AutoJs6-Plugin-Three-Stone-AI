@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">온디바이스 AI</string>
     <string name="button_cancel_download">다운로드 취소</string>
     <string name="button_choose_download_location">저장 위치 선택</string>
     <string name="button_download_model">권장 모델 다운로드</string>
@@ -91,7 +90,7 @@
     <string name="model_selection_succeeded">모델을 선택했습니다</string>
     <string name="model_status_format">모델: %1$s\n크기: %2$s\nSHA-256: %3$s\n모델 ID: %4$s\n상태: %5$s</string>
     <string name="option_check_after_import">가져온 후 호환성 확인 (모델을 한 번 초기화한 후 즉시 닫음)</string>
-    <string name="plugin_description">로컬 LiteRT-LM 모델을 사용하는 온디바이스 AI 텍스트 생성</string>
+    <string name="plugin_description">로컬 LiteRT-LM 모델을 사용하는 로컬 AI 텍스트 생성</string>
     <string name="screen_description">로컬 LiteRT-LM 모델을 선택합니다. 파일은 앱 전용 저장소에 복사되며 업로드되지 않습니다</string>
     <string name="chat_screen_title">로컬 채팅</string>
     <string name="chat_open_menu">대화 메뉴 열기</string>
@@ -118,7 +117,6 @@
     <string name="chat_stop">중지</string>
     <string name="chat_privacy_note">생성은 이 기기에서 실행됩니다. 대화 텍스트는 업로드되지 않습니다.</string>
     <string name="chat_role_user">나</string>
-    <string name="chat_role_assistant">온디바이스 AI</string>
     <string name="chat_thinking">모델 준비 중...</string>
     <string name="chat_streaming">생성 중...</string>
     <string name="chat_empty_response">모델이 텍스트를 반환하지 않고 생성을 완료했습니다.</string>
@@ -181,7 +179,7 @@
     <string name="chat_probability_error">0부터 1 사이의 유한한 숫자를 입력하세요</string>
     <string name="model_manager_title">모델 및 저장공간 설정</string>
     <string name="about_app_and_developer">앱 및 개발자 정보</string>
-    <string name="about_app_summary">AutoJs6용 비공개 온디바이스 AI 채팅 및 모델 관리</string>
+    <string name="about_app_summary">AutoJs6용 비공개 로컬 AI 채팅 및 모델 관리</string>
     <string name="about_developer">개발자</string>
     <string name="about_developer_page">개발자 페이지</string>
     <string name="about_license">오픈 소스 라이선스</string>
@@ -219,7 +217,7 @@
     <string name="app_settings_theme_custom">사용자 지정</string>
     <string name="app_settings_theme_follow_summary">AutoJs6 따르기 (%1$s)</string>
     <string name="app_settings_theme_green">초록색</string>
-    <string name="app_settings_theme_on_device_ai">On-Device AI 주황색</string>
+    <string name="app_settings_theme_three_stone_ai">3-Stone AI 주황색</string>
     <string name="app_settings_theme_purple">보라색</string>
     <string name="app_settings_theme_teal">청록색</string>
     <string name="app_settings_title">앱 설정</string>

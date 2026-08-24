@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">裝置端 AI</string>
     <string name="button_cancel_download">取消下載</string>
     <string name="button_choose_download_location">選擇儲存位置</string>
     <string name="button_download_model">下載推薦模型</string>
@@ -91,7 +90,7 @@
     <string name="model_selection_succeeded">已選取模型</string>
     <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s\n狀態: %5$s</string>
     <string name="option_check_after_import">匯入後檢查相容性 (初始化模型一次並立即關閉)</string>
-    <string name="plugin_description">使用本地 LiteRT-LM 模型的裝置端 AI 文字生成</string>
+    <string name="plugin_description">使用本地 LiteRT-LM 模型的本機 AI 文字生成</string>
     <string name="screen_description">選擇本機 LiteRT-LM 模型. 檔案會複製到應用程式私人儲存空間且絕不會上傳</string>
     <string name="chat_screen_title">本機對話</string>
     <string name="chat_open_menu">開啟對話選單</string>
@@ -118,7 +117,6 @@
     <string name="chat_stop">停止</string>
     <string name="chat_privacy_note">推論在此裝置上執行, 對話文字不會上傳.</string>
     <string name="chat_role_user">你</string>
-    <string name="chat_role_assistant">裝置端 AI</string>
     <string name="chat_thinking">正在準備模型...</string>
     <string name="chat_streaming">正在生成...</string>
     <string name="chat_empty_response">模型已結束生成, 但沒有回傳文字.</string>
@@ -181,7 +179,7 @@
     <string name="chat_probability_error">請輸入 0 至 1 之間的有限數值</string>
     <string name="model_manager_title">模型與儲存空間設定</string>
     <string name="about_app_and_developer">關於應用程式與開發者</string>
-    <string name="about_app_summary">為 AutoJs6 提供私有的裝置端 AI 對話與模型管理</string>
+    <string name="about_app_summary">為 AutoJs6 提供私有的本機 AI 對話與模型管理</string>
     <string name="about_developer">開發者</string>
     <string name="about_developer_page">開發者頁面</string>
     <string name="about_license">開放原始碼授權</string>
@@ -219,7 +217,7 @@
     <string name="app_settings_theme_custom">自訂</string>
     <string name="app_settings_theme_follow_summary">跟隨 AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">綠色</string>
-    <string name="app_settings_theme_on_device_ai">裝置端 AI 橙色</string>
+    <string name="app_settings_theme_three_stone_ai">3-Stone AI 橙色</string>
     <string name="app_settings_theme_purple">紫色</string>
     <string name="app_settings_theme_teal">青色</string>
     <string name="app_settings_title">應用程式設定</string>

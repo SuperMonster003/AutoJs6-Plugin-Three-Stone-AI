@@ -1,78 +1,130 @@
-# On-Device AI 插件路线图
+# 3-Stone AI 插件路线图
 
-本插件是 AutoJs6 的官方设备端 AI 插件, 目标是把设备端 AI 推理能力以最低的脚本使用成本融入 AutoJs6:
-脚本一行 `ai.ask("...", { plugin: true })` 即可在本地模型上完成推理; 推理不联网, 不上传数据. 只有用户在模型管理页明确发起推荐模型下载时才会访问网络.
+3-Stone AI 是 AutoJs6 的官方 AI 插件. 长期目标: 从本地推理插件升级为 AutoJs6 的统一 AI Provider 与交互中心: 本地模型, 在线服务, 模型目录, 凭据, 会话历史与聊天 UI 均由插件管理; 宿主仅保留稳定的 `ai.*` API, 可信插件发现, 协议协商, 安全策略与路由.
 
-路线图按可交付的用户功能组织. 每一项都是一个可独立勾选, 可独立验收的功能; 勾选标准就是 "功能在真机上可用".
-不再为条目附加证据等级或测试矩阵要求; 功能出现问题时针对问题修复, 而不是预先堆砌验证.
+路线图按可交付的功能组织. 每一项可独立勾选, 可独立验收; 勾选标准是 "功能在真机上可用" (更名与协议类条目以 "构建通过 + 全量扫描无产品级旧名残留" 为准).
+当前已交付基线以源码, 测试与 CHANGELOG 为准, 不在此重复.
 
-## 已交付
+## 命名决策 (P0 记录)
 
-### 插件本体 (v1.0.0)
+| 场景 | 采用 | 示例 |
+|---|---|---|
+| 显示名 / 品牌 (全语言统一, 不翻译) | `3-Stone AI` | app_name, 聊天助手名, 文档标题 |
+| 仓库 / 目录 / rootProject / APK 产物 | `Three-Stone-AI` / `three-stone-ai` | `AutoJs6-Plugin-Three-Stone-AI`, `autojs6-plugin-three-stone-ai-v1.2.0-arm64-v8a.apk` |
+| applicationId / namespace / Kotlin 包 | `threestoneai` (Java 标识符不能以数字开头) | `io.github.supermonster003.autojs6.plugin.threestoneai` |
+| 类名前缀 | `ThreeStoneAi` | `ThreeStoneAiProviderService` |
+| provider id / engine id / INFO category | `three-stone-ai` 短横线系 | `autojs6.three-stone-ai`, `three-stone-ai` |
+| 常量 / 线程名 / User-Agent | `THREE_STONE_AI` / `three-stone-ai` / `AutoJs6-Three-Stone-AI` | `THREE_STONE_AI_THEME_COLOR`, `three-stone-ai-worker` |
 
-- [x] On-Device AI 协议 V1 设备端 provider: 独立 `:provider` 进程, CPU-only LiteRT-LM 0.15.0, `text/plain` 输入输出, credit 背压流式.
-- [x] SAF 导入 `.litertlm` 模型: 流式 SHA-256 校验, 8 GiB 上限, 原子发布, 断点恢复, 导入进度与精确取消.
-- [x] 多模型 catalog: 稳定 modelId (SHA 派生), 幂等重复导入, 分页 `listModels`, 模型管理界面查看/选择/复制 ID.
-- [x] 会话安全: 单活动会话, 超时, 取消, Binder death 处理, 宿主包名/UID/签名核验.
+本轮按未发布项目处理, 不提供旧身份兼容层或迁移别名. 产品身份全部采用 3-Stone AI 命名; 跨进程协议直接采用中性 AI Provider 命名, 以免 P2 再进行一次破坏性改名. 当前源码, 资源, 文档, CHANGELOG 与构建产物均不得保留被替换身份的文字, 标识符, 路径或二进制依赖.
 
-### 宿主集成 (AutoJs6 build 5276+, v1.1.0)
+## P0 最终身份 3-Stone AI
 
-- [x] `ai.ask` / `ai.chat` / `ai.stream` 本地插件路由: 显式 `plugin: { component, providerId, modelId }` 完整选择器.
-- [x] `plugin: true` 简写选择器: 默认选中官方插件与 provider, 无需在脚本里硬编码组件名.
-- [x] 单模型场景省略 `modelId`: 只导入一个模型时自动解析; 多模型时返回 `MODEL_AMBIGUOUS` 并提示用 `ai.models()`.
-- [x] `ai.models({ plugin: true })`: 脚本枚举已导入模型 (modelId, displayName, 容量上限).
-- [x] 插件未安装 / 未启用 / 无模型时的明确错误: `PROVIDER_NOT_FOUND` / `PROVIDER_DISABLED` / `MODEL_NOT_FOUND`, 错误消息附带解决指引.
-- [x] 插件路由接入插件中心启用开关: 在插件中心停用插件后, 脚本调用收到 `PROVIDER_DISABLED` 而不是静默绑定.
-- [x] 宿主 "AI 服务设置" 页提供本地 AI 插件入口: 已安装时跳插件独立首页, 未安装时跳插件中心.
-- [x] 插件中心识别本插件: INFO 服务入列, engine `on-device-ai` 关联 provider action, 插件设置页可跳转插件启动页.
+### 插件: 构建与工程
 
-### 品牌与文档 (v1.1.0)
+- [x] `rootProject.name` 改为 `autojs6-plugin-three-stone-ai`, APK 产物名随之变更.
+- [x] `applicationId` / `namespace` 改为 `io.github.supermonster003.autojs6.plugin.threestoneai` (不保留旧 package ID).
+- [x] main/test 源码包目录整体迁移至 `plugin/threestoneai`, 删除历史遗留空包 `plugin/ai/text`.
+- [x] 产品类与测试类改用 `ThreeStoneAi*`; 通用协议类改用 `AiProvider*` / `IAi*` 中性命名.
+- [x] AndroidManifest: Application/InfoService/ProviderService 组件名同步; INFO category 改为 `three-stone-ai`; 两处 `requiresHostVersion` 由 5270 对齐为 5276; 发现 action 改为 `org.autojs.plugin.AI_PROVIDER`.
+- [x] proguard keep 规则同步新包名与新类名.
+- [x] 运行时标识: `PROVIDER_ID` = `autojs6.three-stone-ai`, `ENGINE`/plugin id = `three-stone-ai`, User-Agent, 线程名, 日志 TAG, Intent extra key, `THREE_STONE_AI_THEME_COLOR` 全部换新.
 
-- [x] 插件品牌与运行时标识统一为 On-Device AI (设备端 AI): 应用名, 包名, 组件类, 发现 action, plugin/provider/engine ID, 协议 API, 构建产物及文档全部同步.
-- [x] 插件说明改为 "快速开始 (ai 模块) + 高级 (原始 Binder)" 双层结构, 10 语言同步.
-- [x] README/CHANGELOG 与宿主文档同步更新, 移除 "实验性" 表述.
+### 插件: 资源与文案
 
-## 下一步 (v1.2)
+- [x] `app_name` = `3-Stone AI` (translatable=false), 新启动图标落位, About 页与 README 徽标引用同步.
+- [x] `chat_role_assistant` 统一为品牌名 `3-Stone AI` (移除各语言旧译名覆盖).
+- [x] 主题设置资源 key 改为 `app_settings_theme_three_stone_ai`, 10 语言 value 同步为 "3-Stone AI 橙色" 系.
+- [x] `plugin_description` 统一使用本地 AI 能力描述, 不混入历史品牌词.
 
-围绕 "模型即资源" 补齐管理闭环, 全部在插件仓完成:
+### 插件: 文档管线
 
-- [x] 模型删除: 模型管理界面支持删除未选中的模型并真实释放存储; 删除当前选中模型时给出明确阻止提示.
-- [x] 存储回收: 清理历史保留的旧模型代际 (替换导入后遗留的 hash 命名文件), 提供 "一键清理未引用文件" 操作.
-- [x] 模型重命名: 允许修改 displayName 并同步到 `listModels` 与模型管理界面 (modelId 保持不变).
-- [x] 导入前预检: 打开系统选择器前检查可用空间, 并在界面上显示预计占用, 避免复制到一半才失败.
-- [x] 生成参数透传: 支持 temperature / topK / topP / maxTokens 等基础采样参数, 从 `ai.ask` options 一路传到 LiteRT-LM Engine.
+- [x] `.readme/common.json`: repo_url/repo_slug 改 `Three-Stone-AI`, plugin_id/plugin_engine 改 `three-stone-ai`, protocol_provider_id 改 `autojs6.three-stone-ai`, plugin_action 改 `org.autojs.plugin.AI_PROVIDER`, 本地协议 AAR 改 `ai-provider-api.aar`.
+- [x] `.readme/lang_*.json` × 10: 品牌词统一为 `3-Stone AI`, 能力描述统一为 local AI 语义.
+- [x] `template_readme.md` 图标路径与 alt 文本更新.
+- [x] 运行 `.python/generate_markdown.py` 重新生成 README × 11 与 CHANGELOG × 11, 确认幂等; 未发布 CHANGELOG 直接按最终身份改写.
+- [x] `plugin_instruction.md` × 11: 标题, PLUGIN_PACKAGE, provider 组件名, provider id, 绑定失败文案与原始 Binder 示例协议 API 全部换新.
 
-## 中期 (v1.3+)
+### 宿主 AutoJs6 同步
 
-提升推理体验与性能:
+- [x] `ThreeStoneAiOfficialPlugin` 的 PACKAGE_NAME / CLASS_NAME / PROVIDER_ID 三项常量指向最终身份; `AiControlOptions` 与 `AiSettingsFragment` 引用同步.
+- [x] 插件中心将 engine `three-stone-ai` 映射到中性 `AI_PROVIDER` action, 与插件 PluginInfo.id/engine 及 INFO category 保持一致.
+- [x] 宿主 main/test/androidTest 的插件身份常量, 类型与测试文件名全部同步.
+- [x] `docs/dev` 协议设计与验收文档全部按最终产品及中性协议身份重写.
+- [x] 协议模块直接采用 `:plugin-api:ai-provider-api`: Kotlin/AIDL 包为 `org.autojs.plugin.ai.provider.api`, Binder 接口使用 `IAiProvider` / `IAiSession` / `IAiCallback`, TaggedWire schema 域使用 `AP` (`0x4150`), 宿主实现与一致性测试同步采用 `AiProvider*`.
+- [x] fake provider 验收应用改为 `:test-apps:ai-provider-conformance`, 包名改为 `org.autojs.plugin.ai.provider.fake`; 不保留旧 module alias, package bridge 或 action filter.
 
-- [x] 独立会话首页: 启动插件即可与当前本地模型进行流式多轮对话; 原模型下载, 导入, 选择, 自检与存储管理页迁入会话页的模型入口和设置菜单.
-- [x] 富文本会话体验: 模型输出在流式生成期间持续解析 Markdown, 支持标题, 强调, 列表, 引用, 链接, 代码样式及 `$\text{...}$` 内联数学内容.
-- [x] 本地会话管理: 会话历史持久化, 历史用户消息风险确认后分支编辑, 多结果全文搜索定位, 字体, Enter 键, 最大 token 及采样参数设置.
-- [x] 应用设置: 提供主题色, 暗色模式, 多语言, 应用与开发者信息及版本历史, 适用项默认跟随 AutoJs6, 主题色前景自动保持可读对比度.
-- [x] 移动端输入适配: 软键盘出现时会话与输入框正确避让, 不遮挡正在编辑的内容.
-- [x] Engine 复用: 以 model SHA 为键缓存已初始化 Engine, 消除同模型连续请求的重复冷启动; 模型切换/内存压力/空闲超时时释放.
-- [x] 模型自检: 导入完成后可选执行一次 `Engine.initialize()` 健康检查, 在模型管理界面标记 "可用/不兼容", 避免脚本调用时才发现模型加载失败.
-- [x] system prompt 支持: 插件协议已接受 system 角色, 打通宿主 `ai.ask(messages, { plugin })` 的多消息传入 (system + user).
-- [x] 生成统计: 返回 tokens/耗时等基础 usage 信息, 填充 `ai.chat` 响应的 `usage` 字段.
-- [x] 宿主 d.ts 与文档: 为 `ai.*` 补充 TypeScript 声明与 docs.autojs6.com 文档页 (含 plugin 路由完整示例).
+### 验证 (离线优先, 避免外网 5xx)
 
-## 远期
+- [x] 插件 `gradlew --offline :app:testDebugUnitTest :app:assembleDebug` 通过.
+- [x] 宿主 `ai-provider-api` 与 `ai-provider-conformance` 单测/构建通过, App AI 路由及设置相关 213 个单测通过.
+- [x] 双仓全量扫描: 被替换身份的 CamelCase, kebab-case, package/action, 自然语言品牌词, 文件名, 目录名与 AAR 均为 0 残留, 不设白名单.
+- [ ] 真机冒烟: 安装新包名 APK, `ai.ask("...", { plugin: true })` 走通, 宿主 "AI 服务设置" 跳转插件正常, 插件中心识别正常. (需真机, 由维护者执行)
 
-- [x] 多轮对话会话: 复用 Conversation 保持上下文, 提供 `ai.session()` 风格 API, 避免每轮重传全部历史.
-- [x] Structured JSON 输出: 协议已预留 structuredJson 能力位, 在真实模型上验证后开放.
-- [x] GPU/NPU backend: 提供显式 backend profile 与设备兼容性检测; 仅在真实设备验证通过后声明.
-- [x] 模型直接下载: 在插件内选择固定版本的推荐 `.litertlm` 模型与 SAF 保存位置, 支持进度, 精确取消, 残缺文件清理, 文件头/大小/SHA-256 校验及下载后直接导入.
+### 发布收尾 (发布时执行)
+
+- [x] 未发布 CHANGELOG 按最终产品与中性协议身份改写, 重新生成文档.
+- [ ] 首次发布前确认 GitHub 仓库名为 `AutoJs6-Plugin-Three-Stone-AI`, 按发布清单产出三个 ABI 签名 APK.
+
+## P1 插件内统一 AI Backend (在线 + 本地, 不改宿主默认路由)
+
+先在插件内部形成统一的 "调用目标 (target)" 抽象与聊天产品体验, 最快验证合并价值.
+
+- [ ] 引入 `AiBackend` 通用抽象 (catalog / capabilities / createSession / stream / cancel), 现有 LiteRT 本地实现 (`GenerationBackend`) 收敛为 `LiteRtLocalBackend`, 不重写.
+- [ ] 统一 `AiTarget` 目录: 本地模型与在线配置档案均为可选目标, 含 targetId, locality (local/remote), configured, capabilities, 上下文/输出上限.
+- [ ] 插件自有凭据仓库: Android Keystore 加密存储 API Key, 仅暴露 configured 状态; 凭据不进日志, 不出插件进程.
+- [ ] OpenAI Compatible Backend (自定义 baseUrl + key + 模型名): 流式, 取消, usage, 错误规范化; 作为首个在线后端打通全链路.
+- [ ] 预置提供方模板: OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter (与宿主现有在线目录对齐, 优先复用 OpenAI 兼容格式, Anthropic/Gemini 单独适配).
+- [ ] 在线服务设置页: 配置档案的添加/编辑/删除/测试连接, 默认目标选择, 移动网络开关, 清除 Key.
+- [ ] 聊天 UI 目标选择器: 每个会话固定默认 target; 切换目标默认建议新会话, 继续当前会话需明确确认并记录目标快照.
+- [ ] 会话历史逐条保存实际 target/provider/model/locality 快照; "重新生成" 默认沿用原响应目标.
+- [ ] 会话界面常显目标徽标: Local/Cloud, 提供方, 模型名; 次要信息展示 usage 与耗时, 在线目标标注可能产生费用.
+- [ ] 失败不静默跨界: 本地失败绝不自动转在线, 在线失败绝不自动转本地; 均给出明确错误与手动切换入口.
+- [ ] 统一流式管线: 在线与本地共用 Markdown 渲染, 取消, 重试, usage 与错误展示; 插件 UI 与 Binder Service 调用同一 `AiBackend` 层.
+
+## P2 通用 AI Provider 协议 V2 (宿主, 中性命名)
+
+- [ ] 将现有中性 `plugin-api/ai-provider-api` 从 V1 模型目录语义扩展到 V2 统一目标语义, 复用 `ai-common-api` 的 locality/credential 定义; 直接升级且不增加旧接口兼容层.
+- [ ] 定义 `AiTargetInfo`: targetId, providerId, profileId, modelId, displayName, locality, capabilities, availability, configured, 上下文/输出上限, supportedControls, declaredOrigins.
+- [ ] 统一 Catalog 接口: 目标目录分页枚举替代 "仅本地模型列表"; 本地 backend profile 降级为可选扩展字段.
+- [ ] 标准化流式事件: text / reasoning / toolCall / usage / finishReason, 与终态语义 (completed / failed / cancelled) 一致化.
+- [ ] 放开 `REMOTE` / `HYBRID` provider: 执行器不再仅接受 ON_DEVICE + NONE; 强制 HTTPS 来源声明校验与 `PLUGIN_MANAGED` 凭据模式, 宿主会话层继续拒收任何凭据字节.
+- [ ] 协议一致性测试: fake provider 扩展 remote/hybrid 用例, descriptor 与信任校验 fail-closed 行为回归.
+
+## P3 宿主 `ai.*` 全量接通插件
+
+- [ ] `ai.ask/chat/stream/session` 支持统一 `target` 选择器 (`local:*` / `profile:*`); `plugin: true` 直接映射官方默认本地目标.
+- [ ] 新增 `ai.catalog()`: 返回本地与在线全部目标 (id, displayName, provider, model, locality, configured, available, capabilities).
+- [ ] `ai.models()` / `ai.profiles()` / `ai.providers()` / `ai.isConfigured()` 转为统一 Catalog 的兼容视图.
+- [ ] 插件路由响应补齐 reasoning, toolCalls, finishReason, profile 与完整 usage, 与宿主在线路径能力对称.
+- [ ] 错误码统一: 插件缺失/禁用/协议不兼容/目标未配置返回稳定错误 (如 `AI_PROVIDER_UNAVAILABLE`, `TARGET_NOT_CONFIGURED`), 不静默改路由.
+- [ ] 宿主 d.ts 与 docs.autojs6.com 文档更新 (target 路由完整示例).
+
+## P4 设置入口与配置迁移
+
+- [ ] 宿主 "AI 服务设置" 页改为插件统一设置入口: 已安装跳插件设置, 未安装/被禁用显示安装或启用引导.
+- [ ] 在线 API Key 迁移采用 "插件内重新输入" 方案; 不设计宿主到插件的凭据传输通道, 设置公开契约禁止承载凭据.
+- [ ] 宿主既有在线配置转只读兼容 (旧脚本 `profile` 调用仍可用), 设置页提供迁移提示.
+- [ ] 脚本内裸 `apiKey`/`baseUrl` 用法进入弃用周期: 文档标注, 运行时弃用提示, 推荐 `target`.
+
+## P5 宿主瘦身 (兼容期后)
+
+- [ ] 评估并移除宿主在线提供方 HTTP 实现与请求构造 (`AiRequestFactory` 等), `ai.*` 在线能力完全由插件承载.
+- [ ] 移除宿主在线配置编辑 UI 与 `AiProviderVault` 写路径 (保留只读迁移提示至少一个版本).
+- [ ] 宿主最终仅保留: `ai.*` API 外观, 插件发现与信任, 协议协商, Binder 生命周期, 错误规范化与兼容层.
+- [ ] 插件与宿主切换 V2 后直接移除 V1 协议语义与测试夹具.
 
 ## 设计边界 (不做的事)
 
-- 不做云端推理, 不做联网模型发现或任意 URL 下载: `INTERNET` 权限仅用于用户明确发起的内置推荐模型下载; 推理与已导入模型使用始终离线. 云路由由宿主 `ai.*` 的 OpenAI/Anthropic/Gemini/DeepSeek/OpenRouter/兼容服务商能力承担.
-- 不做 tools / function calling: 工具调用属于云路由能力; 设备端小模型以文本生成为主.
-- 不在未验证的情况下声明能力: capability 声明与实际行为保持一致.
+- 不做任何静默跨界回退: 本地与在线互不自动切换, 隐私边界与费用边界只能由用户跨越.
+- 凭据只存在插件进程内 (Keystore 加密); 宿主, 日志, 设置同步契约与协议对象均不得出现 API Key 或授权头.
+- 不因合并在线能力改变本地推理承诺: 本地目标推理不联网不上传; `INTERNET` 权限仅用于用户明确发起的模型下载与用户配置的在线目标请求.
+- 不做联网模型发现或任意 URL 模型下载; 在线目标仅访问用户配置且声明过的 HTTPS 来源.
+- capability 声明与实际行为保持一致, 未验证不声明.
 
 ## 发布清单 (每个版本)
 
-1. `.\gradlew.bat :app:testDebugUnitTest :app:assembleDebug` 通过.
+1. `.\gradlew.bat --offline :app:testDebugUnitTest :app:assembleDebug` 通过 (网络异常环境优先离线; 依赖变更时才允许在线同步).
 2. 更新 `.changelog/lang_*.json` 与 `.readme/lang_*.json`, 运行 `.python/generate_markdown.py`, 确认工作树幂等.
 3. `.\gradlew.bat :app:assembleRelease` 产出 arm64-v8a / x86_64 / universal 三个签名 APK.
-4. 真机安装, 用插件说明中的快速开始脚本冒烟一次.
+4. 真机安装, 用插件说明中的快速开始脚本冒烟一次; 涉及宿主协同的版本同时验证宿主设置页跳转与插件中心识别.

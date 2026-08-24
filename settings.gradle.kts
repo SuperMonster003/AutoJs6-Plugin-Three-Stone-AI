@@ -1,6 +1,6 @@
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-rootProject.name = "autojs6-plugin-on-device-ai"
+rootProject.name = "autojs6-plugin-three-stone-ai"
 
 pluginManagement {
     repositories {

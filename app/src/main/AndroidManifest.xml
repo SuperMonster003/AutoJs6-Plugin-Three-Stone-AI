@@ -11,11 +11,12 @@
 
     <application
         android:allowBackup="false"
-        android:name=".OnDeviceAiApplication"
+        android:name=".ThreeStoneAiApplication"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"
         android:hardwareAccelerated="true"
-        android:icon="@mipmap/ic_launcher_on_device_ai"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
         android:supportsRtl="true"
@@ -91,31 +92,31 @@
         </activity>
 
         <service
-            android:name=".OnDeviceAiPluginInfoService"
+            android:name=".ThreeStoneAiPluginInfoService"
             android:enabled="true"
             android:exported="true"
             android:permission="org.autojs.permission.PLUGIN">
             <intent-filter>
                 <action android:name="org.autojs.plugin.INFO" />
-                <category android:name="on-device-ai" />
+                <category android:name="three-stone-ai" />
             </intent-filter>
             <meta-data
                 android:name="requiresHostVersion"
-                android:value="5270" />
+                android:value="5276" />
         </service>
 
         <service
-            android:name=".provider.OnDeviceAiProviderService"
+            android:name=".provider.ThreeStoneAiProviderService"
             android:enabled="true"
             android:exported="true"
             android:permission="org.autojs.permission.PLUGIN"
             android:process=":provider">
             <intent-filter>
-                <action android:name="org.autojs.plugin.ON_DEVICE_AI" />
+                <action android:name="org.autojs.plugin.AI_PROVIDER" />
             </intent-filter>
             <meta-data
                 android:name="requiresHostVersion"
-                android:value="5270" />
+                android:value="5276" />
         </service>
 
     </application>

@@ -1,0 +1,74 @@
+package io.github.supermonster003.autojs6.plugin.threestoneai.backend
+
+import java.io.Closeable
+
+internal enum class GenerationRole {
+    SYSTEM,
+    USER,
+    ASSISTANT,
+}
+
+internal data class GenerationMessage(
+    val role: GenerationRole,
+    val textParts: List<String>,
+)
+
+internal data class GenerationSamplingOptions(
+    val temperature: Double,
+    val topK: Int,
+    val topP: Double,
+) {
+    init {
+        require(temperature.isFinite() && temperature >= 0.0)
+        require(topK > 0)
+        require(topP.isFinite() && topP in 0.0..1.0)
+    }
+}
+
+internal data class GenerationRequest(
+    val history: List<GenerationMessage>,
+    val prompt: GenerationMessage,
+    val maximumOutputTokens: Int?,
+    val samplingOptions: GenerationSamplingOptions?,
+    val reportUsage: Boolean,
+    val responseJsonSchema: String? = null,
+)
+
+/** Exact provider-side counters for one generation turn. */
+internal data class GenerationStatistics(
+    val inputTokens: Long,
+    val outputTokens: Long,
+    val durationMillis: Long,
+) {
+    val totalTokens: Long
+
+    init {
+        require(inputTokens >= 0L)
+        require(outputTokens >= 0L)
+        require(durationMillis >= 0L)
+        require(inputTokens <= Long.MAX_VALUE - outputTokens)
+        totalTokens = inputTokens + outputTokens
+    }
+}
+
+internal interface GenerationListener {
+    fun onTextDelta(text: String)
+    fun onCompleted(statistics: GenerationStatistics?)
+    fun onFailed(error: Throwable, statistics: GenerationStatistics?)
+}
+
+internal interface GenerationBackend : Closeable {
+    /** Creates the native Conversation and runs its first turn. */
+    fun start(request: GenerationRequest, listener: GenerationListener)
+
+    /** Runs one new user turn on the Conversation created by [start]. */
+    fun continueGeneration(request: GenerationRequest, listener: GenerationListener) {
+        throw UnsupportedOperationException("Persistent generation is not supported")
+    }
+
+    fun cancel()
+}
+
+internal fun interface GenerationBackendFactory {
+    fun create(modelSha256: String, modelPath: String, backendProfile: String): GenerationBackend
+}

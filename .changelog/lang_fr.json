@@ -6,13 +6,14 @@
   "changelog_label_dependency": "Dépendance",
   "$data": {
     "v1.1.0": {
-      "released_date": "2026/08/23",
+      "released_date": "2026/08/24",
       "feature": [
-        "Plugin renommé On-Device AI, positionné comme le plugin IA locale officiel d'AutoJs6",
+        "Identité de marque et d'exécution du plugin IA locale officiel d'AutoJs6 finalisée sous le nom 3-Stone AI",
+        "L'intégration interprocessus utilise les identités neutres `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` et `IAiProvider`/`IAiSession`/`IAiCallback` sans conserver d'alias des identités remplacées",
         "Compatible avec le sélecteur abrégé `plugin: true` de `ai.ask`/`ai.chat`/`ai.stream` et l'énumération de modèles `ai.models` d'AutoJs6",
-        "Transmission de `temperature`, `topK`, `topP` et `maxTokens` par le protocole On-Device AI 1.1 vers les contrôles d'échantillonnage et de tokens de sortie de LiteRT-LM",
+        "Transmission de `temperature`, `topK`, `topP` et `maxTokens` par le protocole AI Provider 1.1 vers les contrôles d'échantillonnage et de tokens de sortie de LiteRT-LM",
         "Rapport des nombres exacts de tokens d'entrée, de sortie et totaux de LiteRT-LM, avec la durée de génération mesurée côté fournisseur, via `ai.chat().usage` et les événements usage du streaming",
-        "Sessions persistantes du protocole On-Device AI 1.2 et réutilisation d'une Conversation multi-tour via `ai.session` d'AutoJs6 sans renvoyer l'historique précédent",
+        "Sessions persistantes du protocole AI Provider 1.2 et réutilisation d'une Conversation multi-tour via `ai.session` d'AutoJs6 sans renvoyer l'historique précédent",
         "Décodage natif contraint par JSON Schema de LiteRT-LM via `structuredJson` et `responseSchema` d'AutoJs6, pour les appels uniques, le streaming et les sessions persistantes, avec validation stricte du JSON complet",
         "Profils backend explicites `cpu`, `gpu` et `npu` via le protocole 1.3 et les options de génération AutoJs6, avec rapport de compatibilité de l'appareil, isolation du cache modèle/profil et aucun repli depuis un profil indisponible; GPU n'est déclaré qu'après une sonde de chargement OpenCL et NPU reste indisponible car son runtime EAP n'est pas intégré",
         "Téléchargement direct de modèles LiteRT Community épinglés vers un emplacement SAF choisi, avec progression, annulation précise, nettoyage, vérification de l'en-tête LiteRT-LM, de la taille et du SHA-256, puis import direct",
@@ -36,7 +37,7 @@
     "v1.0.0": {
       "released_date": "2026/08/08",
       "feature": [
-        "Provider sur l'appareil pour le protocole On-Device AI V1 avec ID et moteur `on-device-ai`, provider ID `autojs6.on-device-ai` et variante `default`",
+        "Provider sur l'appareil pour le protocole AI Provider V1 avec ID et moteur `three-stone-ai`, provider ID `autojs6.three-stone-ai` et variante `default`",
         "Génération de texte brut LiteRT-LM sur CPU avec historique system, user et assistant et streaming contrôlé par credits",
         "Import SAF de `.litertlm` dans le stockage privé avec limite de 8 GiB, réserve d'espace, SHA-256, fsync et activation atomique",
         "Une session active, I/O bornées, quotas de descripteurs, annulation, timeout, un état terminal et vérification de l'appelant AutoJs6 avec la même signature",

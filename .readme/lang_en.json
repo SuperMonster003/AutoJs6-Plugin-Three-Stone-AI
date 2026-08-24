@@ -1,11 +1,11 @@
 {
   "$name": "English",
   "text_current_lowercase": "current",
-  "text_plugin_synopsis": "On-device AI plugin. LiteRT-LM inference stays local; optional model downloads are explicit",
+  "text_plugin_synopsis": "Local AI plugin. LiteRT-LM inference stays local; optional model downloads are explicit",
   "h3_languages_with_ascii": "Languages",
   "p_languages_all_supported_for_readme": "The current README.md supports the following languages",
   "h3_introduction": "Introduction",
-  "p_introduction": "On-Device AI is the official on-device AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. All inference happens locally without network access or data upload; the network is used only when the user explicitly downloads a recommended model.",
+  "p_introduction": "3-Stone AI is the official local AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. All inference happens locally without network access or data upload; the network is used only when the user explicitly downloads a recommended model.",
   "h3_functions": "Features",
   "features": [
     "Import a `.litertlm` model package through the Android system picker and keep a verified copy in app-private storage.",

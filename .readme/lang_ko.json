@@ -1,11 +1,11 @@
 {
   "$name": "한국어",
   "text_current_lowercase": "현재",
-  "text_plugin_synopsis": "온디바이스 AI 플러그인. LiteRT-LM 추론은 항상 로컬이며 모델 다운로드는 명시적입니다",
+  "text_plugin_synopsis": "로컬 AI 플러그인. LiteRT-LM 추론은 항상 로컬이며 모델 다운로드는 명시적입니다",
   "h3_languages_with_ascii": "언어",
   "p_languages_all_supported_for_readme": "현재 README.md는 다음 언어를 지원합니다",
   "h3_introduction": "소개",
-  "p_introduction": "On-Device AI (온디바이스 AI)는 AutoJs6의 공식 온디바이스 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 모든 추론은 네트워크 접근이나 데이터 업로드 없이 로컬에서 이루어지며, 네트워크는 사용자가 권장 모델 다운로드를 명시적으로 시작할 때만 사용됩니다.",
+  "p_introduction": "3-Stone AI는 AutoJs6의 공식 로컬 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 모든 추론은 네트워크 접근이나 데이터 업로드 없이 로컬에서 이루어지며, 네트워크는 사용자가 권장 모델 다운로드를 명시적으로 시작할 때만 사용됩니다.",
   "h3_functions": "기능",
   "features": [
     "Android 시스템 선택기로 `.litertlm` 모델 패키지를 가져오고 검증된 복사본을 앱 전용 저장소에 보관합니다.",

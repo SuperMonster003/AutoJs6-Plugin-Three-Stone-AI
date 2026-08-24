@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">オンデバイス AI</string>
     <string name="button_cancel_download">ダウンロードをキャンセル</string>
     <string name="button_choose_download_location">保存先を選択</string>
     <string name="button_download_model">推奨モデルをダウンロード</string>
@@ -91,7 +90,7 @@
     <string name="model_selection_succeeded">モデルを選択しました</string>
     <string name="model_status_format">モデル: %1$s\nサイズ: %2$s\nSHA-256: %3$s\nモデル ID: %4$s\n状態: %5$s</string>
     <string name="option_check_after_import">インポート後に互換性を確認 (モデルを一度初期化してすぐに閉じます)</string>
-    <string name="plugin_description">ローカル LiteRT-LM モデルによるオンデバイス AI テキスト生成</string>
+    <string name="plugin_description">ローカル LiteRT-LM モデルによるローカル AI テキスト生成</string>
     <string name="screen_description">ローカル LiteRT-LM モデルを選択します. ファイルはアプリ専用ストレージにコピーされ, アップロードされません</string>
     <string name="chat_screen_title">ローカルチャット</string>
     <string name="chat_open_menu">会話メニューを開く</string>
@@ -118,7 +117,6 @@
     <string name="chat_stop">停止</string>
     <string name="chat_privacy_note">生成はこの端末上で実行されます. 会話テキストはアップロードされません.</string>
     <string name="chat_role_user">あなた</string>
-    <string name="chat_role_assistant">オンデバイス AI</string>
     <string name="chat_thinking">モデルを準備中...</string>
     <string name="chat_streaming">生成中...</string>
     <string name="chat_empty_response">モデルはテキストを返さずに生成を完了しました.</string>
@@ -181,7 +179,7 @@
     <string name="chat_probability_error">0 から 1 の有限数を入力してください</string>
     <string name="model_manager_title">モデルとストレージの設定</string>
     <string name="about_app_and_developer">アプリと開発者について</string>
-    <string name="about_app_summary">AutoJs6 向けのプライベートなオンデバイス AI チャットとモデル管理</string>
+    <string name="about_app_summary">AutoJs6 向けのプライベートなローカル AI チャットとモデル管理</string>
     <string name="about_developer">開発者</string>
     <string name="about_developer_page">開発者ページ</string>
     <string name="about_license">オープンソースライセンス</string>
@@ -219,7 +217,7 @@
     <string name="app_settings_theme_custom">カスタム</string>
     <string name="app_settings_theme_follow_summary">AutoJs6 に従う (%1$s)</string>
     <string name="app_settings_theme_green">緑</string>
-    <string name="app_settings_theme_on_device_ai">On-Device AI オレンジ</string>
+    <string name="app_settings_theme_three_stone_ai">3-Stone AI オレンジ</string>
     <string name="app_settings_theme_purple">紫</string>
     <string name="app_settings_theme_teal">ティール</string>
     <string name="app_settings_title">アプリ設定</string>

@@ -11,7 +11,7 @@ plugins {
     id("com.android.application")
 }
 
-val globalApplicationId = "io.github.supermonster003.autojs6.plugin.ondeviceai"
+val globalApplicationId = "io.github.supermonster003.autojs6.plugin.threestoneai"
 val buildTypeDebug = "debug"
 val buildTypeRelease = "release"
 val supportedAbis = setOf("arm64-v8a", "x86_64")
@@ -143,7 +143,7 @@ dependencies {
     implementation(files("$rootDir/libs/common-plugin-api.aar"))
     implementation(files("$rootDir/libs/protocol-wire-api.aar"))
     implementation(files("$rootDir/libs/ai-common-api.aar"))
-    implementation(files("$rootDir/libs/on-device-ai-api.aar"))
+    implementation(files("$rootDir/libs/ai-provider-api.aar"))
 
     testImplementation(libs.junit)
 }
@@ -154,7 +154,7 @@ tasks {
     }
 
     register<Copy>("appendDigestToReleasedFiles") {
-        description = "Appends CRC32 digest to released On-Device AI APK files"
+        description = "Appends CRC32 digest to released 3-Stone AI APK files"
         dependsOn("assembleRelease")
 
         val ext = utils.FILE_EXTENSION_APK

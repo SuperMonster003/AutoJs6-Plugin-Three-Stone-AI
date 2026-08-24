@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "Langues",
   "p_languages_all_supported_for_readme": "Le fichier README.md actuel prend en charge les langues suivantes",
   "h3_introduction": "Introduction",
-  "p_introduction": "On-Device AI est le plugin officiel de génération de texte IA locale pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Toute l'inférence se fait localement, sans réseau ni envoi de données; le réseau n'est utilisé que lorsque l'utilisateur télécharge explicitement un modèle recommandé.",
+  "p_introduction": "3-Stone AI est le plugin officiel de génération de texte IA locale pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Toute l'inférence se fait localement, sans réseau ni envoi de données; le réseau n'est utilisé que lorsque l'utilisateur télécharge explicitement un modèle recommandé.",
   "h3_functions": "Fonctions",
   "features": [
     "Importer un paquet de modèle `.litertlm` avec le sélecteur système Android et conserver une copie vérifiée dans le stockage privé de l'application.",

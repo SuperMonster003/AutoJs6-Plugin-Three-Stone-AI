@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ИИ на устройстве</string>
     <string name="button_cancel_download">Отменить загрузку</string>
     <string name="button_choose_download_location">Выбрать место</string>
     <string name="button_download_model">Скачать рекомендуемую модель</string>
@@ -118,7 +117,6 @@
     <string name="chat_stop">Остановить</string>
     <string name="chat_privacy_note">Генерация выполняется на этом устройстве. Текст диалога не отправляется.</string>
     <string name="chat_role_user">Вы</string>
-    <string name="chat_role_assistant">ИИ на устройстве</string>
     <string name="chat_thinking">Подготовка модели...</string>
     <string name="chat_streaming">Генерация...</string>
     <string name="chat_empty_response">Модель завершила генерацию, не вернув текст.</string>
@@ -219,7 +217,7 @@
     <string name="app_settings_theme_custom">Свой</string>
     <string name="app_settings_theme_follow_summary">Следовать AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">Зеленый</string>
-    <string name="app_settings_theme_on_device_ai">Оранжевый On-Device AI</string>
+    <string name="app_settings_theme_three_stone_ai">Оранжевый 3-Stone AI</string>
     <string name="app_settings_theme_purple">Фиолетовый</string>
     <string name="app_settings_theme_teal">Бирюзовый</string>
     <string name="app_settings_title">Настройки приложения</string>

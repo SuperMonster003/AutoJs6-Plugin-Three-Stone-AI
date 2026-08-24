@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">الذكاء الاصطناعي المحلي</string>
     <string name="button_cancel_download">إلغاء التنزيل</string>
     <string name="button_choose_download_location">اختيار موقع الحفظ</string>
     <string name="button_download_model">تنزيل نموذج موصى به</string>
@@ -118,7 +117,6 @@
     <string name="chat_stop">إيقاف</string>
     <string name="chat_privacy_note">يجري التوليد على هذا الجهاز. لا يرفع نص المحادثة.</string>
     <string name="chat_role_user">أنت</string>
-    <string name="chat_role_assistant">الذكاء الاصطناعي على الجهاز</string>
     <string name="chat_thinking">جار إعداد النموذج...</string>
     <string name="chat_streaming">جار التوليد...</string>
     <string name="chat_empty_response">اكتمل توليد النموذج من دون إرجاع نص.</string>
@@ -219,7 +217,7 @@
     <string name="app_settings_theme_custom">مخصص</string>
     <string name="app_settings_theme_follow_summary">اتباع AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">أخضر</string>
-    <string name="app_settings_theme_on_device_ai">برتقالي On-Device AI</string>
+    <string name="app_settings_theme_three_stone_ai">برتقالي 3-Stone AI</string>
     <string name="app_settings_theme_purple">أرجواني</string>
     <string name="app_settings_theme_teal">فيروزي</string>
     <string name="app_settings_title">إعدادات التطبيق</string>

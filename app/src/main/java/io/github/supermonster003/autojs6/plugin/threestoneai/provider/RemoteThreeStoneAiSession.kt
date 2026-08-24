@@ -4,11 +4,13 @@ import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.RemoteException
 import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationBackend
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationBackendFactory
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSession
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetIds
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetUnavailableException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationStatistics
-import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelRepository
 import org.autojs.plugin.ai.common.api.AiCommonCodec
 import org.autojs.plugin.ai.common.api.AiCommonLimits
 import org.autojs.plugin.ai.common.api.AiError
@@ -52,8 +54,7 @@ internal class RemoteThreeStoneAiSession(
     descriptors: OwnedParcelFileDescriptors,
     private val callback: IAiCallback,
     private val callerVerifier: HostCallerVerifier,
-    private val repository: ModelRepository,
-    private val backendFactory: GenerationBackendFactory,
+    private val aiBackend: AiBackend,
     private val worker: ExecutorService,
     private val timeoutScheduler: ScheduledExecutorService,
     private val callbackLane: SerialCallbackLane,
@@ -71,7 +72,7 @@ internal class RemoteThreeStoneAiSession(
     private val callbackDeathLinked = AtomicBoolean(false)
     private val closed = AtomicBoolean(false)
     private val cleanupClaimed = AtomicBoolean(false)
-    private val backend = AtomicReference<GenerationBackend?>()
+    private val backendSession = AtomicReference<AiBackendSession?>()
     private val activeTurn = AtomicReference<Turn?>()
     private val fixedConfiguration = AtomicReference<FixedConfiguration?>()
     private val persistentSessionId = AtomicReference<String?>()
@@ -200,19 +201,23 @@ internal class RemoteThreeStoneAiSession(
             requireTurnConfiguration(turn, request, materialized)
             val generationRequest = PromptPlanner.plan(request, materialized)
             val activeBackend = if (turn.firstTurn) {
-                val model = repository.findByModelId(request.modelId) ?: throw ModelUnavailable()
-                backendFactory.create(
-                    model.sha256,
-                    model.file.absolutePath,
-                    request.options.backendProfile,
-                ).also { created ->
-                    if (closed.get() || !backend.compareAndSet(null, created)) {
+                try {
+                    aiBackend.createSession(
+                        AiBackendSessionRequest(
+                            targetId = AiTargetIds.local(request.modelId),
+                            executionProfileId = request.options.backendProfile,
+                        ),
+                    )
+                } catch (_: AiTargetUnavailableException) {
+                    throw ModelUnavailable()
+                }.also { created ->
+                    if (closed.get() || !backendSession.compareAndSet(null, created)) {
                         runCatching(created::close)
                         throw SessionStopped()
                     }
                 }
             } else {
-                checkNotNull(backend.get()) { "Persistent generation backend is unavailable" }
+                checkNotNull(backendSession.get()) { "Persistent generation backend is unavailable" }
             }
             turn.emitStarted(request)
             turn.ensureActive()
@@ -225,9 +230,9 @@ internal class RemoteThreeStoneAiSession(
                     turn.backendFailed(statistics)
             }
             if (turn.firstTurn) {
-                activeBackend.start(generationRequest, listener)
+                activeBackend.stream(generationRequest, listener)
             } else {
-                activeBackend.continueGeneration(generationRequest, listener)
+                activeBackend.streamNext(generationRequest, listener)
             }
         } catch (_: SessionStopped) {
             Unit
@@ -396,7 +401,7 @@ internal class RemoteThreeStoneAiSession(
     }
 
     private fun requestBackendCancel() {
-        val activeBackend = backend.get() ?: return
+        val activeBackend = backendSession.get() ?: return
         try {
             worker.execute(activeBackend::cancel)
         } catch (_: RejectedExecutionException) {
@@ -408,12 +413,12 @@ internal class RemoteThreeStoneAiSession(
         if (!cleanupClaimed.compareAndSet(false, true)) return
         unlinkCallbackDeath()
         val action = {
-            val activeBackend = backend.getAndSet(null)
+            val activeBackend = backendSession.getAndSet(null)
             if (cancelBackend) runCatching { activeBackend?.cancel() }
             runCatching { activeBackend?.close() }
             onFinished(this)
         }
-        if (closeBackendDirectly || backend.get() == null) {
+        if (closeBackendDirectly || backendSession.get() == null) {
             action()
             return
         }

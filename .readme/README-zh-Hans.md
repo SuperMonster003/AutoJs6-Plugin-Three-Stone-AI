@@ -186,6 +186,7 @@ required host build: 5276
 * `优化` 更新插件描述, 使用说明及 10 种语言的 README, 与宿主 `ai.*` 本地插件路由的正式化保持一致
 * `优化` 重写 ROADMAP 为可逐项勾选的功能路线图
 * `优化` 将应用及生成的本地化文档标点统一为 ASCII, 并增加覆盖打包文本和生成文本的回归测试
+* `优化` 引入共享的 `AiBackend`/`AiTarget`/`AiBackendSession` 层, 使启动器聊天和 Binder Provider 共用 `LiteRtLocalBackend` 的目录, 能力, 会话创建, 流式输出及取消路径
 
 # v1.0.0
 

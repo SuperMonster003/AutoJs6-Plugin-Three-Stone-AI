@@ -37,18 +37,20 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationBackend
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSession
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetIds
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationMessage
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRole
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationStatistics
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendProfile
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelHealthStatus
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelManagerState
+import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Executors
@@ -113,8 +115,8 @@ class ChatActivity : ConfiguredActivity() {
     private var isGenerating = false
     private var activeGenerationId: Long? = null
     private var activeAssistantMessageId: Long? = null
-    private var activeBackend: GenerationBackend? = null
-    private var activeBackendModelId: String? = null
+    private var activeBackend: AiBackendSession? = null
+    private var activeBackendTargetId: String? = null
     private var completedTurnsOnBackend = 0
     private var managerAttached = false
     private var destroyed = false
@@ -1079,17 +1081,18 @@ class ChatActivity : ConfiguredActivity() {
     ) {
         val listener = generationListener(generationId, assistantMessageId)
         val prompt = GenerationMessage(GenerationRole.USER, listOf(promptText))
-        var reusableBackend: GenerationBackend? = null
-        var backendToReplace: GenerationBackend? = null
+        val targetId = AiTargetIds.local(model.modelId)
+        var reusableBackend: AiBackendSession? = null
+        var backendToReplace: AiBackendSession? = null
         synchronized(backendLock) {
-            val reusable = activeBackend != null && activeBackendModelId == model.modelId &&
+            val reusable = activeBackend != null && activeBackendTargetId == targetId &&
                 !ChatConversationPolicy.shouldRotateBackend(completedTurnsOnBackend)
             if (reusable) {
                 reusableBackend = activeBackend
             } else {
                 backendToReplace = activeBackend
                 activeBackend = null
-                activeBackendModelId = null
+                activeBackendTargetId = null
                 completedTurnsOnBackend = 0
             }
         }
@@ -1098,7 +1101,7 @@ class ChatActivity : ConfiguredActivity() {
         if (continuation != null) {
             submitBackendWork(generationId, assistantMessageId) {
                 if (!isGenerationCurrent(generationId)) return@submitBackendWork
-                continuation.continueGeneration(
+                continuation.streamNext(
                     generationRequest(history = emptyList(), prompt = prompt),
                     listener,
                 )
@@ -1110,17 +1113,18 @@ class ChatActivity : ConfiguredActivity() {
         submitBackendWork(generationId, assistantMessageId) {
             runCatching { backendToReplace?.close() }
             if (!isGenerationCurrent(generationId)) return@submitBackendWork
-            val created = (application as ThreeStoneAiApplication).engineRuntime.createBackend(
-                modelSha256 = model.sha256,
-                modelPath = model.file.absolutePath,
-                backendProfile = LiteRtLmBackendProfile.CPU,
+            val created = (application as ThreeStoneAiApplication).localBackend.createSession(
+                AiBackendSessionRequest(
+                    targetId = targetId,
+                    executionProfileId = AiProviderBackendProfile.CPU,
+                ),
             )
             val installed = synchronized(backendLock) {
                 if (!isGenerationCurrent(generationId) || activeBackend != null) {
                     false
                 } else {
                     activeBackend = created
-                    activeBackendModelId = model.modelId
+                    activeBackendTargetId = targetId
                     completedTurnsOnBackend = history.size / MESSAGES_PER_TURN
                     true
                 }
@@ -1129,7 +1133,7 @@ class ChatActivity : ConfiguredActivity() {
                 runCatching(created::close)
                 return@submitBackendWork
             }
-            created.start(generationRequest(history, prompt), listener)
+            created.stream(generationRequest(history, prompt), listener)
         }
     }
 
@@ -1350,16 +1354,16 @@ class ChatActivity : ConfiguredActivity() {
         }
     }
 
-    private fun detachBackend(): GenerationBackend? = synchronized(backendLock) {
+    private fun detachBackend(): AiBackendSession? = synchronized(backendLock) {
         activeBackend.also {
             activeBackend = null
-            activeBackendModelId = null
+            activeBackendTargetId = null
             completedTurnsOnBackend = 0
         }
     }
 
-    private fun closeOnFallbackThread(backend: GenerationBackend) {
-        Thread({ runCatching(backend::close) }, "litertlm-chat-close").apply {
+    private fun closeOnFallbackThread(backend: AiBackendSession) {
+        Thread({ runCatching(backend::close) }, "three-stone-ai-chat-close").apply {
             isDaemon = true
             start()
         }

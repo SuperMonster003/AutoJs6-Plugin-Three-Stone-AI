@@ -28,6 +28,7 @@
 * `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 * `Improvement` Normalized application and generated localized text to ASCII punctuation, with a regression test covering packaged and generated text
+* `Improvement` Introduced a shared `AiBackend`/`AiTarget`/`AiBackendSession` layer so launcher chat and the Binder provider use the same `LiteRtLocalBackend` catalog, capabilities, session creation, streaming, and cancellation path
 
 # v1.0.0
 

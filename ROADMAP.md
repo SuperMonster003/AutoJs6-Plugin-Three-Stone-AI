@@ -70,8 +70,9 @@
 
 先在插件内部形成统一的 "调用目标 (target)" 抽象与聊天产品体验, 最快验证合并价值.
 
-- [ ] 引入 `AiBackend` 通用抽象 (catalog / capabilities / createSession / stream / cancel), 现有 LiteRT 本地实现 (`GenerationBackend`) 收敛为 `LiteRtLocalBackend`, 不重写.
-- [ ] 统一 `AiTarget` 目录: 本地模型与在线配置档案均为可选目标, 含 targetId, locality (local/remote), configured, capabilities, 上下文/输出上限.
+- [x] 引入 `AiBackend` / `AiBackendSession` 通用抽象 (catalog / capabilities / createSession / stream / cancel), 现有 LiteRT 原生会话逻辑收敛到 `LiteRtLocalBackend`, 不重写; 启动器聊天与独立 `:provider` 进程的 Binder Service 共用同一 backend 实现及会话路径, 各进程实例由 Application 持有.
+- [x] 建立 `AiTarget` / `AiTargetCatalog` 值模型: 已导入本地模型统一映射为 `local:*` target, 含 targetId, backend/provider/model, locality, configured/available, capabilities, 执行 profile 与上下文/输出上限.
+- [ ] 将在线配置档案映射为 `profile:*` target 并合入同一目录, 使本地模型与在线配置档案均为可选目标.
 - [ ] 插件自有凭据仓库: Android Keystore 加密存储 API Key, 仅暴露 configured 状态; 凭据不进日志, 不出插件进程.
 - [ ] OpenAI Compatible Backend (自定义 baseUrl + key + 模型名): 流式, 取消, usage, 错误规范化; 作为首个在线后端打通全链路.
 - [ ] 预置提供方模板: OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter (与宿主现有在线目录对齐, 优先复用 OpenAI 兼容格式, Anthropic/Gemini 单独适配).

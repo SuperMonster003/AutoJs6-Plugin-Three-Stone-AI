@@ -7,9 +7,7 @@ import android.os.ParcelFileDescriptor
 import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
 import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiApplication
 import io.github.supermonster003.autojs6.plugin.threestoneai.aiProviderInfo
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationBackendFactory
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
-import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelRepository
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
 import org.autojs.plugin.ai.common.api.AiCommonCodec
 import org.autojs.plugin.ai.common.api.AiCommonLimits
 import org.autojs.plugin.ai.common.api.AiError
@@ -31,10 +29,8 @@ class ThreeStoneAiProviderService : Service() {
     private lateinit var worker: ExecutorService
     private lateinit var timeoutScheduler: ScheduledExecutorService
     private lateinit var callbackLane: SerialCallbackLane
-    private lateinit var repository: ModelRepository
     private lateinit var modelPager: ModelPager
-    private lateinit var backendFactory: GenerationBackendFactory
-    private lateinit var backendCompatibilityDetector: LiteRtLmBackendCompatibilityDetector
+    private lateinit var aiBackend: AiBackend
     private val activeSession = AtomicReference<RemoteThreeStoneAiSession?>()
     private val sessions = ConcurrentHashMap.newKeySet<RemoteThreeStoneAiSession>()
 
@@ -46,17 +42,8 @@ class ThreeStoneAiProviderService : Service() {
             Thread(runnable, "three-stone-ai-timeout").apply { isDaemon = true }
         }
         callbackLane = SerialCallbackLane()
-        repository = ModelRepository(this)
-        backendCompatibilityDetector = LiteRtLmBackendCompatibilityDetector()
-        modelPager = ModelPager(repository, backendCompatibilityDetector::profiles)
-        val engineRuntime = (application as ThreeStoneAiApplication).engineRuntime
-        backendFactory = GenerationBackendFactory { modelSha256, modelPath, backendProfile ->
-            engineRuntime.createBackend(
-                modelSha256,
-                modelPath,
-                backendCompatibilityDetector.requireAvailable(backendProfile),
-            )
-        }
+        aiBackend = (application as ThreeStoneAiApplication).localBackend
+        modelPager = ModelPager(aiBackend::catalog)
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
@@ -155,8 +142,7 @@ class ThreeStoneAiProviderService : Service() {
                     descriptors = ownedDescriptors,
                     callback = safeCallback,
                     callerVerifier = callerVerifier,
-                    repository = repository,
-                    backendFactory = backendFactory,
+                    aiBackend = aiBackend,
                     worker = worker,
                     timeoutScheduler = timeoutScheduler,
                     callbackLane = callbackLane,

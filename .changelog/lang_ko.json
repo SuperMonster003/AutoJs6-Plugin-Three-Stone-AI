@@ -31,7 +31,8 @@
       "improvement": [
         "플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신",
         "ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성",
-        "앱과 생성된 현지화 문서의 문장 부호를 ASCII로 통일하고 패키지 및 생성 문서를 검사하는 회귀 테스트를 추가"
+        "앱과 생성된 현지화 문서의 문장 부호를 ASCII로 통일하고 패키지 및 생성 문서를 검사하는 회귀 테스트를 추가",
+        "공유 `AiBackend`/`AiTarget`/`AiBackendSession` 계층을 도입해 런처 채팅과 Binder provider가 `LiteRtLocalBackend`의 catalog, capabilities, session 생성, streaming 및 취소 경로를 공유"
       ]
     },
     "v1.0.0": {

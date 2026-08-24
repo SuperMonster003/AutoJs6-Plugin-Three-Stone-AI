@@ -31,7 +31,8 @@
       "improvement": [
         "更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致",
         "重寫 ROADMAP 為可逐項勾選的功能路線圖",
-        "將應用程式及產生的本地化文件標點統一為 ASCII, 並增加涵蓋封裝文字與產生文字的迴歸測試"
+        "將應用程式及產生的本地化文件標點統一為 ASCII, 並增加涵蓋封裝文字與產生文字的迴歸測試",
+        "引入共用的 `AiBackend`/`AiTarget`/`AiBackendSession` 層, 讓啟動器聊天與 Binder Provider 共用 `LiteRtLocalBackend` 的目錄, 能力, 工作階段建立, 串流輸出及取消路徑"
       ]
     },
     "v1.0.0": {

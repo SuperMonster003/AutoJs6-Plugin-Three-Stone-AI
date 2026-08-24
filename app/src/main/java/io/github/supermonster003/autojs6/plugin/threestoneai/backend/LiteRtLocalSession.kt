@@ -14,13 +14,14 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal class LiteRtLmGenerationBackend(
+internal class LiteRtLocalSession(
+    override val target: AiTarget,
     private val modelSha256: String,
     private val modelPath: String,
     private val backendProfile: LiteRtLmBackendProfile,
     private val cacheDirectory: File,
     private val engineCache: ReusableResourceCache<EngineCacheKey, Engine>,
-) : GenerationBackend {
+) : AiBackendSession {
     private val lifecycleLock = Any()
     private val nativeLifecycleLock = Any()
     private val callbackGate = CallbackQuiescenceGate()
@@ -35,8 +36,8 @@ internal class LiteRtLmGenerationBackend(
     @Volatile
     private var conversation: Conversation? = null
 
-    override fun start(request: GenerationRequest, listener: GenerationListener) {
-        check(started.compareAndSet(false, true)) { "LiteRT-LM backend was already started" }
+    override fun stream(request: GenerationRequest, listener: GenerationListener) {
+        check(started.compareAndSet(false, true)) { "LiteRT-LM session was already started" }
         check(request.prompt.role == GenerationRole.USER) { "The final LiteRT-LM prompt must be a user message" }
         try {
             synchronized(nativeLifecycleLock) {
@@ -81,13 +82,13 @@ internal class LiteRtLmGenerationBackend(
         }
     }
 
-    override fun continueGeneration(request: GenerationRequest, listener: GenerationListener) {
-        check(started.get()) { "LiteRT-LM backend has not been started" }
+    override fun streamNext(request: GenerationRequest, listener: GenerationListener) {
+        check(started.get()) { "LiteRT-LM session has not been started" }
         check(request.history.isEmpty()) { "A continued LiteRT-LM turn must not resend history" }
         check(request.prompt.role == GenerationRole.USER) { "A continued LiteRT-LM prompt must be a user message" }
         try {
             synchronized(nativeLifecycleLock) {
-                check(!closed.get() && !cancelled.get()) { "LiteRT-LM backend is closed" }
+                check(!closed.get() && !cancelled.get()) { "LiteRT-LM session is closed" }
                 val localConversation = checkNotNull(synchronized(lifecycleLock) { conversation })
                 val localEngineLease = checkNotNull(synchronized(lifecycleLock) { engineLease })
                 val tokenBaseline = collectTokenCount(localConversation).getOrElse { error ->

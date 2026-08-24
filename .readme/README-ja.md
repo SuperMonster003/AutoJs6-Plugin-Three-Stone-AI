@@ -186,6 +186,7 @@ required host build: 5276
 * `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合
 * `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 * `改善` アプリと生成済みローカライズ文書の句読点を ASCII に統一し, パッケージ済み文書と生成文書を対象とする回帰テストを追加
+* `改善` 共通の `AiBackend`/`AiTarget`/`AiBackendSession` 層を導入し, ランチャーチャットと Binder provider が `LiteRtLocalBackend` のカタログ, capabilities, セッション作成, streaming, キャンセル経路を共有
 
 # v1.0.0
 

@@ -7,13 +7,13 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class GenerationBackendAbstractionTest {
+class AiBackendAbstractionTest {
     @Test
-    fun fakeBackendExercisesStreamingWithoutLoadingNativeModel() {
+    fun fakeSessionExercisesStreamingWithoutLoadingNativeModel() {
         val output = StreamingOutputBuffer(streaming = true, maximumOutputBytes = 64)
         val expectedStatistics = GenerationStatistics(inputTokens = 8L, outputTokens = 2L, durationMillis = 125L)
-        val backend: GenerationBackend = FakeBackend(listOf("hello ", "world"), expectedStatistics)
-        backend.start(
+        val session: AiBackendSession = FakeSession(target(), listOf("hello ", "world"), expectedStatistics)
+        session.stream(
             GenerationRequest(
                 history = emptyList(),
                 prompt = GenerationMessage(GenerationRole.USER, listOf("prompt")),
@@ -42,8 +42,8 @@ class GenerationBackendAbstractionTest {
         assertEquals("world", output.takeCreditedChunk()?.text)
         assertTrue(output.isReadyForCompletion())
         assertEquals("hello world", output.snapshot().text)
-        backend.close()
-        assertTrue((backend as FakeBackend).closed)
+        session.close()
+        assertTrue((session as FakeSession).closed)
     }
 
     @Test
@@ -57,8 +57,8 @@ class GenerationBackendAbstractionTest {
     }
 
     @Test
-    fun persistentBackendReceivesOnlyTheNewPromptOnLaterTurns() {
-        val backend = RecordingPersistentBackend()
+    fun persistentSessionReceivesOnlyTheNewPromptOnLaterTurns() {
+        val session = RecordingPersistentSession(target())
         val listener = object : GenerationListener {
             override fun onTextDelta(text: String) = Unit
             override fun onCompleted(statistics: GenerationStatistics?) = Unit
@@ -77,23 +77,58 @@ class GenerationBackendAbstractionTest {
             prompt = GenerationMessage(GenerationRole.USER, listOf("Second only")),
         )
 
-        backend.start(initial, listener)
-        backend.continueGeneration(next, listener)
+        session.stream(initial, listener)
+        session.streamNext(next, listener)
 
-        assertEquals(initial, backend.initial)
-        assertEquals(next, backend.next)
-        assertTrue(requireNotNull(backend.next).history.isEmpty())
-        assertEquals(listOf("Second only"), requireNotNull(backend.next).prompt.textParts)
+        assertEquals(initial, session.initial)
+        assertEquals(next, session.next)
+        assertTrue(requireNotNull(session.next).history.isEmpty())
+        assertEquals(listOf("Second only"), requireNotNull(session.next).prompt.textParts)
     }
 
-    private class FakeBackend(
+    @Test
+    fun backendCatalogOwnsCapabilitiesAndSessionCreation() {
+        val target = target()
+        val session = RecordingPersistentSession(target)
+        val backend = object : AiBackend {
+            override val backendId = target.backendId
+            override fun catalog() = AiTargetCatalog("generation-1", target.targetId, listOf(target))
+            override fun createSession(request: AiBackendSessionRequest): AiBackendSession {
+                assertEquals(target.targetId, request.targetId)
+                return session
+            }
+        }
+
+        assertEquals(target.capabilities, backend.capabilities(target.targetId))
+        assertEquals(
+            session,
+            backend.createSession(AiBackendSessionRequest(target.targetId, "cpu")),
+        )
+        assertThrows(AiTargetUnavailableException::class.java) {
+            backend.capabilities(AiTargetIds.local("litertlm." + "ff".repeat(16)))
+        }
+    }
+
+    @Test
+    fun targetCatalogRejectsDuplicateAndMissingDefaultTargets() {
+        val target = target()
+        assertThrows(IllegalArgumentException::class.java) {
+            AiTargetCatalog("generation-1", null, listOf(target, target))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            AiTargetCatalog("generation-1", "local:missing", listOf(target))
+        }
+    }
+
+    private class FakeSession(
+        override val target: AiTarget,
         private val deltas: List<String>,
         private val statistics: GenerationStatistics,
-    ) : GenerationBackend {
+    ) : AiBackendSession {
         var closed = false
             private set
 
-        override fun start(request: GenerationRequest, listener: GenerationListener) {
+        override fun stream(request: GenerationRequest, listener: GenerationListener) {
             deltas.forEach(listener::onTextDelta)
             listener.onCompleted(statistics)
         }
@@ -105,16 +140,18 @@ class GenerationBackendAbstractionTest {
         }
     }
 
-    private class RecordingPersistentBackend : GenerationBackend {
+    private class RecordingPersistentSession(
+        override val target: AiTarget,
+    ) : AiBackendSession {
         var initial: GenerationRequest? = null
         var next: GenerationRequest? = null
 
-        override fun start(request: GenerationRequest, listener: GenerationListener) {
+        override fun stream(request: GenerationRequest, listener: GenerationListener) {
             initial = request
             listener.onCompleted(null)
         }
 
-        override fun continueGeneration(request: GenerationRequest, listener: GenerationListener) {
+        override fun streamNext(request: GenerationRequest, listener: GenerationListener) {
             next = request
             listener.onCompleted(null)
         }
@@ -122,4 +159,26 @@ class GenerationBackendAbstractionTest {
         override fun cancel() = Unit
         override fun close() = Unit
     }
+
+    private fun target() = AiTarget(
+        targetId = AiTargetIds.local("litertlm." + "11".repeat(16)),
+        backendId = LiteRtLocalBackend.BACKEND_ID,
+        providerId = "autojs6.three-stone-ai",
+        profileId = null,
+        modelId = "litertlm." + "11".repeat(16),
+        displayName = "Local model",
+        locality = AiTargetLocality.LOCAL,
+        configured = true,
+        available = true,
+        capabilities = AiTargetCapabilities(
+            streaming = true,
+            persistentSession = true,
+            structuredJson = true,
+            usage = true,
+            reasoning = false,
+            tools = false,
+        ),
+        limits = AiTargetLimits(256L * 1024L, 64L * 1024L),
+        executionProfiles = listOf(AiExecutionProfile("cpu", available = true)),
+    )
 }

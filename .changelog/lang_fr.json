@@ -31,7 +31,8 @@
       "improvement": [
         "Description du plugin, instructions et README en 10 langues mis à jour pour refléter la formalisation de la route de plugin local `ai.*`",
         "ROADMAP réécrite comme feuille de route de fonctionnalités avec des éléments vérifiables individuellement",
-        "Normalisation de la ponctuation ASCII dans l'application et les textes localisés générés, avec un test de régression pour les textes empaquetés et générés"
+        "Normalisation de la ponctuation ASCII dans l'application et les textes localisés générés, avec un test de régression pour les textes empaquetés et générés",
+        "Introduction d'une couche partagée `AiBackend`/`AiTarget`/`AiBackendSession` afin que le chat du lanceur et le provider Binder utilisent le même chemin `LiteRtLocalBackend` pour le catalogue, les capacités, la création de session, le streaming et l'annulation"
       ]
     },
     "v1.0.0": {

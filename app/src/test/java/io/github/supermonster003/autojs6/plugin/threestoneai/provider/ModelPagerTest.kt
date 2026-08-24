@@ -1,10 +1,13 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.provider
 
 import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLocalCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelCatalogDocument
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelCatalogEntry
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportPolicy
 import org.autojs.plugin.ai.provider.api.AiModelListRequest
+import org.autojs.plugin.ai.provider.api.AiBackendProfileInfo
+import org.autojs.plugin.ai.provider.api.AiProviderBackendAvailability
 import org.autojs.plugin.ai.provider.api.AiProviderCapabilityId
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import org.autojs.plugin.ai.provider.api.AiProviderProtocol
@@ -52,7 +55,7 @@ class ModelPagerTest {
     fun freshListingsUseUniqueSingleUseOpaqueTokens() {
         val tokens = ArrayDeque(listOf("aa".repeat(24), "bb".repeat(24)))
         val pager = ModelPager(
-            catalogSnapshot = { catalog(entryA, entryB) },
+            catalogSnapshot = { localCatalog(catalog(entryA, entryB)) },
             tokenSource = tokens::removeFirst,
         )
 
@@ -72,7 +75,7 @@ class ModelPagerTest {
     fun continuationBindsGenerationPageSizeAndAlignedBoundedOffset() {
         var snapshot = catalog(entryA, entryB, entryC)
         val pager = ModelPager(
-            catalogSnapshot = { snapshot },
+            catalogSnapshot = { localCatalog(snapshot) },
             tokenSource = { "aa".repeat(24) },
         )
         val first = pager.page(request(pageSize = 1))
@@ -95,7 +98,7 @@ class ModelPagerTest {
         val pager = ModelPager(
             catalogSnapshot = {
                 reads += 1
-                catalog(entryA, entryB)
+                localCatalog(catalog(entryA, entryB))
             },
             tokenSource = { "aa".repeat(24) },
         )
@@ -121,7 +124,7 @@ class ModelPagerTest {
     fun issuedTokenLedgerEvictsTheOldestEntryAndCloseClearsTheRemainder() {
         val tokens = ArrayDeque(listOf("aa".repeat(24), "bb".repeat(24), "cc".repeat(24)))
         val pager = ModelPager(
-            catalogSnapshot = { catalog(entryA, entryB) },
+            catalogSnapshot = { localCatalog(catalog(entryA, entryB)) },
             tokenSource = tokens::removeFirst,
             maximumIssuedTokens = 2,
         )
@@ -136,8 +139,18 @@ class ModelPagerTest {
     }
 
     private fun pager(document: ModelCatalogDocument) = ModelPager(
-        catalogSnapshot = { document },
+        catalogSnapshot = { localCatalog(document) },
         tokenSource = { "aa".repeat(24) },
+    )
+
+    private fun localCatalog(document: ModelCatalogDocument) = LiteRtLocalCatalog.create(
+        document = document,
+        backendProfiles = listOf(
+            AiBackendProfileInfo(
+                profileId = AiProviderBackendProfile.CPU,
+                availability = AiProviderBackendAvailability.AVAILABLE,
+            ),
+        ),
     )
 
     private fun request(pageSize: Int, pageToken: String? = null) = AiModelListRequest(

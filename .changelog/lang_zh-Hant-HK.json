@@ -31,7 +31,8 @@
       "improvement": [
         "更新插件描述, 使用說明及 10 種語言嘅 README, 與宿主 `ai.*` 本機插件路由嘅正式化保持一致",
         "重寫 ROADMAP 為可逐項勾選嘅功能路線圖",
-        "將應用及生成嘅本地化文檔標點統一為 ASCII, 並增加覆蓋打包文字及生成文字嘅回歸測試"
+        "將應用及生成嘅本地化文檔標點統一為 ASCII, 並增加覆蓋打包文字及生成文字嘅回歸測試",
+        "引入共用嘅 `AiBackend`/`AiTarget`/`AiBackendSession` 層, 令啟動器聊天同 Binder Provider 共用 `LiteRtLocalBackend` 嘅目錄, 能力, 會話建立, 串流輸出同取消路徑"
       ]
     },
     "v1.0.0": {

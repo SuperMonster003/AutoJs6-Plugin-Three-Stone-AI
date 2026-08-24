@@ -1,24 +1,21 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.provider
 
-import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
-import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelCatalogDocument
-import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelCatalogPolicy
-import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelRepository
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiExecutionProfile
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetCatalog
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.toProviderCapabilityIds
 import org.autojs.plugin.ai.common.api.AiProtocolVersion
 import org.autojs.plugin.ai.provider.api.AiBackendProfileInfo
 import org.autojs.plugin.ai.provider.api.AiModelInfo
 import org.autojs.plugin.ai.provider.api.AiModelListRequest
 import org.autojs.plugin.ai.provider.api.AiModelPage
 import org.autojs.plugin.ai.provider.api.AiProviderBackendAvailability
-import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
-import org.autojs.plugin.ai.provider.api.AiProviderCapabilityId
 import org.autojs.plugin.ai.provider.api.AiProviderLimits
 import org.autojs.plugin.ai.provider.api.AiProviderProtocol
 import java.security.SecureRandom
 
 internal class ModelPager(
-    private val catalogSnapshot: () -> ModelCatalogDocument,
-    private val backendProfiles: () -> List<AiBackendProfileInfo> = ::defaultBackendProfiles,
+    private val catalogSnapshot: () -> AiTargetCatalog,
     private val tokenSource: () -> String = ModelPageTokenSource::next,
     private val maximumIssuedTokens: Int = AiProviderLimits.MAX_MODEL_PAGE_TOKEN_LEDGER_ENTRIES,
 ) {
@@ -31,11 +28,6 @@ internal class ModelPager(
         }
     }
 
-    constructor(
-        repository: ModelRepository,
-        backendProfiles: () -> List<AiBackendProfileInfo> = ::defaultBackendProfiles,
-    ) : this(repository::catalogSnapshot, backendProfiles)
-
     /** Tokens are consumed and the catalog snapshot is selected under one service-scoped lock. */
     @Synchronized
     fun page(request: AiModelListRequest): AiModelPage {
@@ -43,31 +35,27 @@ internal class ModelPager(
         val continuation = request.pageToken?.let(::consumeToken)
         requireSelectedProtocol(request.protocolVersion)
         val catalog = try {
-            ModelCatalogPolicy.normalize(catalogSnapshot())
+            catalogSnapshot()
         } catch (error: Throwable) {
             throw ModelListingUnavailableException(error)
         }
         val models: List<AiModelInfo>
         val listingGeneration: String
         try {
-            val detectedBackendProfiles = backendProfiles()
-            models = catalog.entries.map { entry ->
+            models = catalog.targets.map { target ->
+                require(target.locality == AiTargetLocality.LOCAL) {
+                    "The V1 model surface can only expose local AI targets"
+                }
                 AiModelInfo(
-                    modelId = entry.modelId,
-                    displayName = entry.displayName,
-                    capabilityIds = PUBLIC_CAPABILITY_IDS,
-                    maximumContextBytes = ThreeStoneAiPlugin.MAXIMUM_CONTEXT_BYTES,
-                    maximumOutputBytes = ThreeStoneAiPlugin.MAXIMUM_OUTPUT_BYTES,
-                    backendProfiles = detectedBackendProfiles,
+                    modelId = target.modelId,
+                    displayName = target.displayName,
+                    capabilityIds = target.capabilities.toProviderCapabilityIds(),
+                    maximumContextBytes = requireNotNull(target.limits.maximumContextBytes),
+                    maximumOutputBytes = requireNotNull(target.limits.maximumOutputBytes),
+                    backendProfiles = target.executionProfiles.map(AiExecutionProfile::toProviderProfile),
                 )
             }
-            listingGeneration = ModelCatalogPolicy.listingGeneration(
-                document = catalog,
-                capabilityIds = PUBLIC_CAPABILITY_IDS,
-                maximumContextBytes = ThreeStoneAiPlugin.MAXIMUM_CONTEXT_BYTES,
-                maximumOutputBytes = ThreeStoneAiPlugin.MAXIMUM_OUTPUT_BYTES,
-                backendProfiles = detectedBackendProfiles,
-            )
+            listingGeneration = catalog.generation
         } catch (error: Throwable) {
             throw ModelListingFailedException(error)
         }
@@ -156,20 +144,17 @@ internal class ModelPager(
     private companion object {
         const val MAXIMUM_TOKEN_GENERATION_ATTEMPTS = 8
         val OPAQUE_TOKEN = Regex("^[0-9a-f]{48}$")
-        val PUBLIC_CAPABILITY_IDS = listOf(
-            AiProviderCapabilityId.STREAMING,
-            AiProviderCapabilityId.STRUCTURED_JSON,
-            AiProviderCapabilityId.USAGE,
-            AiProviderCapabilityId.PERSISTENT_SESSION,
-        )
     }
 }
 
-private fun defaultBackendProfiles() = listOf(
-    AiBackendProfileInfo(
-        profileId = AiProviderBackendProfile.CPU,
-        availability = AiProviderBackendAvailability.AVAILABLE,
-    ),
+private fun AiExecutionProfile.toProviderProfile() = AiBackendProfileInfo(
+    profileId = profileId,
+    availability = if (available) {
+        AiProviderBackendAvailability.AVAILABLE
+    } else {
+        AiProviderBackendAvailability.UNAVAILABLE
+    },
+    unavailableReason = unavailableReason,
 )
 
 internal class InvalidModelListRequestException : IllegalArgumentException("Invalid model-list request")

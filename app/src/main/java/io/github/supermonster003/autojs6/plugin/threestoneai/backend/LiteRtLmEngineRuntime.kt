@@ -20,11 +20,13 @@ internal class LiteRtLmEngineRuntime(
         idleTimeoutMillis = ENGINE_IDLE_TIMEOUT_MILLIS,
     )
 
-    fun createBackend(
+    fun createSession(
+        target: AiTarget,
         modelSha256: String,
         modelPath: String,
         backendProfile: LiteRtLmBackendProfile,
-    ): GenerationBackend = LiteRtLmGenerationBackend(
+    ): AiBackendSession = LiteRtLocalSession(
+        target,
         modelSha256,
         modelPath,
         backendProfile,

@@ -1,9 +1,13 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.app.Application
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.EngineMemoryPressurePolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLocalBackend
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmEngineRuntime
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectory
+import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelRepository
 
 class ThreeStoneAiApplication : Application() {
     private val engineRuntimeDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
@@ -14,6 +18,17 @@ class ThreeStoneAiApplication : Application() {
 
     internal val engineRuntime: LiteRtLmEngineRuntime
         get() = engineRuntimeDelegate.value
+
+    private val localBackendDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        LiteRtLocalBackend(
+            repository = ModelRepository(this),
+            compatibilityDetector = LiteRtLmBackendCompatibilityDetector(),
+            engineRuntime = engineRuntime,
+        )
+    }
+
+    internal val localBackend: AiBackend
+        get() = localBackendDelegate.value
 
     override fun onTrimMemory(level: Int) {
         if (

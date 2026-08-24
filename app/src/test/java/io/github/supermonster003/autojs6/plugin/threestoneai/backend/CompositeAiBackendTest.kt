@@ -41,6 +41,24 @@ class CompositeAiBackendTest {
     }
 
     @Test
+    fun preferredBackendDefaultOverridesWithoutReorderingTargets() {
+        val local = target("local:model", "local", AiTargetLocality.LOCAL)
+        val remote = target("profile:remote", "remote", AiTargetLocality.REMOTE)
+        val backend = CompositeAiBackend(
+            backends = listOf(
+                FakeBackend("local", AiTargetCatalog("local", local.targetId, listOf(local))),
+                FakeBackend("remote", AiTargetCatalog("remote", remote.targetId, listOf(remote))),
+            ),
+            preferredDefaultBackendId = "remote",
+        )
+
+        val catalog = backend.catalog()
+
+        assertEquals(remote.targetId, catalog.defaultTargetId)
+        assertEquals(listOf(local, remote), catalog.targets)
+    }
+
+    @Test
     fun sessionDispatchUsesOwnershipWithoutReadingCatalogs() {
         val local = target("local:model", "local", AiTargetLocality.LOCAL)
         val expected = RecordingSession(local)

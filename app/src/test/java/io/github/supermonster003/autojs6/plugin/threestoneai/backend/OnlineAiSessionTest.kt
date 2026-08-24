@@ -243,6 +243,25 @@ class OnlineAiSessionTest {
     }
 
     @Test
+    fun networkPolicyRunsBeforeCredentialOrHttpAccess() {
+        val calls = ScriptedCallFactory()
+        val credentials = ClearingCredentialRunner("must-not-be-read")
+        val listener = RecordingListener()
+        val denied = OnlineAiNetworkAccess {
+            throw OnlineAiFailureException(OnlineAiFailureReason.METERED_NETWORK_DISALLOWED)
+        }
+
+        session(calls, credentials, networkAccess = denied).stream(request(), listener)
+
+        assertEquals(0, credentials.invocations)
+        assertTrue(calls.requests.isEmpty())
+        assertEquals(
+            OnlineAiFailureReason.METERED_NETWORK_DISALLOWED,
+            (listener.failure as OnlineAiFailureException).reason,
+        )
+    }
+
+    @Test
     fun cancellationCancelsActiveCallSuppressesTerminalCallbacksAndClearsCredential() {
         val entered = CountDownLatch(1)
         val released = CountDownLatch(1)
@@ -404,10 +423,12 @@ class OnlineAiSessionTest {
         calls: Call.Factory,
         credentials: ClearingCredentialRunner = ClearingCredentialRunner("session-key"),
         profile: OnlineAiProfile = profile(),
+        networkAccess: OnlineAiNetworkAccess = OnlineAiNetworkAccess.UNRESTRICTED,
     ) = OnlineAiSession(
         target = target(profile),
         profile = profile,
         callFactory = calls,
+        networkAccess = networkAccess,
         credentialRunner = credentials,
     )
 

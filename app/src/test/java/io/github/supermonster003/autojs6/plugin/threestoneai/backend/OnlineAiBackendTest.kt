@@ -67,6 +67,17 @@ class OnlineAiBackendTest {
     }
 
     @Test
+    fun selectedDefaultProfileIsPublishedByTheOnlineCatalog() {
+        val fixture = fixture()
+        fixture.registry.save(profile(), replacement("secret"))
+        fixture.registry.setDefaultProfile(profile().profileId)
+
+        val catalog = OnlineAiBackend(fixture.registry, RecordingExecution()).catalog()
+
+        assertEquals(AiTargetIds.profile(profile().profileId), catalog.defaultTargetId)
+    }
+
+    @Test
     fun injectedExecutionControlsAvailabilityCapabilitiesAndSessionCreation() {
         val fixture = fixture()
         fixture.registry.save(profile(), replacement("execution-secret"))

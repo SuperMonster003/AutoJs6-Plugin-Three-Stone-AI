@@ -2,6 +2,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.app.Application
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AndroidOnlineAiNetworkAccess
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.CompositeAiBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.EngineMemoryPressurePolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLocalBackend
@@ -64,18 +65,30 @@ class ThreeStoneAiApplication : Application() {
         get() = onlineProfileRegistryDelegate.value
 
     private val onlineExecutionDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        OnlineAiHttpExecution.create()
+        OnlineAiHttpExecution.create(
+            AndroidOnlineAiNetworkAccess(this) {
+                onlineProfileRegistry.settings().allowMeteredNetwork
+            },
+        )
     }
 
     private val onlineExecution: OnlineAiHttpExecution
         get() = onlineExecutionDelegate.value
 
+    private val onlineBackendDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        OnlineAiBackend(onlineProfileRegistry, onlineExecution)
+    }
+
+    internal val onlineBackend: AiBackend
+        get() = onlineBackendDelegate.value
+
     private val aiBackendDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         CompositeAiBackend(
-            listOf(
+            backends = listOf(
                 localBackend,
-                OnlineAiBackend(onlineProfileRegistry, onlineExecution),
+                onlineBackend,
             ),
+            preferredDefaultBackendId = OnlineAiBackend.BACKEND_ID,
         )
     }
 

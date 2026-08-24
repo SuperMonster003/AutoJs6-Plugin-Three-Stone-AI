@@ -36,6 +36,8 @@ internal data class ConfiguredOnlineAiProfile(
 internal class OnlineAiProfileRegistrySnapshot(
     val revision: Long,
     profiles: List<ConfiguredOnlineAiProfile>,
+    val defaultProfileId: String?,
+    val allowMeteredNetwork: Boolean,
 ) {
     val profiles: List<ConfiguredOnlineAiProfile> = Collections.unmodifiableList(ArrayList(profiles))
 }
@@ -71,8 +73,42 @@ internal class OnlineAiProfileRegistry(
                     configured = credentialStore.isConfigured(profile.profileId),
                 )
             },
+            defaultProfileId = document.defaultProfileId,
+            allowMeteredNetwork = document.allowMeteredNetwork,
         )
     }
+
+    fun settings(): OnlineAiServiceSettings = repository.settings()
+
+    fun setDefaultProfile(profileId: String?): OnlineAiServiceSettings =
+        repository.withTransaction { transaction ->
+            val current = transaction.settings()
+            val normalizedId = profileId?.let(OnlineAiProfilePolicy::canonicalProfileId)
+            if (normalizedId != null) {
+                require(transaction.find(normalizedId) != null) {
+                    "The default online AI profile does not exist"
+                }
+                require(credentialStore.isConfigured(normalizedId)) {
+                    "The default online AI profile must have a credential"
+                }
+            }
+            val document = transaction.saveSettings(current.copy(defaultProfileId = normalizedId))
+            OnlineAiServiceSettings(
+                defaultProfileId = document.defaultProfileId,
+                allowMeteredNetwork = document.allowMeteredNetwork,
+            )
+        }
+
+    fun setAllowMeteredNetwork(allow: Boolean): OnlineAiServiceSettings =
+        repository.withTransaction { transaction ->
+            val document = transaction.saveSettings(
+                transaction.settings().copy(allowMeteredNetwork = allow),
+            )
+            OnlineAiServiceSettings(
+                defaultProfileId = document.defaultProfileId,
+                allowMeteredNetwork = document.allowMeteredNetwork,
+            )
+        }
 
     fun save(
         profile: OnlineAiProfile,
@@ -99,7 +135,12 @@ internal class OnlineAiProfileRegistry(
                 val saved = transaction.save(normalized).profile
                 when (credentialUpdate) {
                     OnlineAiCredentialUpdate.Keep -> Unit
-                    OnlineAiCredentialUpdate.Clear -> Unit
+                    OnlineAiCredentialUpdate.Clear -> {
+                        val settings = transaction.settings()
+                        if (settings.defaultProfileId == saved.profileId) {
+                            transaction.saveSettings(settings.copy(defaultProfileId = null))
+                        }
+                    }
                     is OnlineAiCredentialUpdate.Replace -> credentialStore.put(
                         saved.profileId,
                         credentialUpdate.value,

@@ -1,6 +1,6 @@
 # Online Provider Backend
 
-本文记录 P1 插件内部统一在线执行层的实际契约. 它不改变 AI Provider V1 的本地模型公开范围; 在线 target 要等后续设置页, 目标选择器及 V2 统一目标协议接入后才会成为宿主脚本可选目标.
+本文记录 P1 插件内部统一在线执行层与在线服务设置页的实际契约. 它不改变 AI Provider V1 的本地模型公开范围; 用户现在可在插件设置中管理在线 target, 但在线 target 要等聊天目标选择器及 V2 统一目标协议接入后才会成为聊天或宿主脚本可选目标.
 
 ## 提供方目录
 
@@ -18,6 +18,20 @@
 参考提供方公开契约: [OpenAI Chat Completions](https://platform.openai.com/docs/api-reference/chat), [Anthropic Messages](https://platform.claude.com/docs/en/api/messages), [Anthropic streaming](https://platform.claude.com/docs/en/build-with-claude/streaming), [Gemini GenerateContent](https://ai.google.dev/api/generate-content), [DeepSeek Chat Completions](https://api-docs.deepseek.com/api/create-chat-completion/), [OpenRouter Chat Completions](https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request).
 
 `OnlineAiProviderCatalog` 只保存非敏感模板元数据. `OnlineAiProfile` 保存 canonical UUID, displayName, providerId, HTTPS baseUrl 与 modelId; 凭据只由插件的 Keystore 仓库按 profileId 提供, 不进入 profile JSON, target catalog 或 Binder 对象. 所有在线档案统一映射为 `backendId=online`, `targetId=profile:*`, `REMOTE` 与 `PLUGIN_MANAGED`.
+
+## 设置页与配置状态
+
+应用设置中的 "在线服务" 页面提供以下显式操作:
+
+- 添加与编辑档案: 内置模板只预填 provider 与 baseUrl, 模型 ID 仍由用户输入. 自定义 OpenAI-compatible 档案必须输入 HTTPS baseUrl.
+- API Key 输入框从不回显既有值, 禁止 Autofill 与 Activity 状态保存, 编辑弹窗期间启用 `FLAG_SECURE`, 弹窗关闭时立即清空输入缓冲. 更换 provider 或 HTTPS origin 时, 已配置档案必须重新输入 Key.
+- 清除 Key 与删除档案均要求二次确认. 清除默认档案的 Key 时同时清除默认选择; 删除会先清除 Keystore 密文, 再原子发布不含该档案的元数据, 并在同一文档事务中清除默认值.
+- 默认在线目标只能从已配置档案中选择. 统一目录保留本地 target 排序, 但显式选择的在线默认值优先于本地 backend 默认值; 目标不可用时明确失败, 不自动回退本地.
+- "允许移动网络和按流量计费网络" 默认关闭. 设置只影响在线请求, 不影响本地推理或模型下载.
+
+非敏感 profile 文档直接采用 schema 2, 将 `defaultProfileId` 与 `allowMeteredNetwork` 和档案列表放在同一个跨进程锁, fsync 与原子 rename 事务内. 本项目尚未发布, 因此不提供 schema 1 读取或迁移分支; 不支持的文档会 fail closed. 凭据仍完全独立保存在 Android Keystore 保护的密文仓库中.
+
+"测试连接" 是一次用户确认后才会执行的真实生成: 固定发送 `Reply with OK.`, 最多请求 8 个输出 token, 不保存或显示响应文本, 可随时取消, UI 在 60 秒后主动取消活动 Call. 测试调用统一 `OnlineAiBackend` 和协议适配器, 因而同时验证 profile, Key, 网络策略, 请求认证, 协议解析及正常终态. 它可能产生提供方费用, 所以 UI 在每次执行前明确提示.
 
 ## 请求映射
 
@@ -42,6 +56,7 @@ OpenAI-compatible baseUrl 未以 `/chat/completions` 结束时追加该 endpoint
 ## 网络与凭据边界
 
 - Profile 只接受 HTTPS, 禁止 user-info, query 与 fragment. 每个 target 只声明规范化后的 HTTPS origin.
+- 应用声明 `ACCESS_NETWORK_STATE`. 每轮在线请求在读取凭据前检查活动网络是否具备 Internet capability; 系统判定为 metered 的网络必须由用户显式开启. 配置读取失败, 无活动网络或缺少 capability 均 fail closed.
 - OkHttp client 禁止 HTTP/HTTPS redirect, connection retry, authenticator, proxy authenticator, cookie, cache, application interceptor 与 network interceptor. EventListener 固定为 `NONE`.
 - 认证 header 只在同步凭据作用域内构造. Profile 元数据与凭据在同一锁定快照点配对; 复制后的凭据 buffer 在 Call 成功或异常后清零, 网络期间不持有 profile 或 credential 文件锁.
 - 请求 URL, 认证 header, prompt, response body 与底层异常均不记录. 非 2xx body 只做有界丢弃, 不进入异常. HTTP 200 内的 provider error 也只映射为固定错误.
@@ -91,6 +106,7 @@ OpenAI-compatible baseUrl 未以 `/chat/completions` 结束时追加该 endpoint
 | `REDIRECT_REFUSED` | HTTP 3xx |
 | `REQUEST_REJECTED` | 其他 HTTP 4xx |
 | `SERVICE_UNAVAILABLE` | HTTP 5xx |
+| `METERED_NETWORK_DISALLOWED` | 当前网络由 Android 判定为 metered, 且用户未显式开启 |
 | `TIMED_OUT` / `TLS_FAILED` / `NETWORK_UNAVAILABLE` | 固定化后的 transport failure |
 | `INVALID_RESPONSE` / `PROVIDER_ERROR` / `RESPONSE_TOO_LARGE` | content type, JSON/SSE, provider event 或边界校验失败 |
 
@@ -102,4 +118,4 @@ OpenAI-compatible baseUrl 未以 `/chat/completions` 结束时追加该 endpoint
 .\gradlew.bat --offline :app:testDebugUnitTest
 ```
 
-测试使用无网络的 fake `Call.Factory`, 覆盖六种 profile 模板, 三个协议的 request mapping, one-shot body 清零, SSE/JSON response parser, partial/cumulative usage, persistent history, callback 重入, cancellation, redirect refusal, HTTP/provider/network error redaction 及全部 byte limit. 真机 endpoint 验证单独保留在 Roadmap, 不使用个人或生产凭据进入自动化测试.
+测试使用无网络的 fake `Call.Factory`, 覆盖六种 profile 模板, schema 2 设置状态与默认档案删除, 统一目录默认值优先级, 每轮凭据读取前的网络门禁, 有界连接测试, 三个协议的 request mapping, one-shot body 清零, SSE/JSON response parser, partial/cumulative usage, persistent history, callback 重入, cancellation, redirect refusal, HTTP/provider/network error redaction 及全部 byte limit. 真机 endpoint 验证单独保留在 Roadmap, 不使用个人或生产凭据进入自动化测试.

@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "Langues",
   "p_languages_all_supported_for_readme": "Le fichier README.md actuel prend en charge les langues suivantes",
   "h3_introduction": "Introduction",
-  "p_introduction": "3-Stone AI est le plugin officiel de génération de texte IA pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Les appels actuels de l'hôte AI Provider V1 utilisent ces cibles locales sans accès réseau ni envoi de données. Le plugin contient aussi un backend HTTPS en ligne interne pour les futurs réglages et routages de cibles unifiés, avec des profils OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter et OpenAI Compatible personnalisés; l'UI et les API V1 actuelles n'exposent pas ces cibles en ligne.",
+  "p_introduction": "3-Stone AI est le plugin officiel de génération de texte IA pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Les appels actuels de l'hôte AI Provider V1 utilisent ces cibles locales sans accès réseau ni envoi de données. Les réglages du plugin gèrent maintenant les profils OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter et OpenAI Compatible personnalisés, les identifiants chiffrés, la cible en ligne par défaut, les réseaux facturés et les tests de connexion explicites. Le chat et les API hôte V1 ne routent toujours pas vers les cibles en ligne.",
   "h3_functions": "Fonctions",
   "features": [
     "Importer un paquet de modèle `.litertlm` avec le sélecteur système Android et conserver une copie vérifiée dans le stockage privé de l'application.",
@@ -20,7 +20,8 @@
     "Initialiser facultativement chaque modèle importé une fois, conserver son état Disponible/Incompatible et relancer la vérification depuis le gestionnaire de modèles.",
     "Transmettre les chunks de texte dans l'ordre avec une contre-pression par credits et publier un seul état terminal terminé, échoué ou annulé.",
     "Lister, sélectionner et renommer les modèles importés, supprimer les modèles non sélectionnés et récupérer les fichiers de modèle non référencés depuis le gestionnaire.",
-    "Sélectionner explicitement le backend `cpu`, `gpu` ou `npu` via AutoJs6; CPU est utilisé par défaut, GPU seulement après une sonde de chargement OpenCL, et NPU est signalé indisponible car son runtime EAP n'est pas inclus."
+    "Sélectionner explicitement le backend `cpu`, `gpu` ou `npu` via AutoJs6; CPU est utilisé par défaut, GPU seulement après une sonde de chargement OpenCL, et NPU est signalé indisponible car son runtime EAP n'est pas inclus.",
+    "Gérer les profils en ligne intégrés et personnalisés, les identifiants Android Keystore, la cible en ligne par défaut, les réseaux facturés et les tests de connexion explicites et limités dans les réglages."
   ],
   "h3_formats": "Formats du modèle et des données",
   "p_formats": "La version 1 déclare uniquement le périmètre suivant",
@@ -53,7 +54,7 @@
   "unsupported_capabilities": [
     "Reasoning et tools ne sont pas déclarés.",
     "Les messages de rôle tool, les schemas d'outils, les tool calls et les tool results ne sont pas acceptés.",
-    "Aucune découverte réseau de modèles ni aucun téléchargement de modèle depuis une URL arbitraire. La configuration de profils online, la saisie de credentials et la sélection de cibles ne sont pas encore exposées dans l'UI actuelle ni dans le routage hôte AI Provider V1; seul le catalogue intégré épinglé est actuellement téléchargeable.",
+    "Aucune découverte réseau de modèles ni aucun téléchargement de modèle depuis une URL arbitraire. La UI permet de configurer les profils en ligne et leur valeur par défaut, mais la sélection de cible du chat et le routage hôte AI Provider V1 ne proposent pas encore les cibles en ligne; seul le catalogue intégré épinglé est téléchargeable.",
     "L'inférence NPU n'est pas déclarée: le profil reste visible comme `unavailable` avec `npu-runtime-not-packaged`. GPU n'est déclaré que si `libOpenCL.so` est chargeable, et l'extension `.litertlm` ne garantit toujours pas l'initialisation du modèle."
   ],
   "h3_roadmap": "Feuille de route",

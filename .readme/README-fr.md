@@ -39,7 +39,7 @@ Le fichier README.md actuel prend en charge les langues suivantes:
 
 ******
 
-3-Stone AI est le plugin officiel de génération de texte IA pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Les appels actuels de l'hôte AI Provider V1 utilisent ces cibles locales sans accès réseau ni envoi de données. Le plugin contient aussi un backend HTTPS en ligne interne pour les futurs réglages et routages de cibles unifiés, avec des profils OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter et OpenAI Compatible personnalisés; l'UI et les API V1 actuelles n'exposent pas ces cibles en ligne.
+3-Stone AI est le plugin officiel de génération de texte IA pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Les appels actuels de l'hôte AI Provider V1 utilisent ces cibles locales sans accès réseau ni envoi de données. Les réglages du plugin gèrent maintenant les profils OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter et OpenAI Compatible personnalisés, les identifiants chiffrés, la cible en ligne par défaut, les réseaux facturés et les tests de connexion explicites. Le chat et les API hôte V1 ne routent toujours pas vers les cibles en ligne.
 
 ******
 
@@ -60,6 +60,7 @@ Le fichier README.md actuel prend en charge les langues suivantes:
 - Transmettre les chunks de texte dans l'ordre avec une contre-pression par credits et publier un seul état terminal terminé, échoué ou annulé.
 - Lister, sélectionner et renommer les modèles importés, supprimer les modèles non sélectionnés et récupérer les fichiers de modèle non référencés depuis le gestionnaire.
 - Sélectionner explicitement le backend `cpu`, `gpu` ou `npu` via AutoJs6; CPU est utilisé par défaut, GPU seulement après une sonde de chargement OpenCL, et NPU est signalé indisponible car son runtime EAP n'est pas inclus.
+- Gérer les profils en ligne intégrés et personnalisés, les identifiants Android Keystore, la cible en ligne par défaut, les réseaux facturés et les tests de connexion explicites et limités dans les réglages.
 
 ******
 
@@ -143,7 +144,7 @@ Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés
 
 - Reasoning et tools ne sont pas déclarés.
 - Les messages de rôle tool, les schemas d'outils, les tool calls et les tool results ne sont pas acceptés.
-- Aucune découverte réseau de modèles ni aucun téléchargement de modèle depuis une URL arbitraire. La configuration de profils online, la saisie de credentials et la sélection de cibles ne sont pas encore exposées dans l'UI actuelle ni dans le routage hôte AI Provider V1; seul le catalogue intégré épinglé est actuellement téléchargeable.
+- Aucune découverte réseau de modèles ni aucun téléchargement de modèle depuis une URL arbitraire. La UI permet de configurer les profils en ligne et leur valeur par défaut, mais la sélection de cible du chat et le routage hôte AI Provider V1 ne proposent pas encore les cibles en ligne; seul le catalogue intégré épinglé est téléchargeable.
 - L'inférence NPU n'est pas déclarée: le profil reste visible comme `unavailable` avec `npu-runtime-not-packaged`. GPU n'est déclaré que si `libOpenCL.so` est chargeable, et l'extension `.litertlm` ne garantit toujours pas l'initialisation du modèle.
 
 ******
@@ -183,6 +184,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Fonction` Ajout d'un dépôt strict et non secret de profils en ligne pour les points de terminaison OpenAI Compatible exclusivement HTTPS, avec UUID canoniques, métadonnées atomiques interprocessus et remplacement ou suppression obligatoire des identifiants lors d'un changement de provider ou d'origin
 * `Fonction` Ajout du backend d'exécution HTTPS OpenAI Compatible interne au plugin pour des profils avec baseUrl, identifiant et modèle personnalisés, avec streaming SSE borné et repli JSON, annulation précise, usage du provider, historique persistant des tours terminés, mapping JSON Schema et erreurs fixes sans données sensibles; le routage hôte AI Provider V1 reste limité aux cibles locales
 * `Fonction` Ajout de préréglages OpenAI, Anthropic, Gemini, DeepSeek et OpenRouter alignés sur le catalogue de l'hôte; la couche d'exécution en ligne unifiée réutilise le protocole compatible OpenAI et adapte séparément l'authentification, les requêtes, les terminaux SSE, l'usage et JSON Schema natifs d'Anthropic Messages et Gemini GenerateContent, sans repli entre protocoles ni entre local et en ligne
+* `Fonction` Ajout de la UI des services en ligne en 10 langues pour ajouter, modifier et supprimer les profils, remplacer et effacer les clés API sans les afficher, choisir la cible par défaut, imposer le choix des réseaux facturés avant accès aux identifiants et lancer des tests explicites annulables de 60 secondes; les réglages partagent le document atomique interprocessus et AI Provider V1 reste local uniquement
 * `Correction` Suppression des limites implicites de 256 tokens et 4 KiB des exemples exécutables: l'omission de `maxTokens` utilise désormais la valeur par défaut du modèle ou du moteur, et l'exemple Binder direct utilise les 64 KiB complets autorisés par le fournisseur
 * `Correction` Correction de l'exemple Binder de bas niveau dans les instructions localisées en 10 langues, qui appelait encore le constructeur `AiGenerationOptions` à 14 arguments du protocole 1.1 et échouait avec l'API du protocole 1.3
 * `Correction` Correction du gestionnaire de modèles qui conservait les couleurs de texte du thème clair en mode sombre système, rendant le texte, les cases à cocher et les lignes de modèles illisibles sur l'arrière-plan sombre

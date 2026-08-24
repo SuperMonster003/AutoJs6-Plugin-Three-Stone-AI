@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI 是 AutoJs6 的官方 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 当前 AI Provider V1 宿主调用只使用这些本地目标, 不联网也不上传数据. 插件内部也已包含面向后续统一目标设置与路由的 HTTPS 在线 backend, 提供 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 及自定义 OpenAI Compatible profile; 当前 UI 与 V1 宿主 API 尚不公开这些在线目标.
+3-Stone AI 是 AutoJs6 的官方 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 当前 AI Provider V1 宿主调用只使用这些本地目标, 不联网也不上传数据. 插件设置现可管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 及自定义 OpenAI Compatible profile, 加密凭据, 默认在线目标, 计量网络访问与显式连接测试. 聊天 UI 和 AI Provider V1 宿主 API 仍不会路由到在线目标.
 
 ******
 
@@ -60,6 +60,7 @@
 - 通过 credit 背压按序传送文本 chunk, 并只发布一个完成, 错误或取消终态.
 - 列出, 选择和重命名已导入模型, 删除未选中模型, 并在管理界面一键回收未引用模型文件.
 - 通过 AutoJs6 显式选择 `cpu`, `gpu` 或 `npu` backend; CPU 为默认值, GPU 仅在 OpenCL 加载探测通过后开放, NPU 因未打包 EAP 运行时而明确报告不可用.
+- 在应用设置中管理内置及自定义在线 profile, Android Keystore 凭据, 默认在线目标, 计量网络访问和显式有界连接测试.
 
 ******
 
@@ -143,7 +144,7 @@ required host build: 5276
 
 - 不声明 reasoning 或 tools 能力.
 - 不接受 tool 角色消息, tool schema, tool call 或 tool result.
-- 不提供联网模型发现或任意 URL 模型下载. 当前 UI 与 AI Provider V1 宿主路由尚未公开在线 profile 配置, credential 输入及目标选择; 目前只能下载内置目录中固定版本的推荐模型.
+- 不提供联网模型发现或任意 URL 模型下载. 当前 UI 可配置在线 profile 及其默认值, 但聊天目标选择与 AI Provider V1 宿主路由尚未公开在线目标; 目前只能下载内置目录中固定版本的推荐模型.
 - 不声明 NPU 推理可用: profile 可发现但以 `npu-runtime-not-packaged` 标记为 `unavailable`. GPU 仅在 `libOpenCL.so` 可加载时声明, 且 `.litertlm` 扩展名本身仍不保证模型初始化成功.
 
 ******
@@ -183,6 +184,7 @@ required host build: 5276
 * `新增` 新增严格的非敏感在线配置档案仓库, 仅接受 HTTPS OpenAI Compatible 端点, 使用 canonical UUID 与跨进程原子元数据, 并在 provider 或 origin 变更时强制明确替换或清除凭据
 * `新增` 新增插件内部 OpenAI Compatible HTTPS 执行后端, 支持自定义 baseUrl, 凭据和模型名, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, 完成轮次多轮历史, JSON Schema 请求映射及不含敏感信息的固定错误; AI Provider V1 宿主路由仍仅公开本地目标
 * `新增` 新增与宿主目录对齐的 OpenAI, Anthropic, Gemini, DeepSeek 与 OpenRouter 预置模板; 统一在线执行层复用 OpenAI-compatible 协议, 并分别适配 Anthropic Messages 与 Gemini GenerateContent 的原生认证, 请求, SSE 终态, usage 和 JSON Schema, 不提供协议间或本地/在线自动回退
+* `新增` 新增 10 语言在线服务设置 UI, 支持档案添加, 编辑, 删除, 不回显的 API Key 替换与清除, 默认目标选择, 在读取凭据前强制执行的计量网络开关, 以及可取消且最长 60 秒的显式连接测试; 设置与档案共用跨进程原子文档, AI Provider V1 仍只公开本地目标
 * `修复` 移除插件说明可运行示例默认设置的 256 token 与 4 KiB 输出限制: 省略 `maxTokens` 时改用模型或引擎默认值, raw Binder 示例使用插件完整的 64 KiB 输出额度
 * `修复` 修复 10 种本地化插件说明中的底层 Binder 示例仍调用协议 1.1 的 14 参数 `AiGenerationOptions` 构造方法, 导致其在协议 1.3 API 下报告 Java 构造方法不存在
 * `修复` 修复模型管理界面在系统暗色模式下仍使用亮色主题文字, 导致正文, 复选框和模型列表与深色背景对比不足

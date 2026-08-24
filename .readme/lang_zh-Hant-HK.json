@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "語言",
   "p_languages_all_supported_for_readme": "目前 README.md 支援以下語言",
   "h3_introduction": "簡介",
-  "p_introduction": "3-Stone AI 係 AutoJs6 嘅官方 AI 文本生成插件. 佢喺顯式選擇嘅 CPU 或相容 GPU backend 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本或受 schema 約束嘅 JSON 文本. 目前 AI Provider V1 宿主調用只使用呢啲本地目標, 唔聯網亦唔上傳數據. 插件內部亦已包含面向後續統一目標設定同路由嘅 HTTPS 在線 backend, 提供 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 同自訂 OpenAI Compatible profile; 目前 UI 同 V1 宿主 API 尚未公開呢啲在線目標.",
+  "p_introduction": "3-Stone AI 係 AutoJs6 嘅官方 AI 文本生成插件. 佢喺顯式選擇嘅 CPU 或相容 GPU backend 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本或受 schema 約束嘅 JSON 文本. 目前 AI Provider V1 宿主調用只使用呢啲本地目標, 唔聯網亦唔上傳數據. 插件設定而家可以管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 同自訂 OpenAI Compatible profile, 加密憑證, 預設網上目標, 計量網絡存取同顯式連線測試. 聊天 UI 同 AI Provider V1 宿主 API 仍然唔會路由到網上目標.",
   "h3_functions": "功能",
   "features": [
     "透過 Android 系統檔案選擇器匯入 `.litertlm` 模型套件, 並將驗證後的副本儲存到應用程式私人儲存空間.",
@@ -20,7 +20,8 @@
     "可選擇將每個匯入模型初始化一次, 持久保存其\"可用/不相容\"狀態, 並可喺模型管理介面重新檢查.",
     "透過 credit 背壓按序傳送文字 chunk, 並只發佈一個完成, 錯誤或取消終態.",
     "列出, 選擇同重新命名已匯入模型, 刪除未選取模型, 並喺管理介面一鍵回收未引用模型檔案.",
-    "透過 AutoJs6 顯式選擇 `cpu`, `gpu` 或 `npu` backend; CPU 為預設值, GPU 只會喺 OpenCL 載入探測通過後開放, NPU 因未封裝 EAP runtime 而明確回報不可用."
+    "透過 AutoJs6 顯式選擇 `cpu`, `gpu` 或 `npu` backend; CPU 為預設值, GPU 只會喺 OpenCL 載入探測通過後開放, NPU 因未封裝 EAP runtime 而明確回報不可用.",
+    "喺應用設定管理內置及自訂網上 profile, Android Keystore 憑證, 預設網上目標, 計量網絡存取同顯式有界連線測試."
   ],
   "h3_formats": "模型和資料格式",
   "p_formats": "版本 1 僅宣告以下模型和文字範圍",
@@ -53,7 +54,7 @@
   "unsupported_capabilities": [
     "不宣告 reasoning 或 tools 能力.",
     "不接受 tool 角色訊息, tool schema, tool call 或 tool result.",
-    "不提供連網模型發現或任意 URL 模型下載. 目前 UI 同 AI Provider V1 宿主路由尚未公開網上 profile 設定, credential 輸入及目標選擇; 目前只可下載內置目錄中固定版本嘅建議模型.",
+    "不提供連網模型發現或任意 URL 模型下載. 目前 UI 可以設定網上 profile 同預設值, 但聊天目標選擇同 AI Provider V1 宿主路由仍未公開網上目標; 目前只可下載內置目錄中固定版本嘅建議模型.",
     "不宣告 NPU 推理可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 只喺 `libOpenCL.so` 可載入時宣告, 而 `.litertlm` 副檔名本身仍不保證模型初始化成功."
   ],
   "h3_roadmap": "路線圖",

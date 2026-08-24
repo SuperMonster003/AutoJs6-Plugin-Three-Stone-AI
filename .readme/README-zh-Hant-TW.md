@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI 是 AutoJs6 的官方 AI 文字生成外掛. 它在明確選擇的 CPU 或相容 GPU backend 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段回傳純文字或受 schema 約束的 JSON 文字. 目前 AI Provider V1 宿主呼叫僅使用這些本機目標, 不連網也不上傳資料. 外掛內部也已包含供後續統一目標設定與路由使用的 HTTPS 線上 backend, 提供 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 與自訂 OpenAI Compatible profile; 目前 UI 與 V1 宿主 API 尚未公開這些線上目標.
+3-Stone AI 是 AutoJs6 的官方 AI 文字生成外掛. 它在明確選擇的 CPU 或相容 GPU backend 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段回傳純文字或受 schema 約束的 JSON 文字. 目前 AI Provider V1 宿主呼叫僅使用這些本機目標, 不連網也不上傳資料. 外掛設定現在可管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 與自訂 OpenAI Compatible profile, 加密憑證, 預設線上目標, 計量網路存取與明確連線測試. 聊天 UI 與 AI Provider V1 宿主 API 仍不會路由到線上目標.
 
 ******
 
@@ -60,6 +60,7 @@
 - 透過 credit 背壓依序傳送文字 chunk, 並只發布一個完成, 錯誤或取消終態.
 - 列出, 選取及重新命名已匯入模型, 刪除未選取模型, 並在管理介面一鍵回收未參照模型檔案.
 - 透過 AutoJs6 明確選擇 `cpu`, `gpu` 或 `npu` backend; CPU 為預設值, GPU 僅在 OpenCL 載入探測通過後開放, NPU 因未封裝 EAP runtime 而明確回報不可用.
+- 在應用程式設定管理內建及自訂線上 profile, Android Keystore 憑證, 預設線上目標, 計量網路存取與明確有界連線測試.
 
 ******
 
@@ -143,7 +144,7 @@ required host build: 5276
 
 - 不宣告 reasoning 或 tools 能力.
 - 不接受 tool 角色訊息, tool schema, tool call 或 tool result.
-- 不提供連網模型探索或任意 URL 模型下載. 目前 UI 與 AI Provider V1 宿主路由尚未公開線上 profile 設定, credential 輸入及目標選擇; 目前僅能下載內建目錄中固定版本的推薦模型.
+- 不提供連網模型探索或任意 URL 模型下載. 目前 UI 可設定線上 profile 及其預設值, 但聊天目標選擇與 AI Provider V1 宿主路由尚未公開線上目標; 目前僅能下載內建目錄中固定版本的推薦模型.
 - 不宣告 NPU 推論可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 僅在 `libOpenCL.so` 可載入時宣告, 且 `.litertlm` 副檔名本身仍不保證模型初始化成功.
 
 ******
@@ -183,6 +184,7 @@ required host build: 5276
 * `新增` 新增嚴格且不含敏感資料的線上設定檔儲存庫, 僅接受 HTTPS OpenAI Compatible 端點, 使用 canonical UUID 與跨程序原子中繼資料, provider 或 origin 變更時必須明確取代或清除憑證
 * `新增` 新增外掛程式內部 OpenAI Compatible HTTPS 執行 backend, 支援自訂 baseUrl, 憑證及模型名稱, 有界 SSE 與 JSON fallback 串流回應, 精確取消, provider usage, 完成輪次多輪歷史, JSON Schema 請求映射及不含敏感資料的固定錯誤; AI Provider V1 宿主路由仍僅公開本地目標
 * `新增` 新增與宿主目錄對齊的 OpenAI, Anthropic, Gemini, DeepSeek 與 OpenRouter 預設範本; 統一線上執行層重用 OpenAI-compatible 協定, 並分別適配 Anthropic Messages 與 Gemini GenerateContent 的原生驗證, 請求, SSE 終態, usage 與 JSON Schema, 不提供協定間或本機/線上自動 fallback
+* `新增` 新增 10 種語言線上服務設定 UI, 支援設定檔新增, 編輯, 刪除, 不回顯的 API Key 取代與清除, 預設目標選擇, 在讀取憑證前強制執行的計量網路開關, 以及可取消且最長 60 秒的明確連線測試; 設定與檔案共用跨處理程序原子文件, AI Provider V1 仍僅公開本機目標
 * `修復` 移除外掛說明可執行範例預設設定的 256 token 與 4 KiB 輸出限制: 省略 `maxTokens` 時改用模型或引擎預設值, raw Binder 範例使用外掛完整的 64 KiB 輸出額度
 * `修復` 修復 10 種本地化外掛說明中的底層 Binder 範例仍呼叫協定 1.1 的 14 參數 `AiGenerationOptions` 建構方法, 導致其在協定 1.3 API 下回報 Java 建構方法不存在
 * `修復` 修復模型管理介面在系統深色模式下仍使用淺色主題文字, 導致本文, 核取方塊及模型清單與深色背景對比不足

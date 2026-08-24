@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "Languages",
   "p_languages_all_supported_for_readme": "The current README.md supports the following languages",
   "h3_introduction": "Introduction",
-  "p_introduction": "3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. Current AI Provider V1 host calls use those local targets without network access or data upload. The plugin also contains an internal HTTPS online backend for future unified-target settings and routing, with OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter, and custom OpenAI-compatible profiles; current UI and V1 host APIs do not expose these online targets.",
+  "p_introduction": "3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. Current AI Provider V1 host calls use those local targets without network access or data upload. The plugin settings now manage OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter, and custom OpenAI-compatible profiles, encrypted credentials, the default online target, metered-network access, and explicit connection tests. Chat and AI Provider V1 host APIs still do not route to online targets.",
   "h3_functions": "Features",
   "features": [
     "Import a `.litertlm` model package through the Android system picker and keep a verified copy in app-private storage.",
@@ -20,7 +20,8 @@
     "Optionally initialize each imported model once, persist its Available/Incompatible status, and rerun the check from the model manager.",
     "Deliver text chunks in order with credit backpressure and publish exactly one completed, failed, or cancelled terminal state.",
     "List, select, and rename imported models, delete unselected models, and reclaim unreferenced model files from the manager.",
-    "Select an explicit `cpu`, `gpu`, or `npu` backend through AutoJs6; CPU is the default, GPU is exposed only after an OpenCL loader probe, and NPU is reported unavailable because its EAP runtime is not packaged."
+    "Select an explicit `cpu`, `gpu`, or `npu` backend through AutoJs6; CPU is the default, GPU is exposed only after an OpenCL loader probe, and NPU is reported unavailable because its EAP runtime is not packaged.",
+    "Manage built-in and custom online profiles, Android Keystore credentials, the default online target, metered-network access, and explicit bounded connection tests in the app settings."
   ],
   "h3_formats": "Model and data formats",
   "p_formats": "Version 1 declares only the following model and text scope",
@@ -53,7 +54,7 @@
   "unsupported_capabilities": [
     "Reasoning and tools are not declared.",
     "Tool-role messages, tool schemas, tool calls, and tool results are not accepted.",
-    "There is no network model discovery or arbitrary-URL model download. Online profile configuration, credential entry, and target selection are not yet exposed through the current UI or AI Provider V1 host routing; only the pinned built-in recommendation catalog can currently be downloaded.",
+    "There is no network model discovery or arbitrary-URL model download. The UI can configure online profiles and their default, but chat target selection and AI Provider V1 host routing do not expose online targets yet; only the pinned built-in recommendation catalog can be downloaded.",
     "NPU inference is not declared: the profile is discoverable as `unavailable` with `npu-runtime-not-packaged`. GPU is declared only when `libOpenCL.so` is loadable, and a `.litertlm` extension alone still does not guarantee model initialization."
   ],
   "h3_roadmap": "Roadmap",

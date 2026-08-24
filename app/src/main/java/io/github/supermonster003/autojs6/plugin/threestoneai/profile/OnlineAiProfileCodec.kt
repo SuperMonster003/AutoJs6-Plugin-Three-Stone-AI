@@ -10,7 +10,13 @@ import java.nio.charset.CodingErrorAction
 /** Strict, bounded JSON containing profile metadata only. Authentication fields are never valid. */
 internal object OnlineAiProfileCodec {
     const val MAXIMUM_DOCUMENT_BYTES = 512 * 1024
-    private val DOCUMENT_KEYS = setOf("schema", "revision", "profiles")
+    private val DOCUMENT_KEYS = setOf(
+        "schema",
+        "revision",
+        "defaultProfileId",
+        "allowMeteredNetwork",
+        "profiles",
+    )
     private val PROFILE_KEYS = setOf("profileId", "displayName", "providerId", "baseUrl", "modelId")
 
     fun encode(document: OnlineAiProfileDocument): ByteArray {
@@ -27,6 +33,8 @@ internal object OnlineAiProfileCodec {
         return ("{" +
             "\"schema\":${OnlineAiProfilePolicy.SCHEMA}," +
             "\"revision\":${normalized.revision}," +
+            "\"defaultProfileId\":${normalized.defaultProfileId?.let(::quote) ?: "null"}," +
+            "\"allowMeteredNetwork\":${normalized.allowMeteredNetwork}," +
             "\"profiles\":$profiles" +
             "}").toByteArray(Charsets.UTF_8).also { bytes ->
             require(bytes.size in 1..MAXIMUM_DOCUMENT_BYTES) { "Online AI profile document is too large" }
@@ -38,6 +46,9 @@ internal object OnlineAiProfileCodec {
         val reader = strictReader(bytes)
         var schema: Int? = null
         var revision: Long? = null
+        var defaultProfileId: String? = null
+        var defaultProfileIdRead = false
+        var allowMeteredNetwork: Boolean? = null
         var profiles: List<OnlineAiProfile>? = null
         val keys = linkedSetOf<String>()
         reader.use {
@@ -52,19 +63,33 @@ internal object OnlineAiProfileCodec {
                         "Online AI profile schema",
                     )
                     "revision" -> revision = reader.nextStrictLong("Online AI profile revision")
+                    "defaultProfileId" -> {
+                        defaultProfileIdRead = true
+                        defaultProfileId = reader.nextNullableStrictString(
+                            "Default online AI profile ID",
+                        )
+                    }
+                    "allowMeteredNetwork" -> allowMeteredNetwork =
+                        reader.nextStrictBoolean("Online AI metered-network setting")
                     "profiles" -> profiles = reader.readProfiles()
                 }
             }
             reader.endObject()
             require(reader.peek() == JsonToken.END_DOCUMENT) { "Online AI profile document has trailing data" }
         }
-        require(keys == DOCUMENT_KEYS && schema == OnlineAiProfilePolicy.SCHEMA) {
+        require(
+            keys == DOCUMENT_KEYS &&
+                schema == OnlineAiProfilePolicy.SCHEMA &&
+                defaultProfileIdRead,
+        ) {
             "Online AI profile document is incomplete"
         }
         return OnlineAiProfilePolicy.normalize(
             OnlineAiProfileDocument(
                 revision = requireNotNull(revision),
                 profiles = requireNotNull(profiles),
+                defaultProfileId = defaultProfileId,
+                allowMeteredNetwork = requireNotNull(allowMeteredNetwork),
             ),
         )
     }
@@ -133,6 +158,20 @@ internal object OnlineAiProfileCodec {
         val raw = nextString()
         require(raw.matches(Regex("^(?:0|[1-9][0-9]*)$"))) { "$label is invalid" }
         return raw.toLongOrNull() ?: throw IllegalArgumentException("$label is out of range")
+    }
+
+    private fun JsonReader.nextNullableStrictString(label: String): String? = when (peek()) {
+        JsonToken.NULL -> {
+            nextNull()
+            null
+        }
+        JsonToken.STRING -> nextString()
+        else -> throw IllegalArgumentException("$label is invalid")
+    }
+
+    private fun JsonReader.nextStrictBoolean(label: String): Boolean {
+        require(peek() == JsonToken.BOOLEAN) { "$label is invalid" }
+        return nextBoolean()
     }
 
     private fun JsonReader.nextExactInt(expected: Int, label: String): Int {

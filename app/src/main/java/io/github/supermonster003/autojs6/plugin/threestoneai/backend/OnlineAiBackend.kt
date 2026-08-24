@@ -42,7 +42,7 @@ internal class OnlineAiBackend(
             .map(::target)
         return AiTargetCatalog(
             generation = generation(snapshot, targets),
-            defaultTargetId = null,
+            defaultTargetId = snapshot.defaultProfileId?.let(AiTargetIds::profile),
             targets = targets,
         )
     }

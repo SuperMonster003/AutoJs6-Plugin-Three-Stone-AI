@@ -13,6 +13,7 @@ internal enum class OnlineAiFailureReason {
     REDIRECT_REFUSED,
     SERVICE_UNAVAILABLE,
     NETWORK_UNAVAILABLE,
+    METERED_NETWORK_DISALLOWED,
     TIMED_OUT,
     TLS_FAILED,
     RESPONSE_TOO_LARGE,
@@ -55,6 +56,8 @@ internal class OnlineAiFailureException(
                     "Online AI service is unavailable"
                 OnlineAiFailureReason.NETWORK_UNAVAILABLE ->
                     "Online AI network request failed"
+                OnlineAiFailureReason.METERED_NETWORK_DISALLOWED ->
+                    "Online AI access on a metered network is disabled"
                 OnlineAiFailureReason.TIMED_OUT ->
                     "Online AI request timed out"
                 OnlineAiFailureReason.TLS_FAILED ->

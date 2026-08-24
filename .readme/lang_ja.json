@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "言語",
   "p_languages_all_supported_for_readme": "現在の README.md は次の言語に対応しています",
   "h3_introduction": "概要",
-  "p_introduction": "3-Stone AI は AutoJs6 の公式 AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 現在の AI Provider V1 ホスト呼び出しはこれらのローカルターゲットを使用し, ネットワークアクセスもデータ送信も行いません. プラグインには将来の統一ターゲット設定とルーティングに向けた内部 HTTPS オンライン backend もあり, OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter とカスタム OpenAI Compatible profile を提供しますが, 現在の UI と V1 ホスト API はこれらのオンライン target を公開していません.",
+  "p_introduction": "3-Stone AI は AutoJs6 の公式 AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 現在の AI Provider V1 ホスト呼び出しはこれらのローカルターゲットを使用し, ネットワークアクセスもデータ送信も行いません. プラグイン設定では OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter とカスタム OpenAI Compatible profile, 暗号化認証情報, 既定オンラインターゲット, 従量制ネットワーク, 明示接続テストを管理できます. チャットと AI Provider V1 ホスト API はまだオンラインターゲットへルーティングしません.",
   "h3_functions": "機能",
   "features": [
     "Android システムピッカーから `.litertlm` モデルパッケージをインポートし, 検証済みコピーをアプリ専用ストレージに保存します.",
@@ -20,7 +20,8 @@
     "インポートした各モデルを任意で一度初期化し, \"利用可能/互換性なし\"の状態を保存して, モデル管理画面から再チェックできます.",
     "credit バックプレッシャーでテキスト chunk を順番に配信し, 完了, 失敗, キャンセルのいずれか 1 つの終端状態だけを公開します.",
     "インポート済みモデルの一覧表示, 選択, 名前変更, 未選択モデルの削除, 管理画面からの未参照モデルファイルの回収を行います.",
-    "AutoJs6 から `cpu`, `gpu`, `npu` backend を明示選択できます. CPU が既定で, GPU は OpenCL 読み込み検査の成功時だけ公開し, NPU は EAP runtime 未同梱のため利用不可と明示します."
+    "AutoJs6 から `cpu`, `gpu`, `npu` backend を明示選択できます. CPU が既定で, GPU は OpenCL 読み込み検査の成功時だけ公開し, NPU は EAP runtime 未同梱のため利用不可と明示します.",
+    "アプリ設定で組み込みおよびカスタムのオンライン profile, Android Keystore 認証情報, 既定オンラインターゲット, 従量制ネットワーク, 明示的で上限付きの接続テストを管理します."
   ],
   "h3_formats": "モデルとデータ形式",
   "p_formats": "バージョン 1 は次のモデルとテキスト範囲だけを宣言します",
@@ -53,7 +54,7 @@
   "unsupported_capabilities": [
     "Reasoning と tools は宣言しません.",
     "Tool role メッセージ, tool schema, tool call, tool result は受け付けません.",
-    "ネットワークでのモデル探索や任意 URL からのモデルダウンロードはありません. online profile 設定, credential 入力, ターゲット選択は現在の UI または AI Provider V1 ホストルーティングではまだ公開されていません; 現在ダウンロードできるのは固定された内蔵推奨カタログだけです.",
+    "ネットワークでのモデル探索や任意 URL からのモデルダウンロードはありません. UI ではオンライン profile と既定値を設定できますが, チャットのターゲット選択と AI Provider V1 ホストルーティングはまだオンラインターゲットを公開しません; ダウンロードできるのは固定された内蔵推奨カタログだけです.",
     "NPU 推論は宣言しません. profile は `npu-runtime-not-packaged` 理由付きの `unavailable` として確認できます. GPU は `libOpenCL.so` を読み込める場合だけ宣言され, `.litertlm` 拡張子だけではモデル初期化を保証しません."
   ],
   "h3_roadmap": "ロードマップ",

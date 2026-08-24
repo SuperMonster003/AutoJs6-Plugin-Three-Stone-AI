@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI は AutoJs6 の公式 AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 現在の AI Provider V1 ホスト呼び出しはこれらのローカルターゲットを使用し, ネットワークアクセスもデータ送信も行いません. プラグインには将来の統一ターゲット設定とルーティングに向けた内部 HTTPS オンライン backend もあり, OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter とカスタム OpenAI Compatible profile を提供しますが, 現在の UI と V1 ホスト API はこれらのオンライン target を公開していません.
+3-Stone AI は AutoJs6 の公式 AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 現在の AI Provider V1 ホスト呼び出しはこれらのローカルターゲットを使用し, ネットワークアクセスもデータ送信も行いません. プラグイン設定では OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter とカスタム OpenAI Compatible profile, 暗号化認証情報, 既定オンラインターゲット, 従量制ネットワーク, 明示接続テストを管理できます. チャットと AI Provider V1 ホスト API はまだオンラインターゲットへルーティングしません.
 
 ******
 
@@ -60,6 +60,7 @@
 - credit バックプレッシャーでテキスト chunk を順番に配信し, 完了, 失敗, キャンセルのいずれか 1 つの終端状態だけを公開します.
 - インポート済みモデルの一覧表示, 選択, 名前変更, 未選択モデルの削除, 管理画面からの未参照モデルファイルの回収を行います.
 - AutoJs6 から `cpu`, `gpu`, `npu` backend を明示選択できます. CPU が既定で, GPU は OpenCL 読み込み検査の成功時だけ公開し, NPU は EAP runtime 未同梱のため利用不可と明示します.
+- アプリ設定で組み込みおよびカスタムのオンライン profile, Android Keystore 認証情報, 既定オンラインターゲット, 従量制ネットワーク, 明示的で上限付きの接続テストを管理します.
 
 ******
 
@@ -143,7 +144,7 @@ required host build: 5276
 
 - Reasoning と tools は宣言しません.
 - Tool role メッセージ, tool schema, tool call, tool result は受け付けません.
-- ネットワークでのモデル探索や任意 URL からのモデルダウンロードはありません. online profile 設定, credential 入力, ターゲット選択は現在の UI または AI Provider V1 ホストルーティングではまだ公開されていません; 現在ダウンロードできるのは固定された内蔵推奨カタログだけです.
+- ネットワークでのモデル探索や任意 URL からのモデルダウンロードはありません. UI ではオンライン profile と既定値を設定できますが, チャットのターゲット選択と AI Provider V1 ホストルーティングはまだオンラインターゲットを公開しません; ダウンロードできるのは固定された内蔵推奨カタログだけです.
 - NPU 推論は宣言しません. profile は `npu-runtime-not-packaged` 理由付きの `unavailable` として確認できます. GPU は `libOpenCL.so` を読み込める場合だけ宣言され, `.litertlm` 拡張子だけではモデル初期化を保証しません.
 
 ******
@@ -183,6 +184,7 @@ required host build: 5276
 * `機能` HTTPS 専用の OpenAI Compatible エンドポイント向けに機密情報を含まない厳格なオンライン profile リポジトリを追加し, canonical UUID, プロセス間で原子的なメタデータ, provider または origin 変更時の認証情報の明示的な置換または消去に対応
 * `機能` カスタム baseUrl, 認証情報, モデル profile 用のプラグイン内部 OpenAI Compatible HTTPS 実行 backend を追加し, 上限付き SSE と JSON fallback ストリーミング, 正確なキャンセル, provider usage, 完了ターンのみの永続履歴, JSON Schema リクエスト変換, 機密情報を含まない固定エラーに対応; AI Provider V1 のホストルーティングは引き続きローカル target のみを公開
 * `機能` ホストのカタログに合わせた OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter のプリセットを追加; 統一オンライン実行層は OpenAI-compatible プロトコルを再利用し, Anthropic Messages と Gemini GenerateContent 固有の認証, リクエスト, SSE 終端, usage, JSON Schema を個別に適応し, プロトコル間またはローカル/オンライン間の fallback は行わない
+* `機能` 10 言語のオンラインサービス設定 UI を追加し, profile の追加, 編集, 削除, API キーを表示しない置換と消去, 既定ターゲット選択, 認証情報アクセス前の従量制ネットワーク許可, キャンセル可能な最長 60 秒の明示接続テストに対応; 設定はプロセス間アトミック文書を共有し, AI Provider V1 はローカル限定のまま
 * `修正` 実行可能な説明例に設定されていた暗黙の 256 token / 4 KiB 出力上限を削除し, `maxTokens` 省略時はモデルまたは engine の既定値を使用, raw Binder 例は provider の 64 KiB 出力許容量全体を使用するよう修正
 * `修正` 10 言語のローカライズ済みプラグイン説明にある低レベル Binder 例が, プロトコル 1.1 の 14 引数 `AiGenerationOptions` コンストラクターを呼び続け, プロトコル 1.3 API で失敗する問題を修正
 * `修正` システムのダークモードでもモデル管理画面がライトテーマの文字色を保持し, 本文, チェックボックス, モデル行が暗い背景で読めなくなる問題を修正

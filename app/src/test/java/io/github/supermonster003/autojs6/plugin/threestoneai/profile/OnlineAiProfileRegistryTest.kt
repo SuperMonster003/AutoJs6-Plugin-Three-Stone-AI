@@ -110,6 +110,44 @@ class OnlineAiProfileRegistryTest {
     }
 
     @Test
+    fun defaultSelectionRequiresACredentialAndDeletionClearsTheSelection() {
+        val fixture = fixture()
+        val profile = profile()
+        fixture.registry.save(profile)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            fixture.registry.setDefaultProfile(profile.profileId)
+        }
+
+        fixture.registry.save(profile, replacement("default-secret"))
+        fixture.registry.setDefaultProfile(profile.profileId)
+        fixture.registry.setAllowMeteredNetwork(true)
+        val selected = fixture.registry.snapshot()
+        assertEquals(profile.profileId, selected.defaultProfileId)
+        assertTrue(selected.allowMeteredNetwork)
+
+        fixture.registry.delete(profile.profileId)
+        val deleted = fixture.registry.snapshot()
+        assertEquals(null, deleted.defaultProfileId)
+        assertTrue(deleted.allowMeteredNetwork)
+    }
+
+    @Test
+    fun clearingTheCredentialAlsoClearsItsDefaultSelection() {
+        val fixture = fixture()
+        val profile = profile()
+        fixture.registry.save(profile, replacement("default-secret"))
+        fixture.registry.setDefaultProfile(profile.profileId)
+        fixture.events.clear()
+
+        val cleared = fixture.registry.save(profile, OnlineAiCredentialUpdate.Clear)
+
+        assertFalse(cleared.configured)
+        assertEquals(null, fixture.registry.snapshot().defaultProfileId)
+        assertEquals(listOf("credential-clear", "profile-write"), fixture.events)
+    }
+
+    @Test
     fun registrySnapshotsExposeOnlyConfiguredStateAndCredentialCallbackIsEphemeral() {
         val fixture = fixture()
         val profile = profile()

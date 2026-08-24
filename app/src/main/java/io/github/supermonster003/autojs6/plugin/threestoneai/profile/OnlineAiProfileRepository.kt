@@ -28,6 +28,8 @@ internal class OnlineAiProfileRepository(
     fun delete(profileId: String): OnlineAiProfileDeletion =
         withTransaction { transaction -> transaction.delete(profileId) }
 
+    fun settings(): OnlineAiServiceSettings = withTransaction(Transaction::settings)
+
     /**
      * Keeps profile metadata stable while a registry coordinates its credential update. The
      * transaction object is invalidated before the storage lock is released.
@@ -60,6 +62,14 @@ internal class OnlineAiProfileRepository(
             return document.profiles.singleOrNull { it.profileId == normalizedId }
         }
 
+        fun settings(): OnlineAiServiceSettings {
+            checkValid()
+            return OnlineAiServiceSettings(
+                defaultProfileId = document.defaultProfileId,
+                allowMeteredNetwork = document.allowMeteredNetwork,
+            )
+        }
+
         fun save(profile: OnlineAiProfile): OnlineAiProfileUpdate {
             checkValid()
             val update = OnlineAiProfilePolicy.upsert(document, profile)
@@ -78,6 +88,16 @@ internal class OnlineAiProfileRepository(
                 document = deletion.document
             }
             return deletion
+        }
+
+        fun saveSettings(settings: OnlineAiServiceSettings): OnlineAiProfileDocument {
+            checkValid()
+            val updated = OnlineAiProfilePolicy.updateSettings(document, settings)
+            if (updated != document) {
+                access.write(OnlineAiProfileCodec.encode(updated))
+                document = updated
+            }
+            return updated
         }
 
         fun invalidate() {

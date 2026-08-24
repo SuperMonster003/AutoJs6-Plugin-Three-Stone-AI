@@ -88,6 +88,17 @@ class AppSettingsActivity : ConfiguredActivity() {
             setPaddingRelative(dp(20), dp(10), dp(20), dp(16))
         })
 
+        addView(category(R.string.app_settings_online_ai_category))
+        addView(settingRow(
+            title = getString(R.string.app_settings_online_ai),
+            summary = getString(R.string.app_settings_online_ai_summary),
+            onClick = {
+                startActivity(
+                    Intent(this@AppSettingsActivity, OnlineAiSettingsActivity::class.java),
+                )
+            },
+        ))
+
         addView(category(R.string.app_settings_information))
         addView(settingRow(
             title = getString(R.string.about_app_and_developer),

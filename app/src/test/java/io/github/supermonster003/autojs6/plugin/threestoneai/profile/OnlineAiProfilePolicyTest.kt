@@ -70,7 +70,7 @@ class OnlineAiProfilePolicyTest {
         )
         val earlier = profile(displayName = "Earlier")
         val normalized = OnlineAiProfilePolicy.normalize(
-            OnlineAiProfileDocument(1L, listOf(later, earlier)),
+            OnlineAiProfileDocument(revision = 1L, profiles = listOf(later, earlier)),
         )
 
         assertEquals(listOf(earlier.profileId, later.profileId), normalized.profiles.map { it.profileId })
@@ -89,7 +89,13 @@ class OnlineAiProfilePolicyTest {
 
     @Test
     fun strictCodecRoundTripsAndRejectsAnyAuthenticationField() {
-        val document = OnlineAiProfileDocument(7L, listOf(profile(displayName = "A \"profile\"")))
+        val configuredProfile = profile(displayName = "A \"profile\"")
+        val document = OnlineAiProfileDocument(
+            revision = 7L,
+            profiles = listOf(configuredProfile),
+            defaultProfileId = configuredProfile.profileId,
+            allowMeteredNetwork = true,
+        )
         val encoded = OnlineAiProfileCodec.encode(document)
         val text = encoded.toString(Charsets.UTF_8)
 
@@ -105,6 +111,38 @@ class OnlineAiProfilePolicyTest {
         }
         assertThrows(Exception::class.java) {
             OnlineAiProfileCodec.decode(encoded + " {}".toByteArray())
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            OnlineAiProfileCodec.decode(
+                text.replace("\"schema\":2", "\"schema\":1").toByteArray(),
+            )
+        }
+    }
+
+    @Test
+    fun settingsRequireAnExistingDefaultAndDeleteClearsItAtomically() {
+        val configuredProfile = profile()
+        val selected = OnlineAiProfilePolicy.updateSettings(
+            OnlineAiProfilePolicy.upsert(OnlineAiProfilePolicy.empty(), configuredProfile).document,
+            OnlineAiServiceSettings(
+                defaultProfileId = configuredProfile.profileId,
+                allowMeteredNetwork = true,
+            ),
+        )
+
+        assertEquals(configuredProfile.profileId, selected.defaultProfileId)
+        assertTrue(selected.allowMeteredNetwork)
+        val deleted = OnlineAiProfilePolicy.delete(selected, configuredProfile.profileId).document
+        assertEquals(null, deleted.defaultProfileId)
+        assertTrue(deleted.allowMeteredNetwork)
+        assertThrows(IllegalArgumentException::class.java) {
+            OnlineAiProfilePolicy.updateSettings(
+                OnlineAiProfilePolicy.empty(),
+                OnlineAiServiceSettings(
+                    defaultProfileId = configuredProfile.profileId,
+                    allowMeteredNetwork = false,
+                ),
+            )
         }
     }
 

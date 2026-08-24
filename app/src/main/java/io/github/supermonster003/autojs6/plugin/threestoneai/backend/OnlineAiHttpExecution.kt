@@ -27,6 +27,7 @@ internal fun interface OnlineAiCredentialRunner {
 internal class OnlineAiHttpExecution private constructor(
     private val callFactory: Call.Factory,
     private val ownedClient: OkHttpClient?,
+    private val networkAccess: OnlineAiNetworkAccess,
 ) : OnlineAiExecution, Closeable {
     private val closed = AtomicBoolean(false)
 
@@ -48,7 +49,10 @@ internal class OnlineAiHttpExecution private constructor(
     override val available: Boolean
         get() = !closed.get()
 
-    internal constructor(callFactory: Call.Factory) : this(callFactory, null)
+    internal constructor(
+        callFactory: Call.Factory,
+        networkAccess: OnlineAiNetworkAccess = OnlineAiNetworkAccess.UNRESTRICTED,
+    ) : this(callFactory, null, networkAccess)
 
     override fun supports(profile: OnlineAiProfile): Boolean = runCatching {
         val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
@@ -88,6 +92,7 @@ internal class OnlineAiHttpExecution private constructor(
             profile = normalized,
             callFactory = callFactory,
             executionAvailable = { this@OnlineAiHttpExecution.available },
+            networkAccess = networkAccess,
             credentialRunner = OnlineAiCredentialRunner { action ->
                 credentialAccess.withCredential { credential -> action(credential) }
             },
@@ -100,9 +105,11 @@ internal class OnlineAiHttpExecution private constructor(
     }
 
     companion object {
-        fun create(): OnlineAiHttpExecution {
+        fun create(
+            networkAccess: OnlineAiNetworkAccess = OnlineAiNetworkAccess.UNRESTRICTED,
+        ): OnlineAiHttpExecution {
             val client = OnlineAiHttpClient.create()
-            return OnlineAiHttpExecution(client, client)
+            return OnlineAiHttpExecution(client, client, networkAccess)
         }
     }
 }
@@ -112,6 +119,7 @@ internal class OnlineAiSession(
     profile: OnlineAiProfile,
     private val callFactory: Call.Factory,
     private val executionAvailable: () -> Boolean = { true },
+    private val networkAccess: OnlineAiNetworkAccess = OnlineAiNetworkAccess.UNRESTRICTED,
     private val credentialRunner: OnlineAiCredentialRunner,
 ) : AiBackendSession {
     private val profile = OnlineAiProfilePolicy.normalizeProfile(profile)
@@ -161,6 +169,8 @@ internal class OnlineAiSession(
         val progress = TurnProgress()
         val delivery = TurnDelivery(listener)
         try {
+            if (isStopped()) return
+            networkAccess.requireAccess()
             if (isStopped()) return
             val request = rawRequest.snapshot()
             val outbound = synchronized(stateLock) {

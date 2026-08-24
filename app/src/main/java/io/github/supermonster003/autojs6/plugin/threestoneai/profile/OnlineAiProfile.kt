@@ -82,6 +82,13 @@ internal data class OnlineAiProfile(
 internal data class OnlineAiProfileDocument(
     val revision: Long,
     val profiles: List<OnlineAiProfile>,
+    val defaultProfileId: String? = null,
+    val allowMeteredNetwork: Boolean = false,
+)
+
+internal data class OnlineAiServiceSettings(
+    val defaultProfileId: String?,
+    val allowMeteredNetwork: Boolean,
 )
 
 internal data class OnlineAiProfileUpdate(
@@ -97,13 +104,15 @@ internal data class OnlineAiProfileDeletion(
 )
 
 internal object OnlineAiProfilePolicy {
-    const val SCHEMA = 1
+    const val SCHEMA = 2
     const val MAXIMUM_PROFILES = 100
     const val MAXIMUM_MODEL_ID_BYTES = 256
 
     fun empty(): OnlineAiProfileDocument = OnlineAiProfileDocument(
         revision = 1L,
         profiles = emptyList(),
+        defaultProfileId = null,
+        allowMeteredNetwork = false,
     )
 
     fun normalize(document: OnlineAiProfileDocument): OnlineAiProfileDocument {
@@ -116,7 +125,14 @@ internal object OnlineAiProfilePolicy {
         require(profiles.map { it.displayName.lowercase(Locale.ROOT) }.distinct().size == profiles.size) {
             "Online AI profile display names must be unique"
         }
-        return document.copy(profiles = profiles)
+        val defaultProfileId = document.defaultProfileId?.let(::canonicalProfileId)
+        require(defaultProfileId == null || profiles.any { it.profileId == defaultProfileId }) {
+            "The default online AI profile must exist"
+        }
+        return document.copy(
+            profiles = profiles,
+            defaultProfileId = defaultProfileId,
+        )
     }
 
     fun normalizeProfile(profile: OnlineAiProfile): OnlineAiProfile {
@@ -171,11 +187,32 @@ internal object OnlineAiProfilePolicy {
                 current.copy(
                     revision = Math.addExact(current.revision, 1L),
                     profiles = current.profiles.filterNot { it.profileId == normalizedId },
+                    defaultProfileId = current.defaultProfileId.takeUnless { it == normalizedId },
                 ),
             ),
             profile = existing,
             changed = true,
         )
+    }
+
+    fun updateSettings(
+        document: OnlineAiProfileDocument,
+        settings: OnlineAiServiceSettings,
+    ): OnlineAiProfileDocument {
+        val current = normalize(document)
+        val proposed = normalize(
+            current.copy(
+                defaultProfileId = settings.defaultProfileId,
+                allowMeteredNetwork = settings.allowMeteredNetwork,
+            ),
+        )
+        if (
+            proposed.defaultProfileId == current.defaultProfileId &&
+            proposed.allowMeteredNetwork == current.allowMeteredNetwork
+        ) {
+            return current
+        }
+        return proposed.copy(revision = Math.addExact(current.revision, 1L))
     }
 
     fun canonicalProfileId(profileId: String): String {

@@ -24,7 +24,8 @@
         "플러그인이 관리하는 Android Keystore 자격 증명 저장소를 추가하고 AES-256-GCM, profile에 바인딩된 인증 암호문, 프로세스 간 원자적 비공개 파일, configured 상태만 조회 및 평문 즉시 삭제를 지원",
         "HTTPS 전용 OpenAI Compatible endpoint를 위한 엄격한 비밀정보 비포함 온라인 profile 저장소를 추가하고 canonical UUID, 프로세스 간 원자적 metadata, provider 또는 origin 변경 시 자격 증명의 명시적 교체 또는 삭제를 강제",
         "사용자 지정 baseUrl, 자격 증명, 모델 profile을 위한 플러그인 내부 OpenAI Compatible HTTPS 실행 backend를 추가하고 제한된 SSE 및 JSON fallback 스트리밍, 정확한 취소, provider usage, 완료된 턴만의 영구 기록, JSON Schema 요청 mapping, 민감 정보 없는 고정 오류를 지원; AI Provider V1 호스트 라우팅은 계속 로컬 target만 공개",
-        "호스트 카탈로그와 정렬된 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 프리셋을 추가; 통합 온라인 실행 계층은 OpenAI-compatible 프로토콜을 재사용하고 Anthropic Messages와 Gemini GenerateContent 고유의 인증, 요청, SSE 종료, usage, JSON Schema를 각각 어댑트하며 프로토콜 간 또는 로컬/온라인 자동 fallback은 제공하지 않음"
+        "호스트 카탈로그와 정렬된 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 프리셋을 추가; 통합 온라인 실행 계층은 OpenAI-compatible 프로토콜을 재사용하고 Anthropic Messages와 Gemini GenerateContent 고유의 인증, 요청, SSE 종료, usage, JSON Schema를 각각 어댑트하며 프로토콜 간 또는 로컬/온라인 자동 fallback은 제공하지 않음",
+        "10개 언어 온라인 서비스 설정 UI를 추가하여 profile 추가, 편집, 삭제, API 키 비노출 교체 및 지우기, 기본 대상 선택, 자격 증명 접근 전 종량제 네트워크 허용 적용, 취소 가능한 최대 60초 명시 연결 테스트를 지원; 설정은 프로세스 간 원자 문서를 공유하며 AI Provider V1은 계속 로컬 전용"
       ],
       "fix": [
         "실행 가능한 안내 예제의 암묵적 256 token 및 4 KiB 출력 제한을 제거하여 `maxTokens` 생략 시 모델 또는 engine 기본값을 사용하고 raw Binder 예제는 provider의 전체 64 KiB 출력 허용량을 사용하도록 수정",

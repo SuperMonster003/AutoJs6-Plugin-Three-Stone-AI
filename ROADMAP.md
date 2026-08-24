@@ -78,7 +78,8 @@
 - [x] OpenAI Compatible Backend (自定义 baseUrl + key + 模型名): Application 级执行器通过统一 `AiBackendSession` 提供完成轮次多轮历史, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, JSON Schema 请求映射及固定且不含敏感信息的错误; 仅访问 profile 声明的 HTTPS 来源, 禁止重定向, 自动重试, cookie, cache, authenticator 及请求观察器, 不提供本地/在线自动回退. AI Provider V1 宿主路由仍按设计仅公开本地模型.
 - [ ] OpenAI Compatible 真机互通与安全冒烟: 使用维护者控制的 HTTPS 测试 endpoint 验证自定义 baseUrl/key/model, SSE 与 JSON 回退, 长响应取消, 401/403/429/5xx, malformed/oversized response, profile/key 并发替换, 进程终止及网络切换. (需真机与测试凭据, 由维护者执行)
 - [x] 预置提供方模板: OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter 与宿主现有在线目录顺序及默认 baseUrl 对齐; 模型 ID 仍由 profile 明确填写. OpenAI/DeepSeek/OpenRouter 复用 OpenAI-compatible 格式, Anthropic Messages 与 Gemini GenerateContent 各自使用原生请求, 认证, SSE 终态, usage 与 JSON Schema 映射; 通用在线执行层不提供协议间或本地/在线自动回退. [开发契约](docs/dev/online-provider-backend.md)
-- [ ] 在线服务设置页: 配置档案的添加/编辑/删除/测试连接, 默认目标选择, 移动网络开关, 清除 Key.
+- [x] 在线服务设置页实现与离线验收: 10 语言配置档案添加/编辑/删除, 不回显 Key 的替换与清除, 默认在线目标选择, 实际执行前生效的移动/计量网络开关, 用户确认且可取消的 60 秒有界连接测试; 非敏感设置与档案共用 schema 2 跨进程原子文档, 未发布项目不保留 schema 1 兼容读取. [开发契约](docs/dev/online-provider-backend.md)
+- [ ] 在线服务设置页真机冒烟: 覆盖六种提供方, 新增/编辑/删除, provider/origin 变更强制重录 Key, 默认目标跨进程可见, Wi-Fi/移动及计量网络切换, 连接测试成功/取消/超时/错误映射, 旋转与进程重启. (需真机及维护者控制的测试凭据, 由维护者执行)
 - [ ] 聊天 UI 目标选择器: 每个会话固定默认 target; 切换目标默认建议新会话, 继续当前会话需明确确认并记录目标快照.
 - [ ] 会话历史逐条保存实际 target/provider/model/locality 快照; "重新生成" 默认沿用原响应目标.
 - [ ] 会话界面常显目标徽标: Local/Cloud, 提供方, 模型名; 次要信息展示 usage 与耗时, 在线目标标注可能产生费用.

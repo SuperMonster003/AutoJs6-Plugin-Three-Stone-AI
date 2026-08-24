@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI 係 AutoJs6 嘅官方 AI 文本生成插件. 佢喺顯式選擇嘅 CPU 或相容 GPU backend 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本或受 schema 約束嘅 JSON 文本. 目前 AI Provider V1 宿主調用只使用呢啲本地目標, 唔聯網亦唔上傳數據. 插件內部亦已包含面向後續統一目標設定同路由嘅 HTTPS 在線 backend, 提供 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 同自訂 OpenAI Compatible profile; 目前 UI 同 V1 宿主 API 尚未公開呢啲在線目標.
+3-Stone AI 係 AutoJs6 嘅官方 AI 文本生成插件. 佢喺顯式選擇嘅 CPU 或相容 GPU backend 上運行用戶導入嘅 LiteRT-LM 模型, 接收純文本消息歷史, 並通過受控串流會話返回純文本或受 schema 約束嘅 JSON 文本. 目前 AI Provider V1 宿主調用只使用呢啲本地目標, 唔聯網亦唔上傳數據. 插件設定而家可以管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 同自訂 OpenAI Compatible profile, 加密憑證, 預設網上目標, 計量網絡存取同顯式連線測試. 聊天 UI 同 AI Provider V1 宿主 API 仍然唔會路由到網上目標.
 
 ******
 
@@ -60,6 +60,7 @@
 - 透過 credit 背壓按序傳送文字 chunk, 並只發佈一個完成, 錯誤或取消終態.
 - 列出, 選擇同重新命名已匯入模型, 刪除未選取模型, 並喺管理介面一鍵回收未引用模型檔案.
 - 透過 AutoJs6 顯式選擇 `cpu`, `gpu` 或 `npu` backend; CPU 為預設值, GPU 只會喺 OpenCL 載入探測通過後開放, NPU 因未封裝 EAP runtime 而明確回報不可用.
+- 喺應用設定管理內置及自訂網上 profile, Android Keystore 憑證, 預設網上目標, 計量網絡存取同顯式有界連線測試.
 
 ******
 
@@ -143,7 +144,7 @@ required host build: 5276
 
 - 不宣告 reasoning 或 tools 能力.
 - 不接受 tool 角色訊息, tool schema, tool call 或 tool result.
-- 不提供連網模型發現或任意 URL 模型下載. 目前 UI 同 AI Provider V1 宿主路由尚未公開網上 profile 設定, credential 輸入及目標選擇; 目前只可下載內置目錄中固定版本嘅建議模型.
+- 不提供連網模型發現或任意 URL 模型下載. 目前 UI 可以設定網上 profile 同預設值, 但聊天目標選擇同 AI Provider V1 宿主路由仍未公開網上目標; 目前只可下載內置目錄中固定版本嘅建議模型.
 - 不宣告 NPU 推理可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 只喺 `libOpenCL.so` 可載入時宣告, 而 `.litertlm` 副檔名本身仍不保證模型初始化成功.
 
 ******
@@ -183,6 +184,7 @@ required host build: 5276
 * `新增` 新增嚴格且不含敏感資料嘅網上設定檔案庫, 只接受 HTTPS OpenAI Compatible 端點, 使用 canonical UUID 及跨進程原子元資料, provider 或 origin 變更時必須明確取代或清除憑據
 * `新增` 新增插件內部 OpenAI Compatible HTTPS 執行 backend, 支援自訂 baseUrl, 憑據及模型名稱, 有界 SSE 同 JSON fallback 串流回應, 精確取消, provider usage, 完成輪次多輪歷史, JSON Schema 請求映射及不含敏感資料嘅固定錯誤; AI Provider V1 宿主路由仍只公開本地目標
 * `新增` 新增同宿主目錄對齊嘅 OpenAI, Anthropic, Gemini, DeepSeek 同 OpenRouter 預設模板; 統一在線執行層重用 OpenAI-compatible 協議, 並分別適配 Anthropic Messages 同 Gemini GenerateContent 嘅原生認證, 請求, SSE 終態, usage 同 JSON Schema, 唔提供協議之間或本地/在線自動 fallback
+* `新增` 新增 10 種語言網上服務設定 UI, 支援設定檔新增, 編輯, 刪除, 唔回顯嘅 API Key 取代同清除, 預設目標選擇, 喺讀取憑證前強制執行嘅計量網絡開關, 同可取消且最長 60 秒嘅顯式連線測試; 設定同檔案共用跨進程原子文件, AI Provider V1 仍然只公開本機目標
 * `修復` 移除插件說明可執行範例預設設定嘅 256 token 同 4 KiB 輸出限制: 省略 `maxTokens` 時改用模型或引擎預設值, raw Binder 範例使用插件完整嘅 64 KiB 輸出額度
 * `修復` 修復 10 種本地化插件說明中的底層 Binder 範例仍呼叫協議 1.1 的 14 參數 `AiGenerationOptions` 建構方法, 導致喺協議 1.3 API 下報告 Java 建構方法不存在
 * `修復` 修復模型管理介面在系統深色模式下仍使用淺色主題文字, 導致正文, 核取方塊及模型清單與深色背景對比不足

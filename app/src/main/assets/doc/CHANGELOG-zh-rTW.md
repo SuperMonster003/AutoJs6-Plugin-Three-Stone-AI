@@ -22,6 +22,7 @@
 * `新增` 新增字型大小, Enter 鍵行為, 無限制或自訂 output token, 以及模型預設或自訂 `temperature`, `topK`, `topP` 等會話設定
 * `新增` 支援在串流輸出中渲染內聯 `$\text{...}$` 內容, 並適配常用數學命令, 上標與下標樣式
 * `新增` 新增由外掛程式管理的 Android Keystore 憑證儲存庫, 採用 AES-256-GCM, 綁定 profile 的驗證密文, 跨程序原子私有檔案, 僅查詢 configured 狀態及即時清除明文
+* `新增` 新增嚴格且不含敏感資料的線上設定檔儲存庫, 僅接受 HTTPS OpenAI Compatible 端點, 使用 canonical UUID 與跨程序原子中繼資料, provider 或 origin 變更時必須明確取代或清除憑證
 * `修復` 移除外掛說明可執行範例預設設定的 256 token 與 4 KiB 輸出限制: 省略 `maxTokens` 時改用模型或引擎預設值, raw Binder 範例使用外掛完整的 64 KiB 輸出額度
 * `修復` 修復 10 種本地化外掛說明中的底層 Binder 範例仍呼叫協定 1.1 的 14 參數 `AiGenerationOptions` 建構方法, 導致其在協定 1.3 API 下回報 Java 建構方法不存在
 * `修復` 修復模型管理介面在系統深色模式下仍使用淺色主題文字, 導致本文, 核取方塊及模型清單與深色背景對比不足
@@ -30,6 +31,7 @@
 * `優化` 重寫 ROADMAP 為可逐項勾選的功能路線圖
 * `優化` 將應用程式及產生的本地化文件標點統一為 ASCII, 並增加涵蓋封裝文字與產生文字的迴歸測試
 * `優化` 引入共用的 `AiBackend`/`AiTarget`/`AiBackendSession` 層, 讓啟動器聊天與 Binder Provider 共用 `LiteRtLocalBackend` 的目錄, 能力, 工作階段建立, 串流輸出及取消路徑
+* `優化` 將本機 `local:*` 與線上 `profile:*` 目標合併至 Application 層統一目錄及分派器; V1 模型清單仍僅公開本機模型, HTTPS 執行傳輸完成前線上目標會如實標記為 unavailable
 
 # v1.0.0
 

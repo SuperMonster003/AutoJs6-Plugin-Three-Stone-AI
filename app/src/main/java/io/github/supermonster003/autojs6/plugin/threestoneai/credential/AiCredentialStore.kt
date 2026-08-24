@@ -168,7 +168,7 @@ internal class EncryptedAiCredentialStore(
 }
 
 internal object AiCredentialProfileIds {
-    private val VALID_PROFILE_ID = Regex("^[a-z0-9][a-z0-9._-]{0,191}$")
+    private val VALID_PROFILE_ID = Regex("^[a-z0-9][a-z0-9._-]{0,127}$")
 
     fun requireValid(profileId: String) {
         require(VALID_PROFILE_ID.matches(profileId)) { "AI credential profile ID is invalid" }

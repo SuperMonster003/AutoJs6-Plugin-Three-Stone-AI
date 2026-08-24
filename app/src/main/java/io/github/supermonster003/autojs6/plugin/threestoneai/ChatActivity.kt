@@ -1113,7 +1113,7 @@ class ChatActivity : ConfiguredActivity() {
         submitBackendWork(generationId, assistantMessageId) {
             runCatching { backendToReplace?.close() }
             if (!isGenerationCurrent(generationId)) return@submitBackendWork
-            val created = (application as ThreeStoneAiApplication).localBackend.createSession(
+            val created = (application as ThreeStoneAiApplication).aiBackend.createSession(
                 AiBackendSessionRequest(
                     targetId = targetId,
                     executionProfileId = AiProviderBackendProfile.CPU,

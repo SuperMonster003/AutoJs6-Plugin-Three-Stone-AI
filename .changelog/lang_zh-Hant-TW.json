@@ -21,7 +21,8 @@
         "新增主題色, 深色模式, 應用程式語言, 應用程式與開發者資訊及版本記錄等應用程式設定, 可跟隨 AutoJs6 的選項預設均設為跟隨 AutoJs6",
         "新增字型大小, Enter 鍵行為, 無限制或自訂 output token, 以及模型預設或自訂 `temperature`, `topK`, `topP` 等會話設定",
         "支援在串流輸出中渲染內聯 `$\\text{...}$` 內容, 並適配常用數學命令, 上標與下標樣式",
-        "新增由外掛程式管理的 Android Keystore 憑證儲存庫, 採用 AES-256-GCM, 綁定 profile 的驗證密文, 跨程序原子私有檔案, 僅查詢 configured 狀態及即時清除明文"
+        "新增由外掛程式管理的 Android Keystore 憑證儲存庫, 採用 AES-256-GCM, 綁定 profile 的驗證密文, 跨程序原子私有檔案, 僅查詢 configured 狀態及即時清除明文",
+        "新增嚴格且不含敏感資料的線上設定檔儲存庫, 僅接受 HTTPS OpenAI Compatible 端點, 使用 canonical UUID 與跨程序原子中繼資料, provider 或 origin 變更時必須明確取代或清除憑證"
       ],
       "fix": [
         "移除外掛說明可執行範例預設設定的 256 token 與 4 KiB 輸出限制: 省略 `maxTokens` 時改用模型或引擎預設值, raw Binder 範例使用外掛完整的 64 KiB 輸出額度",
@@ -33,7 +34,8 @@
         "更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致",
         "重寫 ROADMAP 為可逐項勾選的功能路線圖",
         "將應用程式及產生的本地化文件標點統一為 ASCII, 並增加涵蓋封裝文字與產生文字的迴歸測試",
-        "引入共用的 `AiBackend`/`AiTarget`/`AiBackendSession` 層, 讓啟動器聊天與 Binder Provider 共用 `LiteRtLocalBackend` 的目錄, 能力, 工作階段建立, 串流輸出及取消路徑"
+        "引入共用的 `AiBackend`/`AiTarget`/`AiBackendSession` 層, 讓啟動器聊天與 Binder Provider 共用 `LiteRtLocalBackend` 的目錄, 能力, 工作階段建立, 串流輸出及取消路徑",
+        "將本機 `local:*` 與線上 `profile:*` 目標合併至 Application 層統一目錄及分派器; V1 模型清單仍僅公開本機模型, HTTPS 執行傳輸完成前線上目標會如實標記為 unavailable"
       ]
     },
     "v1.0.0": {

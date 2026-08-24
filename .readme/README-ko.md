@@ -180,6 +180,7 @@ required host build: 5276
 * `기능` 글꼴 크기, Enter 키 동작, 무제한 또는 사용자 지정 output token, 모델 기본값 또는 사용자 지정 `temperature`, `topK`, `topP`를 대화 설정에 추가
 * `기능` 스트리밍 중 인라인 `$\text{...}$` 콘텐츠를 렌더링하고 일반 수학 명령과 위 첨자 및 아래 첨자 스타일을 지원
 * `기능` 플러그인이 관리하는 Android Keystore 자격 증명 저장소를 추가하고 AES-256-GCM, profile에 바인딩된 인증 암호문, 프로세스 간 원자적 비공개 파일, configured 상태만 조회 및 평문 즉시 삭제를 지원
+* `기능` HTTPS 전용 OpenAI Compatible endpoint를 위한 엄격한 비밀정보 비포함 온라인 profile 저장소를 추가하고 canonical UUID, 프로세스 간 원자적 metadata, provider 또는 origin 변경 시 자격 증명의 명시적 교체 또는 삭제를 강제
 * `수정` 실행 가능한 안내 예제의 암묵적 256 token 및 4 KiB 출력 제한을 제거하여 `maxTokens` 생략 시 모델 또는 engine 기본값을 사용하고 raw Binder 예제는 provider의 전체 64 KiB 출력 허용량을 사용하도록 수정
 * `수정` 10개 언어로 현지화된 플러그인 안내의 저수준 Binder 예제가 프로토콜 1.1의 14개 인자 `AiGenerationOptions` 생성자를 계속 호출하여 프로토콜 1.3 API에서 실패하던 문제 수정
 * `수정` 시스템 다크 모드에서도 모델 관리 화면이 라이트 테마 텍스트 색상을 유지해 본문, 체크박스, 모델 행을 어두운 배경에서 읽을 수 없던 문제 수정
@@ -188,6 +189,7 @@ required host build: 5276
 * `개선` ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성
 * `개선` 앱과 생성된 현지화 문서의 문장 부호를 ASCII로 통일하고 패키지 및 생성 문서를 검사하는 회귀 테스트를 추가
 * `개선` 공유 `AiBackend`/`AiTarget`/`AiBackendSession` 계층을 도입해 런처 채팅과 Binder provider가 `LiteRtLocalBackend`의 catalog, capabilities, session 생성, streaming 및 취소 경로를 공유
+* `개선` 로컬 `local:*` 및 온라인 `profile:*` target을 Application 수준의 단일 catalog와 dispatcher로 통합; V1 모델 목록은 로컬 전용으로 유지하며 HTTPS 실행 transport 구현 전까지 온라인 target을 unavailable로 정확히 표시
 
 # v1.0.0
 

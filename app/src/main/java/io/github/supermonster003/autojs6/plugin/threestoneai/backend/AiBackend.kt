@@ -1,10 +1,17 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.backend
 
+import org.autojs.plugin.ai.common.api.AiCommonLimits
+import org.autojs.plugin.ai.common.api.AiValidation
 import java.io.Closeable
 
 internal enum class AiTargetLocality {
     LOCAL,
     REMOTE,
+}
+
+internal enum class AiTargetCredentialMode {
+    NONE,
+    PLUGIN_MANAGED,
 }
 
 internal data class AiTargetCapabilities(
@@ -49,6 +56,8 @@ internal data class AiTarget(
     val modelId: String,
     val displayName: String,
     val locality: AiTargetLocality,
+    val credentialMode: AiTargetCredentialMode,
+    val declaredHttpsOrigins: List<String>,
     val configured: Boolean,
     val available: Boolean,
     val capabilities: AiTargetCapabilities,
@@ -62,6 +71,27 @@ internal data class AiTarget(
         require(profileId == null || profileId.isNotBlank())
         require(modelId.isNotBlank())
         require(displayName.isNotBlank())
+        require(declaredHttpsOrigins.size <= AiCommonLimits.MAX_ORIGINS) {
+            "AI target declares too many origins"
+        }
+        require(declaredHttpsOrigins.distinct().size == declaredHttpsOrigins.size) {
+            "AI target declared origins must be unique"
+        }
+        declaredHttpsOrigins.forEach(AiValidation::requireHttpsOrigin)
+        when (locality) {
+            AiTargetLocality.LOCAL -> {
+                require(profileId == null)
+                require(AiTargetIds.requireLocalModelId(targetId) == modelId)
+                require(credentialMode == AiTargetCredentialMode.NONE)
+                require(declaredHttpsOrigins.isEmpty())
+            }
+            AiTargetLocality.REMOTE -> {
+                require(profileId != null)
+                require(AiTargetIds.requireProfileId(targetId) == profileId)
+                require(credentialMode == AiTargetCredentialMode.PLUGIN_MANAGED)
+                require(declaredHttpsOrigins.isNotEmpty())
+            }
+        }
         require(configured || !available) { "An unconfigured AI target cannot be available" }
         require(executionProfiles.map(AiExecutionProfile::profileId).distinct().size == executionProfiles.size) {
             "AI target execution profiles must be unique"
@@ -102,6 +132,8 @@ internal data class AiBackendSessionRequest(
 internal interface AiBackend {
     val backendId: String
 
+    fun ownsTarget(targetId: String): Boolean
+
     fun catalog(): AiTargetCatalog
 
     fun capabilities(targetId: String): AiTargetCapabilities = catalog().requireTarget(targetId).capabilities
@@ -128,7 +160,8 @@ internal class AiTargetUnavailableException(targetId: String) :
 
 internal object AiTargetIds {
     private const val LOCAL_PREFIX = "local:"
-    private val SEGMENT = Regex("^[a-z0-9][a-z0-9._-]{0,191}$")
+    private const val PROFILE_PREFIX = "profile:"
+    private val SEGMENT = AiValidation.STABLE_ID
 
     fun local(modelId: String): String {
         require(SEGMENT.matches(modelId)) { "Local AI model ID is invalid" }
@@ -139,6 +172,18 @@ internal object AiTargetIds {
         require(targetId.startsWith(LOCAL_PREFIX)) { "AI target is not local" }
         return targetId.removePrefix(LOCAL_PREFIX).also { modelId ->
             require(SEGMENT.matches(modelId)) { "Local AI target ID is invalid" }
+        }
+    }
+
+    fun profile(profileId: String): String {
+        require(SEGMENT.matches(profileId)) { "Online AI profile ID is invalid" }
+        return "$PROFILE_PREFIX$profileId"
+    }
+
+    fun requireProfileId(targetId: String): String {
+        require(targetId.startsWith(PROFILE_PREFIX)) { "AI target is not an online profile" }
+        return targetId.removePrefix(PROFILE_PREFIX).also { profileId ->
+            require(SEGMENT.matches(profileId)) { "Online AI target ID is invalid" }
         }
     }
 }

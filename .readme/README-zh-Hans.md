@@ -180,6 +180,7 @@ required host build: 5276
 * `新增` 新增字体大小, Enter 键行为, 无限制或自定义 output token, 以及模型默认或自定义 `temperature`, `topK`, `topP` 等会话设置
 * `新增` 支持在流式输出中渲染内联 `$\text{...}$` 内容, 并适配常用数学命令, 上标与下标样式
 * `新增` 新增插件自管的 Android Keystore 凭据仓库, 使用 AES-256-GCM, 与 profile 绑定的认证密文, 跨进程原子私有文件, 仅 configured 状态查询及明文即时清零
+* `新增` 新增严格的非敏感在线配置档案仓库, 仅接受 HTTPS OpenAI Compatible 端点, 使用 canonical UUID 与跨进程原子元数据, 并在 provider 或 origin 变更时强制明确替换或清除凭据
 * `修复` 移除插件说明可运行示例默认设置的 256 token 与 4 KiB 输出限制: 省略 `maxTokens` 时改用模型或引擎默认值, raw Binder 示例使用插件完整的 64 KiB 输出额度
 * `修复` 修复 10 种本地化插件说明中的底层 Binder 示例仍调用协议 1.1 的 14 参数 `AiGenerationOptions` 构造方法, 导致其在协议 1.3 API 下报告 Java 构造方法不存在
 * `修复` 修复模型管理界面在系统暗色模式下仍使用亮色主题文字, 导致正文, 复选框和模型列表与深色背景对比不足
@@ -188,6 +189,7 @@ required host build: 5276
 * `优化` 重写 ROADMAP 为可逐项勾选的功能路线图
 * `优化` 将应用及生成的本地化文档标点统一为 ASCII, 并增加覆盖打包文本和生成文本的回归测试
 * `优化` 引入共享的 `AiBackend`/`AiTarget`/`AiBackendSession` 层, 使启动器聊天和 Binder Provider 共用 `LiteRtLocalBackend` 的目录, 能力, 会话创建, 流式输出及取消路径
+* `优化` 将本地 `local:*` 与在线 `profile:*` 目标合入 Application 级统一目录及分发层; V1 模型列表仍仅公开本地模型, HTTPS 执行传输落地前在线目标如实标记为 unavailable
 
 # v1.0.0
 

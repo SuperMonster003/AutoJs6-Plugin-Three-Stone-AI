@@ -41,6 +41,9 @@ internal class LiteRtLocalBackend(
 
     override val backendId: String = BACKEND_ID
 
+    override fun ownsTarget(targetId: String): Boolean =
+        runCatching { AiTargetIds.requireLocalModelId(targetId) }.isSuccess
+
     override fun catalog(): AiTargetCatalog = LiteRtLocalCatalog.create(
         document = catalogSnapshot(),
         backendProfiles = backendProfiles(),
@@ -122,6 +125,8 @@ internal object LiteRtLocalCatalog {
             modelId = modelId,
             displayName = displayName,
             locality = AiTargetLocality.LOCAL,
+            credentialMode = AiTargetCredentialMode.NONE,
+            declaredHttpsOrigins = emptyList(),
             configured = true,
             available = executionProfiles.any(AiExecutionProfile::available),
             capabilities = capabilities,

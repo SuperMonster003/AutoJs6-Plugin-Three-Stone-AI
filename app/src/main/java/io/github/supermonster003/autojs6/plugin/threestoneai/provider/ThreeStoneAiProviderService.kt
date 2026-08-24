@@ -42,8 +42,10 @@ class ThreeStoneAiProviderService : Service() {
             Thread(runnable, "three-stone-ai-timeout").apply { isDaemon = true }
         }
         callbackLane = SerialCallbackLane()
-        aiBackend = (application as ThreeStoneAiApplication).localBackend
-        modelPager = ModelPager(aiBackend::catalog)
+        val pluginApplication = application as ThreeStoneAiApplication
+        aiBackend = pluginApplication.aiBackend
+        // Provider protocol V1 lists only local models; unified target listing arrives in V2.
+        modelPager = ModelPager(pluginApplication.localBackend::catalog)
     }
 
     override fun onBind(intent: Intent?): IBinder = binder

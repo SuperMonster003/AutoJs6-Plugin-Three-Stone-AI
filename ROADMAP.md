@@ -72,9 +72,9 @@
 
 - [x] 引入 `AiBackend` / `AiBackendSession` 通用抽象 (catalog / capabilities / createSession / stream / cancel), 现有 LiteRT 原生会话逻辑收敛到 `LiteRtLocalBackend`, 不重写; 启动器聊天与独立 `:provider` 进程的 Binder Service 共用同一 backend 实现及会话路径, 各进程实例由 Application 持有.
 - [x] 建立 `AiTarget` / `AiTargetCatalog` 值模型: 已导入本地模型统一映射为 `local:*` target, 含 targetId, backend/provider/model, locality, configured/available, capabilities, 执行 profile 与上下文/输出上限.
-- [ ] 将在线配置档案映射为 `profile:*` target 并合入同一目录, 使本地模型与在线配置档案均为可选目标.
+- [x] 在线配置档案领域与目录层: 严格有界且不含凭据的 JSON, canonical UUID, HTTPS-only base URL, provider/origin 变更时强制明确替换或清除凭据, 跨进程锁 + fsync + 原子发布; 档案映射为 `profile:*` REMOTE/PLUGIN_MANAGED target 并与 `local:*` 合入 Application 级统一目录及会话分发. HTTP 执行器落地前在线 target 如实保持 `available=false`, Binder V1 模型列表仍仅公开本地模型.
 - [x] 插件自有凭据仓库: Android Keystore AES-256-GCM 主密钥, 与 profile 绑定的认证密文, 应用私有 hash 文件名, fsync + 原子 rename, 进程内互斥 + 跨进程文件锁; 对外仅查询 configured, 插件内部仅在同步回调中短暂解密并在成功或异常后立即清零, 固定错误消息不携带底层敏感原因.
-- [ ] 凭据仓库真机安全冒烟: 验证默认进程写入后 `:provider` 可读取, 并覆盖跨进程替换/清除, 进程终止重启, 锁屏重启, 密文损坏及清除应用数据后的 fail-closed 行为. (需真机, 由维护者执行)
+- [ ] 在线档案与凭据真机安全冒烟: 验证默认进程写入后 `:provider` 可读取一致的非敏感档案与凭据状态, 并覆盖跨进程替换/清除, provider/origin 变更时的凭据重录, 进程终止重启, 锁屏重启, 元数据/密文损坏及清除应用数据后的 fail-closed 行为. (需真机, 由维护者执行)
 - [ ] OpenAI Compatible Backend (自定义 baseUrl + key + 模型名): 流式, 取消, usage, 错误规范化; 作为首个在线后端打通全链路.
 - [ ] 预置提供方模板: OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter (与宿主现有在线目录对齐, 优先复用 OpenAI 兼容格式, Anthropic/Gemini 单独适配).
 - [ ] 在线服务设置页: 配置档案的添加/编辑/删除/测试连接, 默认目标选择, 移动网络开关, 清除 Key.

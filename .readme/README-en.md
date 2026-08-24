@@ -180,6 +180,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Feature` Added conversation settings for font size, Enter-key behavior, unlimited or custom output tokens, and model-default or custom `temperature`, `topK`, and `topP` sampling
 * `Feature` Rendered inline `$\text{...}$` content during streaming, with common math commands plus superscript and subscript styling
 * `Feature` Added a plugin-managed Android Keystore credential store with AES-256-GCM, profile-bound authenticated ciphertext, cross-process atomic private files, configured-only status checks, and immediate plaintext zeroization
+* `Feature` Added a strict non-secret online profile repository for HTTPS-only OpenAI-compatible endpoints, with canonical UUIDs, cross-process atomic metadata, and mandatory credential replacement or clearing when the provider or origin changes
 * `Fix` Removed the runnable instruction examples' implicit 256-token and 4 KiB output caps: omitted `maxTokens` now uses the model or engine default, while the raw Binder example uses the provider's full 64 KiB output allowance
 * `Fix` Fixed the raw Binder sample in the 10 localized plugin instructions still invoking the 14-argument protocol 1.1 `AiGenerationOptions` constructor, which failed against the protocol 1.3 API
 * `Fix` Fixed the model manager retaining light-theme text colors in system dark mode, which made body text, checkboxes, and model rows unreadable against the dark background
@@ -188,6 +189,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 * `Improvement` Normalized application and generated localized text to ASCII punctuation, with a regression test covering packaged and generated text
 * `Improvement` Introduced a shared `AiBackend`/`AiTarget`/`AiBackendSession` layer so launcher chat and the Binder provider use the same `LiteRtLocalBackend` catalog, capabilities, session creation, streaming, and cancellation path
+* `Improvement` Merged local `local:*` and online `profile:*` targets into one application-level catalog and dispatcher; the V1 model listing remains local-only and online targets report unavailable until their HTTPS execution transport is implemented
 
 # v1.0.0
 

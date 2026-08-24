@@ -180,6 +180,7 @@ required host build: 5276
 * `機能` フォントサイズ, Enter キー動作, 無制限または任意の output token, モデル既定または任意の `temperature`, `topK`, `topP` を会話設定に追加
 * `機能` ストリーミング中にインライン `$\text{...}$` を描画し, 一般的な数式コマンド, 上付き, 下付き表示に対応
 * `機能` プラグイン管理の Android Keystore 認証情報ストアを追加し, AES-256-GCM, profile に結び付けた認証済み暗号文, プロセス間で原子的な非公開ファイル, configured 状態のみの照会, 平文の即時消去に対応
+* `機能` HTTPS 専用の OpenAI Compatible エンドポイント向けに機密情報を含まない厳格なオンライン profile リポジトリを追加し, canonical UUID, プロセス間で原子的なメタデータ, provider または origin 変更時の認証情報の明示的な置換または消去に対応
 * `修正` 実行可能な説明例に設定されていた暗黙の 256 token / 4 KiB 出力上限を削除し, `maxTokens` 省略時はモデルまたは engine の既定値を使用, raw Binder 例は provider の 64 KiB 出力許容量全体を使用するよう修正
 * `修正` 10 言語のローカライズ済みプラグイン説明にある低レベル Binder 例が, プロトコル 1.1 の 14 引数 `AiGenerationOptions` コンストラクターを呼び続け, プロトコル 1.3 API で失敗する問題を修正
 * `修正` システムのダークモードでもモデル管理画面がライトテーマの文字色を保持し, 本文, チェックボックス, モデル行が暗い背景で読めなくなる問題を修正
@@ -188,6 +189,7 @@ required host build: 5276
 * `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 * `改善` アプリと生成済みローカライズ文書の句読点を ASCII に統一し, パッケージ済み文書と生成文書を対象とする回帰テストを追加
 * `改善` 共通の `AiBackend`/`AiTarget`/`AiBackendSession` 層を導入し, ランチャーチャットと Binder provider が `LiteRtLocalBackend` のカタログ, capabilities, セッション作成, streaming, キャンセル経路を共有
+* `改善` ローカル `local:*` とオンライン `profile:*` target を Application レベルの統一カタログとディスパッチャーに統合; V1 モデル一覧はローカル専用のままとし, HTTPS 実行 transport の実装まではオンライン target を unavailable として正確に報告
 
 # v1.0.0
 

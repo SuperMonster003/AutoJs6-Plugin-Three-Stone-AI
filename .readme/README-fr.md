@@ -180,6 +180,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Fonction` Ajout de paramètres de conversation pour la taille de police, le comportement de la touche Entrée, les output tokens illimités ou personnalisés et l'échantillonnage `temperature`, `topK` et `topP` par défaut du modèle ou personnalisé
 * `Fonction` Rendu du contenu en ligne `$\text{...}$` pendant le streaming, avec des commandes mathématiques courantes et des styles exposant et indice
 * `Fonction` Ajout d'un coffre d'identifiants géré par le plugin avec Android Keystore, AES-256-GCM, un texte chiffré authentifié lié au profile, des fichiers privés atomiques interprocessus, la seule consultation de l'état configured et l'effacement immédiat du texte en clair
+* `Fonction` Ajout d'un dépôt strict et non secret de profils en ligne pour les points de terminaison OpenAI Compatible exclusivement HTTPS, avec UUID canoniques, métadonnées atomiques interprocessus et remplacement ou suppression obligatoire des identifiants lors d'un changement de provider ou d'origin
 * `Correction` Suppression des limites implicites de 256 tokens et 4 KiB des exemples exécutables: l'omission de `maxTokens` utilise désormais la valeur par défaut du modèle ou du moteur, et l'exemple Binder direct utilise les 64 KiB complets autorisés par le fournisseur
 * `Correction` Correction de l'exemple Binder de bas niveau dans les instructions localisées en 10 langues, qui appelait encore le constructeur `AiGenerationOptions` à 14 arguments du protocole 1.1 et échouait avec l'API du protocole 1.3
 * `Correction` Correction du gestionnaire de modèles qui conservait les couleurs de texte du thème clair en mode sombre système, rendant le texte, les cases à cocher et les lignes de modèles illisibles sur l'arrière-plan sombre
@@ -188,6 +189,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Amélioration` ROADMAP réécrite comme feuille de route de fonctionnalités avec des éléments vérifiables individuellement
 * `Amélioration` Normalisation de la ponctuation ASCII dans l'application et les textes localisés générés, avec un test de régression pour les textes empaquetés et générés
 * `Amélioration` Introduction d'une couche partagée `AiBackend`/`AiTarget`/`AiBackendSession` afin que le chat du lanceur et le provider Binder utilisent le même chemin `LiteRtLocalBackend` pour le catalogue, les capacités, la création de session, le streaming et l'annulation
+* `Amélioration` Fusion des cibles locales `local:*` et en ligne `profile:*` dans un catalogue et un répartiteur uniques au niveau Application; la liste de modèles V1 reste locale et les cibles en ligne sont déclarées unavailable jusqu'à l'implémentation de leur transport HTTPS
 
 # v1.0.0
 

@@ -92,6 +92,7 @@ class AiBackendAbstractionTest {
         val session = RecordingPersistentSession(target)
         val backend = object : AiBackend {
             override val backendId = target.backendId
+            override fun ownsTarget(targetId: String) = targetId == target.targetId
             override fun catalog() = AiTargetCatalog("generation-1", target.targetId, listOf(target))
             override fun createSession(request: AiBackendSessionRequest): AiBackendSession {
                 assertEquals(target.targetId, request.targetId)
@@ -117,6 +118,29 @@ class AiBackendAbstractionTest {
         }
         assertThrows(IllegalArgumentException::class.java) {
             AiTargetCatalog("generation-1", "local:missing", listOf(target))
+        }
+    }
+
+    @Test
+    fun targetLocalityMustMatchIdentityCredentialModeAndOrigins() {
+        val local = target()
+        assertThrows(IllegalArgumentException::class.java) {
+            local.copy(profileId = "remote")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            local.copy(declaredHttpsOrigins = listOf("https://api.example.com"))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            local.copy(targetId = "local:different")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            local.copy(
+                targetId = "profile:remote",
+                profileId = "remote",
+                locality = AiTargetLocality.REMOTE,
+                credentialMode = AiTargetCredentialMode.PLUGIN_MANAGED,
+                declaredHttpsOrigins = listOf("http://api.example.com"),
+            )
         }
     }
 
@@ -168,6 +192,8 @@ class AiBackendAbstractionTest {
         modelId = "litertlm." + "11".repeat(16),
         displayName = "Local model",
         locality = AiTargetLocality.LOCAL,
+        credentialMode = AiTargetCredentialMode.NONE,
+        declaredHttpsOrigins = emptyList(),
         configured = true,
         available = true,
         capabilities = AiTargetCapabilities(

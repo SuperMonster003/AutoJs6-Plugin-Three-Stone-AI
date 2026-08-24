@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "Languages",
   "p_languages_all_supported_for_readme": "The current README.md supports the following languages",
   "h3_introduction": "Introduction",
-  "p_introduction": "3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. Current AI Provider V1 host calls use those local targets without network access or data upload. The plugin also contains an internal HTTPS OpenAI-compatible backend for future unified-target settings and routing; current UI and V1 host APIs do not expose it.",
+  "p_introduction": "3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. Current AI Provider V1 host calls use those local targets without network access or data upload. The plugin also contains an internal HTTPS online backend for future unified-target settings and routing, with OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter, and custom OpenAI-compatible profiles; current UI and V1 host APIs do not expose these online targets.",
   "h3_functions": "Features",
   "features": [
     "Import a `.litertlm` model package through the Android system picker and keep a verified copy in app-private storage.",

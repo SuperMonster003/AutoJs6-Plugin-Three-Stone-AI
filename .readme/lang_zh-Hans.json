@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "语言",
   "p_languages_all_supported_for_readme": "当前 README.md 支持以下语言",
   "h3_introduction": "简介",
-  "p_introduction": "3-Stone AI 是 AutoJs6 的官方 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 当前 AI Provider V1 宿主调用只使用这些本地目标, 不联网也不上传数据. 插件内部也已包含面向后续统一目标设置与路由的 HTTPS OpenAI Compatible backend; 当前 UI 与 V1 宿主 API 尚不公开它.",
+  "p_introduction": "3-Stone AI 是 AutoJs6 的官方 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 当前 AI Provider V1 宿主调用只使用这些本地目标, 不联网也不上传数据. 插件内部也已包含面向后续统一目标设置与路由的 HTTPS 在线 backend, 提供 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 及自定义 OpenAI Compatible profile; 当前 UI 与 V1 宿主 API 尚不公开这些在线目标.",
   "h3_functions": "功能",
   "features": [
     "通过 Android 系统文件选择器导入 `.litertlm` 模型包, 并将验证后的副本保存到应用私有存储.",

@@ -24,7 +24,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-class OpenAiCompatibleSessionTest {
+class OnlineAiSessionTest {
     @Test
     fun sseTurnsStreamTextReportUsageAndRetainOnlyCompletedConversation() {
         val calls = ScriptedCallFactory(
@@ -117,6 +117,62 @@ class OpenAiCompatibleSessionTest {
     }
 
     @Test
+    fun providerNativeStreamsUseTheirAdaptersAndMergePartialUsage() {
+        val anthropicCalls = ScriptedCallFactory(
+            response(
+                contentType = "text/event-stream",
+                body = sse(
+                    """{"type":"message_start","message":{"usage":{"input_tokens":5}}}""",
+                    """{"type":"content_block_start","content_block":{"type":"text","text":""}}""",
+                    """{"type":"content_block_delta","delta":{"type":"text_delta","text":"Claude"}}""",
+                    """{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":3}}""",
+                    """{"type":"message_stop"}""",
+                ),
+            ),
+        )
+        val anthropicProfile = profile(
+            provider = OnlineAiProvider.ANTHROPIC,
+            baseUrl = "https://api.anthropic.com/v1",
+            modelId = "claude-test",
+        )
+        val anthropicListener = RecordingListener()
+
+        session(anthropicCalls, profile = anthropicProfile)
+            .stream(request(reportUsage = true), anthropicListener)
+
+        assertEquals(listOf("Claude"), anthropicListener.deltas)
+        assertEquals(5L, anthropicListener.completed?.inputTokens)
+        assertEquals(3L, anthropicListener.completed?.outputTokens)
+        assertNull(anthropicListener.failure)
+        assertEquals("session-key", anthropicCalls.requests.single().header("x-api-key"))
+
+        val geminiCalls = ScriptedCallFactory(
+            response(
+                contentType = "text/event-stream",
+                body = sse(
+                    """{"candidates":[{"content":{"parts":[{"text":"Gem"}]}}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":1,"totalTokenCount":9}}""",
+                    """{"candidates":[{"content":{"parts":[{"text":"ini"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":6,"candidatesTokenCount":2,"totalTokenCount":10}}""",
+                ),
+            ),
+        )
+        val geminiProfile = profile(
+            provider = OnlineAiProvider.GEMINI,
+            baseUrl = "https://generativelanguage.googleapis.com/v1beta",
+            modelId = "gemini-test",
+        )
+        val geminiListener = RecordingListener()
+
+        session(geminiCalls, profile = geminiProfile)
+            .stream(request(reportUsage = true), geminiListener)
+
+        assertEquals(listOf("Gem", "ini"), geminiListener.deltas)
+        assertEquals(6L, geminiListener.completed?.inputTokens)
+        assertEquals(2L, geminiListener.completed?.outputTokens)
+        assertNull(geminiListener.failure)
+        assertEquals("session-key", geminiCalls.requests.single().header("x-goog-api-key"))
+    }
+
+    @Test
     fun httpAndProviderFailuresAreNormalizedWithoutResponseOrCredentialText() {
         val credential = "private-key"
         val responseSecret = "provider-echoed-private-key"
@@ -131,8 +187,8 @@ class OpenAiCompatibleSessionTest {
 
         session(httpCalls, ClearingCredentialRunner(credential)).stream(request(), httpListener)
 
-        val httpFailure = httpListener.failure as OpenAiCompatibleFailureException
-        assertEquals(OpenAiCompatibleFailureReason.AUTHENTICATION_FAILED, httpFailure.reason)
+        val httpFailure = httpListener.failure as OnlineAiFailureException
+        assertEquals(OnlineAiFailureReason.AUTHENTICATION_FAILED, httpFailure.reason)
         assertEquals(401, httpFailure.statusCode)
         assertFalse(httpFailure.toString().contains(credential))
         assertFalse(httpFailure.toString().contains(responseSecret))
@@ -150,8 +206,8 @@ class OpenAiCompatibleSessionTest {
 
         session(providerCalls, ClearingCredentialRunner(credential)).stream(request(), providerListener)
 
-        val providerFailure = providerListener.failure as OpenAiCompatibleFailureException
-        assertEquals(OpenAiCompatibleFailureReason.PROVIDER_ERROR, providerFailure.reason)
+        val providerFailure = providerListener.failure as OnlineAiFailureException
+        assertEquals(OnlineAiFailureReason.PROVIDER_ERROR, providerFailure.reason)
         assertFalse(providerFailure.toString().contains(credential))
         assertFalse(providerFailure.toString().contains(responseSecret))
     }
@@ -165,8 +221,8 @@ class OpenAiCompatibleSessionTest {
 
         session(calls).stream(request(), listener)
 
-        val failure = listener.failure as OpenAiCompatibleFailureException
-        assertEquals(OpenAiCompatibleFailureReason.REDIRECT_REFUSED, failure.reason)
+        val failure = listener.failure as OnlineAiFailureException
+        assertEquals(OnlineAiFailureReason.REDIRECT_REFUSED, failure.reason)
         assertEquals(307, failure.statusCode)
         assertEquals(1, calls.requests.size)
     }
@@ -181,8 +237,8 @@ class OpenAiCompatibleSessionTest {
 
         session(calls, ClearingCredentialRunner(secret)).stream(request(), listener)
 
-        val failure = listener.failure as OpenAiCompatibleFailureException
-        assertEquals(OpenAiCompatibleFailureReason.NETWORK_UNAVAILABLE, failure.reason)
+        val failure = listener.failure as OnlineAiFailureException
+        assertEquals(OnlineAiFailureReason.NETWORK_UNAVAILABLE, failure.reason)
         assertFalse(failure.toString().contains(secret))
     }
 
@@ -241,8 +297,8 @@ class OpenAiCompatibleSessionTest {
         )
         assertEquals(listOf("partial"), failed.deltas)
         assertEquals(
-            OpenAiCompatibleFailureReason.INVALID_RESPONSE,
-            (failed.failure as OpenAiCompatibleFailureException).reason,
+            OnlineAiFailureReason.INVALID_RESPONSE,
+            (failed.failure as OnlineAiFailureException).reason,
         )
 
         val recovered = RecordingListener()
@@ -303,8 +359,8 @@ class OpenAiCompatibleSessionTest {
             ScriptedCallFactory(response(contentType = "text/plain", body = "not accepted")),
         ).stream(request(), wrongType)
         assertEquals(
-            OpenAiCompatibleFailureReason.INVALID_RESPONSE,
-            (wrongType.failure as OpenAiCompatibleFailureException).reason,
+            OnlineAiFailureReason.INVALID_RESPONSE,
+            (wrongType.failure as OnlineAiFailureException).reason,
         )
 
         val noChoice = RecordingListener()
@@ -321,12 +377,12 @@ class OpenAiCompatibleSessionTest {
             ),
         ).stream(request(reportUsage = true), noChoice)
         assertEquals(
-            OpenAiCompatibleFailureReason.INVALID_RESPONSE,
-            (noChoice.failure as OpenAiCompatibleFailureException).reason,
+            OnlineAiFailureReason.INVALID_RESPONSE,
+            (noChoice.failure as OnlineAiFailureException).reason,
         )
 
         val oversized = "x".repeat(
-            OpenAiCompatibleTransportLimits.MAXIMUM_OUTPUT_BYTES.toInt() + 1,
+            OnlineAiTransportLimits.MAXIMUM_OUTPUT_BYTES.toInt() + 1,
         )
         val oversizedListener = RecordingListener()
         session(
@@ -339,17 +395,18 @@ class OpenAiCompatibleSessionTest {
         ).stream(request(), oversizedListener)
         assertTrue(oversizedListener.deltas.isEmpty())
         assertEquals(
-            OpenAiCompatibleFailureReason.RESPONSE_TOO_LARGE,
-            (oversizedListener.failure as OpenAiCompatibleFailureException).reason,
+            OnlineAiFailureReason.RESPONSE_TOO_LARGE,
+            (oversizedListener.failure as OnlineAiFailureException).reason,
         )
     }
 
     private fun session(
         calls: Call.Factory,
-        credentials: ClearingCredentialRunner = ClearingCredentialRunner("key"),
-    ) = OpenAiCompatibleSession(
-        target = target(),
-        profile = profile(),
+        credentials: ClearingCredentialRunner = ClearingCredentialRunner("session-key"),
+        profile: OnlineAiProfile = profile(),
+    ) = OnlineAiSession(
+        target = target(profile),
+        profile = profile,
         callFactory = calls,
         credentialRunner = credentials,
     )
@@ -366,30 +423,34 @@ class OpenAiCompatibleSessionTest {
         reportUsage = reportUsage,
     )
 
-    private fun profile() = OnlineAiProfile(
+    private fun profile(
+        provider: OnlineAiProvider = OnlineAiProvider.OPENAI_COMPATIBLE,
+        baseUrl: String = "https://example.com/v1",
+        modelId: String = "remote-model",
+    ) = OnlineAiProfile(
         profileId = PROFILE_ID,
         displayName = "Remote",
-        provider = OnlineAiProvider.OPENAI_COMPATIBLE,
-        baseUrl = "https://example.com/v1",
-        modelId = "remote-model",
+        provider = provider,
+        baseUrl = baseUrl,
+        modelId = modelId,
     )
 
-    private fun target() = AiTarget(
+    private fun target(profile: OnlineAiProfile = profile()) = AiTarget(
         targetId = AiTargetIds.profile(PROFILE_ID),
-        backendId = OnlineAiProvider.OPENAI_COMPATIBLE.backendId,
-        providerId = OnlineAiProvider.OPENAI_COMPATIBLE.providerId,
+        backendId = OnlineAiBackend.BACKEND_ID,
+        providerId = profile.provider.providerId,
         profileId = PROFILE_ID,
-        modelId = "remote-model",
-        displayName = "Remote",
+        modelId = profile.modelId,
+        displayName = profile.displayName,
         locality = AiTargetLocality.REMOTE,
         credentialMode = AiTargetCredentialMode.PLUGIN_MANAGED,
-        declaredHttpsOrigins = listOf("https://example.com"),
+        declaredHttpsOrigins = listOf(profile.declaredHttpsOrigin),
         configured = true,
         available = true,
         capabilities = AiTargetCapabilities(true, true, true, true, false, false),
         limits = AiTargetLimits(
-            OpenAiCompatibleTransportLimits.MAXIMUM_CONTEXT_BYTES,
-            OpenAiCompatibleTransportLimits.MAXIMUM_OUTPUT_BYTES,
+            OnlineAiTransportLimits.MAXIMUM_CONTEXT_BYTES,
+            OnlineAiTransportLimits.MAXIMUM_OUTPUT_BYTES,
         ),
         executionProfiles = emptyList(),
     )
@@ -440,7 +501,7 @@ class OpenAiCompatibleSessionTest {
         }
     }
 
-    private class ClearingCredentialRunner(secret: String) : OpenAiCompatibleCredentialRunner {
+    private class ClearingCredentialRunner(secret: String) : OnlineAiCredentialRunner {
         private val secret = secret.toByteArray()
         val retiredBuffers = CopyOnWriteArrayList<ByteArray>()
 

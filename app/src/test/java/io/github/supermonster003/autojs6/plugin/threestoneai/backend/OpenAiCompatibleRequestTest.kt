@@ -109,6 +109,62 @@ class OpenAiCompatibleRequestTest {
     }
 
     @Test
+    fun compatiblePresetsShareTransportButKeepProviderSpecificControlSupport() {
+        val turn = generationRequest(
+            samplingOptions = GenerationSamplingOptions(
+                temperature = 0.25,
+                topK = 11,
+                topP = 0.75,
+            ),
+            responseJsonSchema = """{"type":"object"}""",
+        )
+        OpenAiCompatibleRequestFactory.prepare(
+            profile = profile(provider = OnlineAiProvider.OPENAI),
+            messages = listOf(turn.prompt),
+            turn = turn,
+            credential = "key".toByteArray(),
+        ).use { prepared ->
+            val buffer = Buffer()
+            prepared.request.body!!.writeTo(buffer)
+            val json = JsonParser.parseString(buffer.readUtf8()).asJsonObject
+
+            assertFalse(json.has("top_k"))
+            assertTrue(json.has("response_format"))
+        }
+
+        OpenAiCompatibleRequestFactory.prepare(
+            profile = profile(provider = OnlineAiProvider.OPENROUTER),
+            messages = listOf(turn.prompt),
+            turn = turn,
+            credential = "key".toByteArray(),
+        ).use { prepared ->
+            val buffer = Buffer()
+            prepared.request.body!!.writeTo(buffer)
+            val json = JsonParser.parseString(buffer.readUtf8()).asJsonObject
+
+            assertEquals(11, json.get("top_k").asInt)
+            assertTrue(json.has("response_format"))
+        }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            OpenAiCompatibleRequestFactory.prepare(
+                profile = profile(provider = OnlineAiProvider.DEEPSEEK),
+                messages = listOf(turn.prompt),
+                turn = turn,
+                credential = "key".toByteArray(),
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            OpenAiCompatibleRequestFactory.prepare(
+                profile = profile(provider = OnlineAiProvider.ANTHROPIC),
+                messages = listOf(turn.prompt),
+                turn = generationRequest(),
+                credential = "key".toByteArray(),
+            )
+        }
+    }
+
+    @Test
     fun invalidSchemaAndCredentialFailWithNoSensitiveDetail() {
         assertThrows(IllegalArgumentException::class.java) {
             OpenAiCompatibleRequestFactory.prepare(
@@ -120,7 +176,7 @@ class OpenAiCompatibleRequestTest {
         }
 
         val secret = "secret\nkey"
-        val failure = assertThrows(OpenAiCompatibleFailureException::class.java) {
+        val failure = assertThrows(OnlineAiFailureException::class.java) {
             OpenAiCompatibleRequestFactory.prepare(
                 profile = profile(),
                 messages = listOf(generationRequest().prompt),
@@ -128,7 +184,7 @@ class OpenAiCompatibleRequestTest {
                 credential = secret.toByteArray(),
             )
         }
-        assertEquals(OpenAiCompatibleFailureReason.CREDENTIAL_UNAVAILABLE, failure.reason)
+        assertEquals(OnlineAiFailureReason.CREDENTIAL_UNAVAILABLE, failure.reason)
         assertFalse(failure.toString().contains("secret"))
         assertFalse(failure.toString().contains("key"))
     }
@@ -153,7 +209,7 @@ class OpenAiCompatibleRequestTest {
     @Test
     fun contextAndRequestLimitsAreEnforcedBeforeNetworkExecution() {
         val oversized = "x".repeat(
-            OpenAiCompatibleTransportLimits.MAXIMUM_CONTEXT_BYTES.toInt() + 1,
+            OnlineAiTransportLimits.MAXIMUM_CONTEXT_BYTES.toInt() + 1,
         )
         assertThrows(IllegalArgumentException::class.java) {
             OpenAiCompatibleRequestFactory.prepare(
@@ -168,7 +224,7 @@ class OpenAiCompatibleRequestTest {
 
         val schema = "{\"type\":\"object\"}"
         val messagesAlmostAtLimit = "x".repeat(
-            OpenAiCompatibleTransportLimits.MAXIMUM_CONTEXT_BYTES.toInt() -
+            OnlineAiTransportLimits.MAXIMUM_CONTEXT_BYTES.toInt() -
                 schema.toByteArray().size + 1,
         )
         assertThrows(IllegalArgumentException::class.java) {
@@ -183,10 +239,13 @@ class OpenAiCompatibleRequestTest {
         }
     }
 
-    private fun profile(baseUrl: String = "https://example.com/v1") = OnlineAiProfile(
+    private fun profile(
+        baseUrl: String = "https://example.com/v1",
+        provider: OnlineAiProvider = OnlineAiProvider.OPENAI_COMPATIBLE,
+    ) = OnlineAiProfile(
         profileId = "11111111-1111-4111-8111-111111111111",
         displayName = "Remote",
-        provider = OnlineAiProvider.OPENAI_COMPATIBLE,
+        provider = provider,
         baseUrl = baseUrl,
         modelId = "remote-model",
     )

@@ -7,8 +7,8 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.EngineMemor
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLocalBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmEngineRuntime
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OpenAiCompatibleBackend
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OpenAiCompatibleHttpExecution
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiBackend
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiHttpExecution
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectory
 import io.github.supermonster003.autojs6.plugin.threestoneai.credential.AiCredentialStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.credential.AndroidKeystoreCredentialCipher
@@ -64,17 +64,17 @@ class ThreeStoneAiApplication : Application() {
         get() = onlineProfileRegistryDelegate.value
 
     private val onlineExecutionDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        OpenAiCompatibleHttpExecution.create()
+        OnlineAiHttpExecution.create()
     }
 
-    private val onlineExecution: OpenAiCompatibleHttpExecution
+    private val onlineExecution: OnlineAiHttpExecution
         get() = onlineExecutionDelegate.value
 
     private val aiBackendDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         CompositeAiBackend(
             listOf(
                 localBackend,
-                OpenAiCompatibleBackend(onlineProfileRegistry, onlineExecution),
+                OnlineAiBackend(onlineProfileRegistry, onlineExecution),
             ),
         )
     }

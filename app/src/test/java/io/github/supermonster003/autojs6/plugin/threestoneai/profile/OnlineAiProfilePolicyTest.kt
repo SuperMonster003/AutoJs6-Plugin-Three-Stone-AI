@@ -53,9 +53,13 @@ class OnlineAiProfilePolicyTest {
         val anotherOrigin = OnlineAiProfilePolicy.normalizeProfile(
             profile(baseUrl = "https://other.example.com/v1"),
         )
+        val anotherProvider = OnlineAiProfilePolicy.normalizeProfile(
+            profile(provider = OnlineAiProvider.OPENAI),
+        )
 
         assertTrue(OnlineAiProfileUrls.sameCredentialDestination(first, sameOrigin))
         assertFalse(OnlineAiProfileUrls.sameCredentialDestination(first, anotherOrigin))
+        assertFalse(OnlineAiProfileUrls.sameCredentialDestination(first, anotherProvider))
     }
 
     @Test
@@ -144,12 +148,13 @@ class OnlineAiProfilePolicyTest {
     private fun profile(
         profileId: String = "550e8400-e29b-41d4-a716-446655440000",
         displayName: String = "Work",
+        provider: OnlineAiProvider = OnlineAiProvider.OPENAI_COMPATIBLE,
         baseUrl: String = "https://api.example.com/v1",
         modelId: String = "model-a",
     ) = OnlineAiProfile(
         profileId = profileId,
         displayName = displayName,
-        provider = OnlineAiProvider.OPENAI_COMPATIBLE,
+        provider = provider,
         baseUrl = baseUrl,
         modelId = modelId,
     )

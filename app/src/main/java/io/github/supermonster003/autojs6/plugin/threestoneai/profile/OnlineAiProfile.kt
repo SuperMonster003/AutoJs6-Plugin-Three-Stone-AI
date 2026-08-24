@@ -9,11 +9,31 @@ import java.util.UUID
 
 internal enum class OnlineAiProvider(
     val providerId: String,
-    val backendId: String,
+    val protocol: OnlineAiProtocol,
 ) {
+    OPENAI(
+        providerId = "openai",
+        protocol = OnlineAiProtocol.OPENAI_COMPATIBLE,
+    ),
+    ANTHROPIC(
+        providerId = "anthropic",
+        protocol = OnlineAiProtocol.ANTHROPIC_MESSAGES,
+    ),
+    GEMINI(
+        providerId = "gemini",
+        protocol = OnlineAiProtocol.GEMINI_GENERATE_CONTENT,
+    ),
+    DEEPSEEK(
+        providerId = "deepseek",
+        protocol = OnlineAiProtocol.OPENAI_COMPATIBLE,
+    ),
+    OPENROUTER(
+        providerId = "openrouter",
+        protocol = OnlineAiProtocol.OPENAI_COMPATIBLE,
+    ),
     OPENAI_COMPATIBLE(
         providerId = "openai-compatible",
-        backendId = "openai-compatible",
+        protocol = OnlineAiProtocol.OPENAI_COMPATIBLE,
     ),
     ;
 
@@ -22,6 +42,12 @@ internal enum class OnlineAiProvider(
             it.providerId == providerId
         } ?: throw IllegalArgumentException("Online AI provider is unsupported")
     }
+}
+
+internal enum class OnlineAiProtocol {
+    OPENAI_COMPATIBLE,
+    ANTHROPIC_MESSAGES,
+    GEMINI_GENERATE_CONTENT,
 }
 
 /** Non-secret configuration for one remote inference destination. */

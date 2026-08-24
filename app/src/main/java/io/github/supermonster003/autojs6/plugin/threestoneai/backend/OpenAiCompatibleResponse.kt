@@ -1,47 +1,15 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.backend
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import com.google.gson.Strictness
 import okhttp3.ResponseBody
-import okio.Buffer
 import java.math.BigDecimal
-import kotlin.math.min
-
-internal data class OpenAiCompatibleUsage(
-    val inputTokens: Long,
-    val outputTokens: Long,
-) {
-    init {
-        require(inputTokens >= 0L)
-        require(outputTokens >= 0L)
-        require(inputTokens <= Long.MAX_VALUE - outputTokens)
-    }
-}
-
-internal data class OpenAiCompatibleStreamChunk(
-    val text: String = "",
-    val usage: OpenAiCompatibleUsage? = null,
-    val choiceSeen: Boolean = false,
-    val done: Boolean = false,
-)
-
-internal data class OpenAiCompatibleJsonResponse(
-    val text: String,
-    val usage: OpenAiCompatibleUsage?,
-)
 
 /** Parses only the text and exact usage surface declared by the unified backend. */
 internal object OpenAiCompatibleResponseParser {
-    private val STRICT_GSON: Gson = GsonBuilder()
-        .setStrictness(Strictness.STRICT)
-        .create()
-
-    fun parseEvent(event: OpenAiCompatibleSseEvent): OpenAiCompatibleStreamChunk {
-        if (event.isDone) return OpenAiCompatibleStreamChunk(done = true)
-        val root = parseObject(event.data)
+    fun parseEvent(event: OnlineAiSseEvent): OnlineAiStreamChunk {
+        if (event.isDone) return OnlineAiStreamChunk(done = true)
+        val root = OnlineAiResponseSupport.parseObject(event.data)
         if (event.event == "error" || root.isTypedError() || root.hasProviderError()) providerError()
 
         val choice = root.firstChoice()
@@ -54,16 +22,16 @@ internal object OpenAiCompatibleResponseParser {
             delta?.get("refusal").appendText(this)
             if (isEmpty()) choice?.get("text").appendText(this)
         }
-        return OpenAiCompatibleStreamChunk(
+        return OnlineAiStreamChunk(
             text = text,
             usage = root.usageOrNull(),
-            choiceSeen = choice != null,
+            contentSeen = choice != null,
         )
     }
 
-    fun parseJson(body: ResponseBody): OpenAiCompatibleJsonResponse {
-        val root = readObject(body)
-        if (root.hasProviderError()) providerError()
+    fun parseJson(body: ResponseBody): OnlineAiJsonResponse {
+        val root = OnlineAiResponseSupport.readObject(body)
+        if (root.isTypedError() || root.hasProviderError()) providerError()
         val choice = root.firstChoice() ?: invalidResponse()
         val message = choice.get("message")?.let { element ->
             if (!element.isJsonObject) invalidResponse()
@@ -74,57 +42,10 @@ internal object OpenAiCompatibleResponseParser {
             message?.get("refusal").appendText(this)
             if (isEmpty()) choice.get("text").appendText(this)
         }
-        return OpenAiCompatibleJsonResponse(
+        return OnlineAiJsonResponse(
             text = text,
             usage = root.usageOrNull(),
         )
-    }
-
-    fun discardErrorBody(body: ResponseBody?) {
-        body ?: return
-        val source = body.source()
-        val scratch = Buffer()
-        var remaining = OpenAiCompatibleTransportLimits.MAXIMUM_ERROR_RESPONSE_BYTES + 1L
-        while (remaining > 0L) {
-            val read = source.read(scratch, min(remaining, READ_CHUNK_BYTES))
-            if (read == -1L) break
-            remaining -= read
-            scratch.clear()
-        }
-        scratch.clear()
-    }
-
-    private fun readObject(body: ResponseBody): JsonObject {
-        val source = body.source()
-        val buffer = Buffer()
-        var remaining = OpenAiCompatibleTransportLimits.MAXIMUM_JSON_RESPONSE_BYTES + 1L
-        while (remaining > 0L) {
-            val read = source.read(buffer, min(remaining, READ_CHUNK_BYTES))
-            if (read == -1L) break
-            remaining -= read
-        }
-        if (buffer.size > OpenAiCompatibleTransportLimits.MAXIMUM_JSON_RESPONSE_BYTES) {
-            buffer.clear()
-            throw OpenAiCompatibleFailureException(
-                OpenAiCompatibleFailureReason.RESPONSE_TOO_LARGE,
-            )
-        }
-        val bytes = buffer.readByteArray()
-        return try {
-            parseObject(String(bytes, Charsets.UTF_8).removePrefix("\uFEFF"))
-        } finally {
-            bytes.fill(0)
-        }
-    }
-
-    private fun parseObject(value: String): JsonObject {
-        val parsed = try {
-            STRICT_GSON.fromJson(value, JsonElement::class.java)
-        } catch (_: RuntimeException) {
-            invalidResponse()
-        }
-        if (parsed == null || !parsed.isJsonObject) invalidResponse()
-        return parsed.asJsonObject
     }
 
     private fun JsonObject.firstChoice(): JsonObject? {
@@ -147,7 +68,7 @@ internal object OpenAiCompatibleResponseParser {
             type.asString == "error"
     }
 
-    private fun JsonObject.usageOrNull(): OpenAiCompatibleUsage? {
+    private fun JsonObject.usageOrNull(): OnlineAiUsageUpdate? {
         val element = get("usage") ?: return null
         if (element.isJsonNull) return null
         if (!element.isJsonObject) invalidResponse()
@@ -162,7 +83,7 @@ internal object OpenAiCompatibleResponseParser {
             invalidResponse()
         }
         if (total != null && total != expectedTotal) invalidResponse()
-        return OpenAiCompatibleUsage(input, output)
+        return OnlineAiUsageUpdate(input, output, total)
     }
 
     private fun JsonObject.countOrNull(name: String): Long? {
@@ -196,13 +117,11 @@ internal object OpenAiCompatibleResponseParser {
         }
     }
 
-    private fun invalidResponse(): Nothing = throw OpenAiCompatibleFailureException(
-        OpenAiCompatibleFailureReason.INVALID_RESPONSE,
+    private fun invalidResponse(): Nothing = throw OnlineAiFailureException(
+        OnlineAiFailureReason.INVALID_RESPONSE,
     )
 
-    private fun providerError(): Nothing = throw OpenAiCompatibleFailureException(
-        OpenAiCompatibleFailureReason.PROVIDER_ERROR,
+    private fun providerError(): Nothing = throw OnlineAiFailureException(
+        OnlineAiFailureReason.PROVIDER_ERROR,
     )
-
-    private const val READ_CHUNK_BYTES = 8192L
 }

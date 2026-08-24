@@ -4,17 +4,17 @@ import okio.Buffer
 import okio.BufferedSource
 import java.io.Closeable
 
-internal data class OpenAiCompatibleSseEvent(
+internal data class OnlineAiSseEvent(
     val event: String?,
     val data: String,
     val isDone: Boolean,
 )
 
 /** Bounded UTF-8 SSE reader accepting LF, CRLF, lone CR, BOM, and a final unterminated event. */
-internal class OpenAiCompatibleSseReader(
+internal class OnlineAiSseReader(
     private val source: BufferedSource,
-    private val maximumEventBytes: Long = OpenAiCompatibleTransportLimits.MAXIMUM_SSE_EVENT_BYTES,
-    private val maximumTotalBytes: Long = OpenAiCompatibleTransportLimits.MAXIMUM_SSE_TOTAL_BYTES,
+    private val maximumEventBytes: Long = OnlineAiTransportLimits.MAXIMUM_SSE_EVENT_BYTES,
+    private val maximumTotalBytes: Long = OnlineAiTransportLimits.MAXIMUM_SSE_TOTAL_BYTES,
 ) : Closeable {
     init {
         require(maximumEventBytes > 0L)
@@ -30,7 +30,7 @@ internal class OpenAiCompatibleSseReader(
     private val data = StringBuilder()
     private var eventType: String? = null
 
-    fun readEvent(): OpenAiCompatibleSseEvent? {
+    fun readEvent(): OnlineAiSseEvent? {
         check(!closed) { "Online AI SSE reader is closed" }
         if (ended) return null
 
@@ -103,17 +103,17 @@ internal class OpenAiCompatibleSseReader(
         totalBytes += 1L
         eventBytes += 1L
         if (totalBytes > maximumTotalBytes || eventBytes > maximumEventBytes) {
-            throw OpenAiCompatibleFailureException(
-                OpenAiCompatibleFailureReason.RESPONSE_TOO_LARGE,
+            throw OnlineAiFailureException(
+                OnlineAiFailureReason.RESPONSE_TOO_LARGE,
             )
         }
     }
 
-    private fun dispatchEvent(): OpenAiCompatibleSseEvent? {
+    private fun dispatchEvent(): OnlineAiSseEvent? {
         if (!dataSeen) return null
         if (data.isNotEmpty()) data.setLength(data.length - 1)
         val payload = data.toString()
-        return OpenAiCompatibleSseEvent(
+        return OnlineAiSseEvent(
             event = eventType?.takeIf(String::isNotEmpty),
             data = payload,
             isDone = payload.trim() == DONE_SENTINEL,

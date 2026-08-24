@@ -23,7 +23,8 @@
         "支援喺串流輸出中渲染內聯 `$\\text{...}$` 內容, 並適配常用數學命令, 上標及下標樣式",
         "新增由插件管理嘅 Android Keystore 憑據儲存庫, 使用 AES-256-GCM, 綁定 profile 嘅認證密文, 跨進程原子私人檔案, 僅查詢 configured 狀態及即時清除明文",
         "新增嚴格且不含敏感資料嘅網上設定檔案庫, 只接受 HTTPS OpenAI Compatible 端點, 使用 canonical UUID 及跨進程原子元資料, provider 或 origin 變更時必須明確取代或清除憑據",
-        "新增插件內部 OpenAI Compatible HTTPS 執行 backend, 支援自訂 baseUrl, 憑據及模型名稱, 有界 SSE 同 JSON fallback 串流回應, 精確取消, provider usage, 完成輪次多輪歷史, JSON Schema 請求映射及不含敏感資料嘅固定錯誤; AI Provider V1 宿主路由仍只公開本地目標"
+        "新增插件內部 OpenAI Compatible HTTPS 執行 backend, 支援自訂 baseUrl, 憑據及模型名稱, 有界 SSE 同 JSON fallback 串流回應, 精確取消, provider usage, 完成輪次多輪歷史, JSON Schema 請求映射及不含敏感資料嘅固定錯誤; AI Provider V1 宿主路由仍只公開本地目標",
+        "新增同宿主目錄對齊嘅 OpenAI, Anthropic, Gemini, DeepSeek 同 OpenRouter 預設模板; 統一在線執行層重用 OpenAI-compatible 協議, 並分別適配 Anthropic Messages 同 Gemini GenerateContent 嘅原生認證, 請求, SSE 終態, usage 同 JSON Schema, 唔提供協議之間或本地/在線自動 fallback"
       ],
       "fix": [
         "移除插件說明可執行範例預設設定嘅 256 token 同 4 KiB 輸出限制: 省略 `maxTokens` 時改用模型或引擎預設值, raw Binder 範例使用插件完整嘅 64 KiB 輸出額度",

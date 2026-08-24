@@ -9,7 +9,9 @@ import com.google.gson.Strictness
 import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfile
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfilePolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProtocol
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType
@@ -19,7 +21,7 @@ import okhttp3.RequestBody
 import okio.BufferedSink
 import java.io.Closeable
 
-internal object OpenAiCompatibleTransportLimits {
+internal object OnlineAiTransportLimits {
     const val MAXIMUM_CONTEXT_BYTES = ThreeStoneAiPlugin.MAXIMUM_CONTEXT_BYTES
     const val MAXIMUM_OUTPUT_BYTES = ThreeStoneAiPlugin.MAXIMUM_OUTPUT_BYTES
     const val MAXIMUM_REQUEST_BYTES = 512L * 1024L
@@ -31,18 +33,128 @@ internal object OpenAiCompatibleTransportLimits {
 }
 
 /** Owns the request body bytes and erases them as soon as the synchronous Call finishes. */
-internal class PreparedOpenAiCompatibleRequest internal constructor(
+internal class PreparedOnlineAiRequest internal constructor(
     val request: Request,
     private val body: ErasableOneShotJsonRequestBody,
 ) : Closeable {
     override fun close() = body.close()
 }
 
-internal object OpenAiCompatibleRequestFactory {
+internal enum class OnlineAiCredentialHeader {
+    BEARER,
+    ANTHROPIC_API_KEY,
+    GEMINI_API_KEY,
+}
+
+internal object OnlineAiRequestSupport {
     private val JSON: MediaType = "application/json; charset=utf-8".toMediaType()
     private val STRICT_GSON: Gson = GsonBuilder()
         .setStrictness(Strictness.STRICT)
         .create()
+
+    fun prepare(
+        url: HttpUrl,
+        json: JsonObject,
+        credential: ByteArray,
+        credentialHeader: OnlineAiCredentialHeader,
+        fixedHeaders: Map<String, String> = emptyMap(),
+    ): PreparedOnlineAiRequest {
+        requireCredential(credential)
+        val content = json.toString().toByteArray(Charsets.UTF_8)
+        if (content.size.toLong() > OnlineAiTransportLimits.MAXIMUM_REQUEST_BYTES) {
+            content.fill(0)
+            throw IllegalArgumentException("Online AI request body is too large")
+        }
+        val body = ErasableOneShotJsonRequestBody(content, JSON)
+        return try {
+            val credentialText = String(credential, Charsets.US_ASCII)
+            val request = Request.Builder()
+                .url(url)
+                .post(body)
+                .header("Accept", "text/event-stream")
+                .header("Cache-Control", "no-store")
+                .header("Content-Type", JSON.toString())
+                .header("User-Agent", "AutoJs6-Three-Stone-AI/1")
+                .apply {
+                    when (credentialHeader) {
+                        OnlineAiCredentialHeader.BEARER ->
+                            header("Authorization", "Bearer $credentialText")
+                        OnlineAiCredentialHeader.ANTHROPIC_API_KEY ->
+                            header("x-api-key", credentialText)
+                        OnlineAiCredentialHeader.GEMINI_API_KEY ->
+                            header("x-goog-api-key", credentialText)
+                    }
+                    fixedHeaders.forEach { (name, value) -> header(name, value) }
+                }
+                .build()
+            PreparedOnlineAiRequest(request, body)
+        } catch (error: Throwable) {
+            body.close()
+            throw error
+        }
+    }
+
+    fun requireConversation(messages: List<GenerationMessage>): Long {
+        require(messages.isNotEmpty()) { "Online AI request must contain at least one message" }
+        require(messages.last().role == GenerationRole.USER) {
+            "The final online AI prompt must be a user message"
+        }
+        var totalBytes = 0L
+        messages.forEach { message ->
+            require(message.textParts.isNotEmpty()) { "Online AI messages must contain text" }
+            message.textParts.forEach { part ->
+                totalBytes = try {
+                    Math.addExact(totalBytes, part.toByteArray(Charsets.UTF_8).size.toLong())
+                } catch (_: ArithmeticException) {
+                    throw IllegalArgumentException("Online AI context is too large")
+                }
+                require(totalBytes <= OnlineAiTransportLimits.MAXIMUM_CONTEXT_BYTES) {
+                    "Online AI context is too large"
+                }
+            }
+        }
+        return totalBytes
+    }
+
+    fun parseSchema(schema: String, messageBytes: Long): JsonObject {
+        val schemaBytes = schema.toByteArray(Charsets.UTF_8).size.toLong()
+        val combinedBytes = try {
+            Math.addExact(messageBytes, schemaBytes)
+        } catch (_: ArithmeticException) {
+            throw IllegalArgumentException("Online AI context is too large")
+        }
+        require(combinedBytes <= OnlineAiTransportLimits.MAXIMUM_CONTEXT_BYTES) {
+            "Online AI context is too large"
+        }
+        val parsed = try {
+            STRICT_GSON.fromJson(schema.removePrefix("\uFEFF"), JsonElement::class.java)
+        } catch (_: RuntimeException) {
+            throw IllegalArgumentException("Online AI response schema must be strict JSON")
+        }
+        require(parsed != null && parsed.isJsonObject) {
+            "Online AI response schema must be a JSON object"
+        }
+        return parsed.asJsonObject
+    }
+
+    fun text(message: GenerationMessage): String {
+        require(message.textParts.isNotEmpty()) { "Online AI messages must contain text" }
+        return message.textParts.joinToString(separator = "")
+    }
+
+    private fun requireCredential(credential: ByteArray) {
+        if (
+            credential.size !in 1..OnlineAiTransportLimits.MAXIMUM_CREDENTIAL_BYTES ||
+            credential.any { byte -> (byte.toInt() and 0xff) !in 0x21..0x7e }
+        ) {
+            throw OnlineAiFailureException(
+                OnlineAiFailureReason.CREDENTIAL_UNAVAILABLE,
+            )
+        }
+    }
+}
+
+internal object OpenAiCompatibleRequestFactory {
     private val ENDPOINT_SEGMENTS = listOf("chat", "completions")
 
     fun prepare(
@@ -50,17 +162,12 @@ internal object OpenAiCompatibleRequestFactory {
         messages: List<GenerationMessage>,
         turn: GenerationRequest,
         credential: ByteArray,
-    ): PreparedOpenAiCompatibleRequest {
+    ): PreparedOnlineAiRequest {
         val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
-        require(normalized.provider == OnlineAiProvider.OPENAI_COMPATIBLE) {
+        require(normalized.provider.protocol == OnlineAiProtocol.OPENAI_COMPATIBLE) {
             "Online AI profile does not use the OpenAI-compatible protocol"
         }
-        requireCredential(credential)
-        require(messages.isNotEmpty()) { "Online AI request must contain at least one message" }
-        require(messages.last().role == GenerationRole.USER) {
-            "The final online AI prompt must be a user message"
-        }
-        val messageBytes = requireContextWithinLimit(messages)
+        val messageBytes = OnlineAiRequestSupport.requireConversation(messages)
 
         val json = JsonObject().apply {
             addProperty("model", normalized.modelId)
@@ -74,8 +181,13 @@ internal object OpenAiCompatibleRequestFactory {
             }
             turn.samplingOptions?.let { sampling ->
                 addProperty("temperature", sampling.temperature)
-                addProperty("top_k", sampling.topK)
                 addProperty("top_p", sampling.topP)
+                if (
+                    normalized.provider == OnlineAiProvider.OPENROUTER ||
+                    normalized.provider == OnlineAiProvider.OPENAI_COMPATIBLE
+                ) {
+                    addProperty("top_k", sampling.topK)
+                }
             }
             if (turn.reportUsage) {
                 add("stream_options", JsonObject().apply {
@@ -83,64 +195,35 @@ internal object OpenAiCompatibleRequestFactory {
                 })
             }
             turn.responseJsonSchema?.let { schema ->
-                add("response_format", responseFormat(schema, messageBytes))
+                require(OnlineAiProviderCatalog.templateFor(normalized.provider).structuredJson) {
+                    "Online AI provider does not support response schemas"
+                }
+                add(
+                    "response_format",
+                    responseFormat(OnlineAiRequestSupport.parseSchema(schema, messageBytes)),
+                )
             }
         }
-        val content = json.toString().toByteArray(Charsets.UTF_8)
-        if (content.size.toLong() > OpenAiCompatibleTransportLimits.MAXIMUM_REQUEST_BYTES) {
-            content.fill(0)
-            throw IllegalArgumentException("Online AI request body is too large")
-        }
-
-        val body = ErasableOneShotJsonRequestBody(content, JSON)
-        return try {
-            val authorization = "Bearer ${String(credential, Charsets.US_ASCII)}"
-            val request = Request.Builder()
-                .url(endpoint(normalized.baseUrl))
-                .post(body)
-                .header("Accept", "text/event-stream")
-                .header("Authorization", authorization)
-                .header("Cache-Control", "no-store")
-                .header("Content-Type", JSON.toString())
-                .header("User-Agent", "AutoJs6-Three-Stone-AI/1")
-                .build()
-            PreparedOpenAiCompatibleRequest(request, body)
-        } catch (error: Throwable) {
-            body.close()
-            throw error
-        }
+        return OnlineAiRequestSupport.prepare(
+            url = endpoint(normalized.baseUrl),
+            json = json,
+            credential = credential,
+            credentialHeader = OnlineAiCredentialHeader.BEARER,
+        )
     }
 
-    private fun responseFormat(schema: String, messageBytes: Long): JsonObject {
-        val schemaBytes = schema.toByteArray(Charsets.UTF_8).size.toLong()
-        val combinedBytes = try {
-            Math.addExact(messageBytes, schemaBytes)
-        } catch (_: ArithmeticException) {
-            throw IllegalArgumentException("Online AI context is too large")
-        }
-        require(combinedBytes <= OpenAiCompatibleTransportLimits.MAXIMUM_CONTEXT_BYTES) {
-            "Online AI context is too large"
-        }
-        val parsed = try {
-            STRICT_GSON.fromJson(schema.removePrefix("\uFEFF"), JsonElement::class.java)
-        } catch (_: RuntimeException) {
-            throw IllegalArgumentException("Online AI response schema must be strict JSON")
-        }
-        require(parsed != null && parsed.isJsonObject) {
-            "Online AI response schema must be a JSON object"
-        }
+    private fun responseFormat(schema: JsonObject): JsonObject {
         return JsonObject().apply {
             addProperty("type", "json_schema")
             add("json_schema", JsonObject().apply {
                 addProperty("name", "response")
                 addProperty("strict", true)
-                add("schema", parsed.asJsonObject)
+                add("schema", schema)
             })
         }
     }
 
     private fun GenerationMessage.toOpenAiJson(): JsonObject {
-        require(textParts.isNotEmpty()) { "Online AI messages must contain text" }
         return JsonObject().apply {
             addProperty(
                 "role",
@@ -150,36 +233,7 @@ internal object OpenAiCompatibleRequestFactory {
                     GenerationRole.ASSISTANT -> "assistant"
                 },
             )
-            addProperty("content", textParts.joinToString(separator = ""))
-        }
-    }
-
-    private fun requireContextWithinLimit(messages: List<GenerationMessage>): Long {
-        var totalBytes = 0L
-        messages.forEach { message ->
-            require(message.textParts.isNotEmpty()) { "Online AI messages must contain text" }
-            message.textParts.forEach { part ->
-                totalBytes = try {
-                    Math.addExact(totalBytes, part.toByteArray(Charsets.UTF_8).size.toLong())
-                } catch (_: ArithmeticException) {
-                    throw IllegalArgumentException("Online AI context is too large")
-                }
-                require(totalBytes <= OpenAiCompatibleTransportLimits.MAXIMUM_CONTEXT_BYTES) {
-                    "Online AI context is too large"
-                }
-            }
-        }
-        return totalBytes
-    }
-
-    private fun requireCredential(credential: ByteArray) {
-        if (
-            credential.size !in 1..OpenAiCompatibleTransportLimits.MAXIMUM_CREDENTIAL_BYTES ||
-            credential.any { byte -> (byte.toInt() and 0xff) !in 0x21..0x7e }
-        ) {
-            throw OpenAiCompatibleFailureException(
-                OpenAiCompatibleFailureReason.CREDENTIAL_UNAVAILABLE,
-            )
+            addProperty("content", OnlineAiRequestSupport.text(this@toOpenAiJson))
         }
     }
 

@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "言語",
   "p_languages_all_supported_for_readme": "現在の README.md は次の言語に対応しています",
   "h3_introduction": "概要",
-  "p_introduction": "3-Stone AI は AutoJs6 の公式 AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 現在の AI Provider V1 ホスト呼び出しはこれらのローカルターゲットを使用し, ネットワークアクセスもデータ送信も行いません. プラグインには将来の統一ターゲット設定とルーティングに向けた内部 HTTPS OpenAI Compatible backend もありますが, 現在の UI と V1 ホスト API は公開していません.",
+  "p_introduction": "3-Stone AI は AutoJs6 の公式 AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 現在の AI Provider V1 ホスト呼び出しはこれらのローカルターゲットを使用し, ネットワークアクセスもデータ送信も行いません. プラグインには将来の統一ターゲット設定とルーティングに向けた内部 HTTPS オンライン backend もあり, OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter とカスタム OpenAI Compatible profile を提供しますが, 現在の UI と V1 ホスト API はこれらのオンライン target を公開していません.",
   "h3_functions": "機能",
   "features": [
     "Android システムピッカーから `.litertlm` モデルパッケージをインポートし, 検証済みコピーをアプリ専用ストレージに保存します.",

@@ -5,7 +5,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiPro
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileChangedException
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileCredentialAccess
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfilePolicy
-import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
@@ -19,18 +19,18 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.net.ssl.SSLException
 
-internal fun interface OpenAiCompatibleCredentialRunner {
+internal fun interface OnlineAiCredentialRunner {
     fun run(action: (ByteArray) -> Unit)
 }
 
-/** Production OpenAI-compatible HTTPS execution boundary shared by all online targets. */
-internal class OpenAiCompatibleHttpExecution private constructor(
+/** Production HTTPS execution boundary shared by all online provider protocols. */
+internal class OnlineAiHttpExecution private constructor(
     private val callFactory: Call.Factory,
     private val ownedClient: OkHttpClient?,
-) : OpenAiCompatibleExecution, Closeable {
+) : OnlineAiExecution, Closeable {
     private val closed = AtomicBoolean(false)
 
-    override val capabilities = AiTargetCapabilities(
+    private val baseCapabilities = AiTargetCapabilities(
         streaming = true,
         persistentSession = true,
         structuredJson = true,
@@ -39,9 +39,9 @@ internal class OpenAiCompatibleHttpExecution private constructor(
         tools = false,
     )
 
-    override val limits = AiTargetLimits(
-        maximumContextBytes = OpenAiCompatibleTransportLimits.MAXIMUM_CONTEXT_BYTES,
-        maximumOutputBytes = OpenAiCompatibleTransportLimits.MAXIMUM_OUTPUT_BYTES,
+    private val transportLimits = AiTargetLimits(
+        maximumContextBytes = OnlineAiTransportLimits.MAXIMUM_CONTEXT_BYTES,
+        maximumOutputBytes = OnlineAiTransportLimits.MAXIMUM_OUTPUT_BYTES,
         maximumOutputTokens = null,
     )
 
@@ -50,26 +50,45 @@ internal class OpenAiCompatibleHttpExecution private constructor(
 
     internal constructor(callFactory: Call.Factory) : this(callFactory, null)
 
+    override fun supports(profile: OnlineAiProfile): Boolean = runCatching {
+        val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
+        OnlineAiProtocolAdapters.forProfile(normalized)
+    }.isSuccess
+
+    override fun capabilities(profile: OnlineAiProfile): AiTargetCapabilities {
+        val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
+        OnlineAiProtocolAdapters.forProfile(normalized)
+        return baseCapabilities.copy(
+            structuredJson = OnlineAiProviderCatalog.templateFor(normalized.provider).structuredJson,
+        )
+    }
+
+    override fun limits(profile: OnlineAiProfile): AiTargetLimits {
+        val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
+        OnlineAiProtocolAdapters.forProfile(normalized)
+        return transportLimits
+    }
+
     override fun createSession(
         target: AiTarget,
         profile: OnlineAiProfile,
         credentialAccess: OnlineAiProfileCredentialAccess,
     ): AiBackendSession {
         if (!available) {
-            throw OpenAiCompatibleFailureException(OpenAiCompatibleFailureReason.EXECUTION_CLOSED)
+            throw OnlineAiFailureException(OnlineAiFailureReason.EXECUTION_CLOSED)
         }
         val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
-        require(normalized.provider == OnlineAiProvider.OPENAI_COMPATIBLE)
+        require(supports(normalized)) { "Online AI profile protocol is unsupported" }
         require(target.targetId == AiTargetIds.profile(normalized.profileId))
         require(target.profileId == normalized.profileId)
         require(target.modelId == normalized.modelId)
         require(target.declaredHttpsOrigins == listOf(normalized.declaredHttpsOrigin))
-        return OpenAiCompatibleSession(
+        return OnlineAiSession(
             target = target,
             profile = normalized,
             callFactory = callFactory,
-            executionAvailable = { this@OpenAiCompatibleHttpExecution.available },
-            credentialRunner = OpenAiCompatibleCredentialRunner { action ->
+            executionAvailable = { this@OnlineAiHttpExecution.available },
+            credentialRunner = OnlineAiCredentialRunner { action ->
                 credentialAccess.withCredential { credential -> action(credential) }
             },
         )
@@ -77,25 +96,26 @@ internal class OpenAiCompatibleHttpExecution private constructor(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
-        ownedClient?.let(OpenAiCompatibleHttpClient::close)
+        ownedClient?.let(OnlineAiHttpClient::close)
     }
 
     companion object {
-        fun create(): OpenAiCompatibleHttpExecution {
-            val client = OpenAiCompatibleHttpClient.create()
-            return OpenAiCompatibleHttpExecution(client, client)
+        fun create(): OnlineAiHttpExecution {
+            val client = OnlineAiHttpClient.create()
+            return OnlineAiHttpExecution(client, client)
         }
     }
 }
 
-internal class OpenAiCompatibleSession(
+internal class OnlineAiSession(
     override val target: AiTarget,
     profile: OnlineAiProfile,
     private val callFactory: Call.Factory,
     private val executionAvailable: () -> Boolean = { true },
-    private val credentialRunner: OpenAiCompatibleCredentialRunner,
+    private val credentialRunner: OnlineAiCredentialRunner,
 ) : AiBackendSession {
     private val profile = OnlineAiProfilePolicy.normalizeProfile(profile)
+    private val adapter = OnlineAiProtocolAdapters.forProfile(this.profile)
     private val stateLock = Any()
     private val callbackGate = CallbackQuiescenceGate()
     private val started = AtomicBoolean(false)
@@ -153,7 +173,7 @@ internal class OpenAiCompatibleSession(
 
             credentialRunner.run credential@{ credential ->
                 if (isStopped()) return@credential
-                OpenAiCompatibleRequestFactory.prepare(
+                adapter.prepare(
                     profile = profile,
                     messages = outbound,
                     turn = request,
@@ -215,9 +235,9 @@ internal class OpenAiCompatibleSession(
         call.execute().use { response ->
             if (!response.isSuccessful) {
                 runCatching {
-                    OpenAiCompatibleResponseParser.discardErrorBody(response.body)
+                    OnlineAiResponseSupport.discardErrorBody(response.body)
                 }
-                throw failureForHttpStatus(response.code)
+                throw failureForOnlineAiHttpStatus(response.code)
             }
             val body = response.body ?: invalidResponse()
             when {
@@ -234,11 +254,11 @@ internal class OpenAiCompatibleSession(
         delivery: TurnDelivery,
     ) {
         var terminalSeen = false
-        OpenAiCompatibleSseReader(body.source()).use { reader ->
+        OnlineAiSseReader(body.source()).use { reader ->
             while (!isStopped()) {
                 val event = reader.readEvent() ?: break
-                val chunk = OpenAiCompatibleResponseParser.parseEvent(event)
-                if (chunk.choiceSeen) progress.recordChoice()
+                val chunk = adapter.parseEvent(event)
+                if (chunk.contentSeen) progress.recordContent()
                 chunk.usage?.let(progress::recordUsage)
                 if (chunk.text.isNotEmpty()) {
                     progress.append(chunk.text)
@@ -250,7 +270,7 @@ internal class OpenAiCompatibleSession(
                 }
             }
         }
-        if ((!terminalSeen || !progress.choiceSeen) && !isStopped()) invalidResponse()
+        if ((!terminalSeen || !progress.contentSeen) && !isStopped()) invalidResponse()
     }
 
     private fun consumeJson(
@@ -258,7 +278,7 @@ internal class OpenAiCompatibleSession(
         progress: TurnProgress,
         delivery: TurnDelivery,
     ) {
-        val response = OpenAiCompatibleResponseParser.parseJson(body)
+        val response = adapter.parseJson(body)
         response.usage?.let(progress::recordUsage)
         if (response.text.isNotEmpty()) {
             progress.append(response.text)
@@ -283,28 +303,28 @@ internal class OpenAiCompatibleSession(
     private fun isStopped(): Boolean =
         cancelled.get() || closed.get() || !executionAvailable()
 
-    private fun normalizeFailure(error: Exception): OpenAiCompatibleFailureException = when (error) {
-        is OpenAiCompatibleFailureException -> error
-        is AiCredentialUnavailableException -> OpenAiCompatibleFailureException(
-            OpenAiCompatibleFailureReason.CREDENTIAL_UNAVAILABLE,
+    private fun normalizeFailure(error: Exception): OnlineAiFailureException = when (error) {
+        is OnlineAiFailureException -> error
+        is AiCredentialUnavailableException -> OnlineAiFailureException(
+            OnlineAiFailureReason.CREDENTIAL_UNAVAILABLE,
         )
-        is OnlineAiProfileChangedException -> OpenAiCompatibleFailureException(
-            OpenAiCompatibleFailureReason.PROFILE_CHANGED,
+        is OnlineAiProfileChangedException -> OnlineAiFailureException(
+            OnlineAiFailureReason.PROFILE_CHANGED,
         )
         is SocketTimeoutException,
         is InterruptedIOException ->
-            OpenAiCompatibleFailureException(OpenAiCompatibleFailureReason.TIMED_OUT)
-        is SSLException -> OpenAiCompatibleFailureException(OpenAiCompatibleFailureReason.TLS_FAILED)
-        is ProtocolException -> OpenAiCompatibleFailureException(
-            OpenAiCompatibleFailureReason.INVALID_RESPONSE,
+            OnlineAiFailureException(OnlineAiFailureReason.TIMED_OUT)
+        is SSLException -> OnlineAiFailureException(OnlineAiFailureReason.TLS_FAILED)
+        is ProtocolException -> OnlineAiFailureException(
+            OnlineAiFailureReason.INVALID_RESPONSE,
         )
-        is IllegalArgumentException -> OpenAiCompatibleFailureException(
-            OpenAiCompatibleFailureReason.INVALID_REQUEST,
+        is IllegalArgumentException -> OnlineAiFailureException(
+            OnlineAiFailureReason.INVALID_REQUEST,
         )
-        is IOException -> OpenAiCompatibleFailureException(
-            OpenAiCompatibleFailureReason.NETWORK_UNAVAILABLE,
+        is IOException -> OnlineAiFailureException(
+            OnlineAiFailureReason.NETWORK_UNAVAILABLE,
         )
-        else -> OpenAiCompatibleFailureException(OpenAiCompatibleFailureReason.INVALID_RESPONSE)
+        else -> OnlineAiFailureException(OnlineAiFailureReason.INVALID_RESPONSE)
     }
 
     private fun GenerationRequest.snapshot() = copy(
@@ -327,8 +347,8 @@ internal class OpenAiCompatibleSession(
                 )
     } == true
 
-    private fun invalidResponse(): Nothing = throw OpenAiCompatibleFailureException(
-        OpenAiCompatibleFailureReason.INVALID_RESPONSE,
+    private fun invalidResponse(): Nothing = throw OnlineAiFailureException(
+        OnlineAiFailureReason.INVALID_RESPONSE,
     )
 
     private inner class TurnDelivery(
@@ -361,8 +381,9 @@ internal class OpenAiCompatibleSession(
     private class TurnProgress {
         private val output = StringBuilder()
         private var outputBytes = 0L
-        private var usage: OpenAiCompatibleUsage? = null
-        var choiceSeen = false
+        private var inputTokens: Long? = null
+        private var outputTokens: Long? = null
+        var contentSeen = false
             private set
 
         fun append(delta: String) {
@@ -370,35 +391,37 @@ internal class OpenAiCompatibleSession(
             val proposed = try {
                 Math.addExact(outputBytes, deltaBytes)
             } catch (_: ArithmeticException) {
-                throw OpenAiCompatibleFailureException(
-                    OpenAiCompatibleFailureReason.RESPONSE_TOO_LARGE,
+                throw OnlineAiFailureException(
+                    OnlineAiFailureReason.RESPONSE_TOO_LARGE,
                 )
             }
-            if (proposed > OpenAiCompatibleTransportLimits.MAXIMUM_OUTPUT_BYTES) {
-                throw OpenAiCompatibleFailureException(
-                    OpenAiCompatibleFailureReason.RESPONSE_TOO_LARGE,
+            if (proposed > OnlineAiTransportLimits.MAXIMUM_OUTPUT_BYTES) {
+                throw OnlineAiFailureException(
+                    OnlineAiFailureReason.RESPONSE_TOO_LARGE,
                 )
             }
             output.append(delta)
             outputBytes = proposed
         }
 
-        fun recordUsage(value: OpenAiCompatibleUsage) {
-            usage = value
+        fun recordUsage(value: OnlineAiUsageUpdate) {
+            value.inputTokens?.let { inputTokens = it }
+            value.outputTokens?.let { outputTokens = it }
         }
 
-        fun recordChoice() {
-            choiceSeen = true
+        fun recordContent() {
+            contentSeen = true
         }
 
         fun text(): String = output.toString()
 
         fun statistics(reportUsage: Boolean, startedNanos: Long): GenerationStatistics? {
             if (!reportUsage) return null
-            val counters = usage ?: return null
+            val input = inputTokens ?: return null
+            val output = outputTokens ?: return null
             return GenerationStatistics(
-                inputTokens = counters.inputTokens,
-                outputTokens = counters.outputTokens,
+                inputTokens = input,
+                outputTokens = output,
                 durationMillis = TimeUnit.NANOSECONDS.toMillis(
                     (System.nanoTime() - startedNanos).coerceAtLeast(0L),
                 ),

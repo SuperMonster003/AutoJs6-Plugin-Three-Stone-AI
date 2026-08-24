@@ -10,6 +10,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiPro
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileRegistry
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileRepository
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
 import okhttp3.Call
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,20 +20,20 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class OpenAiCompatibleBackendTest {
+class OnlineAiBackendTest {
     @Test
     fun productionCatalogMapsConfiguredProfileWithoutClaimingUnimplementedExecution() {
         val fixture = fixture()
         fixture.registry.save(profile(), replacement("secret"))
-        val backend = OpenAiCompatibleBackend(fixture.registry)
+        val backend = OnlineAiBackend(fixture.registry)
 
         val catalog = backend.catalog()
         val target = catalog.targets.single()
 
         assertNull(catalog.defaultTargetId)
         assertEquals("profile:${profile().profileId}", target.targetId)
-        assertEquals(OpenAiCompatibleBackend::class.java.simpleName, backend.javaClass.simpleName)
-        assertEquals("openai-compatible", target.backendId)
+        assertEquals(OnlineAiBackend::class.java.simpleName, backend.javaClass.simpleName)
+        assertEquals(OnlineAiBackend.BACKEND_ID, target.backendId)
         assertEquals("openai-compatible", target.providerId)
         assertEquals(profile().profileId, target.profileId)
         assertEquals("model-a", target.modelId)
@@ -52,7 +53,7 @@ class OpenAiCompatibleBackendTest {
     fun configuredStatusChangesCatalogGenerationWithoutChangingMetadataRevision() {
         val fixture = fixture()
         fixture.registry.save(profile())
-        val backend = OpenAiCompatibleBackend(fixture.registry)
+        val backend = OnlineAiBackend(fixture.registry)
         val before = backend.catalog()
         val revisionBeforeCredential = fixture.registry.snapshot().revision
 
@@ -70,7 +71,7 @@ class OpenAiCompatibleBackendTest {
         val fixture = fixture()
         fixture.registry.save(profile(), replacement("execution-secret"))
         val execution = RecordingExecution()
-        val backend = OpenAiCompatibleBackend(fixture.registry, execution)
+        val backend = OnlineAiBackend(fixture.registry, execution)
         val target = backend.catalog().targets.single()
 
         assertTrue(target.available)
@@ -88,10 +89,10 @@ class OpenAiCompatibleBackendTest {
     fun httpExecutionPublishesOnlyItsImplementedCapabilitiesAndSafetyLimits() {
         val fixture = fixture()
         fixture.registry.save(profile(), replacement("execution-secret"))
-        val execution = OpenAiCompatibleHttpExecution(
+        val execution = OnlineAiHttpExecution(
             Call.Factory { throw AssertionError("No network call expected") },
         )
-        val backend = OpenAiCompatibleBackend(fixture.registry, execution)
+        val backend = OnlineAiBackend(fixture.registry, execution)
 
         val target = backend.catalog().targets.single()
 
@@ -103,11 +104,11 @@ class OpenAiCompatibleBackendTest {
         assertFalse(target.capabilities.reasoning)
         assertFalse(target.capabilities.tools)
         assertEquals(
-            OpenAiCompatibleTransportLimits.MAXIMUM_CONTEXT_BYTES,
+            OnlineAiTransportLimits.MAXIMUM_CONTEXT_BYTES,
             target.limits.maximumContextBytes,
         )
         assertEquals(
-            OpenAiCompatibleTransportLimits.MAXIMUM_OUTPUT_BYTES,
+            OnlineAiTransportLimits.MAXIMUM_OUTPUT_BYTES,
             target.limits.maximumOutputBytes,
         )
         backend.createSession(AiBackendSessionRequest(target.targetId)).close()
@@ -121,8 +122,33 @@ class OpenAiCompatibleBackendTest {
     }
 
     @Test
+    fun httpExecutionPublishesEveryProviderWithProtocolSpecificCapabilities() {
+        val fixture = fixture()
+        OnlineAiProvider.entries.forEachIndexed { index, provider ->
+            fixture.registry.save(providerProfile(provider, index), replacement("secret-$index"))
+        }
+        val execution = OnlineAiHttpExecution(
+            Call.Factory { throw AssertionError("No network call expected") },
+        )
+        val targets = OnlineAiBackend(fixture.registry, execution).catalog().targets
+
+        assertEquals(
+            OnlineAiProvider.entries.map(OnlineAiProvider::providerId),
+            targets.map(AiTarget::providerId),
+        )
+        assertTrue(targets.all(AiTarget::available))
+        assertFalse(targets.single { it.providerId == "deepseek" }.capabilities.structuredJson)
+        assertTrue(
+            targets.filterNot { it.providerId == "deepseek" }
+                .all { target -> target.capabilities.structuredJson },
+        )
+
+        execution.close()
+    }
+
+    @Test
     fun namespaceOwnershipDoesNotPretendMissingProfilesExist() {
-        val backend = OpenAiCompatibleBackend(fixture().registry, RecordingExecution())
+        val backend = OnlineAiBackend(fixture().registry, RecordingExecution())
         val targetId = AiTargetIds.profile(profile().profileId)
 
         assertTrue(backend.ownsTarget(targetId))
@@ -142,7 +168,7 @@ class OpenAiCompatibleBackendTest {
         val original = profile()
         fixture.registry.save(original, replacement("first-secret"))
         val execution = RecordingExecution(readCredentialDuringCreation = false)
-        val backend = OpenAiCompatibleBackend(fixture.registry, execution)
+        val backend = OnlineAiBackend(fixture.registry, execution)
         backend.createSession(AiBackendSessionRequest(AiTargetIds.profile(original.profileId)))
 
         fixture.registry.save(
@@ -167,6 +193,17 @@ class OpenAiCompatibleBackendTest {
         modelId = "model-a",
     )
 
+    private fun providerProfile(provider: OnlineAiProvider, index: Int): OnlineAiProfile {
+        val template = OnlineAiProviderCatalog.templateFor(provider)
+        return OnlineAiProfile(
+            profileId = "00000000-0000-4000-8000-${(index + 1).toString().padStart(12, '0')}",
+            displayName = template.displayName,
+            provider = provider,
+            baseUrl = template.defaultBaseUrl ?: "https://custom.example.com/v1",
+            modelId = "model-${index + 1}",
+        )
+    }
+
     private fun replacement(value: String) =
         OnlineAiCredentialUpdate.Replace.takingOwnership(value.toCharArray())
 
@@ -184,8 +221,8 @@ class OpenAiCompatibleBackendTest {
 
     private class RecordingExecution(
         private val readCredentialDuringCreation: Boolean = true,
-    ) : OpenAiCompatibleExecution {
-        override val capabilities = AiTargetCapabilities(
+    ) : OnlineAiExecution {
+        private val targetCapabilities = AiTargetCapabilities(
             streaming = true,
             persistentSession = false,
             structuredJson = true,
@@ -193,7 +230,7 @@ class OpenAiCompatibleBackendTest {
             reasoning = false,
             tools = false,
         )
-        override val limits = AiTargetLimits(
+        private val targetLimits = AiTargetLimits(
             maximumContextBytes = null,
             maximumOutputBytes = null,
             maximumOutputTokens = 8192,
@@ -202,6 +239,12 @@ class OpenAiCompatibleBackendTest {
         var credential: String? = null
         var profile: OnlineAiProfile? = null
         var credentialAccess: OnlineAiProfileCredentialAccess? = null
+
+        override fun supports(profile: OnlineAiProfile): Boolean = true
+
+        override fun capabilities(profile: OnlineAiProfile): AiTargetCapabilities = targetCapabilities
+
+        override fun limits(profile: OnlineAiProfile): AiTargetLimits = targetLimits
 
         override fun createSession(
             target: AiTarget,

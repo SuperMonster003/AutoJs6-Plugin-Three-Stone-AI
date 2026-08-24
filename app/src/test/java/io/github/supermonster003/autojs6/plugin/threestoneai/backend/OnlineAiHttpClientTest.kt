@@ -9,10 +9,10 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class OpenAiCompatibleHttpClientTest {
+class OnlineAiHttpClientTest {
     @Test
     fun clientDisablesCredentialReplayAndObservationSurfaces() {
-        val client = OpenAiCompatibleHttpClient.create()
+        val client = OnlineAiHttpClient.create()
         try {
             assertFalse(client.followRedirects)
             assertFalse(client.followSslRedirects)
@@ -28,7 +28,7 @@ class OpenAiCompatibleHttpClientTest {
             assertEquals(0, client.readTimeoutMillis)
             assertEquals(0, client.callTimeoutMillis)
         } finally {
-            OpenAiCompatibleHttpClient.close(client)
+            OnlineAiHttpClient.close(client)
         }
     }
 }

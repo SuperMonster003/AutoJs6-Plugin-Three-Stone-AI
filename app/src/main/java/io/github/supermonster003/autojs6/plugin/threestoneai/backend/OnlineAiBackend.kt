@@ -5,16 +5,19 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiPro
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileCredentialAccess
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileRegistry
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileRegistrySnapshot
-import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.security.MessageDigest
 
-/** Optional execution boundary for the forthcoming HTTPS OpenAI-compatible transport. */
-internal interface OpenAiCompatibleExecution {
-    val capabilities: AiTargetCapabilities
-    val limits: AiTargetLimits
+/** Optional HTTPS execution boundary shared by every supported online protocol. */
+internal interface OnlineAiExecution {
     val available: Boolean
+
+    fun supports(profile: OnlineAiProfile): Boolean
+
+    fun capabilities(profile: OnlineAiProfile): AiTargetCapabilities
+
+    fun limits(profile: OnlineAiProfile): AiTargetLimits
 
     fun createSession(
         target: AiTarget,
@@ -24,11 +27,11 @@ internal interface OpenAiCompatibleExecution {
 }
 
 /** Maps non-secret online profiles into the unified target namespace. */
-internal class OpenAiCompatibleBackend(
+internal class OnlineAiBackend(
     private val registry: OnlineAiProfileRegistry,
-    private val execution: OpenAiCompatibleExecution? = null,
+    private val execution: OnlineAiExecution? = null,
 ) : AiBackend {
-    override val backendId: String = OnlineAiProvider.OPENAI_COMPATIBLE.backendId
+    override val backendId: String = BACKEND_ID
 
     override fun ownsTarget(targetId: String): Boolean =
         runCatching { AiTargetIds.requireProfileId(targetId) }.isSuccess
@@ -36,7 +39,6 @@ internal class OpenAiCompatibleBackend(
     override fun catalog(): AiTargetCatalog {
         val snapshot = registry.snapshot()
         val targets = snapshot.profiles
-            .filter { configured -> configured.profile.provider == OnlineAiProvider.OPENAI_COMPATIBLE }
             .map(::target)
         return AiTargetCatalog(
             generation = generation(snapshot, targets),
@@ -51,9 +53,11 @@ internal class OpenAiCompatibleBackend(
         }
         val profileId = AiTargetIds.requireProfileId(request.targetId)
         val configured = registry.snapshot().profiles.singleOrNull { state ->
-            state.profile.profileId == profileId && state.profile.provider == OnlineAiProvider.OPENAI_COMPATIBLE
+            state.profile.profileId == profileId
         } ?: throw AiTargetUnavailableException(request.targetId)
-        val executor = execution?.takeIf(OpenAiCompatibleExecution::available)
+        val executor = execution?.takeIf { candidate ->
+            candidate.available && candidate.supports(configured.profile)
+        }
             ?: throw AiTargetUnavailableException(request.targetId)
         if (!configured.configured) throw AiTargetUnavailableException(request.targetId)
         return executor.createSession(
@@ -64,7 +68,9 @@ internal class OpenAiCompatibleBackend(
     }
 
     private fun target(configured: ConfiguredOnlineAiProfile): AiTarget {
-        val executor = execution?.takeIf(OpenAiCompatibleExecution::available)
+        val executor = execution?.takeIf { candidate ->
+            candidate.available && candidate.supports(configured.profile)
+        }
         return AiTarget(
             targetId = AiTargetIds.profile(configured.profile.profileId),
             backendId = backendId,
@@ -77,8 +83,8 @@ internal class OpenAiCompatibleBackend(
             declaredHttpsOrigins = listOf(configured.profile.declaredHttpsOrigin),
             configured = configured.configured,
             available = configured.configured && executor != null,
-            capabilities = executor?.capabilities ?: UNIMPLEMENTED_CAPABILITIES,
-            limits = executor?.limits ?: UNKNOWN_LIMITS,
+            capabilities = executor?.capabilities(configured.profile) ?: UNIMPLEMENTED_CAPABILITIES,
+            limits = executor?.limits(configured.profile) ?: UNKNOWN_LIMITS,
             executionProfiles = emptyList(),
         )
     }
@@ -128,8 +134,10 @@ internal class OpenAiCompatibleBackend(
         value?.let(::writeInt)
     }
 
-    private companion object {
-        val UNIMPLEMENTED_CAPABILITIES = AiTargetCapabilities(
+    companion object {
+        const val BACKEND_ID = "online"
+
+        private val UNIMPLEMENTED_CAPABILITIES = AiTargetCapabilities(
             streaming = false,
             persistentSession = false,
             structuredJson = false,
@@ -137,7 +145,7 @@ internal class OpenAiCompatibleBackend(
             reasoning = false,
             tools = false,
         )
-        val UNKNOWN_LIMITS = AiTargetLimits(
+        private val UNKNOWN_LIMITS = AiTargetLimits(
             maximumContextBytes = null,
             maximumOutputBytes = null,
             maximumOutputTokens = null,

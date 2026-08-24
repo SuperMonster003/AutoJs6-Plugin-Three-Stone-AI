@@ -9,7 +9,7 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 /** Builds an isolated client for credential-bearing online generation requests. */
-internal object OpenAiCompatibleHttpClient {
+internal object OnlineAiHttpClient {
     fun create(): OkHttpClient = OkHttpClient.Builder()
         .dispatcher(Dispatcher())
         .connectionPool(ConnectionPool())

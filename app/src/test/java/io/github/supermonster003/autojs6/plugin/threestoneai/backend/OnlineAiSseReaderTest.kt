@@ -8,7 +8,7 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class OpenAiCompatibleSseReaderTest {
+class OnlineAiSseReaderTest {
     @Test
     fun readerHandlesBomLineEndingsCommentsAndMultilineData() {
         val source = Buffer().writeUtf8(
@@ -19,7 +19,7 @@ class OpenAiCompatibleSseReaderTest {
                 "data: [DONE]\n\n",
         )
 
-        OpenAiCompatibleSseReader(source).use { reader ->
+        OnlineAiSseReader(source).use { reader ->
             val first = reader.readEvent() ?: error("Missing first event")
             assertEquals("message", first.event)
             assertEquals("{\"first\":1,\n\"second\":2}", first.data)
@@ -34,7 +34,7 @@ class OpenAiCompatibleSseReaderTest {
 
     @Test
     fun readerDispatchesFinalUnterminatedEvent() {
-        OpenAiCompatibleSseReader(Buffer().writeUtf8("data: final")).use { reader ->
+        OnlineAiSseReader(Buffer().writeUtf8("data: final")).use { reader ->
             assertEquals("final", reader.readEvent()?.data)
             assertNull(reader.readEvent())
         }
@@ -42,17 +42,17 @@ class OpenAiCompatibleSseReaderTest {
 
     @Test
     fun readerEnforcesPerEventAndTotalByteLimits() {
-        val eventFailure = assertThrows(OpenAiCompatibleFailureException::class.java) {
-            OpenAiCompatibleSseReader(
+        val eventFailure = assertThrows(OnlineAiFailureException::class.java) {
+            OnlineAiSseReader(
                 source = Buffer().writeUtf8("data: too-long\n\n"),
                 maximumEventBytes = 8L,
                 maximumTotalBytes = 64L,
             ).use { it.readEvent() }
         }
-        assertEquals(OpenAiCompatibleFailureReason.RESPONSE_TOO_LARGE, eventFailure.reason)
+        assertEquals(OnlineAiFailureReason.RESPONSE_TOO_LARGE, eventFailure.reason)
 
-        val totalFailure = assertThrows(OpenAiCompatibleFailureException::class.java) {
-            OpenAiCompatibleSseReader(
+        val totalFailure = assertThrows(OnlineAiFailureException::class.java) {
+            OnlineAiSseReader(
                 source = Buffer().writeUtf8("data:a\n\ndata:b\n\n"),
                 maximumEventBytes = 12L,
                 maximumTotalBytes = 12L,
@@ -61,6 +61,6 @@ class OpenAiCompatibleSseReaderTest {
                 reader.readEvent()
             }
         }
-        assertEquals(OpenAiCompatibleFailureReason.RESPONSE_TOO_LARGE, totalFailure.reason)
+        assertEquals(OnlineAiFailureReason.RESPONSE_TOO_LARGE, totalFailure.reason)
     }
 }

@@ -10,6 +10,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiPro
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileRegistry
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileRepository
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
+import okhttp3.Call
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -81,6 +82,42 @@ class OpenAiCompatibleBackendTest {
         assertEquals(target, session.target)
         assertEquals("execution-secret", execution.credential)
         assertEquals(profile(), execution.profile)
+    }
+
+    @Test
+    fun httpExecutionPublishesOnlyItsImplementedCapabilitiesAndSafetyLimits() {
+        val fixture = fixture()
+        fixture.registry.save(profile(), replacement("execution-secret"))
+        val execution = OpenAiCompatibleHttpExecution(
+            Call.Factory { throw AssertionError("No network call expected") },
+        )
+        val backend = OpenAiCompatibleBackend(fixture.registry, execution)
+
+        val target = backend.catalog().targets.single()
+
+        assertTrue(target.available)
+        assertTrue(target.capabilities.streaming)
+        assertTrue(target.capabilities.persistentSession)
+        assertTrue(target.capabilities.structuredJson)
+        assertTrue(target.capabilities.usage)
+        assertFalse(target.capabilities.reasoning)
+        assertFalse(target.capabilities.tools)
+        assertEquals(
+            OpenAiCompatibleTransportLimits.MAXIMUM_CONTEXT_BYTES,
+            target.limits.maximumContextBytes,
+        )
+        assertEquals(
+            OpenAiCompatibleTransportLimits.MAXIMUM_OUTPUT_BYTES,
+            target.limits.maximumOutputBytes,
+        )
+        backend.createSession(AiBackendSessionRequest(target.targetId)).close()
+
+        execution.close()
+
+        assertFalse(backend.catalog().targets.single().available)
+        assertThrows(AiTargetUnavailableException::class.java) {
+            backend.createSession(AiBackendSessionRequest(target.targetId))
+        }
     }
 
     @Test

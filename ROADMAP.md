@@ -75,7 +75,8 @@
 - [x] 在线配置档案领域与目录层: 严格有界且不含凭据的 JSON, canonical UUID, HTTPS-only base URL, provider/origin 变更时强制明确替换或清除凭据, 跨进程锁 + fsync + 原子发布; 档案映射为 `profile:*` REMOTE/PLUGIN_MANAGED target 并与 `local:*` 合入 Application 级统一目录及会话分发. HTTP 执行器落地前在线 target 如实保持 `available=false`, Binder V1 模型列表仍仅公开本地模型.
 - [x] 插件自有凭据仓库: Android Keystore AES-256-GCM 主密钥, 与 profile 绑定的认证密文, 应用私有 hash 文件名, fsync + 原子 rename, 进程内互斥 + 跨进程文件锁; 对外仅查询 configured, 插件内部仅在同步回调中短暂解密并在成功或异常后立即清零, 固定错误消息不携带底层敏感原因.
 - [ ] 在线档案与凭据真机安全冒烟: 验证默认进程写入后 `:provider` 可读取一致的非敏感档案与凭据状态, 并覆盖跨进程替换/清除, provider/origin 变更时的凭据重录, 进程终止重启, 锁屏重启, 元数据/密文损坏及清除应用数据后的 fail-closed 行为. (需真机, 由维护者执行)
-- [ ] OpenAI Compatible Backend (自定义 baseUrl + key + 模型名): 流式, 取消, usage, 错误规范化; 作为首个在线后端打通全链路.
+- [x] OpenAI Compatible Backend (自定义 baseUrl + key + 模型名): Application 级执行器通过统一 `AiBackendSession` 提供完成轮次多轮历史, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, JSON Schema 请求映射及固定且不含敏感信息的错误; 仅访问 profile 声明的 HTTPS 来源, 禁止重定向, 自动重试, cookie, cache, authenticator 及请求观察器, 不提供本地/在线自动回退. AI Provider V1 宿主路由仍按设计仅公开本地模型. [开发契约](docs/dev/openai-compatible-backend.md)
+- [ ] OpenAI Compatible 真机互通与安全冒烟: 使用维护者控制的 HTTPS 测试 endpoint 验证自定义 baseUrl/key/model, SSE 与 JSON 回退, 长响应取消, 401/403/429/5xx, malformed/oversized response, profile/key 并发替换, 进程终止及网络切换. (需真机与测试凭据, 由维护者执行)
 - [ ] 预置提供方模板: OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter (与宿主现有在线目录对齐, 优先复用 OpenAI 兼容格式, Anthropic/Gemini 单独适配).
 - [ ] 在线服务设置页: 配置档案的添加/编辑/删除/测试连接, 默认目标选择, 移动网络开关, 清除 Key.
 - [ ] 聊天 UI 目标选择器: 每个会话固定默认 target; 切换目标默认建议新会话, 继续当前会话需明确确认并记录目标快照.

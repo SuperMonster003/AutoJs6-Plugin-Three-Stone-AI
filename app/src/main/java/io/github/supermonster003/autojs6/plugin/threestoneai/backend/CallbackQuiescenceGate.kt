@@ -7,6 +7,7 @@ import kotlin.concurrent.withLock
 internal class CallbackQuiescenceGate {
     private val lock = ReentrantLock()
     private val quiescent = lock.newCondition()
+    private val callbacksOnCurrentThread = ThreadLocal.withInitial { 0 }
     private var activeCallbacks = 0
     private var closing = false
     private var sealed = false
@@ -15,6 +16,7 @@ internal class CallbackQuiescenceGate {
         val entered = lock.withLock {
             if (sealed) return
             activeCallbacks += 1
+            callbacksOnCurrentThread.set(currentThreadCallbackCount() + 1)
             !closing
         }
         try {
@@ -22,8 +24,15 @@ internal class CallbackQuiescenceGate {
         } finally {
             lock.withLock {
                 activeCallbacks -= 1
+                val currentThreadCount = currentThreadCallbackCount() - 1
+                check(currentThreadCount >= 0)
+                if (currentThreadCount == 0) {
+                    callbacksOnCurrentThread.remove()
+                } else {
+                    callbacksOnCurrentThread.set(currentThreadCount)
+                }
                 check(activeCallbacks >= 0)
-                if (activeCallbacks == 0) quiescent.signalAll()
+                quiescent.signalAll()
             }
         }
     }
@@ -35,8 +44,12 @@ internal class CallbackQuiescenceGate {
     fun awaitQuiescenceAndSeal() {
         lock.withLock {
             closing = true
-            while (activeCallbacks != 0) quiescent.awaitUninterruptibly()
+            val callbacksOwnedByCaller = currentThreadCallbackCount()
+            while (activeCallbacks > callbacksOwnedByCaller) quiescent.awaitUninterruptibly()
             sealed = true
+            if (callbacksOwnedByCaller == 0) callbacksOnCurrentThread.remove()
         }
     }
+
+    private fun currentThreadCallbackCount(): Int = callbacksOnCurrentThread.get() ?: 0
 }

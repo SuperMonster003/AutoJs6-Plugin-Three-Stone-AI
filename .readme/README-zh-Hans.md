@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI 是 AutoJs6 的官方本地 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 全部推理在本地完成, 不联网也不上传任何数据; 只有用户明确下载推荐模型时才会访问网络.
+3-Stone AI 是 AutoJs6 的官方 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 当前 AI Provider V1 宿主调用只使用这些本地目标, 不联网也不上传数据. 插件内部也已包含面向后续统一目标设置与路由的 HTTPS OpenAI Compatible backend; 当前 UI 与 V1 宿主 API 尚不公开它.
 
 ******
 
@@ -94,7 +94,7 @@ protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-插件声明 ON_DEVICE 执行位置和 NONE credential 模式. 它声明 `streaming`, `usage`, `persistent-session` 与 `structured-json` 能力, 接受 `text/plain` 消息输入和 `application/json` 响应 schema, 并输出 `text/plain` 或 `application/json` 文本. 协议 1.3 增加显式 backend profile 和设备级可用性, 且禁止静默回退到 CPU.
+公开的 AI Provider V1 表面声明 ON_DEVICE 执行位置和 NONE credential 模式. 它声明 `streaming`, `usage`, `persistent-session` 与 `structured-json` 能力, 接受 `text/plain` 消息输入和 `application/json` 响应 schema, 并输出 `text/plain` 或 `application/json` 文本. 协议 1.3 增加显式 backend profile 和设备级可用性, 且禁止静默回退到 CPU. 插件内部 REMOTE 目标不会通过 V1 公布.
 
 需要宿主构建版本 5276 或更高版本. 发布产物包含 arm64-v8a, x86_64, universal APK.
 
@@ -112,7 +112,7 @@ required host build: 5276
 
 ******
 
-插件仅为用户主动发起的推荐模型下载请求 `INTERNET` 权限, 不请求广泛存储权限. 目录下载使用不可变 HTTPS 版本及固定字节数和 SHA-256, 仅写入用户选择的 SAF 位置; LiteRT-LM 文件头, 大小, 摘要, flush 与 fsync 全部通过后才算完成. 导入仍只读取系统选择器授予的 URI, 将验证副本流式写入应用私有 `files/models` 并原子激活. Provider 服务还会核验 AutoJs6 包名, 调用 UID 归属及双方签名.
+插件为用户主动发起的推荐模型下载及用户配置的在线目标请求 `INTERNET` 权限; 当前 V1 本地生成不使用网络. 插件不请求广泛存储权限. 目录下载使用不可变 HTTPS 版本及固定字节数和 SHA-256, 仅写入用户选择的 SAF 位置; LiteRT-LM 文件头, 大小, 摘要, flush 与 fsync 全部通过后才算完成. 导入仍只读取系统选择器授予的 URI, 将验证副本流式写入应用私有 `files/models` 并原子激活. Provider 服务还会核验 AutoJs6 包名, 调用 UID 归属及双方签名.
 
 ******
 
@@ -143,7 +143,7 @@ required host build: 5276
 
 - 不声明 reasoning 或 tools 能力.
 - 不接受 tool 角色消息, tool schema, tool call 或 tool result.
-- 不提供联网模型发现, 任意 URL 下载, 云端推理或 credential 流程; 只能下载内置目录中固定版本的推荐模型.
+- 不提供联网模型发现或任意 URL 模型下载. 当前 UI 与 AI Provider V1 宿主路由尚未公开在线 profile 配置, credential 输入及目标选择; 目前只能下载内置目录中固定版本的推荐模型.
 - 不声明 NPU 推理可用: profile 可发现但以 `npu-runtime-not-packaged` 标记为 `unavailable`. GPU 仅在 `libOpenCL.so` 可加载时声明, 且 `.litertlm` 扩展名本身仍不保证模型初始化成功.
 
 ******
@@ -181,10 +181,12 @@ required host build: 5276
 * `新增` 支持在流式输出中渲染内联 `$\text{...}$` 内容, 并适配常用数学命令, 上标与下标样式
 * `新增` 新增插件自管的 Android Keystore 凭据仓库, 使用 AES-256-GCM, 与 profile 绑定的认证密文, 跨进程原子私有文件, 仅 configured 状态查询及明文即时清零
 * `新增` 新增严格的非敏感在线配置档案仓库, 仅接受 HTTPS OpenAI Compatible 端点, 使用 canonical UUID 与跨进程原子元数据, 并在 provider 或 origin 变更时强制明确替换或清除凭据
+* `新增` 新增插件内部 OpenAI Compatible HTTPS 执行后端, 支持自定义 baseUrl, 凭据和模型名, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, 完成轮次多轮历史, JSON Schema 请求映射及不含敏感信息的固定错误; AI Provider V1 宿主路由仍仅公开本地目标
 * `修复` 移除插件说明可运行示例默认设置的 256 token 与 4 KiB 输出限制: 省略 `maxTokens` 时改用模型或引擎默认值, raw Binder 示例使用插件完整的 64 KiB 输出额度
 * `修复` 修复 10 种本地化插件说明中的底层 Binder 示例仍调用协议 1.1 的 14 参数 `AiGenerationOptions` 构造方法, 导致其在协议 1.3 API 下报告 Java 构造方法不存在
 * `修复` 修复模型管理界面在系统暗色模式下仍使用亮色主题文字, 导致正文, 复选框和模型列表与深色背景对比不足
 * `修复` 确保输入框位于软键盘上方, 根据当前主题色对比度选择发送按钮文字颜色, 并统一搜索的上一个, 下一个及关闭控件
+* `修复` 修复在生成 listener callback 内关闭 session 时 callback quiescence 等待自身而死锁; 关闭仍会等待其他线程中已开始的 callback
 * `优化` 更新插件描述, 使用说明及 10 种语言的 README, 与宿主 `ai.*` 本地插件路由的正式化保持一致
 * `优化` 重写 ROADMAP 为可逐项勾选的功能路线图
 * `优化` 将应用及生成的本地化文档标点统一为 ASCII, 并增加覆盖打包文本和生成文本的回归测试

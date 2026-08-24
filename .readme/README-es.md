@@ -39,7 +39,7 @@ El README.md actual admite los siguientes idiomas:
 
 ******
 
-3-Stone AI es el plugin oficial de generación de texto con IA local para AutoJs6. Ejecuta los modelos LiteRT-LM importados por el usuario en un backend CPU seleccionado explícitamente o en una GPU compatible, acepta un historial de mensajes de texto plano y devuelve texto plano o texto JSON restringido por un schema mediante una sesión de streaming controlada. Toda la inferencia ocurre localmente, sin red ni subida de datos; la red solo se usa cuando el usuario descarga explícitamente un modelo recomendado.
+3-Stone AI es el plugin oficial de generación de texto con IA para AutoJs6. Ejecuta los modelos LiteRT-LM importados por el usuario en un backend CPU seleccionado explícitamente o en una GPU compatible, acepta un historial de mensajes de texto plano y devuelve texto plano o texto JSON restringido por un schema mediante una sesión de streaming controlada. Las llamadas actuales del host AI Provider V1 usan esos objetivos locales sin acceso a la red ni subida de datos. El plugin también contiene un backend HTTPS interno compatible con OpenAI para futuras configuraciones y rutas de objetivos unificados; la UI y las APIs V1 actuales no lo exponen.
 
 ******
 
@@ -94,7 +94,7 @@ protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-El plugin declara ejecución ON_DEVICE y modo credential NONE. Declara las capacidades `streaming`, `usage`, `persistent-session` y `structured-json`, acepta mensajes `text/plain` y schemas de respuesta `application/json`, y emite texto `text/plain` o `application/json`. El protocolo 1.3 añade perfiles backend explícitos y disponibilidad por dispositivo sin retorno silencioso a CPU.
+La superficie pública de AI Provider V1 declara ejecución ON_DEVICE y modo credential NONE. Declara las capacidades `streaming`, `usage`, `persistent-session` y `structured-json`, acepta mensajes `text/plain` y schemas de respuesta `application/json`, y emite texto `text/plain` o `application/json`. El protocolo 1.3 añade perfiles backend explícitos y disponibilidad por dispositivo sin retorno silencioso a CPU. Los objetivos REMOTE internos del plugin no se anuncian mediante V1.
 
 Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes APK arm64-v8a, x86_64, universal.
 
@@ -112,7 +112,7 @@ Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes
 
 ******
 
-El plugin solicita `INTERNET` solo para descargas de modelos recomendados iniciadas por el usuario y ningún permiso general de almacenamiento. Las descargas usan revisiones HTTPS inmutables, tamaño y SHA-256 fijados, y solo escriben en la ubicación SAF elegida; deben superar cabecera LiteRT-LM, tamaño, resumen, flush y fsync. La importación sigue leyendo solo un URI del selector, escribe una copia verificada en `files/models` y la activa atómicamente. Los servicios también verifican el paquete AutoJs6, el UID y las firmas.
+El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario y solicitudes a un objetivo online configurado por el usuario; la generación local V1 actual no usa la red. No solicita ningún permiso general de almacenamiento. Las descargas usan revisiones HTTPS inmutables, tamaño y SHA-256 fijados, y solo escriben en la ubicación SAF elegida; deben superar cabecera LiteRT-LM, tamaño, resumen, flush y fsync. La importación sigue leyendo solo un URI del selector, escribe una copia verificada en `files/models` y la activa atómicamente. Los servicios también verifican el paquete AutoJs6, el UID y las firmas.
 
 ******
 
@@ -143,7 +143,7 @@ El plugin solicita `INTERNET` solo para descargas de modelos recomendados inicia
 
 - No se declaran reasoning ni tools.
 - No se aceptan mensajes con rol tool, schemas de herramientas, tool calls ni tool results.
-- No hay descubrimiento de modelos por red, descargas desde URL arbitrarias, inferencia cloud ni flujo credential; solo puede descargarse el catálogo integrado fijado.
+- No hay descubrimiento de modelos por red ni descargas de modelos desde URL arbitrarias. La configuración de perfiles online, la entrada de credentials y la selección de objetivos todavía no se exponen mediante la UI actual ni el enrutamiento del host AI Provider V1; actualmente solo puede descargarse el catálogo integrado fijado.
 - No se declara inferencia NPU: el perfil es visible como `unavailable` con `npu-runtime-not-packaged`. GPU solo se declara si `libOpenCL.so` puede cargarse y la extensión `.litertlm` aún no garantiza que el modelo se inicialice.
 
 ******
@@ -181,10 +181,12 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Función` Se renderiza contenido `$\text{...}$` en línea durante el streaming, con comandos matemáticos comunes y estilos de superíndice y subíndice
 * `Función` Se añadió un almacén de credenciales gestionado por el plugin con Android Keystore, AES-256-GCM, texto cifrado autenticado vinculado al profile, archivos privados atómicos entre procesos, consultas limitadas al estado configured y borrado inmediato del texto sin cifrar
 * `Función` Se añadió un repositorio estricto y sin secretos de perfiles en línea para endpoints OpenAI Compatible solo por HTTPS, con UUID canónicos, metadatos atómicos entre procesos y reemplazo o eliminación obligatorios de la credencial al cambiar el provider o el origin
+* `Función` Se añadió el backend interno del plugin para ejecución HTTPS OpenAI Compatible con perfiles de baseUrl, credencial y modelo personalizados, streaming SSE acotado y fallback JSON, cancelación precisa, usage del provider, historial persistente de turnos completados, mapping de JSON Schema y errores fijos sin datos sensibles; el enrutamiento del host AI Provider V1 sigue limitado a objetivos locales
 * `Corrección` Se eliminaron los límites implícitos de 256 tokens y 4 KiB de los ejemplos ejecutables: omitir `maxTokens` usa ahora el valor predeterminado del modelo o motor y el ejemplo Binder directo usa los 64 KiB completos permitidos por el proveedor
 * `Corrección` Se corrigió el ejemplo Binder de bajo nivel de las instrucciones localizadas en 10 idiomas, que aún invocaba el constructor `AiGenerationOptions` de 14 argumentos del protocolo 1.1 y fallaba con la API del protocolo 1.3
 * `Corrección` Se corrigió que el gestor de modelos conservara los colores de texto del tema claro en el modo oscuro del sistema, lo que hacía ilegibles el texto, las casillas y las filas de modelos sobre el fondo oscuro
 * `Corrección` Se mantuvo el editor visible sobre el teclado, se eligió el texto del botón Enviar según el contraste con el color del tema y se unificaron los controles de búsqueda anterior, siguiente y cerrar
+* `Corrección` Se corrigió el bloqueo al cerrar una session desde un callback listener de generación, donde la espera de inactividad se esperaba a sí misma indefinidamente; el cierre sigue esperando los callbacks ya activos en otros hilos
 * `Mejora` Descripción del plugin, instrucciones y README en 10 idiomas actualizados conforme a la formalización de la ruta de plugin local `ai.*`
 * `Mejora` ROADMAP reescrito como hoja de ruta de funciones con elementos verificables individualmente
 * `Mejora` Se normalizó la puntuación ASCII en la aplicación y en el texto localizado generado, con una prueba de regresión para el texto empaquetado y generado

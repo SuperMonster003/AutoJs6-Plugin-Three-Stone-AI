@@ -118,7 +118,16 @@ class OnlineAiProfileRegistryTest {
         val snapshot = fixture.registry.snapshot()
         assertEquals(listOf(profile.profileId), snapshot.profiles.map { it.profile.profileId })
         assertTrue(snapshot.profiles.single().configured)
-        assertEquals("callback-secret", fixture.reveal(profile.profileId))
+        var callbackBytes: ByteArray? = null
+        assertEquals(
+            "callback-secret",
+            fixture.registry.withCredential(profile.profileId) { _, bytes ->
+                assertFalse(fixture.storage.accessActive)
+                callbackBytes = bytes
+                bytes.toString(Charsets.UTF_8)
+            },
+        )
+        assertTrue(requireNotNull(callbackBytes).all { it == 0.toByte() })
         assertTrue(requireNotNull(fixture.credentials.lastCallbackBytes).all { it == 0.toByte() })
         val documentText = requireNotNull(fixture.storage.bytes()).toString(Charsets.UTF_8)
         assertFalse(documentText.contains("callback-secret"))
@@ -169,16 +178,25 @@ class OnlineAiProfileRegistryTest {
     ) : OnlineAiProfileDocumentStorage {
         private var document: ByteArray? = null
 
+        @Volatile
+        var accessActive = false
+            private set
+
         override fun <T> withExclusiveAccess(action: (OnlineAiProfileDocumentAccess) -> T): T = synchronized(this) {
-            action(
-                object : OnlineAiProfileDocumentAccess {
-                    override fun read(): ByteArray? = document?.copyOf()
-                    override fun write(encodedDocument: ByteArray) {
-                        events += "profile-write"
-                        document = encodedDocument.copyOf()
-                    }
-                },
-            )
+            accessActive = true
+            try {
+                action(
+                    object : OnlineAiProfileDocumentAccess {
+                        override fun read(): ByteArray? = document?.copyOf()
+                        override fun write(encodedDocument: ByteArray) {
+                            events += "profile-write"
+                            document = encodedDocument.copyOf()
+                        }
+                    },
+                )
+            } finally {
+                accessActive = false
+            }
         }
 
         fun bytes(): ByteArray? = synchronized(this) { document?.copyOf() }

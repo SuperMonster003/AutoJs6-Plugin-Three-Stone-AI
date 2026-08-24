@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.profile
 
 import io.github.supermonster003.autojs6.plugin.threestoneai.credential.AiCredentialStore
+import java.io.Closeable
 import java.util.Collections
 
 internal sealed interface OnlineAiCredentialUpdate {
@@ -52,8 +53,9 @@ internal class OnlineAiProfileCredentialAccess internal constructor(
 }
 
 /**
- * Coordinates non-secret metadata with profile-bound encrypted credentials. The profile storage
- * lock remains held for the complete operation, so another process can observe only safe states.
+ * Coordinates non-secret metadata with profile-bound encrypted credentials. Mutations and
+ * execution snapshots pair both stores while the profile transaction is locked; a captured
+ * credential is then used only after every storage lock has been released.
  */
 internal class OnlineAiProfileRegistry(
     private val repository: OnlineAiProfileRepository,
@@ -128,22 +130,60 @@ internal class OnlineAiProfileRegistry(
     fun <T> withCredential(
         profileId: String,
         action: (OnlineAiProfile, ByteArray) -> T,
-    ): T = repository.withTransaction { transaction ->
-        val profile = transaction.find(profileId)
-            ?: throw IllegalArgumentException("Online AI profile does not exist")
-        credentialStore.withCredential(profile.profileId) { credential ->
-            action(profile, credential)
-        }
+    ): T = acquireCredential(profileId = profileId).use { snapshot ->
+        action(snapshot.profile, snapshot.credential)
     }
 
     internal fun <T> withCredential(
         expectedProfile: OnlineAiProfile,
         action: (ByteArray) -> T,
-    ): T = repository.withTransaction { transaction ->
-        val expected = OnlineAiProfilePolicy.normalizeProfile(expectedProfile)
-        val current = transaction.find(expected.profileId)
-            ?: throw OnlineAiProfileChangedException()
-        if (current != expected) throw OnlineAiProfileChangedException()
-        credentialStore.withCredential(current.profileId, action)
+    ): T = acquireCredential(expectedProfile = expectedProfile).use { snapshot ->
+        action(snapshot.credential)
+    }
+
+    /**
+     * Captures an exact metadata/credential pair while the profile transaction is locked, then
+     * releases every storage lock before invoking a potentially long-running HTTPS operation.
+     */
+    private fun acquireCredential(
+        profileId: String? = null,
+        expectedProfile: OnlineAiProfile? = null,
+    ): CredentialSnapshot {
+        require((profileId == null) != (expectedProfile == null))
+        var copiedCredential: ByteArray? = null
+        return try {
+            val profile = repository.withTransaction { transaction ->
+                val current = if (expectedProfile == null) {
+                    transaction.find(requireNotNull(profileId))
+                        ?: throw IllegalArgumentException("Online AI profile does not exist")
+                } else {
+                    val expected = OnlineAiProfilePolicy.normalizeProfile(expectedProfile)
+                    transaction.find(expected.profileId)
+                        ?.takeIf { it == expected }
+                        ?: throw OnlineAiProfileChangedException()
+                }
+                credentialStore.withCredential(current.profileId) { credential ->
+                    copiedCredential = credential.copyOf()
+                }
+                current
+            }
+            CredentialSnapshot(profile, requireNotNull(copiedCredential)).also {
+                copiedCredential = null
+            }
+        } finally {
+            copiedCredential?.fill(0)
+        }
+    }
+
+    private class CredentialSnapshot(
+        val profile: OnlineAiProfile,
+        val credential: ByteArray,
+    ) : Closeable {
+        override fun close() {
+            credential.fill(0)
+        }
+
+        override fun toString(): String =
+            "CredentialSnapshot(profileId=${profile.profileId}, credential=[REDACTED])"
     }
 }

@@ -39,7 +39,7 @@ The current README.md supports the following languages:
 
 ******
 
-3-Stone AI is the official local AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. All inference happens locally without network access or data upload; the network is used only when the user explicitly downloads a recommended model.
+3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. Current AI Provider V1 host calls use those local targets without network access or data upload. The plugin also contains an internal HTTPS OpenAI-compatible backend for future unified-target settings and routing; current UI and V1 host APIs do not expose it.
 
 ******
 
@@ -94,7 +94,7 @@ protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-The plugin declares ON_DEVICE execution and the NONE credential mode. It declares the `streaming`, `usage`, `persistent-session`, and `structured-json` capabilities, accepts `text/plain` message input and `application/json` response schemas, and emits `text/plain` or `application/json` text. Protocol 1.3 adds explicit backend profiles and device-scoped availability without CPU fallback.
+The public AI Provider V1 surface declares ON_DEVICE execution and the NONE credential mode. It declares the `streaming`, `usage`, `persistent-session`, and `structured-json` capabilities, accepts `text/plain` message input and `application/json` response schemas, and emits `text/plain` or `application/json` text. Protocol 1.3 adds explicit backend profiles and device-scoped availability without CPU fallback. Plugin-internal REMOTE targets are not advertised through V1.
 
 Host build 5276 or later is required. Releases include arm64-v8a, x86_64, universal APK variants.
 
@@ -112,7 +112,7 @@ Host build 5276 or later is required. Releases include arm64-v8a, x86_64, univer
 
 ******
 
-The plugin requests `INTERNET` only for user-triggered recommended-model downloads and requests no broad storage permission. Catalog downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, and matching signatures.
+The plugin requests `INTERNET` for user-triggered recommended-model downloads and requests to a user-configured online target; current V1 local generation does not use the network. It requests no broad storage permission. Catalog downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, and matching signatures.
 
 ******
 
@@ -143,7 +143,7 @@ The plugin requests `INTERNET` only for user-triggered recommended-model downloa
 
 - Reasoning and tools are not declared.
 - Tool-role messages, tool schemas, tool calls, and tool results are not accepted.
-- There is no network model discovery, arbitrary-URL download, cloud inference, or credential flow; only the pinned built-in recommendation catalog can be downloaded.
+- There is no network model discovery or arbitrary-URL model download. Online profile configuration, credential entry, and target selection are not yet exposed through the current UI or AI Provider V1 host routing; only the pinned built-in recommendation catalog can currently be downloaded.
 - NPU inference is not declared: the profile is discoverable as `unavailable` with `npu-runtime-not-packaged`. GPU is declared only when `libOpenCL.so` is loadable, and a `.litertlm` extension alone still does not guarantee model initialization.
 
 ******
@@ -181,10 +181,12 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Feature` Rendered inline `$\text{...}$` content during streaming, with common math commands plus superscript and subscript styling
 * `Feature` Added a plugin-managed Android Keystore credential store with AES-256-GCM, profile-bound authenticated ciphertext, cross-process atomic private files, configured-only status checks, and immediate plaintext zeroization
 * `Feature` Added a strict non-secret online profile repository for HTTPS-only OpenAI-compatible endpoints, with canonical UUIDs, cross-process atomic metadata, and mandatory credential replacement or clearing when the provider or origin changes
+* `Feature` Added the plugin-internal OpenAI-compatible HTTPS execution backend for custom base URL, credential, and model profiles, with bounded SSE and JSON-fallback streaming, precise cancellation, provider usage, completed-turn persistent history, JSON Schema request mapping, and fixed non-sensitive errors; AI Provider V1 host routing remains local-only
 * `Fix` Removed the runnable instruction examples' implicit 256-token and 4 KiB output caps: omitted `maxTokens` now uses the model or engine default, while the raw Binder example uses the provider's full 64 KiB output allowance
 * `Fix` Fixed the raw Binder sample in the 10 localized plugin instructions still invoking the 14-argument protocol 1.1 `AiGenerationOptions` constructor, which failed against the protocol 1.3 API
 * `Fix` Fixed the model manager retaining light-theme text colors in system dark mode, which made body text, checkboxes, and model rows unreadable against the dark background
 * `Fix` Kept the composer visible above the soft keyboard, selected send-button text for contrast with the active theme color, and unified the previous, next, and close search controls
+* `Fix` Fixed a session close invoked from inside a generation listener callback waiting on itself indefinitely; close still waits for callbacks already running on other threads
 * `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 * `Improvement` Normalized application and generated localized text to ASCII punctuation, with a regression test covering packaged and generated text

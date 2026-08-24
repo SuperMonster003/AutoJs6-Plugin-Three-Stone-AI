@@ -8,6 +8,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLocal
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmEngineRuntime
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OpenAiCompatibleBackend
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OpenAiCompatibleHttpExecution
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectory
 import io.github.supermonster003.autojs6.plugin.threestoneai.credential.AiCredentialStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.credential.AndroidKeystoreCredentialCipher
@@ -62,16 +63,23 @@ class ThreeStoneAiApplication : Application() {
     internal val onlineProfileRegistry: OnlineAiProfileRegistry
         get() = onlineProfileRegistryDelegate.value
 
+    private val onlineExecutionDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        OpenAiCompatibleHttpExecution.create()
+    }
+
+    private val onlineExecution: OpenAiCompatibleHttpExecution
+        get() = onlineExecutionDelegate.value
+
     private val aiBackendDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         CompositeAiBackend(
             listOf(
                 localBackend,
-                OpenAiCompatibleBackend(onlineProfileRegistry),
+                OpenAiCompatibleBackend(onlineProfileRegistry, onlineExecution),
             ),
         )
     }
 
-    /** Unified local/remote dispatch. Remote profiles remain unavailable until HTTPS execution lands. */
+    /** Unified local/remote dispatch with no automatic fallback across the locality boundary. */
     internal val aiBackend: AiBackend
         get() = aiBackendDelegate.value
 
@@ -91,6 +99,7 @@ class ThreeStoneAiApplication : Application() {
     }
 
     override fun onTerminate() {
+        if (onlineExecutionDelegate.isInitialized()) onlineExecution.close()
         if (engineRuntimeDelegate.isInitialized()) engineRuntime.close()
         super.onTerminate()
     }

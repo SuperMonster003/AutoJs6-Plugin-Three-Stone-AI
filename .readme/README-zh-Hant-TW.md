@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI 是 AutoJs6 的官方本機 AI 文字生成外掛. 它在明確選擇的 CPU 或相容 GPU backend 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段回傳純文字或受 schema 約束的 JSON 文字. 全部推論在本地完成, 不連網也不上傳任何資料; 只有使用者明確下載推薦模型時才會連網.
+3-Stone AI 是 AutoJs6 的官方 AI 文字生成外掛. 它在明確選擇的 CPU 或相容 GPU backend 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段回傳純文字或受 schema 約束的 JSON 文字. 目前 AI Provider V1 宿主呼叫僅使用這些本機目標, 不連網也不上傳資料. 外掛內部也已包含供後續統一目標設定與路由使用的 HTTPS OpenAI Compatible backend; 目前 UI 與 V1 宿主 API 尚未公開它.
 
 ******
 
@@ -94,7 +94,7 @@ protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-外掛宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming`, `usage`, `persistent-session` 與 `structured-json` 能力, 接受 `text/plain` 訊息輸入和 `application/json` 回應 schema, 並輸出 `text/plain` 或 `application/json` 文字. 協議 1.3 新增明確 backend profile 與裝置級可用性, 並禁止靜默回退 CPU.
+公開的 AI Provider V1 表面宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming`, `usage`, `persistent-session` 與 `structured-json` 能力, 接受 `text/plain` 訊息輸入和 `application/json` 回應 schema, 並輸出 `text/plain` 或 `application/json` 文字. 協議 1.3 新增明確 backend profile 與裝置級可用性, 並禁止靜默回退 CPU. 外掛內部 REMOTE 目標不會透過 V1 公布.
 
 需要主程式建置版本 5276 或更高版本. 發布產物包含 arm64-v8a, x86_64, universal APK.
 
@@ -112,7 +112,7 @@ required host build: 5276
 
 ******
 
-外掛僅為使用者主動發起的推薦模型下載要求 `INTERNET` 權限, 不要求廣泛儲存權限. 目錄下載使用不可變 HTTPS 版本及固定位元組數與 SHA-256, 僅寫入使用者選擇的 SAF 位置; LiteRT-LM 檔頭, 大小, 摘要, flush 與 fsync 全部通過後才算完成. 匯入仍只讀取系統選擇器授予的 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬及雙方簽章.
+外掛為使用者主動發起的推薦模型下載及使用者設定的線上目標請求 `INTERNET` 權限; 目前 V1 本機生成不使用網路. 外掛不要求廣泛儲存權限. 目錄下載使用不可變 HTTPS 版本及固定位元組數與 SHA-256, 僅寫入使用者選擇的 SAF 位置; LiteRT-LM 檔頭, 大小, 摘要, flush 與 fsync 全部通過後才算完成. 匯入仍只讀取系統選擇器授予的 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬及雙方簽章.
 
 ******
 
@@ -143,7 +143,7 @@ required host build: 5276
 
 - 不宣告 reasoning 或 tools 能力.
 - 不接受 tool 角色訊息, tool schema, tool call 或 tool result.
-- 不提供連網模型探索, 任意 URL 下載, 雲端推論或 credential 流程; 僅能下載內建目錄中固定版本的推薦模型.
+- 不提供連網模型探索或任意 URL 模型下載. 目前 UI 與 AI Provider V1 宿主路由尚未公開線上 profile 設定, credential 輸入及目標選擇; 目前僅能下載內建目錄中固定版本的推薦模型.
 - 不宣告 NPU 推論可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 僅在 `libOpenCL.so` 可載入時宣告, 且 `.litertlm` 副檔名本身仍不保證模型初始化成功.
 
 ******
@@ -181,10 +181,12 @@ required host build: 5276
 * `新增` 支援在串流輸出中渲染內聯 `$\text{...}$` 內容, 並適配常用數學命令, 上標與下標樣式
 * `新增` 新增由外掛程式管理的 Android Keystore 憑證儲存庫, 採用 AES-256-GCM, 綁定 profile 的驗證密文, 跨程序原子私有檔案, 僅查詢 configured 狀態及即時清除明文
 * `新增` 新增嚴格且不含敏感資料的線上設定檔儲存庫, 僅接受 HTTPS OpenAI Compatible 端點, 使用 canonical UUID 與跨程序原子中繼資料, provider 或 origin 變更時必須明確取代或清除憑證
+* `新增` 新增外掛程式內部 OpenAI Compatible HTTPS 執行 backend, 支援自訂 baseUrl, 憑證及模型名稱, 有界 SSE 與 JSON fallback 串流回應, 精確取消, provider usage, 完成輪次多輪歷史, JSON Schema 請求映射及不含敏感資料的固定錯誤; AI Provider V1 宿主路由仍僅公開本地目標
 * `修復` 移除外掛說明可執行範例預設設定的 256 token 與 4 KiB 輸出限制: 省略 `maxTokens` 時改用模型或引擎預設值, raw Binder 範例使用外掛完整的 64 KiB 輸出額度
 * `修復` 修復 10 種本地化外掛說明中的底層 Binder 範例仍呼叫協定 1.1 的 14 參數 `AiGenerationOptions` 建構方法, 導致其在協定 1.3 API 下回報 Java 建構方法不存在
 * `修復` 修復模型管理介面在系統深色模式下仍使用淺色主題文字, 導致本文, 核取方塊及模型清單與深色背景對比不足
 * `修復` 確保輸入框位於軟鍵盤上方, 依目前主題色對比度選擇傳送按鈕文字顏色, 並統一搜尋的上一個, 下一個及關閉控制項
+* `修復` 修正於生成 listener callback 內關閉 session 時 callback quiescence 等待自身而死鎖; 關閉仍會等待其他執行緒中已開始的 callback
 * `優化` 更新外掛描述, 使用說明及 10 種語言的 README, 與宿主 `ai.*` 本機外掛路由的正式化保持一致
 * `優化` 重寫 ROADMAP 為可逐項勾選的功能路線圖
 * `優化` 將應用程式及產生的本地化文件標點統一為 ASCII, 並增加涵蓋封裝文字與產生文字的迴歸測試

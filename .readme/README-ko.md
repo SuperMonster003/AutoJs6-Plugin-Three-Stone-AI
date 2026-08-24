@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI는 AutoJs6의 공식 로컬 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 모든 추론은 네트워크 접근이나 데이터 업로드 없이 로컬에서 이루어지며, 네트워크는 사용자가 권장 모델 다운로드를 명시적으로 시작할 때만 사용됩니다.
+3-Stone AI는 AutoJs6의 공식 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 현재 AI Provider V1 호스트 호출은 이 로컬 대상을 사용하며 네트워크 접근이나 데이터 업로드를 하지 않습니다. 플러그인에는 향후 통합 대상 설정과 라우팅을 위한 내부 HTTPS OpenAI Compatible backend도 있지만, 현재 UI와 V1 호스트 API에는 노출되지 않습니다.
 
 ******
 
@@ -94,7 +94,7 @@ protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-플러그인은 ON_DEVICE 실행과 NONE credential 모드를 선언합니다. `streaming`, `usage`, `persistent-session`, `structured-json` 기능을 선언하고, `text/plain` 메시지와 `application/json` 응답 schema를 입력받아 `text/plain` 또는 `application/json` 텍스트를 출력합니다. 프로토콜 1.3은 명시적 backend profile과 기기별 가용성을 추가하며 CPU로의 자동 전환을 금지합니다.
+공개 AI Provider V1 표면은 ON_DEVICE 실행과 NONE credential 모드를 선언합니다. `streaming`, `usage`, `persistent-session`, `structured-json` 기능을 선언하고, `text/plain` 메시지와 `application/json` 응답 schema를 입력받아 `text/plain` 또는 `application/json` 텍스트를 출력합니다. 프로토콜 1.3은 명시적 backend profile과 기기별 가용성을 추가하며 CPU로의 자동 전환을 금지합니다. 플러그인 내부 REMOTE 대상은 V1을 통해 알리지 않습니다.
 
 호스트 build 5276 이상이 필요합니다. 릴리스에는 arm64-v8a, x86_64, universal APK 변형이 포함됩니다.
 
@@ -112,7 +112,7 @@ required host build: 5276
 
 ******
 
-사용자가 시작한 권장 모델 다운로드에만 `INTERNET` 권한을 요청하며 광범위한 저장소 권한은 요청하지 않습니다. 다운로드는 변경 불가능한 HTTPS 리비전, 고정 크기와 SHA-256을 사용하고 선택한 SAF 위치에만 쓰며 LiteRT-LM 헤더, 크기, 다이제스트, flush, fsync가 모두 통과해야 완료됩니다. 가져오기는 계속 선택기 URI만 읽고 검증 사본을 `files/models`에 써서 원자적으로 활성화합니다. Provider는 AutoJs6 패키지, UID, 서명도 검증합니다.
+사용자가 시작한 권장 모델 다운로드와 사용자가 구성한 online 대상 요청에 `INTERNET` 권한을 사용하지만, 현재 V1 로컬 생성은 네트워크를 사용하지 않습니다. 광범위한 저장소 권한은 요청하지 않습니다. 다운로드는 변경 불가능한 HTTPS 리비전, 고정 크기와 SHA-256을 사용하고 선택한 SAF 위치에만 쓰며 LiteRT-LM 헤더, 크기, 다이제스트, flush, fsync가 모두 통과해야 완료됩니다. 가져오기는 계속 선택기 URI만 읽고 검증 사본을 `files/models`에 써서 원자적으로 활성화합니다. Provider는 AutoJs6 패키지, UID, 서명도 검증합니다.
 
 ******
 
@@ -143,7 +143,7 @@ required host build: 5276
 
 - Reasoning 및 tools는 선언하지 않습니다.
 - Tool 역할 메시지, tool schema, tool call 및 tool result를 받지 않습니다.
-- 네트워크 모델 검색, 임의 URL 다운로드, cloud 추론 또는 credential 흐름은 없으며 고정된 내장 권장 카탈로그만 다운로드할 수 있습니다.
+- 네트워크 모델 검색이나 임의 URL 모델 다운로드는 없습니다. online profile 구성, credential 입력 및 대상 선택은 현재 UI나 AI Provider V1 호스트 라우팅에 아직 노출되지 않으며, 현재는 고정된 내장 권장 카탈로그만 다운로드할 수 있습니다.
 - NPU 추론은 선언하지 않습니다. profile은 `npu-runtime-not-packaged` 사유의 `unavailable`로 검색됩니다. GPU는 `libOpenCL.so`를 로드할 수 있을 때만 선언되며 `.litertlm` 확장자만으로 모델 초기화를 보장하지 않습니다.
 
 ******
@@ -181,10 +181,12 @@ required host build: 5276
 * `기능` 스트리밍 중 인라인 `$\text{...}$` 콘텐츠를 렌더링하고 일반 수학 명령과 위 첨자 및 아래 첨자 스타일을 지원
 * `기능` 플러그인이 관리하는 Android Keystore 자격 증명 저장소를 추가하고 AES-256-GCM, profile에 바인딩된 인증 암호문, 프로세스 간 원자적 비공개 파일, configured 상태만 조회 및 평문 즉시 삭제를 지원
 * `기능` HTTPS 전용 OpenAI Compatible endpoint를 위한 엄격한 비밀정보 비포함 온라인 profile 저장소를 추가하고 canonical UUID, 프로세스 간 원자적 metadata, provider 또는 origin 변경 시 자격 증명의 명시적 교체 또는 삭제를 강제
+* `기능` 사용자 지정 baseUrl, 자격 증명, 모델 profile을 위한 플러그인 내부 OpenAI Compatible HTTPS 실행 backend를 추가하고 제한된 SSE 및 JSON fallback 스트리밍, 정확한 취소, provider usage, 완료된 턴만의 영구 기록, JSON Schema 요청 mapping, 민감 정보 없는 고정 오류를 지원; AI Provider V1 호스트 라우팅은 계속 로컬 target만 공개
 * `수정` 실행 가능한 안내 예제의 암묵적 256 token 및 4 KiB 출력 제한을 제거하여 `maxTokens` 생략 시 모델 또는 engine 기본값을 사용하고 raw Binder 예제는 provider의 전체 64 KiB 출력 허용량을 사용하도록 수정
 * `수정` 10개 언어로 현지화된 플러그인 안내의 저수준 Binder 예제가 프로토콜 1.1의 14개 인자 `AiGenerationOptions` 생성자를 계속 호출하여 프로토콜 1.3 API에서 실패하던 문제 수정
 * `수정` 시스템 다크 모드에서도 모델 관리 화면이 라이트 테마 텍스트 색상을 유지해 본문, 체크박스, 모델 행을 어두운 배경에서 읽을 수 없던 문제 수정
 * `수정` 작성 영역을 소프트 키보드 위에 유지하고 활성 테마 색상 대비에 따라 보내기 버튼 글자색을 선택하며 이전, 다음, 닫기 검색 컨트롤을 통일
+* `수정` 생성 listener callback 안에서 session을 close할 때 callback quiescence가 자기 자신을 무한히 기다리던 교착을 수정; close는 다른 스레드에서 이미 실행 중인 callback을 계속 대기
 * `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신
 * `개선` ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성
 * `개선` 앱과 생성된 현지화 문서의 문장 부호를 ASCII로 통일하고 패키지 및 생성 문서를 검사하는 회귀 테스트를 추가

@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI は AutoJs6 の公式ローカル AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 推論はすべてローカルで完結し, ネットワークアクセスもデータ送信もありません; ネットワークはユーザーが推奨モデルを明示的にダウンロードするときだけ使用します.
+3-Stone AI は AutoJs6 の公式 AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 現在の AI Provider V1 ホスト呼び出しはこれらのローカルターゲットを使用し, ネットワークアクセスもデータ送信も行いません. プラグインには将来の統一ターゲット設定とルーティングに向けた内部 HTTPS OpenAI Compatible backend もありますが, 現在の UI と V1 ホスト API は公開していません.
 
 ******
 
@@ -94,7 +94,7 @@ protocol: V1.2-V1.3
 required host build: 5276
 ```
 
-プラグインは ON_DEVICE 実行と NONE credential モードを宣言します. `streaming`, `usage`, `persistent-session`, `structured-json` 機能を宣言し, `text/plain` メッセージと `application/json` 応答 schema を受け取り, `text/plain` または `application/json` テキストを出力します. プロトコル 1.3 は明示 backend profile と端末別可用性を追加し, CPU への暗黙フォールバックを禁止します.
+公開 AI Provider V1 サーフェスは ON_DEVICE 実行と NONE credential モードを宣言します. `streaming`, `usage`, `persistent-session`, `structured-json` 機能を宣言し, `text/plain` メッセージと `application/json` 応答 schema を受け取り, `text/plain` または `application/json` テキストを出力します. プロトコル 1.3 は明示 backend profile と端末別可用性を追加し, CPU への暗黙フォールバックを禁止します. プラグイン内部の REMOTE ターゲットは V1 では公開されません.
 
 ホスト build 5276 以降が必要です. リリースには arm64-v8a, x86_64, universal APK variant が含まれます.
 
@@ -112,7 +112,7 @@ required host build: 5276
 
 ******
 
-ユーザーが開始する推奨モデルのダウンロードにのみ `INTERNET` 権限を要求し, 広範なストレージ権限は要求しません. ダウンロードは不変 HTTPS リビジョン, 固定サイズと SHA-256 を使い, 選択された SAF 保存先だけへ書き込みます; LiteRT-LM ヘッダー, サイズ, ダイジェスト, flush, fsync がすべて成功するまで完了扱いにしません. インポートは引き続きピッカー URI のみを読み, 検証済みコピーを `files/models` に書いて原子的に有効化します. Provider は AutoJs6 パッケージ, UID, 署名も検証します.
+ユーザーが開始する推奨モデルのダウンロードとユーザー設定 online ターゲットへのリクエストに `INTERNET` 権限を要求しますが, 現在の V1 ローカル生成はネットワークを使用しません. 広範なストレージ権限は要求しません. ダウンロードは不変 HTTPS リビジョン, 固定サイズと SHA-256 を使い, 選択された SAF 保存先だけへ書き込みます; LiteRT-LM ヘッダー, サイズ, ダイジェスト, flush, fsync がすべて成功するまで完了扱いにしません. インポートは引き続きピッカー URI のみを読み, 検証済みコピーを `files/models` に書いて原子的に有効化します. Provider は AutoJs6 パッケージ, UID, 署名も検証します.
 
 ******
 
@@ -143,7 +143,7 @@ required host build: 5276
 
 - Reasoning と tools は宣言しません.
 - Tool role メッセージ, tool schema, tool call, tool result は受け付けません.
-- ネットワークでのモデル探索, 任意 URL のダウンロード, cloud 推論, credential フローはありません; ダウンロードできるのは固定された内蔵推奨カタログだけです.
+- ネットワークでのモデル探索や任意 URL からのモデルダウンロードはありません. online profile 設定, credential 入力, ターゲット選択は現在の UI または AI Provider V1 ホストルーティングではまだ公開されていません; 現在ダウンロードできるのは固定された内蔵推奨カタログだけです.
 - NPU 推論は宣言しません. profile は `npu-runtime-not-packaged` 理由付きの `unavailable` として確認できます. GPU は `libOpenCL.so` を読み込める場合だけ宣言され, `.litertlm` 拡張子だけではモデル初期化を保証しません.
 
 ******
@@ -181,10 +181,12 @@ required host build: 5276
 * `機能` ストリーミング中にインライン `$\text{...}$` を描画し, 一般的な数式コマンド, 上付き, 下付き表示に対応
 * `機能` プラグイン管理の Android Keystore 認証情報ストアを追加し, AES-256-GCM, profile に結び付けた認証済み暗号文, プロセス間で原子的な非公開ファイル, configured 状態のみの照会, 平文の即時消去に対応
 * `機能` HTTPS 専用の OpenAI Compatible エンドポイント向けに機密情報を含まない厳格なオンライン profile リポジトリを追加し, canonical UUID, プロセス間で原子的なメタデータ, provider または origin 変更時の認証情報の明示的な置換または消去に対応
+* `機能` カスタム baseUrl, 認証情報, モデル profile 用のプラグイン内部 OpenAI Compatible HTTPS 実行 backend を追加し, 上限付き SSE と JSON fallback ストリーミング, 正確なキャンセル, provider usage, 完了ターンのみの永続履歴, JSON Schema リクエスト変換, 機密情報を含まない固定エラーに対応; AI Provider V1 のホストルーティングは引き続きローカル target のみを公開
 * `修正` 実行可能な説明例に設定されていた暗黙の 256 token / 4 KiB 出力上限を削除し, `maxTokens` 省略時はモデルまたは engine の既定値を使用, raw Binder 例は provider の 64 KiB 出力許容量全体を使用するよう修正
 * `修正` 10 言語のローカライズ済みプラグイン説明にある低レベル Binder 例が, プロトコル 1.1 の 14 引数 `AiGenerationOptions` コンストラクターを呼び続け, プロトコル 1.3 API で失敗する問題を修正
 * `修正` システムのダークモードでもモデル管理画面がライトテーマの文字色を保持し, 本文, チェックボックス, モデル行が暗い背景で読めなくなる問題を修正
 * `修正` 入力欄をソフトキーボードの上に維持し, 送信ボタン文字色をテーマ色とのコントラストで選択し, 前へ, 次へ, 閉じる検索操作を統一
+* `修正` 生成 listener callback 内から session を close した場合に callback quiescence が自身を待ち続けるデッドロックを修正; 他のスレッドで実行中の callback は引き続き待機
 * `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合
 * `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 * `改善` アプリと生成済みローカライズ文書の句読点を ASCII に統一し, パッケージ済み文書と生成文書を対象とする回帰テストを追加

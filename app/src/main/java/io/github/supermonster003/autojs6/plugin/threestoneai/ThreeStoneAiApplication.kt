@@ -7,6 +7,10 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLocal
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmEngineRuntime
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectory
+import io.github.supermonster003.autojs6.plugin.threestoneai.credential.AiCredentialStore
+import io.github.supermonster003.autojs6.plugin.threestoneai.credential.AndroidKeystoreCredentialCipher
+import io.github.supermonster003.autojs6.plugin.threestoneai.credential.EncryptedAiCredentialStore
+import io.github.supermonster003.autojs6.plugin.threestoneai.credential.FileCredentialRecordStorage
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelRepository
 
 class ThreeStoneAiApplication : Application() {
@@ -29,6 +33,17 @@ class ThreeStoneAiApplication : Application() {
 
     internal val localBackend: AiBackend
         get() = localBackendDelegate.value
+
+    private val credentialStoreDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        EncryptedAiCredentialStore(
+            storage = FileCredentialRecordStorage(filesDir),
+            cipher = AndroidKeystoreCredentialCipher(),
+        )
+    }
+
+    /** Each app process owns an instance backed by the same Keystore key and atomic private files. */
+    internal val credentialStore: AiCredentialStore
+        get() = credentialStoreDelegate.value
 
     override fun onTrimMemory(level: Int) {
         if (

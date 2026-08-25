@@ -72,15 +72,19 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-Перечисление импортированных моделей или явное закрепление через `plugin: { modelId: "..." }`:
+Перечислите все локальные и сетевые цели, затем закрепите одну по точному ID `target`:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
+    });
 });
 ```
 
-`ai.chat` и `ai.stream` принимают ту же опцию `plugin`. Если плагин не установлен, отключен в Центре плагинов или модель не импортирована, Promise отклоняется с понятным кодом ошибки: `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND` или `MODEL_AMBIGUOUS`.
+`ai.ask`, `ai.chat`, `ai.stream` и `ai.session` принимают одну и ту же точную цель `target`; один `plugin: true` использует цель по умолчанию, объявленную плагином. Отсутствующий или отключенный плагин и ненастроенная или недоступная цель отклоняются со стабильными кодами `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED` или `TARGET_UNAVAILABLE`. Маршрут никогда не меняется автоматически.
 
 ## Продвинутый уровень: прямой доступ к Binder
 

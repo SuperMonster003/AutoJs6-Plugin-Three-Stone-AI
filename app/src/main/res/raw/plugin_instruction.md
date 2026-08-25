@@ -72,27 +72,28 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-List imported models, or pin one explicitly with `plugin: { modelId: "..." }`:
+List every local and online target, then pin one with its exact `target` ID:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => {
-        console.log(m.modelId, m.displayName);
-        console.log(m.backendProfiles);
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
     });
 });
 ```
 
-CPU is the default. To request GPU explicitly, first select only a model whose `gpu` profile is reported as `available`; an unavailable profile is rejected and never falls back to CPU:
+Local targets expose their execution profiles; online targets return an empty `backendProfiles` array. To request GPU explicitly, select a local target whose `gpu` profile is `available`. An unavailable profile is rejected and never falls back:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    let model = models.find((item) => item.backendProfiles.some((profile) => {
+ai.catalog({ plugin: true }).then((catalog) => {
+    let target = catalog.targets.find((item) => item.backendProfiles.some((profile) => {
         return profile.id === "gpu" && profile.availability === "available";
     }));
-    if (!model) throw new Error("No compatible GPU backend is available");
+    if (!target) throw new Error("No compatible GPU backend is available");
     return ai.ask("Hello", {
-        plugin: { modelId: model.modelId },
+        target: target.id,
         backend: "gpu",
     });
 }).then((text) => console.log(text));
@@ -100,7 +101,7 @@ ai.models({ plugin: true }).then((models) => {
 
 `available` confirms ABI and runtime-library prerequisites, not that every model can initialize on every driver. The official plugin exposes `npu` as `unavailable` with reason `npu-runtime-not-packaged`; it does not package or declare LiteRT-LM 0.15.0 EAP NPU inference.
 
-`ai.chat` and `ai.stream` accept the same `plugin` option. If the plugin is not installed, not enabled in Plugin Center, or has no imported model, the promise rejects with a clear error code such as `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND`, or `MODEL_AMBIGUOUS`.
+`ai.ask`, `ai.chat`, `ai.stream`, and `ai.session` accept the same exact `target`; `plugin: true` alone uses the plugin-declared default target. Missing or disabled plugins and unconfigured or unavailable targets reject with stable codes such as `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED`, or `TARGET_UNAVAILABLE`. The route never changes automatically.
 
 ## Advanced: raw Binder access
 

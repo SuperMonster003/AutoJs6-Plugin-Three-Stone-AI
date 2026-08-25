@@ -49,7 +49,9 @@ internal class TargetPager(
         val targets: List<AiTargetInfo>
         val catalogGeneration: String
         try {
-            targets = catalog.targets.map(AiTarget::toProviderTarget)
+            targets = catalog.targets.map { target ->
+                target.toProviderTarget(isDefault = target.targetId == catalog.defaultTargetId)
+            }
             catalogGeneration = catalog.generation
         } catch (error: Throwable) {
             throw TargetListingFailedException(error)
@@ -142,7 +144,7 @@ internal class TargetPager(
     }
 }
 
-private fun AiTarget.toProviderTarget() = AiTargetInfo(
+private fun AiTarget.toProviderTarget(isDefault: Boolean) = AiTargetInfo(
     targetId = targetId,
     providerId = providerId,
     profileId = profileId,
@@ -161,6 +163,7 @@ private fun AiTarget.toProviderTarget() = AiTargetInfo(
     configured = configured,
     maximumContextBytes = limits.maximumContextBytes,
     maximumOutputBytes = limits.maximumOutputBytes,
+    isDefault = isDefault,
     supportedControls = toProviderSupportedControls(),
     declaredHttpsOrigins = declaredHttpsOrigins,
     backendProfiles = executionProfiles.map(AiExecutionProfile::toProviderProfile),

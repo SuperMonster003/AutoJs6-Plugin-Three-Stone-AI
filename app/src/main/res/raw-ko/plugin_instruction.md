@@ -72,15 +72,19 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-가져온 모델을 열거하거나 `plugin: { modelId: "..." }`로 명시적으로 고정할 수 있습니다:
+모든 로컬 및 온라인 대상을 나열한 뒤 정확한 `target` ID로 하나를 고정할 수 있습니다:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
+    });
 });
 ```
 
-`ai.chat`과 `ai.stream`도 동일한 `plugin` 옵션을 받습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 Promise는 `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND`, `MODEL_AMBIGUOUS` 같은 명확한 오류 코드로 거부됩니다.
+`ai.ask`, `ai.chat`, `ai.stream`, `ai.session`은 동일한 정확한 `target`을 받으며 `plugin: true`만 지정하면 플러그인이 선언한 기본 대상을 사용합니다. 플러그인이 없거나 비활성화되었거나 대상이 구성되지 않았거나 사용할 수 없으면 `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED`, `TARGET_UNAVAILABLE` 같은 안정된 코드로 거부됩니다. 경로는 자동으로 바뀌지 않습니다.
 
 ## 고급: 원시 Binder 접근
 

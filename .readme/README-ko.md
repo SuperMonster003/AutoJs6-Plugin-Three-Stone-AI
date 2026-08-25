@@ -108,7 +108,7 @@ AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 cat
 
 ******
 
-> AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`, `ai.session`은 AI Provider V2 target catalog에서 가져온 로컬 모델과 설정된 온라인 profile을 모두 사용합니다. 순서가 있는 `system`, `user`, `assistant` 기록을 유지하고 영구 세션의 다음 턴은 새 사용자 프롬프트만 보내며 usage에는 정확한 token 수와 provider 측정 시간이 포함됩니다. `plugin: true`는 이 플러그인을 선택하고 모델 ID는 catalog에 target이 하나뿐일 때만 생략할 수 있습니다. `ai.catalog()`가 현재 공개 목록 API를 대체하기 전까지 `ai.models({ plugin: true })`는 모든 로컬/온라인 target을 모델로 투영하며 `backendProfiles`는 로컬 target에만 있습니다. `plugin: { component, providerId, modelId }`는 정확히 하나의 target으로 해석되어야 합니다. `backend`를 생략하면 로컬은 CPU, 온라인은 로컬 실행 profile 없음을 사용합니다. 명시적 `cpu`, `gpu`, `npu`는 로컬 전용이며 사용 불가 profile은 fallback 없이 실패합니다. 플러그인 누락/비활성화와 설정되지 않음/사용 불가/모호한 target은 명시적 오류를 반환합니다. `responseSchema`는 구조화 출력을 활성화하고 schema 없는 `structuredJson: true`는 기본 object-root schema를 사용합니다. 완료 호출은 JSON 텍스트를 반환하고 stream delta는 부분 JSON일 수 있으며 영구 세션은 모든 턴에 같은 target, schema, 선택적 backend를 고정합니다.
+> AutoJs6(빌드 5276 이상)에서 `ai.catalog()`는 가져온 로컬 모델과 구성된 온라인 profile을 하나의 대상 카탈로그로 반환하며 정확한 ID, 공급자, 모델, 위치, 구성/가용 상태, 기능, 제어, 제한, origin 및 로컬 backend profile을 포함합니다. 정확한 `target`을 `ai.ask`, `ai.chat`, `ai.stream` 또는 `ai.session`에 전달합니다. `target`만 지정하면 공식 3-Stone AI 플러그인을 선택하고 `plugin: true`는 플러그인이 선언한 기본 대상을 사용합니다. 로컬 대상은 `cpu`, `gpu`, 사용 불가 `npu`를 제공할 수 있지만 온라인 대상에는 로컬 실행 profile이 없습니다. backend 또는 대상을 사용할 수 없으면 fallback 없이 실패하며 로컬/온라인 경로도 자동으로 전환되지 않습니다. 완료 및 스트리밍 응답은 target, plugin, profile, reasoning, finish reason, 전체 usage 및 공급자 측정 시간을 제공합니다. 안정된 오류는 공급자 누락/비활성화, 대상 알 수 없음/미구성/사용 불가/기능 불일치 및 backend 사용 불가를 구분합니다. `responseSchema`는 구조화 출력을 활성화하고 schema 없는 `structuredJson: true`는 기본 object 루트를 사용하며 영구 세션은 모든 턴에서 같은 target, schema 및 선택 backend를 고정합니다.
 
 ******
 
@@ -168,11 +168,11 @@ AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 cat
 
 # v1.1.0
 
-###### 2026/08/25
+###### 2026/08/26
 
 * `기능` AutoJs6 공식 로컬 AI 플러그인의 브랜드와 런타임 식별자를 3-Stone AI로 통일
 * `기능` 프로세스 간 통합에 중립적인 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 및 `IAiProvider`/`IAiSession`/`IAiCallback` 식별자를 사용하고 교체된 식별자의 alias는 유지하지 않음
-* `기능` AI Provider V2 페이지형 target catalog를 통해 `local:*` 및 `profile:*`을 직접 공개하고 각 target의 provider/model/locality, 구성 및 가용 상태, capabilities, limits, controls, HTTPS origins를 독립적으로 선언
+* `기능` AI Provider V2 페이지형 target catalog를 통해 `local:*` 및 `profile:*`을 직접 공개하고 각 target의 provider/model/locality, 구성 및 가용 상태, capabilities, limits, controls, HTTPS origins와 정확한 `isDefault` 표식을 독립적으로 선언
 * `기능` AI Provider V2 생성 요청을 통해 `temperature`, `topK`, `topP`, `maxTokens`를 LiteRT-LM sampling 및 출력 token 제어까지 전달
 * `기능` LiteRT-LM의 정확한 입력, 출력, 전체 token 수와 공급자 측에서 측정한 생성 시간을 `ai.chat().usage` 및 스트림 usage 이벤트로 보고
 * `기능` AI Provider V2 영구 세션과 AutoJs6 `ai.session` 여러 턴 Conversation 재사용을 추가하여 이전 기록 재전송 제거

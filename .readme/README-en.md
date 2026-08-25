@@ -108,7 +108,7 @@ Host build 5276 or later is required. Releases include arm64-v8a, x86_64, univer
 
 ******
 
-> In AutoJs6 (build 5276 and later), `ai.ask`, `ai.chat`, `ai.stream`, and `ai.session` use the AI Provider V2 target catalog for both imported local models and configured online profiles. Ordered plain-text `system`, `user`, and `assistant` history is preserved, later persistent-session turns send only the new user prompt, and usage includes exact token counts plus provider-measured duration. Pass `plugin: true` to select this plugin; the model ID may be omitted only when the catalog contains one target. Until `ai.catalog()` replaces the current public listing API, `ai.models({ plugin: true })` projects every local and online target by model, with `backendProfiles` present only for local targets. A `plugin: { component, providerId, modelId }` selector must resolve to exactly one target. Omit `backend` to use the target default: local targets select CPU and online targets use no local execution profile. Explicit `cpu`, `gpu`, or `npu` is local-only; unavailable profiles fail without fallback. Missing, disabled, unconfigured, unavailable, or ambiguous targets return explicit errors. `responseSchema` implies structured output; `structuredJson: true` without a schema uses a default object-root schema. Completed calls return JSON text, streamed deltas may be partial JSON text, and a persistent session fixes one target, schema, and optional backend for every turn.
+> In AutoJs6 (build 5276 and later), `ai.catalog()` returns every imported local model and configured online profile as one target catalog, including exact ID, provider, model, locality, configuration, availability, capabilities, controls, limits, origin, and local backend profiles. Pass an exact `target` to `ai.ask`, `ai.chat`, `ai.stream`, or `ai.session`; `target` alone selects the official 3-Stone AI plugin, while `plugin: true` uses its declared default target. Local targets may expose `cpu`, `gpu`, and unavailable `npu`; online targets have no local execution profile. An unavailable backend or target fails without fallback, and local/online routes never switch automatically. Completed and streamed responses expose target, plugin, profile, reasoning, finish reason, complete usage, and provider-measured duration. Stable errors distinguish a missing or disabled provider, an unknown, unconfigured, unavailable, or capability-mismatched target, and an unavailable backend. `responseSchema` implies structured output; `structuredJson: true` without a schema uses a default object-root schema, and persistent sessions fix the same target, schema, and optional backend for every turn.
 
 ******
 
@@ -168,11 +168,11 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 # v1.1.0
 
-###### 2026/08/25
+###### 2026/08/26
 
 * `Feature` Plugin brand and runtime identity standardized as 3-Stone AI across display names, package and component names, discovery identifiers, build artifacts, and documentation
 * `Feature` Cross-process integration uses the neutral `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER`, and `IAiProvider`/`IAiSession`/`IAiCallback` identities without aliases from replaced identities
-* `Feature` Exposed `local:*` and `profile:*` directly through the paged AI Provider V2 target catalog, with independent provider/model/locality, configured and available state, capabilities, limits, controls, and HTTPS origins for every target
+* `Feature` Exposed `local:*` and `profile:*` directly through the paged AI Provider V2 target catalog, with independent provider/model/locality, configured and available state, capabilities, limits, controls, HTTPS origins, and an exact `isDefault` marker for every target
 * `Feature` Forwarded `temperature`, `topK`, `topP`, and `maxTokens` through AI Provider V2 generation requests to LiteRT-LM sampling and output-token controls
 * `Feature` Reported exact LiteRT-LM input, output, and total token counts plus provider-measured generation duration through AutoJs6 `ai.chat().usage` and stream usage events
 * `Feature` Added AI Provider V2 persistent sessions and AutoJs6 `ai.session` multi-turn Conversation reuse without resending prior history

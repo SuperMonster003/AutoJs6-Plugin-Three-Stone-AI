@@ -6,11 +6,11 @@
   "changelog_label_dependency": "Dépendance",
   "$data": {
     "v1.1.0": {
-      "released_date": "2026/08/25",
+      "released_date": "2026/08/26",
       "feature": [
         "Identité de marque et d'exécution du plugin IA locale officiel d'AutoJs6 finalisée sous le nom 3-Stone AI",
         "L'intégration interprocessus utilise les identités neutres `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` et `IAiProvider`/`IAiSession`/`IAiCallback` sans conserver d'alias des identités remplacées",
-        "Exposition directe de `local:*` et `profile:*` dans le catalogue paginé de cibles AI Provider V2, avec provider/model/locality, états configured et available, capacités, limites, contrôles et origines HTTPS indépendants pour chaque cible",
+        "Exposition directe de `local:*` et `profile:*` dans le catalogue paginé de cibles AI Provider V2, avec provider/model/locality, états configured et available, capacités, limites, contrôles, origines HTTPS et un marqueur `isDefault` exact indépendants pour chaque cible",
         "Transmission de `temperature`, `topK`, `topP` et `maxTokens` par les requêtes de génération AI Provider V2 vers les contrôles d'échantillonnage et de tokens de sortie de LiteRT-LM",
         "Rapport des nombres exacts de tokens d'entrée, de sortie et totaux de LiteRT-LM, avec la durée de génération mesurée côté fournisseur, via `ai.chat().usage` et les événements usage du streaming",
         "Sessions persistantes AI Provider V2 et réutilisation d'une Conversation multi-tour via `ai.session` d'AutoJs6 sans renvoyer l'historique précédent",

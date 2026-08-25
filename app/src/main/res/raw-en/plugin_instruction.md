@@ -72,15 +72,19 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-List imported models, or pin one explicitly with `plugin: { modelId: "..." }`:
+List every local and online target, then pin one with its exact `target` ID:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
+    });
 });
 ```
 
-`ai.chat` and `ai.stream` accept the same `plugin` option. If the plugin is not installed, not enabled in Plugin Center, or has no imported model, the promise rejects with a clear error code such as `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND`, or `MODEL_AMBIGUOUS`.
+`ai.ask`, `ai.chat`, `ai.stream`, and `ai.session` accept the same exact `target`; `plugin: true` alone uses the plugin-declared default target. Missing or disabled plugins and unconfigured or unavailable targets reject with stable codes such as `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED`, or `TARGET_UNAVAILABLE`. The route never changes automatically.
 
 ## Advanced: raw Binder access
 

@@ -108,7 +108,7 @@ Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes
 
 ******
 
-> En AutoJs6 (compilación 5276 y posteriores), `ai.ask`, `ai.chat`, `ai.stream` y `ai.session` usan el catálogo de destinos AI Provider V2 tanto para modelos locales importados como para profiles en línea configurados. Se conserva el historial ordenado `system`, `user` y `assistant`, los turnos posteriores de una sesión persistente envían solo el nuevo prompt y usage incluye tokens exactos y duración medida por el proveedor. `plugin: true` selecciona este plugin; el ID de modelo solo puede omitirse cuando el catálogo contiene un destino. Hasta que `ai.catalog()` sustituya la API pública de listado actual, `ai.models({ plugin: true })` proyecta por modelo todos los destinos locales y en línea, con `backendProfiles` solo para destinos locales. `plugin: { component, providerId, modelId }` debe resolverse a un único destino. Omitir `backend` usa el valor predeterminado del destino: CPU para local y ningún profile de ejecución local para en línea. `cpu`, `gpu` o `npu` explícitos son solo locales; un profile no disponible falla sin fallback. Un plugin ausente o deshabilitado y un destino no configurado, no disponible o ambiguo devuelven errores explícitos. `responseSchema` activa la salida estructurada; `structuredJson: true` sin schema usa una raíz object predeterminada. Las llamadas completas devuelven texto JSON, los deltas pueden ser JSON parcial y una sesión persistente fija un destino, schema y backend opcional para todos los turnos.
+> En AutoJs6 (compilación 5276 y posteriores), `ai.catalog()` devuelve cada modelo local importado y profile en línea configurado como un único catálogo de destinos, con ID exacto, proveedor, modelo, localidad, configuración, disponibilidad, capacidades, controles, límites, origen y profiles backend locales. Pase un `target` exacto a `ai.ask`, `ai.chat`, `ai.stream` o `ai.session`; solo `target` selecciona el plugin oficial 3-Stone AI, mientras que `plugin: true` usa su destino predeterminado declarado. Los destinos locales pueden ofrecer `cpu`, `gpu` y `npu` no disponible; los destinos en línea no tienen profile de ejecución local. Un backend o destino no disponible falla sin fallback y las rutas local/en línea nunca cambian automáticamente. Las respuestas completas y de streaming exponen target, plugin, profile, razonamiento, motivo de finalización, usage completo y duración medida por el proveedor. Los errores estables distinguen proveedor ausente o deshabilitado, destino desconocido, no configurado, no disponible o con capacidad incompatible y backend no disponible. `responseSchema` activa la salida estructurada; `structuredJson: true` sin schema usa una raíz object predeterminada y las sesiones persistentes fijan el mismo target, schema y backend opcional para todos los turnos.
 
 ******
 
@@ -168,11 +168,11 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 # v1.1.0
 
-###### 2026/08/25
+###### 2026/08/26
 
 * `Función` Identidad de marca y de ejecución del plugin oficial de IA local de AutoJs6 consolidada como 3-Stone AI
 * `Función` La integración entre procesos usa las identidades neutrales `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` e `IAiProvider`/`IAiSession`/`IAiCallback` sin conservar alias de las identidades reemplazadas
-* `Función` Exposición directa de `local:*` y `profile:*` en el catálogo paginado de destinos de AI Provider V2, con provider/model/locality, estados configured y available, capacidades, límites, controles y orígenes HTTPS independientes para cada destino
+* `Función` Exposición directa de `local:*` y `profile:*` en el catálogo paginado de destinos de AI Provider V2, con provider/model/locality, estados configured y available, capacidades, límites, controles, orígenes HTTPS y una marca `isDefault` exacta independientes para cada destino
 * `Función` Transferencia de `temperature`, `topK`, `topP` y `maxTokens` mediante solicitudes de generación AI Provider V2 a los controles de muestreo y tokens de salida de LiteRT-LM
 * `Función` Informe de los recuentos exactos de tokens de entrada, salida y totales de LiteRT-LM, junto con la duración de generación medida por el proveedor, mediante `ai.chat().usage` y eventos usage de streaming
 * `Función` Sesiones persistentes de AI Provider V2 y reutilización de Conversation de varios turnos con `ai.session` de AutoJs6 sin reenviar el historial anterior

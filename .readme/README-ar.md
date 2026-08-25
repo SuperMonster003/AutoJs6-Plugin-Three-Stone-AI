@@ -108,7 +108,7 @@ required host build: 5276
 
 ******
 
-> في AutoJs6 (البنية 5276 وما بعدها) تستخدم `ai.ask` و `ai.chat` و `ai.stream` و `ai.session` كتالوج اهداف AI Provider V2 للنماذج المحلية المستوردة و profiles المتصلة المضبوطة. يحفظ سجل `system` و `user` و `assistant` المرتب, وترسل الجولات اللاحقة للجلسة المستمرة طلب المستخدم الجديد فقط, ويحتوي usage على اعداد token الدقيقة والمدة المقاسة لدى provider. يختار `plugin: true` هذه الاضافة; ولا يجوز حذف model ID الا عندما يحتوي الكتالوج على هدف واحد. حتى تستبدل `ai.catalog()` واجهة القائمة العامة الحالية, تعرض `ai.models({ plugin: true })` كل الاهداف المحلية والمتصلة كاسقاط نموذج, ولا تظهر `backendProfiles` الا للاهداف المحلية. يجب ان يحل `plugin: { component, providerId, modelId }` الى هدف واحد فقط. عند حذف `backend` يستخدم الهدف المحلي CPU ولا يستخدم الهدف المتصل profile تنفيذ محليا. الخيارات الصريحة `cpu` و `gpu` و `npu` محلية فقط; ويفشل profile غير المتاح دون fallback. تعيد الاضافة المفقودة او المعطلة والاهداف غير المضبوطة او غير المتاحة او الملتبسة اخطاء صريحة. يفعل `responseSchema` الاخراج المنظم; ويستخدم `structuredJson: true` من دون schema جذرا افتراضيا من نوع object. تعيد الاستدعاءات المكتملة نص JSON, وقد تكون stream delta جزءا من JSON, وتثبت الجلسة المستمرة هدفا و schema و backend اختياريا واحدا لكل الجولات.
+> في AutoJs6 (البنية 5276 وما بعدها) تعيد `ai.catalog()` كل نموذج محلي مستورد وكل profile متصل مضبوط ضمن كتالوج اهداف موحد يضم المعرف الدقيق وprovider والنموذج والمحلية وحالة الضبط والتوافر والقدرات وعناصر التحكم والحدود والاصل وbackend profile المحلي. مرر `target` دقيقا الى `ai.ask` او `ai.chat` او `ai.stream` او `ai.session`; يختار `target` وحده اضافة 3-Stone AI الرسمية, بينما يستخدم `plugin: true` هدفها الافتراضي المعلن. قد تعرض الاهداف المحلية `cpu` و`gpu` و`npu` غير المتاح, اما الاهداف المتصلة فلا تملك profile تنفيذ محليا. يفشل backend او الهدف غير المتاح دون fallback ولا يتبدل المسار المحلي والمتصل تلقائيا. تعرض الاستجابات المكتملة والمتدفقة target وplugin وprofile وreasoning وfinish reason وusage الكامل والمدة المقاسة لدى provider. تميز الاخطاء الثابتة provider المفقود او المعطل والهدف المجهول او غير المضبوط او غير المتاح او غير المتوافق في القدرات وbackend غير المتاح. يفعل `responseSchema` الاخراج المنظم; ويستخدم `structuredJson: true` دون schema جذرا افتراضيا من نوع object, وتثبت الجلسات المستمرة target وschema وbackend الاختياري نفسه لكل الجولات.
 
 ******
 
@@ -168,11 +168,11 @@ required host build: 5276
 
 # v1.1.0
 
-###### 2026/08/25
+###### 2026/08/26
 
 * `ميزة` اعتماد 3-Stone AI كهوية نهائية للعلامة التجارية ووقت التشغيل لاضافة الذكاء الاصطناعي المحلية الرسمية في AutoJs6
 * `ميزة` يستخدم التكامل بين العمليات هويات `ai-provider-api` و `org.autojs.plugin.ai.provider.api` و `org.autojs.plugin.AI_PROVIDER` و `IAiProvider`/`IAiSession`/`IAiCallback` المحايدة من دون الاحتفاظ باسماء بديلة للهويات المستبدلة
-* `ميزة` عرض `local:*` و `profile:*` مباشرة في كتالوج أهداف AI Provider V2 المقسم إلى صفحات, مع provider/model/locality وحالتي configured وavailable والقدرات والحدود وعناصر التحكم وHTTPS origins مستقلة لكل هدف
+* `ميزة` عرض `local:*` و `profile:*` مباشرة في كتالوج أهداف AI Provider V2 المقسم إلى صفحات, مع provider/model/locality وحالتي configured وavailable والقدرات والحدود وعناصر التحكم وHTTPS origins وعلامة `isDefault` دقيقة مستقلة لكل هدف
 * `ميزة` تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر طلبات توليد AI Provider V2 إلى عناصر تحكم sampling و output tokens في LiteRT-LM
 * `ميزة` إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد المقاسة لدى المزود عبر `ai.chat().usage` وأحداث usage للبث
 * `ميزة` إضافة جلسات AI Provider V2 مستمرة وإعادة استخدام Conversation متعددة الجولات عبر `ai.session` في AutoJs6 دون إعادة إرسال السجل السابق

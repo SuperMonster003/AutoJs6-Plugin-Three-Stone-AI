@@ -108,7 +108,7 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 
 ******
 
-> AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream`, `ai.session` は, インポート済みローカルモデルと設定済みオンライン profile の両方を AI Provider V2 ターゲットカタログから使用します. 順序付き `system`, `user`, `assistant` 履歴を保持し, 永続セッションの後続ターンは新しいユーザープロンプトだけを送信し, usage は正確な token 数と provider 実測時間を含みます. `plugin: true` は本プラグインを選択し, モデル ID はカタログにターゲットが 1 つだけの場合に限り省略可能です. `ai.catalog()` が現在の公開一覧 API を置き換えるまで, `ai.models({ plugin: true })` は全ローカル/オンラインターゲットをモデルとして投影し, `backendProfiles` はローカルターゲットだけに付きます. `plugin: { component, providerId, modelId }` は 1 つのターゲットへ一意に解決される必要があります. `backend` を省略するとローカルは CPU, オンラインはローカル実行 profile なしを使用します. 明示的な `cpu`, `gpu`, `npu` はローカル専用で, 利用不可 profile は fallback せず失敗します. プラグインの欠落/無効化, 未設定/利用不可/曖昧なターゲットは明示エラーになります. `responseSchema` は構造化出力を有効化し, schema なしの `structuredJson: true` は既定の object-root schema を使用します. 完了呼び出しは JSON テキストを返し, ストリーム delta は部分 JSON となる場合があり, 永続セッションは全ターンで同じターゲット, schema, 任意 backend を固定します.
+> AutoJs6 (build 5276 以降) では, `ai.catalog()` がインポート済みローカルモデルと設定済みオンライン profile を統一ターゲットカタログとして返し, 正確な ID, プロバイダー, モデル, ローカリティ, 設定/可用状態, 機能, 制御項目, 上限, オリジン, ローカル backend profile を含みます. `ai.ask`, `ai.chat`, `ai.stream`, `ai.session` に正確な `target` を渡します. `target` だけなら公式 3-Stone AI プラグインを選択し, `plugin: true` は宣言済みデフォルトターゲットを使います. ローカルターゲットは `cpu`, `gpu`, 利用不可の `npu` を公開できますが, オンラインターゲットにローカル実行 profile はありません. backend またはターゲットが利用不可ならフォールバックせず失敗し, ローカル/オンラインルートも自動切替しません. 完了/ストリーム応答は target, plugin, profile, reasoning, finish reason, 完全な usage, プロバイダー計測時間を公開します. 安定したエラーはプロバイダー欠落/無効, ターゲット不明/未設定/利用不可/機能不一致, backend 利用不可を区別します. `responseSchema` は構造化出力を有効にし, schema なしの `structuredJson: true` は既定の object ルートを使い, 永続セッションは全ターンで同じ target, schema, 任意 backend を固定します.
 
 ******
 
@@ -168,11 +168,11 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 
 # v1.1.0
 
-###### 2026/08/25
+###### 2026/08/26
 
 * `機能` AutoJs6 公式ローカル AI プラグインのブランドとランタイム識別子を 3-Stone AI に統一
 * `機能` プロセス間統合に中立な `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER`, `IAiProvider`/`IAiSession`/`IAiCallback` 識別子を採用し, 置換前の識別子 alias は保持しない
-* `機能` AI Provider V2 のページ分割ターゲットカタログから `local:*` と `profile:*` を直接公開し, 各ターゲットの provider/model/locality, 設定/可用状態, capabilities, limits, controls, HTTPS origins を個別に宣言
+* `機能` AI Provider V2 のページ分割ターゲットカタログから `local:*` と `profile:*` を直接公開し, 各ターゲットの provider/model/locality, 設定/可用状態, capabilities, limits, controls, HTTPS origins, 正確な `isDefault` マーカーを個別に宣言
 * `機能` AI Provider V2 生成リクエストで `temperature`, `topK`, `topP`, `maxTokens` を LiteRT-LM の sampling と出力 token 制御まで伝達
 * `機能` LiteRT-LM の正確な入力, 出力, 合計 token 数とプロバイダー実測の生成時間を `ai.chat().usage` とストリーム usage イベントで報告
 * `機能` AI Provider V2 の永続セッションと AutoJs6 `ai.session` による複数ターン Conversation 再利用に対応し, 以前の履歴の再送信を不要化

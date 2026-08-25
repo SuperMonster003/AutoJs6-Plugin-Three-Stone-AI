@@ -94,15 +94,17 @@
 - [x] 标准化流式事件: chunk 中分别承载 text/reasoning, toolCall 与 usage 独立事件, completion 强制携带 finishReason 及已校验的最终聚合输出; completed/failed/cancelled 由唯一终态 gate 管理, 无载荷完成兼容入口已移除.
 - [x] 放开 `REMOTE` / `HYBRID` provider: 宿主按目标 locality 与 credentialMode 规划, 远程来源必须属于固定插件描述符声明的 HTTPS origins 且凭据模式必须为 `PLUGIN_MANAGED`; 宿主请求, 计划, cache key, 日志及 Binder 对象均无凭据字节.
 - [x] 协议一致性测试: fake provider 覆盖 local/remote/hybrid/unconfigured target, 目标服务 provider 与 Binder 插件身份解耦, origin/capability/locality 越权, descriptor/UID/FD/终态 hostile 场景及信任校验 fail-closed; 宿主 API, fake conformance, 宿主调用链与真实插件 JVM 测试通过.
+- [x] V2 真机冒烟: G8441 / Android 9 的临时公开目录投影同时返回 Local Gemma 与 PoloAPI Cloud 目标, 在线目标不携带本地 `backendProfiles`; 省略 `backend` 并按 `claude-opus-4-8` 选择后准确返回 `V2 target route OK`, 从脚本启动到完成共 11.389 秒, 未发生本地 backend 注入或跨边界回退.
 
 ## P3 宿主 `ai.*` 全量接通插件 (直接替换旧目录 API)
 
-- [ ] `ai.ask/chat/stream/session` 支持统一 `target` 选择器 (`local:*` / `profile:*`); `plugin: true` 仅作为选择官方插件默认 target 的简写, 不再限定本地目标.
-- [ ] 新增 `ai.catalog()`: 返回本地与在线全部目标 (id, displayName, provider, model, locality, configured, available, capabilities).
-- [ ] 直接移除 `ai.models()` / `ai.profiles()` / `ai.providers()` / `ai.isConfigured()` 及内部 `AiPluginModelList*` 目录类型, 统一由 `ai.catalog()` 取代; 不保留别名, 兼容视图或旧名称源码.
-- [ ] 插件路由响应补齐 reasoning, toolCalls, finishReason, profile 与完整 usage, 与宿主在线路径能力对称.
-- [ ] 错误码统一: 插件缺失/禁用/协议不兼容/目标未配置返回稳定错误 (如 `AI_PROVIDER_UNAVAILABLE`, `TARGET_NOT_CONFIGURED`), 不静默改路由.
-- [ ] 宿主 d.ts 与 docs.autojs6.com 文档更新 (target 路由完整示例).
+- [x] `ai.ask/chat/stream/session` 支持统一 `target` 选择器 (`local:*` / `profile:*`); `plugin: true` 仅作为选择官方插件默认 target 的简写, 不再限定本地目标.
+- [x] 新增 `ai.catalog()`: 返回本地与在线全部目标, 包含身份, 配置/可用状态, 能力, 控制项, 限制, 来源, 默认标记与本地 backend profile.
+- [x] 直接移除未发布的旧公开目录、配置探测入口及内部模型列表投影类型, 全部由 `ai.catalog()` 取代; 不保留别名, 兼容视图或旧名称源码.
+- [x] 插件路由响应补齐 reasoning, toolCalls, finishReason, target/plugin/profile 与完整 usage, 流式增量及持久会话同步公开精确目标元数据.
+- [x] 错误码统一: 插件缺失/禁用/协议不兼容/目标未知或未配置/目标或 backend 不可用/能力不匹配均返回稳定错误, 不静默改路由.
+- [x] 宿主 d.ts, Ace Editor 内置声明与 docs.autojs6.com/离线文档已更新, 覆盖目录, 精确 target, 默认 target, 本机/在线差异, 完整响应及禁止回退语义.
+- [ ] P3 统一宿主公开 API 真机冒烟: 在 G8441 验证 `ai.catalog()` 默认标记, 精确本机与在线 target 的完成响应元数据, `plugin: true` 默认目标, 以及不存在 target 返回 `TARGET_NOT_FOUND` 且不回退. [维护者脚本](docs/dev/p3-host-public-api-smoke.md)
 
 ## P4 设置入口与配置迁移
 

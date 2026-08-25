@@ -72,15 +72,19 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-枚举已导入模型, 或通过 `plugin: { modelId: "..." }` 显式固定模型:
+列出全部本机及在线目标, 再用精确的 `target` ID 固定其中一个:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
+    });
 });
 ```
 
-`ai.chat` 与 `ai.stream` 接受相同的 `plugin` 选项. 插件未安装, 未在插件中心启用或未导入模型时, Promise 会以明确的错误码拒绝, 如 `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND` 或 `MODEL_AMBIGUOUS`.
+`ai.ask`, `ai.chat`, `ai.stream` 与 `ai.session` 接受同一个精确 `target`; 仅传入 `plugin: true` 时使用插件声明的默认目标. 插件缺失或停用, 以及目标未配置或不可用时, Promise 会以 `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED` 或 `TARGET_UNAVAILABLE` 等稳定错误码拒绝. 路由绝不会自动切换.
 
 ## 高级: 原始 Binder 访问
 

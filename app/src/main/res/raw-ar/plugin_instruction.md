@@ -72,15 +72,19 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-عدد النماذج المستوردة او ثبت نموذجا صراحة عبر `plugin: { modelId: "..." }`:
+اعرض جميع الاهداف المحلية والمتصلة ثم ثبت احدها عبر معرف `target` الدقيق:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
+    });
 });
 ```
 
-يقبل `ai.chat` و `ai.stream` خيار `plugin` نفسه. عند عدم تثبيت الاضافة او تعطيلها في مركز الاضافات او عدم وجود نموذج, يرفض الوعد برمز خطا واضح مثل `PROVIDER_NOT_FOUND` او `PROVIDER_DISABLED` او `MODEL_NOT_FOUND` او `MODEL_AMBIGUOUS`.
+تقبل `ai.ask` و `ai.chat` و `ai.stream` و `ai.session` قيمة `target` الدقيقة نفسها; ويستخدم `plugin: true` وحده الهدف الافتراضي المعلن من الاضافة. ترفض الاضافة المفقودة او المعطلة والاهداف غير المضبوطة او غير المتاحة برموز ثابتة مثل `AI_PROVIDER_UNAVAILABLE` و `AI_PROVIDER_DISABLED` و `TARGET_NOT_CONFIGURED` و `TARGET_UNAVAILABLE`. لا يتغير المسار تلقائيا ابدا.
 
 ## متقدم: الوصول المباشر الى Binder
 

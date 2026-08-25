@@ -72,15 +72,19 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-Énumérez les modèles importés ou épinglez-en un explicitement avec `plugin: { modelId: "..." }` :
+Énumérez toutes les cibles locales et en ligne, puis épinglez-en une avec son ID `target` exact :
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
+    });
 });
 ```
 
-`ai.chat` et `ai.stream` acceptent la même option `plugin`. Si le plugin n'est pas installé, désactivé dans le Centre de plugins ou sans modèle importé, la promesse est rejetée avec un code clair : `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND` ou `MODEL_AMBIGUOUS`.
+`ai.ask`, `ai.chat`, `ai.stream` et `ai.session` acceptent le même `target` exact ; `plugin: true` seul utilise la cible par défaut déclarée par le plugin. Un plugin absent ou désactivé et une cible non configurée ou indisponible sont rejetés avec des codes stables comme `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED` ou `TARGET_UNAVAILABLE`. La route ne change jamais automatiquement.
 
 ## Avancé : accès Binder brut
 

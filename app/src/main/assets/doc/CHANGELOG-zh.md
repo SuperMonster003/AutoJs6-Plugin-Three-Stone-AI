@@ -6,11 +6,11 @@
 
 # v1.1.0
 
-###### 2026/08/25
+###### 2026/08/26
 
 * `新增` 插件品牌与运行时标识统一为 3-Stone AI, 同步应用名, 包名, 组件名, 发现标识, 构建产物及文档
 * `新增` 跨进程集成统一采用中性 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 及 `IAiProvider`/`IAiSession`/`IAiCallback` 身份, 不保留被替换身份的别名
-* `新增` 通过 AI Provider V2 分页目标目录直接公开 `local:*` 与 `profile:*`, 每项目标独立声明 provider/model/locality, 配置与可用状态, capabilities, limits, controls 及 HTTPS origins
+* `新增` 通过 AI Provider V2 分页目标目录直接公开 `local:*` 与 `profile:*`, 每项目标独立声明 provider/model/locality, 配置与可用状态, capabilities, limits, controls, HTTPS origins 及精确的 `isDefault` 标记
 * `新增` 通过 AI Provider V2 生成请求将 `temperature`, `topK`, `topP` 与 `maxTokens` 透传至 LiteRT-LM 采样和输出 token 控制
 * `新增` 通过 AutoJs6 `ai.chat().usage` 和流式 usage 事件返回 LiteRT-LM 精确的输入, 输出及总 token 数, 以及插件实测生成耗时
 * `新增` AI Provider V2 持久会话及 AutoJs6 `ai.session` 多轮 Conversation 复用, 后续轮次无需重传既有历史

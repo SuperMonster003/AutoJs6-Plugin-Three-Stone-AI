@@ -6,11 +6,11 @@
   "changelog_label_dependency": "相依性",
   "$data": {
     "v1.1.0": {
-      "released_date": "2026/08/25",
+      "released_date": "2026/08/26",
       "feature": [
         "外掛品牌與執行階段識別統一為 3-Stone AI, 同步應用程式名稱, 套件名稱, 元件名稱, 探索識別, 建置產物及文件",
         "跨處理程序整合統一採用中性 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 及 `IAiProvider`/`IAiSession`/`IAiCallback` 識別, 不保留被取代識別的別名",
-        "透過 AI Provider V2 分頁目標目錄直接公開 `local:*` 與 `profile:*`, 每個目標獨立宣告 provider/model/locality, 設定與可用狀態, capabilities, limits, controls 及 HTTPS origins",
+        "透過 AI Provider V2 分頁目標目錄直接公開 `local:*` 與 `profile:*`, 每個目標獨立宣告 provider/model/locality, 設定與可用狀態, capabilities, limits, controls, HTTPS origins 及精確的 `isDefault` 標記",
         "透過 AI Provider V2 生成請求將 `temperature`, `topK`, `topP` 與 `maxTokens` 傳遞至 LiteRT-LM 取樣及輸出 token 控制",
         "透過 AutoJs6 `ai.chat().usage` 與串流 usage 事件回傳 LiteRT-LM 精確的輸入, 輸出及總 token 數, 以及外掛實測生成耗時",
         "AI Provider V2 持久工作階段及 AutoJs6 `ai.session` 多輪 Conversation 重複使用, 後續輪次無需重傳既有歷史",

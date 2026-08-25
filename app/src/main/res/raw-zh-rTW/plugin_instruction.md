@@ -72,15 +72,19 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-列舉已匯入模型, 或透過 `plugin: { modelId: "..." }` 顯式固定模型:
+列出全部本機及線上目標, 再用精確的 `target` ID 固定其中一個:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
+    });
 });
 ```
 
-`ai.chat` 與 `ai.stream` 接受相同的 `plugin` 選項. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, Promise 會以明確的錯誤碼拒絕, 如 `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND` 或 `MODEL_AMBIGUOUS`.
+`ai.ask`, `ai.chat`, `ai.stream` 與 `ai.session` 接受同一個精確 `target`; 僅傳入 `plugin: true` 時使用外掛宣告的預設目標. 外掛缺失或停用, 以及目標未設定或不可用時, Promise 會以 `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED` 或 `TARGET_UNAVAILABLE` 等穩定錯誤碼拒絕. 路由絕不會自動切換.
 
 ## 進階: 原始 Binder 存取
 

@@ -44,6 +44,10 @@ class TargetPagerTest {
         assertEquals(listOf(entryA.modelId, entryB.modelId), first.targets.map { it.modelId })
         assertEquals(listOf(entryC.modelId), second.targets.map { it.modelId })
         assertEquals(first.catalogGeneration, second.catalogGeneration)
+        assertEquals(
+            listOf(entryB.modelId),
+            (first.targets + second.targets).filter { it.isDefault }.map { it.modelId },
+        )
         assertTrue(requireNotNull(first.nextPageToken).toByteArray().size < 128)
         assertNull(second.nextPageToken)
         (first.targets + second.targets).forEach { target ->
@@ -92,6 +96,7 @@ class TargetPagerTest {
         assertEquals(AiCredentialMode.PLUGIN_MANAGED, target.credentialMode)
         assertEquals(AiTargetAvailability.AVAILABLE, target.availability)
         assertTrue(target.configured)
+        assertTrue(target.isDefault)
         assertEquals(listOf("https://api.example.com"), target.declaredHttpsOrigins)
         assertFalse(AiTargetControlId.BACKEND_PROFILE in target.supportedControls)
         assertTrue(AiTargetControlId.TOP_K in target.supportedControls)

@@ -6,11 +6,11 @@
 
 # v1.1.0
 
-###### 2026/08/25
+###### 2026/08/26
 
 * `ميزة` اعتماد 3-Stone AI كهوية نهائية للعلامة التجارية ووقت التشغيل لاضافة الذكاء الاصطناعي المحلية الرسمية في AutoJs6
 * `ميزة` يستخدم التكامل بين العمليات هويات `ai-provider-api` و `org.autojs.plugin.ai.provider.api` و `org.autojs.plugin.AI_PROVIDER` و `IAiProvider`/`IAiSession`/`IAiCallback` المحايدة من دون الاحتفاظ باسماء بديلة للهويات المستبدلة
-* `ميزة` عرض `local:*` و `profile:*` مباشرة في كتالوج أهداف AI Provider V2 المقسم إلى صفحات, مع provider/model/locality وحالتي configured وavailable والقدرات والحدود وعناصر التحكم وHTTPS origins مستقلة لكل هدف
+* `ميزة` عرض `local:*` و `profile:*` مباشرة في كتالوج أهداف AI Provider V2 المقسم إلى صفحات, مع provider/model/locality وحالتي configured وavailable والقدرات والحدود وعناصر التحكم وHTTPS origins وعلامة `isDefault` دقيقة مستقلة لكل هدف
 * `ميزة` تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر طلبات توليد AI Provider V2 إلى عناصر تحكم sampling و output tokens في LiteRT-LM
 * `ميزة` إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد المقاسة لدى المزود عبر `ai.chat().usage` وأحداث usage للبث
 * `ميزة` إضافة جلسات AI Provider V2 مستمرة وإعادة استخدام Conversation متعددة الجولات عبر `ai.session` في AutoJs6 دون إعادة إرسال السجل السابق

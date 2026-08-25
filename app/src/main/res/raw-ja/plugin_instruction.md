@@ -72,15 +72,19 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-インポート済みモデルの列挙や, `plugin: { modelId: "..." }` による明示指定も可能です:
+ローカルとオンラインの全ターゲットを列挙し, 正確な `target` ID で 1 つを固定できます:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
+    });
 });
 ```
 
-`ai.chat` と `ai.stream` も同じ `plugin` オプションを受け付けます. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, Promise は `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND`, `MODEL_AMBIGUOUS` などの明確なエラーコードで拒否されます.
+`ai.ask`, `ai.chat`, `ai.stream`, `ai.session` は同じ正確な `target` を受け付けます. `plugin: true` だけの場合はプラグイン宣言のデフォルトターゲットを使います. プラグインがないか無効, またはターゲットが未設定か利用不可の場合, `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED`, `TARGET_UNAVAILABLE` などの安定したコードで拒否されます. ルートが自動的に変わることはありません.
 
 ## 上級: 生の Binder アクセス
 

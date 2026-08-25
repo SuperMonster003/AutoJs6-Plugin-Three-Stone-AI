@@ -108,7 +108,7 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 ******
 
-> AutoJs6 (构建 5276 及以上) 的 `ai.ask`, `ai.chat`, `ai.stream` 与 `ai.session` 通过 AI Provider V2 目标目录同时调用已导入本地模型和已配置在线 profile. 有序纯文本 `system`, `user` 与 `assistant` 历史会被保留, 持久会话后续轮次只发送新的用户提示词, usage 包含精确 token 数与提供端实测耗时. 传入 `plugin: true` 即选择本插件; 仅当目录只有一个目标时才可省略模型 ID. 在 `ai.catalog()` 取代当前公开目录 API 前, `ai.models({ plugin: true })` 会按模型投影全部本地与在线目标, `backendProfiles` 仅属于本地目标. `plugin: { component, providerId, modelId }` 必须唯一解析到一个目标. 省略 `backend` 时使用目标默认值: 本地目标选择 CPU, 在线目标不使用本地执行 profile. 显式 `cpu`, `gpu` 或 `npu` 仅适用于本地目标; 不可用 profile 会失败且不回退. 插件缺失, 禁用及目标未配置, 不可用或不唯一均返回明确错误. `responseSchema` 会隐式启用结构化输出; 仅设置 `structuredJson: true` 时使用默认对象根 schema. 完成调用返回 JSON 文本, 流式 delta 可能是不完整 JSON 片段, 持久会话在所有轮次固定同一目标, schema 与可选 backend.
+> 在 AutoJs6 (构建 5276 及以上) 中, `ai.catalog()` 将全部已导入本机模型与已配置在线 profile 作为统一目标目录返回, 包含精确 ID, 提供方, 模型, 本机/在线属性, 配置与可用状态, 能力, 控制项, 限制, 来源及本机 backend profile. 向 `ai.ask`, `ai.chat`, `ai.stream` 或 `ai.session` 传入精确 `target`; 仅传 `target` 会选择官方 3-Stone AI 插件, `plugin: true` 则使用其声明的默认目标. 本机目标可提供 `cpu`, `gpu` 与不可用的 `npu`, 在线目标没有本机执行 profile. backend 或目标不可用时会直接失败且不回退, 本机与在线路由也绝不自动切换. 完成及流式响应公开 target, plugin, profile, reasoning, finish reason, 完整 usage 和提供端实测耗时. 稳定错误码可区分提供方缺失或停用, 目标未知, 未配置, 不可用或能力不匹配, 以及 backend 不可用. `responseSchema` 会隐式启用结构化输出; 仅设置 `structuredJson: true` 时使用默认对象根 schema, 持久会话在所有轮次固定同一 target, schema 与可选 backend.
 
 ******
 
@@ -168,11 +168,11 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 # v1.1.0
 
-###### 2026/08/25
+###### 2026/08/26
 
 * `新增` 插件品牌与运行时标识统一为 3-Stone AI, 同步应用名, 包名, 组件名, 发现标识, 构建产物及文档
 * `新增` 跨进程集成统一采用中性 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 及 `IAiProvider`/`IAiSession`/`IAiCallback` 身份, 不保留被替换身份的别名
-* `新增` 通过 AI Provider V2 分页目标目录直接公开 `local:*` 与 `profile:*`, 每项目标独立声明 provider/model/locality, 配置与可用状态, capabilities, limits, controls 及 HTTPS origins
+* `新增` 通过 AI Provider V2 分页目标目录直接公开 `local:*` 与 `profile:*`, 每项目标独立声明 provider/model/locality, 配置与可用状态, capabilities, limits, controls, HTTPS origins 及精确的 `isDefault` 标记
 * `新增` 通过 AI Provider V2 生成请求将 `temperature`, `topK`, `topP` 与 `maxTokens` 透传至 LiteRT-LM 采样和输出 token 控制
 * `新增` 通过 AutoJs6 `ai.chat().usage` 和流式 usage 事件返回 LiteRT-LM 精确的输入, 输出及总 token 数, 以及插件实测生成耗时
 * `新增` AI Provider V2 持久会话及 AutoJs6 `ai.session` 多轮 Conversation 复用, 后续轮次无需重传既有历史

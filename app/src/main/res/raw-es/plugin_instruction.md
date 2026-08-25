@@ -72,15 +72,19 @@ ai.ask("Return answer as OK and ok as true.", {
 });
 ```
 
-Enumere los modelos importados o fije uno explícitamente con `plugin: { modelId: "..." }`:
+Enumere todos los destinos locales y en línea, y fije uno mediante su ID `target` exacto:
 
 ```javascript
-ai.models({ plugin: true }).then((models) => {
-    models.forEach((m) => console.log(m.modelId, m.displayName));
+ai.catalog({ plugin: true }).then((catalog) => {
+    console.log("default:", catalog.defaultTarget);
+    catalog.targets.forEach((target) => {
+        console.log(target.id, target.displayName, target.locality);
+        console.log(target.backendProfiles);
+    });
 });
 ```
 
-`ai.chat` y `ai.stream` aceptan la misma opción `plugin`. Si el plugin no está instalado, no está habilitado en el Centro de plugins o no tiene modelo, la promesa se rechaza con un código claro como `PROVIDER_NOT_FOUND`, `PROVIDER_DISABLED`, `MODEL_NOT_FOUND` o `MODEL_AMBIGUOUS`.
+`ai.ask`, `ai.chat`, `ai.stream` y `ai.session` aceptan el mismo `target` exacto; solo `plugin: true` usa el destino predeterminado declarado por el plugin. Un plugin ausente o deshabilitado y un destino no configurado o no disponible se rechazan con códigos estables como `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED` o `TARGET_UNAVAILABLE`. La ruta nunca cambia automáticamente.
 
 ## Avanzado: acceso Binder de bajo nivel
 

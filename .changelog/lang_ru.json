@@ -6,11 +6,11 @@
   "changelog_label_dependency": "Зависимость",
   "$data": {
     "v1.1.0": {
-      "released_date": "2026/08/25",
+      "released_date": "2026/08/26",
       "feature": [
         "Бренд и идентификаторы среды выполнения официального локального ИИ-плагина AutoJs6 окончательно унифицированы как 3-Stone AI",
         "Межпроцессная интеграция использует нейтральные идентификаторы `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` и `IAiProvider`/`IAiSession`/`IAiCallback` без сохранения псевдонимов замененных идентификаторов",
-        "Прямое представление `local:*` и `profile:*` в постраничном каталоге целей AI Provider V2 с независимыми provider/model/locality, состояниями настройки и доступности, capabilities, limits, controls и HTTPS origins для каждой цели",
+        "Прямое представление `local:*` и `profile:*` в постраничном каталоге целей AI Provider V2 с независимыми provider/model/locality, состояниями настройки и доступности, capabilities, limits, controls, HTTPS origins и точным признаком `isDefault` для каждой цели",
         "Передача `temperature`, `topK`, `topP` и `maxTokens` через запросы генерации AI Provider V2 в параметры sampling и ограничения выходных tokens LiteRT-LM",
         "Возврат точных количеств входных, выходных и общих токенов LiteRT-LM вместе с измеренной провайдером длительностью генерации через `ai.chat().usage` и потоковые события usage",
         "Постоянные сеансы AI Provider V2 и повторное использование многоходового Conversation через `ai.session` AutoJs6 без повторной передачи предыдущей истории",

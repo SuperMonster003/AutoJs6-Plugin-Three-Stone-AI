@@ -30,6 +30,7 @@ class ConversationHistoryTest {
                     ChatMessageRole.ASSISTANT,
                     "**Answer**",
                     usage = ChatMessageUsage(12, 34, 567),
+                    target = assistantTarget,
                 ),
             ),
         )
@@ -37,15 +38,19 @@ class ConversationHistoryTest {
         val restored = ConversationHistoryCodec.decode(ConversationHistoryCodec.encode(listOf(original)))
 
         assertEquals(listOf(original), restored)
+        assertEquals(AiTargetLocality.REMOTE, restored.single().target?.locality)
+        assertEquals(assistantTarget, restored.single().messages.last().target)
     }
 
     @Test
-    fun `codec rejects the unpublished model-only version instead of retaining compatibility`() {
-        val encoded = ConversationHistoryCodec.encode(emptyList())
-        ByteBuffer.wrap(encoded).putInt(Int.SIZE_BYTES, 1)
+    fun `codec rejects every unpublished older version instead of retaining compatibility`() {
+        listOf(1, 2).forEach { version ->
+            val encoded = ConversationHistoryCodec.encode(emptyList())
+            ByteBuffer.wrap(encoded).putInt(Int.SIZE_BYTES, version)
 
-        assertThrows(IllegalArgumentException::class.java) {
-            ConversationHistoryCodec.decode(encoded)
+            assertThrows(IllegalArgumentException::class.java) {
+                ConversationHistoryCodec.decode(encoded)
+            }
         }
     }
 
@@ -93,7 +98,7 @@ class ConversationHistoryTest {
     fun `search finds every visible markdown occurrence with rendered offsets`() {
         val messages = listOf(
             ChatMessage(1, ChatMessageRole.USER, "answer here"),
-            ChatMessage(2, ChatMessageRole.ASSISTANT, "**Answer** and another answer"),
+            assistant(2, "**Answer** and another answer"),
         )
 
         val matches = ConversationSearchPolicy.find(messages, "answer")
@@ -109,9 +114,9 @@ class ConversationHistoryTest {
     fun `edit impact removes the selected user node and every later message`() {
         val messages = listOf(
             ChatMessage(1, ChatMessageRole.USER, "keep"),
-            ChatMessage(2, ChatMessageRole.ASSISTANT, "keep answer"),
+            assistant(2, "keep answer"),
             ChatMessage(3, ChatMessageRole.USER, "edit"),
-            ChatMessage(4, ChatMessageRole.ASSISTANT, "old branch"),
+            assistant(4, "old branch"),
             ChatMessage(5, ChatMessageRole.USER, "later"),
         )
 
@@ -126,16 +131,20 @@ class ConversationHistoryTest {
     fun `regeneration locates the paired user and reports later branch size`() {
         val messages = listOf(
             ChatMessage(1, ChatMessageRole.USER, "first"),
-            ChatMessage(2, ChatMessageRole.ASSISTANT, "answer"),
+            assistant(2, "answer"),
             ChatMessage(3, ChatMessageRole.NOTICE, "model unchanged"),
             ChatMessage(4, ChatMessageRole.USER, "second"),
             ChatMessage(5, ChatMessageRole.NOTICE, "notice"),
-            ChatMessage(6, ChatMessageRole.ASSISTANT, "second answer"),
+            assistant(6, "second answer"),
             ChatMessage(7, ChatMessageRole.USER, "later"),
         )
 
         assertEquals(
-            MessageRegenerationImpact(userMessageId = 4, laterMessageCount = 1),
+            MessageRegenerationImpact(
+                userMessageId = 4,
+                laterMessageCount = 1,
+                responseTarget = assistantTarget,
+            ),
             ConversationRegenerationPolicy.impact(messages, 6),
         )
         assertNull(ConversationRegenerationPolicy.impact(messages, 4))
@@ -149,4 +158,21 @@ class ConversationHistoryTest {
         target = null,
         messages = emptyList(),
     )
+
+    private fun assistant(id: Long, text: String) = ChatMessage(
+        id = id,
+        role = ChatMessageRole.ASSISTANT,
+        text = text,
+        target = assistantTarget,
+    )
+
+    private companion object {
+        val assistantTarget = ConversationTargetSnapshot(
+            targetId = "local:actual-response-model",
+            providerId = "autojs6.three-stone-ai",
+            modelId = "actual-response-model",
+            displayName = "Actual response model",
+            locality = AiTargetLocality.LOCAL,
+        )
+    }
 }

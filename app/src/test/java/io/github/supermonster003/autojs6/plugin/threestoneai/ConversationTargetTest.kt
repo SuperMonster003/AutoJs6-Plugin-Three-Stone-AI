@@ -42,6 +42,33 @@ class ConversationTargetTest {
     }
 
     @Test
+    fun `exact resolution permits a rename but rejects provider or model drift`() {
+        val snapshot = ConversationTargetSnapshot.from(
+            remoteTarget(displayName = "Original name", modelId = "original-model"),
+        )
+        val renamed = remoteTarget(displayName = "Renamed", modelId = "original-model")
+        val changedModel = remoteTarget(displayName = "Renamed", modelId = "new-model")
+        val changedProvider = renamed.copy(providerId = "openai")
+
+        assertEquals(
+            renamed,
+            ConversationTargetPolicy.resolveExact(snapshot, catalog(renamed.targetId, listOf(renamed))),
+        )
+        assertNull(
+            ConversationTargetPolicy.resolveExact(
+                snapshot,
+                catalog(changedModel.targetId, listOf(changedModel)),
+            ),
+        )
+        assertNull(
+            ConversationTargetPolicy.resolveExact(
+                snapshot,
+                catalog(changedProvider.targetId, listOf(changedProvider)),
+            ),
+        )
+    }
+
+    @Test
     fun `empty conversation switches directly while populated conversation requires confirmation`() {
         val current = ConversationTargetSnapshot.from(localTarget())
         val candidate = remoteTarget()

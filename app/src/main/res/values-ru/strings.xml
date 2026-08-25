@@ -246,6 +246,9 @@
     <string name="chat_message_regenerate">Повторить генерацию</string>
     <string name="chat_regenerate_warning_title">Повторить генерацию ответа?</string>
     <string name="chat_regenerate_warning_message">Повторная генерация отсюда безвозвратно удалит все последующие сообщения (всего %1$d) и заменит эту ветвь разговора.</string>
+    <string name="chat_regenerate_original_target_message">Этот ответ был создан целью %1$s. При повторной генерации будет использована эта сохранённая цель, а не текущая цель разговора по умолчанию. %2$s</string>
+    <string name="chat_regenerate_target_unavailable_title">Исходная цель недоступна</string>
+    <string name="chat_regenerate_target_unavailable_message">%1$s больше не соответствует доступной цели с сохранёнными поставщиком и моделью. Повторная генерация не запущена; текущая цель разговора не использована как резервная.</string>
     <string name="chat_history_select">Выбрать разговоры</string>
     <string name="chat_history_select_all">Выбрать все</string>
     <string name="chat_history_selected_count">Выбрано: %1$d</string>

@@ -34,6 +34,7 @@ internal data class ChatMessage(
     val text: String,
     val status: ChatMessageStatus = ChatMessageStatus.COMPLETE,
     val usage: ChatMessageUsage? = null,
+    val target: ConversationTargetSnapshot? = null,
 ) {
     init {
         require(id > 0L)
@@ -42,6 +43,9 @@ internal data class ChatMessage(
         }
         require(status == ChatMessageStatus.COMPLETE || usage == null) {
             "Only complete messages may carry generation usage"
+        }
+        require((role == ChatMessageRole.ASSISTANT) == (target != null)) {
+            "Every assistant message, and only an assistant message, must carry its actual target"
         }
     }
 }

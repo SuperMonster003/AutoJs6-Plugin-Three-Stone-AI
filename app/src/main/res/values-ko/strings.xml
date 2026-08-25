@@ -246,6 +246,9 @@
     <string name="chat_message_regenerate">다시 생성</string>
     <string name="chat_regenerate_warning_title">이 응답을 다시 생성할까요?</string>
     <string name="chat_regenerate_warning_message">여기에서 다시 생성하면 이후 모든 메시지 (총 %1$d개)가 영구적으로 삭제되고 이 대화 분기가 교체됩니다.</string>
+    <string name="chat_regenerate_original_target_message">이 응답은 %1$s에서 생성되었습니다. 다시 생성하면 현재 대화 기본 대상이 아닌 기록된 원래 대상을 사용합니다. %2$s</string>
+    <string name="chat_regenerate_target_unavailable_title">원래 대상을 사용할 수 없음</string>
+    <string name="chat_regenerate_target_unavailable_message">%1$s은(는) 더 이상 기록된 제공자 및 모델과 일치하는 사용 가능한 대상이 아닙니다. 다시 생성을 시작하지 않았으며 현재 대화 대상을 대체 대상으로 사용하지 않았습니다.</string>
     <string name="chat_history_select">대화 선택</string>
     <string name="chat_history_select_all">모두 선택</string>
     <string name="chat_history_selected_count">선택됨: %1$d</string>

@@ -246,6 +246,9 @@
     <string name="chat_message_regenerate">Regenerar</string>
     <string name="chat_regenerate_warning_title">Regenerar esta respuesta?</string>
     <string name="chat_regenerate_warning_message">Regenerar aquí eliminará permanentemente todos los mensajes posteriores (%1$d en total) y reemplazará esa rama de la conversación.</string>
+    <string name="chat_regenerate_original_target_message">Esta respuesta fue generada por %1$s. La regeneración usará ese destino registrado en lugar del destino predeterminado actual de la conversación. %2$s</string>
+    <string name="chat_regenerate_target_unavailable_title">Destino original no disponible</string>
+    <string name="chat_regenerate_target_unavailable_message">%1$s ya no coincide con un destino disponible con el proveedor y modelo registrados. No se inició la regeneración ni se usó el destino actual de la conversación como alternativa.</string>
     <string name="chat_history_select">Seleccionar conversaciones</string>
     <string name="chat_history_select_all">Seleccionar todo</string>
     <string name="chat_history_selected_count">Seleccionadas: %1$d</string>

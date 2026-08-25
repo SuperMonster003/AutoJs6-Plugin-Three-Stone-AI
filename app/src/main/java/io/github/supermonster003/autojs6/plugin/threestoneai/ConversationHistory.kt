@@ -73,7 +73,8 @@ internal object ConversationHistoryPolicy {
         var retainedBytes = 0
         for (message in messages.asReversed()) {
             if (retainedReversed.size >= MAXIMUM_MESSAGES_PER_CONVERSATION) break
-            val messageBytes = message.text.toByteArray(Charsets.UTF_8).size + MESSAGE_OVERHEAD_BYTES
+            val messageBytes = message.text.toByteArray(Charsets.UTF_8).size +
+                message.target.estimatedBytes() + MESSAGE_OVERHEAD_BYTES
             if (
                 retainedReversed.isNotEmpty() &&
                 retainedBytes + messageBytes > MAXIMUM_CONVERSATION_MESSAGE_BYTES
@@ -87,7 +88,8 @@ internal object ConversationHistoryPolicy {
     }
 
     private fun StoredConversation.estimatedMessageBytes(): Int = messages.sumOf { message ->
-        message.text.toByteArray(Charsets.UTF_8).size + MESSAGE_OVERHEAD_BYTES
+        message.text.toByteArray(Charsets.UTF_8).size + message.target.estimatedBytes() +
+            MESSAGE_OVERHEAD_BYTES
     }
 
     private fun StoredConversation.estimatedBytes(): Int = estimatedMessageBytes() +
@@ -169,12 +171,14 @@ internal object ConversationEditPolicy {
 internal data class MessageRegenerationImpact(
     val userMessageId: Long,
     val laterMessageCount: Int,
+    val responseTarget: ConversationTargetSnapshot,
 )
 
 internal object ConversationRegenerationPolicy {
     fun impact(messages: List<ChatMessage>, assistantMessageId: Long): MessageRegenerationImpact? {
         val assistantIndex = messages.indexOfFirst { message -> message.id == assistantMessageId }
         if (assistantIndex < 0 || messages[assistantIndex].role != ChatMessageRole.ASSISTANT) return null
+        val responseTarget = messages[assistantIndex].target ?: return null
         var userIndex = assistantIndex - 1
         while (userIndex >= 0 && messages[userIndex].role == ChatMessageRole.NOTICE) userIndex--
         val user = messages.getOrNull(userIndex)?.takeIf { message ->
@@ -183,6 +187,7 @@ internal object ConversationRegenerationPolicy {
         return MessageRegenerationImpact(
             userMessageId = user.id,
             laterMessageCount = messages.lastIndex - assistantIndex,
+            responseTarget = responseTarget,
         )
     }
 }
@@ -221,14 +226,7 @@ internal object ConversationHistoryCodec {
         output.writeText(conversation.title, MAXIMUM_TITLE_BYTES)
         output.writeLong(conversation.createdAtMillis)
         output.writeLong(conversation.updatedAtMillis)
-        output.writeBoolean(conversation.target != null)
-        conversation.target?.let { target ->
-            output.writeText(target.targetId, MAXIMUM_TARGET_ID_BYTES)
-            output.writeText(target.providerId, MAXIMUM_PROVIDER_ID_BYTES)
-            output.writeText(target.modelId, MAXIMUM_MODEL_ID_BYTES)
-            output.writeText(target.displayName, MAXIMUM_TARGET_NAME_BYTES)
-            output.writeText(target.locality.name, MAXIMUM_ENUM_BYTES)
-        }
+        output.writeNullableTarget(conversation.target)
         require(conversation.messages.size <= ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION)
         output.writeInt(conversation.messages.size)
         conversation.messages.forEach { message ->
@@ -242,6 +240,7 @@ internal object ConversationHistoryCodec {
                 output.writeLong(usage.outputTokens)
                 output.writeLong(usage.durationMillis)
             }
+            output.writeNullableTarget(message.target)
         }
     }
 
@@ -250,17 +249,7 @@ internal object ConversationHistoryCodec {
         val title = input.readText(MAXIMUM_TITLE_BYTES)
         val createdAt = input.readLong()
         val updatedAt = input.readLong()
-        val target = if (input.readBoolean()) {
-            ConversationTargetSnapshot(
-                targetId = input.readText(MAXIMUM_TARGET_ID_BYTES),
-                providerId = input.readText(MAXIMUM_PROVIDER_ID_BYTES),
-                modelId = input.readText(MAXIMUM_MODEL_ID_BYTES),
-                displayName = input.readText(MAXIMUM_TARGET_NAME_BYTES),
-                locality = AiTargetLocality.valueOf(input.readText(MAXIMUM_ENUM_BYTES)),
-            )
-        } else {
-            null
-        }
+        val target = input.readNullableTarget()
         val messageCount = input.readBoundedCount(
             ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION,
         )
@@ -275,7 +264,17 @@ internal object ConversationHistoryCodec {
                 } else {
                     null
                 }
-                add(ChatMessage(messageId, role, text, status, usage))
+                val messageTarget = input.readNullableTarget()
+                add(
+                    ChatMessage(
+                        id = messageId,
+                        role = role,
+                        text = text,
+                        status = status,
+                        usage = usage,
+                        target = messageTarget,
+                    ),
+                )
             }
         }
         return StoredConversation(id, title, createdAt, updatedAt, target, messages)
@@ -294,13 +293,37 @@ internal object ConversationHistoryCodec {
         return ByteArray(size).also(::readFully).toString(Charsets.UTF_8)
     }
 
+    private fun DataOutputStream.writeNullableTarget(target: ConversationTargetSnapshot?) {
+        writeBoolean(target != null)
+        target?.let { snapshot ->
+            writeText(snapshot.targetId, MAXIMUM_TARGET_ID_BYTES)
+            writeText(snapshot.providerId, MAXIMUM_PROVIDER_ID_BYTES)
+            writeText(snapshot.modelId, MAXIMUM_MODEL_ID_BYTES)
+            writeText(snapshot.displayName, MAXIMUM_TARGET_NAME_BYTES)
+            writeText(snapshot.locality.name, MAXIMUM_ENUM_BYTES)
+        }
+    }
+
+    private fun DataInputStream.readNullableTarget(): ConversationTargetSnapshot? =
+        if (readBoolean()) {
+            ConversationTargetSnapshot(
+                targetId = readText(MAXIMUM_TARGET_ID_BYTES),
+                providerId = readText(MAXIMUM_PROVIDER_ID_BYTES),
+                modelId = readText(MAXIMUM_MODEL_ID_BYTES),
+                displayName = readText(MAXIMUM_TARGET_NAME_BYTES),
+                locality = AiTargetLocality.valueOf(readText(MAXIMUM_ENUM_BYTES)),
+            )
+        } else {
+            null
+        }
+
     private fun DataInputStream.readBoundedCount(maximum: Int): Int = readInt().also { count ->
         require(count in 0..maximum) { "Invalid conversation history item count" }
     }
 
     const val MAXIMUM_FILE_BYTES = 32 * 1_024 * 1_024
     private const val MAGIC = 0x33534143 // 3SAC
-    private const val VERSION = 2
+    private const val VERSION = 3
     private const val MAXIMUM_ID_BYTES = 128
     private const val MAXIMUM_TITLE_BYTES = 512
     private const val MAXIMUM_TARGET_ID_BYTES = 512

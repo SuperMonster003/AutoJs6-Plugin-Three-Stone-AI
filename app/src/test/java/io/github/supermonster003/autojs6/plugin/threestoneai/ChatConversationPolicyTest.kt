@@ -1,13 +1,25 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRole
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChatConversationPolicyTest {
+    @Test
+    fun `only assistant messages carry an actual target snapshot`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ChatMessage(1, ChatMessageRole.ASSISTANT, "missing target")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ChatMessage(2, ChatMessageRole.USER, "unexpected target", target = responseTarget)
+        }
+    }
+
     @Test
     fun `fresh backend history contains only completed turn pairs`() {
         val messages = listOf(
@@ -133,6 +145,7 @@ class ChatConversationPolicyTest {
         text = text,
         status = status,
         usage = usage,
+        target = responseTarget,
     )
 
     private fun notice(id: Int, text: String) = ChatMessage(
@@ -140,4 +153,14 @@ class ChatConversationPolicyTest {
         role = ChatMessageRole.NOTICE,
         text = text,
     )
+
+    private companion object {
+        val responseTarget = ConversationTargetSnapshot(
+            targetId = "local:test-model",
+            providerId = "autojs6.three-stone-ai",
+            modelId = "test-model",
+            displayName = "Test model",
+            locality = AiTargetLocality.LOCAL,
+        )
+    }
 }

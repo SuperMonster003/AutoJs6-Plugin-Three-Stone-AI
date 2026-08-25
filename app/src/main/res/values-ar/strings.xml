@@ -246,6 +246,9 @@
     <string name="chat_message_regenerate">إعادة التوليد</string>
     <string name="chat_regenerate_warning_title">هل تريد إعادة توليد هذا الرد?</string>
     <string name="chat_regenerate_warning_message">ستؤدي إعادة التوليد من هنا إلى حذف كل الرسائل اللاحقة نهائيا (عددها %1$d) واستبدال هذا الفرع من المحادثة.</string>
+    <string name="chat_regenerate_original_target_message">تم إنشاء هذا الرد بواسطة %1$s. ستستخدم إعادة التوليد ذلك الهدف المسجل بدلا من الهدف الافتراضي الحالي للمحادثة. %2$s</string>
+    <string name="chat_regenerate_target_unavailable_title">الهدف الأصلي غير متاح</string>
+    <string name="chat_regenerate_target_unavailable_message">لم يعد %1$s يطابق هدفا متاحا بنفس المزود والنموذج المسجلين. لم تبدأ إعادة التوليد, ولم يستخدم هدف المحادثة الحالي كخيار احتياطي.</string>
     <string name="chat_history_select">تحديد المحادثات</string>
     <string name="chat_history_select_all">تحديد الكل</string>
     <string name="chat_history_selected_count">المحدد: %1$d</string>

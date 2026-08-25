@@ -38,12 +38,14 @@
 启动器聊天直接读取 Application 级 `AiTargetCatalog`, 不再从所选本地模型推导 `local:*` 目标. 选择在线 profile 时, `AiBackendSessionRequest` 使用原始 `profile:*` targetId 且不传本地 execution profile; 选择本地模型时优先使用可用 CPU profile, 否则使用目录声明的首个可用本地 profile. 两种路径共用相同的流式, 取消, Markdown 与会话复用管线, 任何失败都不会跨本地与在线边界回退.
 
 - 新的空会话只在首次解析统一目录时捕获一次默认 target. 后续本地模型选择或默认在线档案变化不会静默改写当前会话.
-- `ConversationTargetSnapshot` 保存 targetId, providerId, modelId, displayName 与 locality. 会话历史二进制格式直接升级为 version 2; 项目尚未发布, 因此不保留 version 1 的 model-only 读取或迁移分支.
+- `ConversationTargetSnapshot` 保存 targetId, providerId, modelId, displayName 与 locality. 会话级目标与每条 assistant 消息的实际执行目标共用该不可变快照. 会话历史二进制格式直接升级为 version 3; 项目尚未发布, 因此不保留 version 1/2 的读取或迁移分支.
 - 顶部目标栏始终显示 Local/Cloud, provider, 显示名与 modelId, 点击后列出统一目录中的全部 target. 未配置或不可用 target 不能被选中, 只提供相应的本地模型或在线服务设置入口; Cloud 项明确标注可能产生费用.
 - 空会话可直接更换 target. 已有消息的会话默认主操作是使用所选 target 新建会话; "继续当前会话" 是次要操作, 对话框会明确说明保留消息将作为上下文交给新 target, Cloud 情况额外说明数据离开设备及可能产生费用.
 - 用户确认继续当前会话后, 页面关闭既有 backend session, 更新会话级目标快照, 写入可见的 target-change notice 并立即持久化. 若已保存 target 从目录消失或变为不可用, 会话保持原快照并禁用发送, 不自动采用新的默认 target.
+- 每条 assistant 占位消息在请求开始前先捕获目录中的目标快照; backend session 建立后再以 `AiBackendSession.target` 校正并立即持久化实际 target. 完成, 失败, 停止及 Activity 状态恢复均保留 target/provider/model/locality, user 与 notice 消息则禁止携带目标快照.
+- "重新生成" 精确沿用原响应快照, 但不改写会话默认 target. 历史 targetId 只有在 providerId, modelId 与 locality 仍一致时才可解析; 仅显示名重命名可继续. 目标被删除, 不可用或身份漂移时明确失败并提供对应设置入口, 绝不回退到当前会话目标. 当原响应目标不同于会话默认目标时, 确认对话框会显示实际目标以及本地/云端隐私和费用边界.
 
-本节只定义会话级默认 target 与变更审计. 每条 assistant 响应的实际 target/provider/model/locality 快照及重新生成沿用原响应目标, 仍属于 Roadmap 中紧随其后的独立交付项.
+文本历史仍可作为跨目标上下文使用, 但每条响应的执行来源独立可审计; target 变化不会改写已经完成的响应快照.
 
 ## 请求映射
 

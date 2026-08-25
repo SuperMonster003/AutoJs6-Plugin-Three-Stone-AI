@@ -116,7 +116,7 @@ class ChatActivity : ConfiguredActivity() {
     private var activeGenerationId: Long? = null
     private var activeAssistantMessageId: Long? = null
     private var activeBackend: AiBackendSession? = null
-    private var activeBackendTargetId: String? = null
+    private var activeBackendTarget: ConversationTargetSnapshot? = null
     private var completedTurnsOnBackend = 0
     private var managerAttached = false
     private var destroyed = false
@@ -288,6 +288,26 @@ class ChatActivity : ConfiguredActivity() {
         outState.putLongArray(
             STATE_MESSAGE_DURATION_MILLIS,
             savedMessages.map { message -> message.usage?.durationMillis ?: NO_USAGE }.toLongArray(),
+        )
+        outState.putStringArrayList(
+            STATE_MESSAGE_TARGET_IDS,
+            ArrayList(savedMessages.map { message -> message.target?.targetId.orEmpty() }),
+        )
+        outState.putStringArrayList(
+            STATE_MESSAGE_TARGET_PROVIDER_IDS,
+            ArrayList(savedMessages.map { message -> message.target?.providerId.orEmpty() }),
+        )
+        outState.putStringArrayList(
+            STATE_MESSAGE_TARGET_MODEL_IDS,
+            ArrayList(savedMessages.map { message -> message.target?.modelId.orEmpty() }),
+        )
+        outState.putStringArrayList(
+            STATE_MESSAGE_TARGET_NAMES,
+            ArrayList(savedMessages.map { message -> message.target?.displayName.orEmpty() }),
+        )
+        outState.putStringArrayList(
+            STATE_MESSAGE_TARGET_LOCALITIES,
+            ArrayList(savedMessages.map { message -> message.target?.locality?.name.orEmpty() }),
         )
         outState.putLong(STATE_NEXT_MESSAGE_ID, nextMessageId)
         outState.putString(STATE_CONVERSATION_ID, currentConversationId)
@@ -832,6 +852,21 @@ class ChatActivity : ConfiguredActivity() {
         refreshActiveSearchResults()
     }
 
+    private fun recordAssistantTarget(
+        generationId: Long,
+        assistantMessageId: Long,
+        actualTarget: ConversationTargetSnapshot,
+    ) {
+        if (!isGenerationCurrent(generationId)) return
+        val current = messages.singleOrNull { message -> message.id == assistantMessageId }
+            ?.takeIf { message -> message.role == ChatMessageRole.ASSISTANT }
+            ?: return
+        if (current.target != actualTarget) {
+            replaceMessage(current.copy(target = actualTarget))
+            persistConversationNow()
+        }
+    }
+
     private fun addMessageView(message: ChatMessage) {
         if (message.role == ChatMessageRole.NOTICE) {
             val notice = MarkdownMessageView(this, appPalette).apply {
@@ -984,13 +1019,22 @@ class ChatActivity : ConfiguredActivity() {
         sendCurrentMessage()
     }
 
-    private fun sendCurrentMessage() {
+    private fun sendCurrentMessage(targetOverride: ConversationTargetSnapshot? = null) {
         if (isGenerating) return
-        val target = resolvedConversationTarget()
-        if (!isConversationTargetReady() || target == null) {
-            showTargetSelector()
+        val target = if (targetOverride == null) {
+            resolvedConversationTarget()
+        } else {
+            ConversationTargetPolicy.resolveExact(targetOverride, targetCatalog)
+        }
+        if (!isTargetReady(target)) {
+            if (targetOverride == null) {
+                showTargetSelector()
+            } else {
+                showUnavailableRegenerationTargetDialog(targetOverride)
+            }
             return
         }
+        checkNotNull(target)
         val promptText = input.text.toString().trim()
         if (promptText.isEmpty()) return
         val messageBeingEdited = editingMessageId
@@ -1015,6 +1059,7 @@ class ChatActivity : ConfiguredActivity() {
             role = ChatMessageRole.ASSISTANT,
             text = "",
             status = ChatMessageStatus.GENERATING,
+            target = ConversationTargetSnapshot.from(target),
         )
         val generationId = generationEpoch.incrementAndGet()
         activeGenerationId = generationId
@@ -1054,27 +1099,31 @@ class ChatActivity : ConfiguredActivity() {
         assistantMessageId: Long,
         generationId: Long,
     ) {
-        val listener = generationListener(generationId, assistantMessageId)
         val prompt = GenerationMessage(GenerationRole.USER, listOf(promptText))
-        val targetId = target.targetId
+        val requestedTarget = ConversationTargetSnapshot.from(target)
         var reusableBackend: AiBackendSession? = null
         var backendToReplace: AiBackendSession? = null
         synchronized(backendLock) {
             val reusable = target.capabilities.persistentSession &&
-                activeBackend != null && activeBackendTargetId == targetId &&
+                activeBackend != null && activeBackendTarget?.let { activeTarget ->
+                    activeTarget.matchesExecutionIdentity(target)
+                } == true &&
                 !ChatConversationPolicy.shouldRotateBackend(completedTurnsOnBackend)
             if (reusable) {
                 reusableBackend = activeBackend
             } else {
                 backendToReplace = activeBackend
                 activeBackend = null
-                activeBackendTargetId = null
+                activeBackendTarget = null
                 completedTurnsOnBackend = 0
             }
         }
 
         val continuation = reusableBackend
         if (continuation != null) {
+            val actualTarget = ConversationTargetSnapshot.from(continuation.target)
+            recordAssistantTarget(generationId, assistantMessageId, actualTarget)
+            val listener = generationListener(generationId, assistantMessageId, actualTarget)
             submitBackendWork(generationId, assistantMessageId) {
                 if (!isGenerationCurrent(generationId)) return@submitBackendWork
                 continuation.streamNext(
@@ -1091,16 +1140,17 @@ class ChatActivity : ConfiguredActivity() {
             if (!isGenerationCurrent(generationId)) return@submitBackendWork
             val created = (application as ThreeStoneAiApplication).aiBackend.createSession(
                 AiBackendSessionRequest(
-                    targetId = targetId,
+                    targetId = requestedTarget.targetId,
                     executionProfileId = target.chatExecutionProfileId(),
                 ),
             )
+            val actualTarget = ConversationTargetSnapshot.from(created.target)
             val installed = synchronized(backendLock) {
                 if (!isGenerationCurrent(generationId) || activeBackend != null) {
                     false
                 } else {
                     activeBackend = created
-                    activeBackendTargetId = targetId
+                    activeBackendTarget = actualTarget
                     completedTurnsOnBackend = history.size / MESSAGES_PER_TURN
                     true
                 }
@@ -1109,6 +1159,10 @@ class ChatActivity : ConfiguredActivity() {
                 runCatching(created::close)
                 return@submitBackendWork
             }
+            mainHandler.post {
+                recordAssistantTarget(generationId, assistantMessageId, actualTarget)
+            }
+            val listener = generationListener(generationId, assistantMessageId, actualTarget)
             created.stream(generationRequest(history, prompt), listener)
         }
     }
@@ -1127,6 +1181,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun generationListener(
         generationId: Long,
         assistantMessageId: Long,
+        actualTarget: ConversationTargetSnapshot,
     ) = object : GenerationListener {
         override fun onTextDelta(text: String) {
             queueTextDelta(generationId, assistantMessageId, text)
@@ -1134,13 +1189,13 @@ class ChatActivity : ConfiguredActivity() {
 
         override fun onCompleted(statistics: GenerationStatistics?) {
             mainHandler.post {
-                completeGeneration(generationId, assistantMessageId, statistics)
+                completeGeneration(generationId, assistantMessageId, actualTarget, statistics)
             }
         }
 
         override fun onFailed(error: Throwable, statistics: GenerationStatistics?) {
             Log.e(TAG, "Launcher chat generation failed", error)
-            mainHandler.post { failGeneration(generationId, assistantMessageId) }
+            mainHandler.post { failGeneration(generationId, assistantMessageId, actualTarget) }
         }
     }
 
@@ -1216,6 +1271,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun completeGeneration(
         generationId: Long,
         assistantMessageId: Long,
+        actualTarget: ConversationTargetSnapshot,
         statistics: GenerationStatistics?,
     ) {
         if (!isGenerationCurrent(generationId)) return
@@ -1224,6 +1280,7 @@ class ChatActivity : ConfiguredActivity() {
         replaceMessage(
             current.copy(
                 status = ChatMessageStatus.COMPLETE,
+                target = actualTarget,
                 usage = statistics?.let { value ->
                     ChatMessageUsage(
                         inputTokens = value.inputTokens,
@@ -1240,7 +1297,11 @@ class ChatActivity : ConfiguredActivity() {
         persistConversationNow()
     }
 
-    private fun failGeneration(generationId: Long, assistantMessageId: Long) {
+    private fun failGeneration(
+        generationId: Long,
+        assistantMessageId: Long,
+        actualTarget: ConversationTargetSnapshot? = null,
+    ) {
         if (!isGenerationCurrent(generationId)) return
         flushTextDelta(generationId, assistantMessageId)
         val current = messages.singleOrNull { message -> message.id == assistantMessageId }
@@ -1250,6 +1311,7 @@ class ChatActivity : ConfiguredActivity() {
                     text = current.text.ifEmpty { getString(R.string.chat_generation_failed) },
                     status = ChatMessageStatus.FAILED,
                     usage = null,
+                    target = actualTarget ?: current.target,
                 ),
             )
         }
@@ -1272,6 +1334,7 @@ class ChatActivity : ConfiguredActivity() {
         val generationId = activeGenerationId ?: return
         val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
         val assistantMessageId = activeAssistantMessageId
+        val actualTarget = synchronized(backendLock) { activeBackendTarget }
         if (assistantMessageId != null) {
             val delta = takePendingDelta(generationId, assistantMessageId)
             val current = messages.singleOrNull { message -> message.id == assistantMessageId }
@@ -1281,6 +1344,7 @@ class ChatActivity : ConfiguredActivity() {
                         text = current.text + delta,
                         status = ChatMessageStatus.STOPPED,
                         usage = null,
+                        target = actualTarget ?: current.target,
                     ),
                 )
             }
@@ -1333,7 +1397,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun detachBackend(): AiBackendSession? = synchronized(backendLock) {
         activeBackend.also {
             activeBackend = null
-            activeBackendTargetId = null
+            activeBackendTarget = null
             completedTurnsOnBackend = 0
         }
     }
@@ -1847,10 +1911,12 @@ class ChatActivity : ConfiguredActivity() {
         ConversationTargetPolicy.resolve(conversationTarget, targetCatalog)
 
     private fun isConversationTargetReady(): Boolean {
-        if (targetCatalogAvailability != TargetCatalogAvailability.READY) return false
-        val target = resolvedConversationTarget() ?: return false
-        return target.configured && target.available && target.capabilities.streaming
+        return isTargetReady(resolvedConversationTarget())
     }
+
+    private fun isTargetReady(target: AiTarget?): Boolean =
+        targetCatalogAvailability == TargetCatalogAvailability.READY &&
+            target?.configured == true && target.available && target.capabilities.streaming
 
     private fun targetSummary(snapshot: ConversationTargetSnapshot): String = getString(
         R.string.chat_target_status_format,
@@ -2007,6 +2073,27 @@ class ChatActivity : ConfiguredActivity() {
             .also(::tintDialogButtons)
     }
 
+    private fun showUnavailableRegenerationTargetDialog(
+        snapshot: ConversationTargetSnapshot,
+    ) {
+        val settingsLabel = when (snapshot.locality) {
+            AiTargetLocality.LOCAL -> R.string.chat_model_settings
+            AiTargetLocality.REMOTE -> R.string.online_ai_settings_title
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.chat_regenerate_target_unavailable_title)
+            .setMessage(
+                getString(
+                    R.string.chat_regenerate_target_unavailable_message,
+                    targetSummary(snapshot),
+                ),
+            )
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(settingsLabel) { _, _ -> openTargetSettings(snapshot.locality) }
+            .show()
+            .also(::tintDialogButtons)
+    }
+
     private fun showTargetConfigurationDialog() {
         AlertDialog.Builder(this)
             .setTitle(R.string.chat_target_selector_empty_title)
@@ -2100,24 +2187,53 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun requestRegenerateMessage(messageId: Long) {
         val impact = ConversationRegenerationPolicy.impact(messages, messageId) ?: return
-        if (impact.laterMessageCount == 0) {
-            regenerateMessage(impact.userMessageId)
+        val originalTarget = ConversationTargetPolicy.resolveExact(
+            impact.responseTarget,
+            targetCatalog,
+        )
+        if (!isTargetReady(originalTarget)) {
+            showUnavailableRegenerationTargetDialog(impact.responseTarget)
+            return
+        }
+        checkNotNull(originalTarget)
+        val warnings = buildList {
+            if (impact.laterMessageCount > 0) {
+                add(getString(R.string.chat_regenerate_warning_message, impact.laterMessageCount))
+            }
+            if (conversationTarget?.matchesExecutionIdentity(originalTarget) != true) {
+                val destinationWarning = if (impact.responseTarget.locality == AiTargetLocality.REMOTE) {
+                    getString(R.string.chat_target_change_cloud_warning)
+                } else {
+                    getString(R.string.chat_target_change_local_warning)
+                }
+                add(
+                    getString(
+                        R.string.chat_regenerate_original_target_message,
+                        targetSummary(impact.responseTarget),
+                        destinationWarning,
+                    ),
+                )
+            }
+        }
+        if (warnings.isEmpty()) {
+            regenerateMessage(impact.userMessageId, impact.responseTarget)
             return
         }
         AlertDialog.Builder(this)
             .setTitle(R.string.chat_regenerate_warning_title)
-            .setMessage(
-                getString(R.string.chat_regenerate_warning_message, impact.laterMessageCount),
-            )
+            .setMessage(warnings.joinToString("\n\n"))
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.chat_message_regenerate) { _, _ ->
-                regenerateMessage(impact.userMessageId)
+                regenerateMessage(impact.userMessageId, impact.responseTarget)
             }
             .show()
             .also(::tintDialogButtons)
     }
 
-    private fun regenerateMessage(userMessageId: Long) {
+    private fun regenerateMessage(
+        userMessageId: Long,
+        responseTarget: ConversationTargetSnapshot,
+    ) {
         val userMessage = messages.singleOrNull { message -> message.id == userMessageId }
             ?.takeIf { message -> message.role == ChatMessageRole.USER }
             ?: return
@@ -2126,7 +2242,7 @@ class ChatActivity : ConfiguredActivity() {
         editingMessageId = userMessage.id
         input.setText(userMessage.text)
         input.setSelection(input.text.length)
-        sendCurrentMessage()
+        sendCurrentMessage(targetOverride = responseTarget)
     }
 
     private fun formatUsage(usage: ChatMessageUsage): String {
@@ -2197,8 +2313,28 @@ class ChatActivity : ConfiguredActivity() {
         val inputTokens = state.getLongArray(STATE_MESSAGE_INPUT_TOKENS) ?: return false
         val outputTokens = state.getLongArray(STATE_MESSAGE_OUTPUT_TOKENS) ?: return false
         val durations = state.getLongArray(STATE_MESSAGE_DURATION_MILLIS) ?: return false
+        val targetIds = state.getStringArrayList(STATE_MESSAGE_TARGET_IDS) ?: return false
+        val targetProviderIds =
+            state.getStringArrayList(STATE_MESSAGE_TARGET_PROVIDER_IDS) ?: return false
+        val targetModelIds =
+            state.getStringArrayList(STATE_MESSAGE_TARGET_MODEL_IDS) ?: return false
+        val targetNames = state.getStringArrayList(STATE_MESSAGE_TARGET_NAMES) ?: return false
+        val targetLocalities =
+            state.getStringArrayList(STATE_MESSAGE_TARGET_LOCALITIES) ?: return false
         if (
-            listOf(roles.size, statuses.size, texts.size, inputTokens.size, outputTokens.size, durations.size)
+            listOf(
+                roles.size,
+                statuses.size,
+                texts.size,
+                inputTokens.size,
+                outputTokens.size,
+                durations.size,
+                targetIds.size,
+                targetProviderIds.size,
+                targetModelIds.size,
+                targetNames.size,
+                targetLocalities.size,
+            )
                 .any { size -> size != ids.size }
         ) {
             return false
@@ -2213,12 +2349,32 @@ class ChatActivity : ConfiguredActivity() {
                 } else {
                     ChatMessageUsage(inputTokens[index], outputTokens[index], durations[index])
                 }
+                val target = if (targetIds[index].isEmpty()) {
+                    require(
+                        listOf(
+                            targetProviderIds[index],
+                            targetModelIds[index],
+                            targetNames[index],
+                            targetLocalities[index],
+                        ).all(String::isEmpty),
+                    )
+                    null
+                } else {
+                    ConversationTargetSnapshot(
+                        targetId = targetIds[index],
+                        providerId = targetProviderIds[index],
+                        modelId = targetModelIds[index],
+                        displayName = targetNames[index],
+                        locality = AiTargetLocality.valueOf(targetLocalities[index]),
+                    )
+                }
                 ChatMessage(
                     id = ids[index],
                     role = ChatMessageRole.valueOf(roles[index]),
                     text = texts[index],
                     status = ChatMessageStatus.valueOf(statuses[index]),
                     usage = usage,
+                    target = target,
                 )
             }.also { values ->
                 require(values.map(ChatMessage::id).distinct().size == values.size)
@@ -2386,6 +2542,11 @@ class ChatActivity : ConfiguredActivity() {
         const val STATE_MESSAGE_INPUT_TOKENS = "chatMessageInputTokens"
         const val STATE_MESSAGE_OUTPUT_TOKENS = "chatMessageOutputTokens"
         const val STATE_MESSAGE_DURATION_MILLIS = "chatMessageDurationMillis"
+        const val STATE_MESSAGE_TARGET_IDS = "chatMessageTargetIds"
+        const val STATE_MESSAGE_TARGET_PROVIDER_IDS = "chatMessageTargetProviderIds"
+        const val STATE_MESSAGE_TARGET_MODEL_IDS = "chatMessageTargetModelIds"
+        const val STATE_MESSAGE_TARGET_NAMES = "chatMessageTargetNames"
+        const val STATE_MESSAGE_TARGET_LOCALITIES = "chatMessageTargetLocalities"
         const val STATE_NEXT_MESSAGE_ID = "chatNextMessageId"
         const val STATE_CONVERSATION_ID = "chatConversationId"
         const val STATE_CONVERSATION_CREATED_AT = "chatConversationCreatedAt"

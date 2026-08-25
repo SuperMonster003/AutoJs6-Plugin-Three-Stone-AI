@@ -246,6 +246,9 @@
     <string name="chat_message_regenerate">Régénérer</string>
     <string name="chat_regenerate_warning_title">Régénérer cette réponse?</string>
     <string name="chat_regenerate_warning_message">Régénérer ici supprimera définitivement tous les messages suivants (%1$d au total) et remplacera cette branche de la conversation.</string>
+    <string name="chat_regenerate_original_target_message">Cette réponse a été générée par %1$s. La régénération utilisera cette cible enregistrée au lieu de la cible par défaut actuelle de la conversation. %2$s</string>
+    <string name="chat_regenerate_target_unavailable_title">Cible d\'origine indisponible</string>
+    <string name="chat_regenerate_target_unavailable_message">%1$s ne correspond plus à une cible disponible ayant le fournisseur et le modèle enregistrés. La régénération n\'a pas démarré et la cible actuelle de la conversation n\'a pas été utilisée comme solution de repli.</string>
     <string name="chat_history_select">Sélectionner des conversations</string>
     <string name="chat_history_select_all">Tout sélectionner</string>
     <string name="chat_history_selected_count">Sélectionnées: %1$d</string>

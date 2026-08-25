@@ -24,6 +24,13 @@ internal data class ConversationTargetSnapshot(
         }
     }
 
+    /** Stable execution identity; a presentation-only rename does not create a different target. */
+    fun matchesExecutionIdentity(target: AiTarget): Boolean =
+        targetId == target.targetId &&
+            providerId == target.providerId &&
+            modelId == target.modelId &&
+            locality == target.locality
+
     companion object {
         fun from(target: AiTarget) = ConversationTargetSnapshot(
             targetId = target.targetId,
@@ -53,6 +60,14 @@ internal object ConversationTargetPolicy {
         catalog: AiTargetCatalog?,
     ): AiTarget? = snapshot?.let { selected ->
         catalog?.targets?.singleOrNull { target -> target.targetId == selected.targetId }
+    }
+
+    /** Resolves only when the historical provider, model and locality still identify the same target. */
+    fun resolveExact(
+        snapshot: ConversationTargetSnapshot?,
+        catalog: AiTargetCatalog?,
+    ): AiTarget? = resolve(snapshot, catalog)?.takeIf { target ->
+        snapshot?.matchesExecutionIdentity(target) == true
     }
 
     fun selectionDisposition(

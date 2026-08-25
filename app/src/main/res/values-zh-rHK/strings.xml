@@ -246,6 +246,9 @@
     <string name="chat_message_regenerate">重新產生</string>
     <string name="chat_regenerate_warning_title">重新產生此回覆?</string>
     <string name="chat_regenerate_warning_message">從此處重新產生將永久刪除其後所有訊息 (共 %1$d 則), 並取代該對話分支.</string>
+    <string name="chat_regenerate_original_target_message">此回覆由 %1$s 產生. 重新產生會沿用呢個已記錄目標, 而唔係目前對話預設目標. %2$s</string>
+    <string name="chat_regenerate_target_unavailable_title">原回覆目標不可用</string>
+    <string name="chat_regenerate_target_unavailable_message">%1$s 已無法配對具有已記錄提供方同模型嘅可用目標. 未有開始重新產生, 亦無回退到目前對話目標.</string>
     <string name="chat_history_select">選擇對話</string>
     <string name="chat_history_select_all">全選</string>
     <string name="chat_history_selected_count">已選擇: %1$d</string>

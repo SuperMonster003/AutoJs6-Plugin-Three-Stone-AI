@@ -24,7 +24,7 @@
 
 - [x] `rootProject.name` 改为 `autojs6-plugin-three-stone-ai`, APK 产物名随之变更.
 - [x] `applicationId` / `namespace` 改为 `io.github.supermonster003.autojs6.plugin.threestoneai` (不保留旧 package ID).
-- [x] main/test 源码包目录整体迁移至 `plugin/threestoneai`, 删除历史遗留空包 `plugin/ai/text`.
+- [x] main/test 源码包目录整体迁移至 `plugin/threestoneai`, 未保留旧包目录或桥接代码.
 - [x] 产品类与测试类改用 `ThreeStoneAi*`; 通用协议类改用 `AiProvider*` / `IAi*` 中性命名.
 - [x] AndroidManifest: Application/InfoService/ProviderService 组件名同步; INFO category 改为 `three-stone-ai`; 两处 `requiresHostVersion` 由 5270 对齐为 5276; 发现 action 改为 `org.autojs.plugin.AI_PROVIDER`.
 - [x] proguard keep 规则同步新包名与新类名.
@@ -84,7 +84,7 @@
 - [x] 会话历史逐条保存实际 target/provider/model/locality 快照; "重新生成" 默认沿用原响应目标. 历史格式直接升级为 version 3, assistant 消息强制保存 backend 实际目标, 精确重新生成允许显示名变更但拒绝 provider/model/locality 漂移, 且不回退到会话默认目标. G8441 / Android 9 已在同一 PoloAPI Cloud target 上完成首次生成与重新生成, 两次响应均成功且目标保持 `OpenAI Compatible / PoloAPI / claude-opus-4-8`.
 - [x] 会话界面常显目标徽标: Local/Cloud, 提供方, 模型名; 次要信息展示 usage 与耗时, 在线目标标注可能产生费用. G8441 / Android 9 已验证 Cloud 目标栏常显完整身份, 首次生成显示 `18788 input | 106 output | 8.0 s`, 重新生成显示 `18786 input | 212 output | 6.0 s`; 在线费用提示已随目标选择器真机验收.
 - [x] 失败不静默跨界: 本地失败绝不自动转在线, 在线失败绝不自动转本地; 均给出明确错误与手动切换入口. Unified dispatcher 仅调用 targetId 的唯一 owner, 双向失败测试确认另一 backend 的会话创建次数保持为 0; 聊天按响应 target 的 Local/Cloud 边界追加有界且不含底层敏感详情的原因, 明示未自动跨界, 保留失败前的部分输出, 并在失败消息下提供可点击的手动目标选择入口. G8441 / Android 9 已在存在可用本地 Gemma target 时断网触发 PoloAPI Cloud 失败, 验证目标仍保持 Cloud, 明确显示无可用网络及未自动选择本地目标, 点击失败入口可打开仍以 PoloAPI 为当前项的手动选择器. 本地破坏性失败没有安全复现条件, 因此以双向确定性 owner-failure 测试覆盖, 不为勾选而损坏模型或私有配置.
-- [ ] 统一流式管线: 在线与本地共用 Markdown 渲染, 取消, 重试, usage 与错误展示; 插件 UI 与 Binder Service 调用同一 `AiBackend` 层.
+- [ ] 统一流式管线: 在线与本地共用 Markdown 渲染, 取消, 重试, usage 与错误展示; 插件 UI 与 Binder Service 调用同一 `AiBackend` 层. 代码审计与离线回归已确认 Application 级 `CompositeAiBackend` 是两个入口唯一的 backend 边界, 首轮/续轮统一使用 `GenerationListener` 与 `GenerationStatistics`, UI 统一进入 Markdown/完成/失败状态机, Binder V1 会话统一映射 chunk/usage/终态; `cancelAndClose` 契约保证取消异常也不会跳过资源释放, 架构测试禁止两个入口重新直接构造本地或在线实现. G8441 / Android 9 的 PoloAPI 首次生成, 重新生成, usage/耗时与失败展示已经覆盖 Cloud 路径, 本轮加固后的 arm64 APK 也已保留应用数据完成覆盖安装; 仍需用现有 Gemma target 安全验证 Local 流式中止保留部分输出, 重新生成及完成后的 usage, 不要求破坏性本地失败.
 
 ## P2 通用 AI Provider 协议 V2 (宿主, 中性命名)
 

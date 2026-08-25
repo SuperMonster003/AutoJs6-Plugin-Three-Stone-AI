@@ -340,7 +340,7 @@ class ChatActivity : ConfiguredActivity() {
         val detached = detachBackend()
         if (detached != null) {
             try {
-                backendExecutor.execute { runCatching(detached::close) }
+                backendExecutor.execute { runCatching(detached::cancelAndClose) }
             } catch (_: RejectedExecutionException) {
                 closeOnFallbackThread(detached)
             }
@@ -1414,7 +1414,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun closeCurrentBackend() {
         val detached = detachBackend() ?: return
         try {
-            backendExecutor.execute { runCatching(detached::close) }
+            backendExecutor.execute { runCatching(detached::cancelAndClose) }
         } catch (_: RejectedExecutionException) {
             closeOnFallbackThread(detached)
         }
@@ -1429,7 +1429,7 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun closeOnFallbackThread(backend: AiBackendSession) {
-        Thread({ runCatching(backend::close) }, "three-stone-ai-chat-close").apply {
+        Thread({ runCatching(backend::cancelAndClose) }, "three-stone-ai-chat-close").apply {
             isDaemon = true
             start()
         }

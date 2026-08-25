@@ -87,6 +87,19 @@ class AiBackendAbstractionTest {
     }
 
     @Test
+    fun cancelAndCloseAlwaysReleasesSessionWhenCancellationFails() {
+        val cancellationFailure = IllegalStateException("cancel marker")
+        val session = FailingCancellationSession(target(), cancellationFailure)
+
+        assertEquals(
+            cancellationFailure,
+            assertThrows(IllegalStateException::class.java, session::cancelAndClose),
+        )
+        assertEquals(1, session.cancelCount)
+        assertEquals(1, session.closeCount)
+    }
+
+    @Test
     fun backendCatalogOwnsCapabilitiesAndSessionCreation() {
         val target = target()
         val session = RecordingPersistentSession(target)
@@ -182,6 +195,27 @@ class AiBackendAbstractionTest {
 
         override fun cancel() = Unit
         override fun close() = Unit
+    }
+
+    private class FailingCancellationSession(
+        override val target: AiTarget,
+        private val cancellationFailure: RuntimeException,
+    ) : AiBackendSession {
+        var cancelCount = 0
+            private set
+        var closeCount = 0
+            private set
+
+        override fun stream(request: GenerationRequest, listener: GenerationListener) = Unit
+
+        override fun cancel() {
+            cancelCount += 1
+            throw cancellationFailure
+        }
+
+        override fun close() {
+            closeCount += 1
+        }
     }
 
     private fun target() = AiTarget(

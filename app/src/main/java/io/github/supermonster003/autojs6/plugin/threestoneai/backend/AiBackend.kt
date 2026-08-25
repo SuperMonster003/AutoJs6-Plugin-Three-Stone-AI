@@ -152,6 +152,15 @@ internal interface AiBackendSession : Closeable {
         throw UnsupportedOperationException("Persistent generation is not supported")
     }
 
+    /** Requests cancellation before releasing every session resource. */
+    fun cancelAndClose() {
+        try {
+            cancel()
+        } finally {
+            close()
+        }
+    }
+
     fun cancel()
 }
 
@@ -237,6 +246,10 @@ internal data class GenerationStatistics(
     }
 }
 
+/**
+ * Backend-neutral turn events. Text remains opaque here so every target reaches the same
+ * surface-owned Markdown renderer; usage and errors are delivered through the same terminal path.
+ */
 internal interface GenerationListener {
     fun onTextDelta(text: String)
     fun onCompleted(statistics: GenerationStatistics?)

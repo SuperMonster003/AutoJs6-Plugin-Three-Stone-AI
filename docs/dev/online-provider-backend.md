@@ -56,6 +56,14 @@
 - 离线回归测试分别令本地与在线 owner 抛出异常, 并断言另一 backend 的会话创建次数保持为 0; 失败分类测试覆盖全部固定在线原因, target 丢失, 未知传输异常及错误类型与 target locality 不一致的防御分支.
 - G8441 / Android 9 已在目录同时存在可用本地 Gemma target 与 PoloAPI Cloud target 时断开网络并发送在线请求. 界面保留 PoloAPI Cloud 目标, 显示 `No usable network connection is available` 与 `No local target was selected automatically`, 且点击失败消息下方入口可打开仍以 PoloAPI 为当前项的手动目标选择器. 该证据证明即使本地候选实际可用也不会发生 Cloud 到 Local 回退; Local 到 Cloud 反向边界由确定性 owner-failure 测试覆盖, 不采用破坏模型或私有配置的真机复现方式.
 
+## 统一流式管线
+
+- `ThreeStoneAiApplication` 是 backend 组合根, 只公开一个由本地和在线实现组成的 Application 级 `CompositeAiBackend`. 启动器聊天通过它读取目录并建立会话; `ThreeStoneAiProviderService` 将同一个 `aiBackend` 交给每个 Binder session, `RemoteThreeStoneAiSession` 也只能通过 `AiBackend.createSession` 建立实际会话. 架构回归测试禁止聊天或 Binder 入口重新直接构造 `LiteRtLocalBackend`, `LiteRtLocalSession`, `OnlineAiBackend` 或 `OnlineAiSession`.
+- `AiBackendSession.stream` / `streamNext` 和单一 `GenerationListener` 是本地与在线共同的增量边界. 聊天不按 backend 类型选择渲染器: 所有 text delta 都进入同一个节流缓冲与 `MarkdownMessageView`, 完成都由 `GenerationStatistics` 生成 usage/耗时, 失败都进入同一消息状态机并保留已到达的部分文本. "重新生成" 只解析原响应 target 后重新走同一发送路径, 不调用 backend 专用重试接口.
+- 停止, Activity 销毁和异常终止使用 `AiBackendSession.cancelAndClose`: 先请求取消, 再无条件释放会话, 即使取消本身抛出异常也不会跳过 `close`. 本地与在线 session 的 callback gate 会在关闭后抑制迟到终态; Binder 的用户取消, 超时与服务销毁也复用同一生命周期契约, 再映射为协议自己的 `cancelled` / `failed` 终态.
+- 当前 Binder V1 的模型目录按协议仍只枚举本地模型, 因而 `ModelPager` 有意读取 `localBackend.catalog`; 这不形成执行旁路, 每个 Binder generation 仍经 Application 级 `aiBackend` 解析其 `local:*` target. 本地与在线统一目录进入 Binder/宿主 API 属于 Roadmap P2/P3 的 V2 工作, 不在此处伪造旧协议兼容层.
+- 离线测试覆盖统一接口的流式文本, 首轮/续轮, usage, 取消后资源释放, 迟到 callback 隔离, 在线失败后重试以及 Binder chunk/usage/单终态规则. G8441 / Android 9 已验证 Cloud 首次生成, 重新生成, usage/耗时和错误呈现, 本轮加固后的 arm64 APK 也已使用保留应用数据的覆盖安装部署到同一设备; 关闭本项前只需用现有 Gemma target 完成非破坏性的 Local 流式中止, 部分输出保留, 重新生成与 usage 冒烟, 不需要人为损坏模型或配置.
+
 ## 请求映射
 
 三个协议适配器共用同一个有界, 一次性且可擦除的 JSON RequestBody, 但不伪造彼此不兼容的字段或事件.

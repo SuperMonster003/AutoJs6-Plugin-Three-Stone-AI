@@ -414,8 +414,11 @@ internal class RemoteThreeStoneAiSession(
         unlinkCallbackDeath()
         val action = {
             val activeBackend = backendSession.getAndSet(null)
-            if (cancelBackend) runCatching { activeBackend?.cancel() }
-            runCatching { activeBackend?.close() }
+            if (cancelBackend) {
+                runCatching { activeBackend?.cancelAndClose() }
+            } else {
+                runCatching { activeBackend?.close() }
+            }
             onFinished(this)
         }
         if (closeBackendDirectly || backendSession.get() == null) {

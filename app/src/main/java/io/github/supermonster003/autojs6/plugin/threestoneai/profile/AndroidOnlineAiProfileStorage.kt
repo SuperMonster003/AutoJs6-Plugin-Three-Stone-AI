@@ -2,6 +2,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai.profile
 
 import android.system.Os
 import android.system.OsConstants
+import io.github.supermonster003.autojs6.plugin.threestoneai.storage.AppPrivatePathGuard
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
@@ -98,12 +99,11 @@ internal class FileOnlineAiProfileDocumentStorage(
     private fun ensureDirectory() {
         require(privateFilesDirectory.isDirectory) { "Private online AI profile root is unavailable" }
         require(directory.isDirectory || directory.mkdir()) { "Private online AI profile storage is unavailable" }
-        require(directory.canonicalFile == directory.absoluteFile) {
-            "Private online AI profile storage must not use a link"
-        }
-        require(directory.canonicalFile.parentFile == privateFilesDirectory.canonicalFile) {
-            "Private online AI profile storage escaped its root"
-        }
+        AppPrivatePathGuard.requireDirectChild(
+            child = directory,
+            trustedParent = privateFilesDirectory,
+            label = "Private online AI profile storage",
+        )
     }
 
     private fun requireSafeRegularFile(file: File) {
@@ -112,15 +112,11 @@ internal class FileOnlineAiProfileDocumentStorage(
     }
 
     private fun requireSafeDirectChild(file: File) {
-        require(file.absoluteFile.parentFile == directory.absoluteFile) {
-            "Private online AI profile path escaped its directory"
-        }
-        require(file.canonicalFile == file.absoluteFile) {
-            "Private online AI profile path must not use a link"
-        }
-        require(file.canonicalFile.parentFile == directory.canonicalFile) {
-            "Private online AI profile path escaped through a link"
-        }
+        AppPrivatePathGuard.requireDirectChild(
+            child = file,
+            trustedParent = directory,
+            label = "Private online AI profile path",
+        )
     }
 
     private fun syncDirectory() {

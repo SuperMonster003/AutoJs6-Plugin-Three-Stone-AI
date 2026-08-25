@@ -4,6 +4,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.system.Os
 import android.system.OsConstants
+import io.github.supermonster003.autojs6.plugin.threestoneai.storage.AppPrivatePathGuard
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
@@ -221,12 +222,11 @@ internal class FileCredentialRecordStorage(
     private fun ensureDirectory() {
         require(privateFilesDirectory.isDirectory) { "Private credential storage root is unavailable" }
         require(directory.isDirectory || directory.mkdir()) { "Private credential storage is unavailable" }
-        require(directory.canonicalFile == directory.absoluteFile) {
-            "Private credential storage must not use a link"
-        }
-        require(directory.canonicalFile.parentFile == privateFilesDirectory.canonicalFile) {
-            "Private credential storage escaped its root"
-        }
+        AppPrivatePathGuard.requireDirectChild(
+            child = directory,
+            trustedParent = privateFilesDirectory,
+            label = "Private credential storage",
+        )
     }
 
     private fun requireSafeRegularFile(file: File) {
@@ -235,15 +235,11 @@ internal class FileCredentialRecordStorage(
     }
 
     private fun requireSafeDirectChild(file: File) {
-        require(file.absoluteFile.parentFile == directory.absoluteFile) {
-            "Private credential path escaped its directory"
-        }
-        require(file.canonicalFile == file.absoluteFile) {
-            "Private credential path must not use a link"
-        }
-        require(file.canonicalFile.parentFile == directory.canonicalFile) {
-            "Private credential path escaped through a link"
-        }
+        AppPrivatePathGuard.requireDirectChild(
+            child = file,
+            trustedParent = directory,
+            label = "Private credential path",
+        )
     }
 
     private fun syncDirectory() {

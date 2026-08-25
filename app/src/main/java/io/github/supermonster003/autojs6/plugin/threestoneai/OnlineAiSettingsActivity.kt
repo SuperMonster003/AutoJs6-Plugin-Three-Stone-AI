@@ -807,6 +807,6 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         const val PROFILE_TEXT_MAXIMUM_CHARACTERS = 256
         const val BASE_URL_MAXIMUM_CHARACTERS = 4096
         const val CREDENTIAL_MAXIMUM_CHARACTERS = 8192
-        const val CONNECTION_TEST_TIMEOUT_MILLIS = 60_000L
+        const val CONNECTION_TEST_TIMEOUT_MILLIS = 120_000L
     }
 }

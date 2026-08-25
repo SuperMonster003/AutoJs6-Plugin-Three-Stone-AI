@@ -25,12 +25,13 @@
 * `機能` HTTPS 専用の OpenAI Compatible エンドポイント向けに機密情報を含まない厳格なオンライン profile リポジトリを追加し, canonical UUID, プロセス間で原子的なメタデータ, provider または origin 変更時の認証情報の明示的な置換または消去に対応
 * `機能` カスタム baseUrl, 認証情報, モデル profile 用のプラグイン内部 OpenAI Compatible HTTPS 実行 backend を追加し, 上限付き SSE と JSON fallback ストリーミング, 正確なキャンセル, provider usage, 完了ターンのみの永続履歴, JSON Schema リクエスト変換, 機密情報を含まない固定エラーに対応; AI Provider V1 のホストルーティングは引き続きローカル target のみを公開
 * `機能` ホストのカタログに合わせた OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter のプリセットを追加; 統一オンライン実行層は OpenAI-compatible プロトコルを再利用し, Anthropic Messages と Gemini GenerateContent 固有の認証, リクエスト, SSE 終端, usage, JSON Schema を個別に適応し, プロトコル間またはローカル/オンライン間の fallback は行わない
-* `機能` 10 言語のオンラインサービス設定 UI を追加し, profile の追加, 編集, 削除, API キーを表示しない置換と消去, 既定ターゲット選択, 認証情報アクセス前の従量制ネットワーク許可, キャンセル可能な最長 60 秒の明示接続テストに対応; 設定はプロセス間アトミック文書を共有し, AI Provider V1 はローカル限定のまま
+* `機能` 10 言語のオンラインサービス設定 UI を追加し, profile の追加, 編集, 削除, API キーを表示しない置換と消去, 既定ターゲット選択, 認証情報アクセス前の従量制ネットワーク許可, キャンセル可能な最長 120 秒の明示接続テストに対応; 設定はプロセス間アトミック文書を共有し, AI Provider V1 はローカル限定のまま
 * `修正` 実行可能な説明例に設定されていた暗黙の 256 token / 4 KiB 出力上限を削除し, `maxTokens` 省略時はモデルまたは engine の既定値を使用, raw Binder 例は provider の 64 KiB 出力許容量全体を使用するよう修正
 * `修正` 10 言語のローカライズ済みプラグイン説明にある低レベル Binder 例が, プロトコル 1.1 の 14 引数 `AiGenerationOptions` コンストラクターを呼び続け, プロトコル 1.3 API で失敗する問題を修正
 * `修正` システムのダークモードでもモデル管理画面がライトテーマの文字色を保持し, 本文, チェックボックス, モデル行が暗い背景で読めなくなる問題を修正
 * `修正` 入力欄をソフトキーボードの上に維持し, 送信ボタン文字色をテーマ色とのコントラストで選択し, 前へ, 次へ, 閉じる検索操作を統一
 * `修正` 生成 listener callback 内から session を close した場合に callback quiescence が自身を待ち続けるデッドロックを修正; 他のスレッドで実行中の callback は引き続き待機
+* `修正` Android が信頼済みの `/data/user/0` アプリデータルートを `/data/data` に canonicalize する場合に, アプリ非公開のオンライン profile と認証情報ストレージを誤って拒否する問題を修正; 直接の子リンクと containment 逸脱は引き続き拒否
 * `改善` プラグイン説明, 使用手順, 10 言語 README を更新し, ホスト `ai.*` ローカルプラグイン経路の正式化に整合
 * `改善` ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成
 * `改善` アプリと生成済みローカライズ文書の句読点を ASCII に統一し, パッケージ済み文書と生成文書を対象とする回帰テストを追加

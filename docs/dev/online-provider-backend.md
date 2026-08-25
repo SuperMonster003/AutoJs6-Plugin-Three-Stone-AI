@@ -31,7 +31,7 @@
 
 非敏感 profile 文档直接采用 schema 2, 将 `defaultProfileId` 与 `allowMeteredNetwork` 和档案列表放在同一个跨进程锁, fsync 与原子 rename 事务内. 本项目尚未发布, 因此不提供 schema 1 读取或迁移分支; 不支持的文档会 fail closed. 凭据仍完全独立保存在 Android Keystore 保护的密文仓库中.
 
-"测试连接" 是一次用户确认后才会执行的真实生成: 固定发送 `Reply with OK.`, 最多请求 8 个输出 token, 不保存或显示响应文本, 可随时取消, UI 在 60 秒后主动取消活动 Call. 测试调用统一 `OnlineAiBackend` 和协议适配器, 因而同时验证 profile, Key, 网络策略, 请求认证, 协议解析及正常终态. 它可能产生提供方费用, 所以 UI 在每次执行前明确提示.
+"测试连接" 是一次用户确认后才会执行的真实生成: 固定发送 `Reply with OK.`, 最多请求 8 个输出 token, 不保存或显示响应文本, 可随时取消, UI 在 120 秒后主动取消活动 Call. 测试调用统一 `OnlineAiBackend` 和协议适配器, 因而同时验证 profile, Key, 网络策略, 请求认证, 协议解析及正常终态. 它可能产生提供方费用, 所以 UI 在每次执行前明确提示. 120 秒上限覆盖了 G8441 上维护者观测到约 64 秒才完成的可用在线服务响应, 同时保持测试有界.
 
 ## 请求映射
 
@@ -56,6 +56,7 @@ OpenAI-compatible baseUrl 未以 `/chat/completions` 结束时追加该 endpoint
 ## 网络与凭据边界
 
 - Profile 只接受 HTTPS, 禁止 user-info, query 与 fragment. 每个 target 只声明规范化后的 HTTPS origin.
+- Profile 元数据与凭据存储以 `filesDir` 为可信根, 分别拒绝其直接子项的符号链接及 canonical containment 逃逸. Android 可能把 Context 返回的 `/data/user/0` 系统路径规范化为 `/data/data`; 两侧都相对同一个 canonical 可信根校验, 不把这个系统级路径别名误判成直接子项链接.
 - 应用声明 `ACCESS_NETWORK_STATE`. 每轮在线请求在读取凭据前检查活动网络是否具备 Internet capability; 系统判定为 metered 的网络必须由用户显式开启. 配置读取失败, 无活动网络或缺少 capability 均 fail closed.
 - OkHttp client 禁止 HTTP/HTTPS redirect, connection retry, authenticator, proxy authenticator, cookie, cache, application interceptor 与 network interceptor. EventListener 固定为 `NONE`.
 - 认证 header 只在同步凭据作用域内构造. Profile 元数据与凭据在同一锁定快照点配对; 复制后的凭据 buffer 在 Call 成功或异常后清零, 网络期间不持有 profile 或 credential 文件锁.

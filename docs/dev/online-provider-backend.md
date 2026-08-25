@@ -54,6 +54,7 @@
 - 启动器聊天以失败响应自身的 target 快照决定 Local/Cloud 边界. 在线执行层的固定 `OnlineAiFailureReason` 会映射为有界的凭据, 档案变更, 鉴权, 限流, 提供方, 网络, 计量网络, 超时, TLS 或响应类别; 本地和未知错误不展示原始异常文本, 路径, URL, provider body 或传输详情.
 - 失败前已收到的部分输出会保留, 随后追加本地化错误说明和 "未自动选择另一边界目标" 声明. 失败轮次继续从后续模型上下文中排除, 消息下方提供显式的手动目标选择入口; 用户仍需遵循已有的新会话或继续当前会话确认流程.
 - 离线回归测试分别令本地与在线 owner 抛出异常, 并断言另一 backend 的会话创建次数保持为 0; 失败分类测试覆盖全部固定在线原因, target 丢失, 未知传输异常及错误类型与 target locality 不一致的防御分支.
+- G8441 / Android 9 已在目录同时存在可用本地 Gemma target 与 PoloAPI Cloud target 时断开网络并发送在线请求. 界面保留 PoloAPI Cloud 目标, 显示 `No usable network connection is available` 与 `No local target was selected automatically`, 且点击失败消息下方入口可打开仍以 PoloAPI 为当前项的手动目标选择器. 该证据证明即使本地候选实际可用也不会发生 Cloud 到 Local 回退; Local 到 Cloud 反向边界由确定性 owner-failure 测试覆盖, 不采用破坏模型或私有配置的真机复现方式.
 
 ## 请求映射
 

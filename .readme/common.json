@@ -8,7 +8,7 @@
   "protocol_provider_id": "autojs6.three-stone-ai",
   "plugin_engine": "three-stone-ai",
   "plugin_variant": "default",
-  "protocol_version": "V1.2-V1.3",
+  "protocol_version": "V2",
   "required_host_build": "5276",
   "input_format": "text/plain message history plus application/json response schema",
   "output_format": "streamed text/plain or application/json text chunks",

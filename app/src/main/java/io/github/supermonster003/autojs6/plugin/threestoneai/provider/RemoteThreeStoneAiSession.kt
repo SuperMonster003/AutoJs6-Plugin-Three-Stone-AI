@@ -7,7 +7,6 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSession
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetIds
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetUnavailableException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationStatistics
@@ -24,7 +23,6 @@ import org.autojs.plugin.ai.provider.api.AiMessageRole
 import org.autojs.plugin.ai.provider.api.AiSessionStarted
 import org.autojs.plugin.ai.provider.api.IAiCallback
 import org.autojs.plugin.ai.provider.api.IAiSession
-import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import org.autojs.plugin.ai.provider.api.AiProviderCapabilityId
 import org.autojs.plugin.ai.provider.api.AiProviderChunk
 import org.autojs.plugin.ai.provider.api.AiProviderCodec
@@ -32,7 +30,6 @@ import org.autojs.plugin.ai.provider.api.AiProviderMimeType
 import org.autojs.plugin.ai.provider.api.AiProviderProtocol
 import org.autojs.plugin.ai.provider.api.AiProviderQuotaPolicy
 import org.autojs.plugin.ai.provider.api.AiProviderRequest
-import org.autojs.plugin.ai.provider.api.AiProviderVersionPolicy
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
@@ -107,10 +104,10 @@ internal class RemoteThreeStoneAiSession(
         val ownedDescriptors: OwnedParcelFileDescriptors
         try {
             callerVerifier.enforceSessionOwner(ownerUid)
-            require(persistent) { "This local AI session is not persistent" }
-            safeRequest = requireNotNull(request) { "local AI request metadata is missing" }
+            require(persistent) { "This AI session is not persistent" }
+            safeRequest = requireNotNull(request) { "AI request metadata is missing" }
             val safeDescriptors = requireNotNull(descriptors) {
-                "local AI request descriptors are missing"
+                "AI request descriptors are missing"
             }
             BinderInputPolicy.requireEnvelopeSize(safeRequest.size)
             BinderInputPolicy.requireRequestDescriptorCount(
@@ -124,7 +121,7 @@ internal class RemoteThreeStoneAiSession(
         } catch (error: Throwable) {
             OwnedParcelFileDescriptors.closeIncoming(descriptors)
             if (error is SecurityException) throw error
-            failSession(AiErrorCode.INVALID_REQUEST, "The next local AI turn is invalid")
+            failSession(AiErrorCode.INVALID_REQUEST, "The next AI turn is invalid")
             return
         }
 
@@ -136,7 +133,7 @@ internal class RemoteThreeStoneAiSession(
         val turn = Turn(safeRequest.copyOf(), ownedDescriptors, firstTurn = false)
         if (!activeTurn.compareAndSet(null, turn)) {
             turn.dispose(cancelWorkers = true)
-            failSession(AiErrorCode.PROTOCOL_VIOLATION, "An local AI turn is already active")
+            failSession(AiErrorCode.PROTOCOL_VIOLATION, "An AI turn is already active")
             return
         }
         turn.start()
@@ -171,7 +168,7 @@ internal class RemoteThreeStoneAiSession(
                 AiCommonCodec.encodeError(
                     AiError(
                         code = AiErrorCode.PROVIDER_UNAVAILABLE,
-                        message = "local AI provider already has an active session",
+                        message = "AI provider already has an active session",
                         retryDisposition = AiRetryDisposition.EXPLICIT_NEW_REQUEST_ONLY,
                     ),
                 ),
@@ -187,11 +184,20 @@ internal class RemoteThreeStoneAiSession(
             turn.ensureActive()
             val request = turn.decodedRequest.getOrThrow()
             requireProtocolAndSurface(request)
-            AiProviderQuotaPolicy.validateRequest(
+            val quota = AiProviderQuotaPolicy.validateRequest(
                 request = request,
                 provider = ThreeStoneAiPlugin.capabilities,
                 descriptorCount = turn.descriptors.count,
             )
+            try {
+                TargetRequestPolicy.requireSupported(
+                    target = aiBackend.catalog().requireTarget(request.targetId),
+                    request = request,
+                    quota = quota,
+                )
+            } catch (_: AiTargetUnavailableException) {
+                throw TargetUnavailable()
+            }
             val materialized = PayloadMaterializer.materializeRequest(
                 request,
                 turn.descriptors::readDeclaredBytes,
@@ -204,12 +210,12 @@ internal class RemoteThreeStoneAiSession(
                 try {
                     aiBackend.createSession(
                         AiBackendSessionRequest(
-                            targetId = AiTargetIds.local(request.modelId),
+                            targetId = request.targetId,
                             executionProfileId = request.options.backendProfile,
                         ),
                     )
                 } catch (_: AiTargetUnavailableException) {
-                    throw ModelUnavailable()
+                    throw TargetUnavailable()
                 }.also { created ->
                     if (closed.get() || !backendSession.compareAndSet(null, created)) {
                         runCatching(created::close)
@@ -237,19 +243,19 @@ internal class RemoteThreeStoneAiSession(
         } catch (_: SessionStopped) {
             Unit
         } catch (_: UnsupportedProtocol) {
-            turn.fail(AiErrorCode.UNSUPPORTED_PROTOCOL, "local AI protocol version is unsupported")
+            turn.fail(AiErrorCode.UNSUPPORTED_PROTOCOL, "AI protocol version is unsupported")
         } catch (_: UnsupportedSurface) {
-            turn.fail(AiErrorCode.UNSUPPORTED_CAPABILITY, "local AI request capability is unsupported")
-        } catch (_: ModelUnavailable) {
-            turn.fail(AiErrorCode.MODEL_UNAVAILABLE, "The selected local AI model is unavailable")
+            turn.fail(AiErrorCode.UNSUPPORTED_CAPABILITY, "AI request capability is unsupported")
+        } catch (_: TargetUnavailable) {
+            turn.fail(AiErrorCode.TARGET_UNAVAILABLE, "The selected AI target is unavailable")
         } catch (_: IllegalArgumentException) {
-            turn.fail(AiErrorCode.INVALID_REQUEST, "local AI request is invalid")
+            turn.fail(AiErrorCode.INVALID_REQUEST, "AI request is invalid")
         } catch (_: IllegalStateException) {
             if (turn.isActive) {
-                turn.fail(AiErrorCode.PROTOCOL_VIOLATION, "local AI session state is invalid")
+                turn.fail(AiErrorCode.PROTOCOL_VIOLATION, "AI session state is invalid")
             }
         } catch (_: Throwable) {
-            if (turn.isActive) turn.fail(AiErrorCode.PROVIDER_FAILED, "local AI provider failed")
+            if (turn.isActive) turn.fail(AiErrorCode.PROVIDER_FAILED, "AI provider failed")
         }
     }
 
@@ -262,8 +268,6 @@ internal class RemoteThreeStoneAiSession(
         require(request.providerId == ThreeStoneAiPlugin.PROVIDER_ID) { "Provider ID does not match" }
         val options = request.options
         if (
-            (options.backendProfile != AiProviderBackendProfile.CPU &&
-                request.protocolVersion < AiProviderProtocol.PROTOCOL_V1_3) ||
             options.includeReasoning ||
             options.maximumToolRounds != 0 ||
             (!options.structuredJson && options.responseMimeType != AiProviderMimeType.PLAIN) ||
@@ -295,7 +299,7 @@ internal class RemoteThreeStoneAiSession(
         } else {
             require(request.messages.size == 1 && request.messages.single().role == AiMessageRole.USER)
             require(fixedConfiguration.get() == configuration) {
-                "Persistent local AI session configuration changed between turns"
+                "Persistent AI session configuration changed between turns"
             }
         }
     }
@@ -342,7 +346,7 @@ internal class RemoteThreeStoneAiSession(
                 AiCommonCodec.encodeError(
                     AiError(
                         code = AiErrorCode.PROVIDER_UNAVAILABLE,
-                        message = "The persistent local AI session is closed",
+                        message = "The persistent AI session is closed",
                         retryDisposition = AiRetryDisposition.EXPLICIT_NEW_REQUEST_ONLY,
                     ),
                 ),
@@ -392,7 +396,7 @@ internal class RemoteThreeStoneAiSession(
         val future = try {
             worker.submit(block)
         } catch (_: RejectedExecutionException) {
-            turn.fail(AiErrorCode.PROVIDER_FAILED, "local AI worker is unavailable")
+            turn.fail(AiErrorCode.PROVIDER_FAILED, "AI worker is unavailable")
             return false
         }
         turn.futures += future
@@ -476,7 +480,7 @@ internal class RemoteThreeStoneAiSession(
             terminalCause.compareAndSet(TerminalCause.NONE, TerminalCause.USER_CANCEL)
             failTurn(
                 this,
-                AiError(AiErrorCode.CANCELLED, "local AI generation was cancelled"),
+                AiError(AiErrorCode.CANCELLED, "AI generation was cancelled"),
                 cancelled = true,
             )
         }
@@ -492,7 +496,7 @@ internal class RemoteThreeStoneAiSession(
                 sessionId = persistentSessionId.get() ?: sessionId,
                 protocolVersion = request.protocolVersion,
                 providerId = ThreeStoneAiPlugin.PROVIDER_ID,
-                modelId = request.modelId,
+                targetId = request.targetId,
                 firstChunkSequence = 0L,
                 effectiveMaximumOutputBytes = request.options.maximumOutputBytes,
                 effectiveMaximumToolRounds = 0,
@@ -505,7 +509,7 @@ internal class RemoteThreeStoneAiSession(
             val hitLimit = try {
                 output.append(text)
             } catch (_: Throwable) {
-                fail(AiErrorCode.PROVIDER_FAILED, "local AI output is invalid")
+                fail(AiErrorCode.PROVIDER_FAILED, "AI output is invalid")
                 return
             }
             scheduleDrain()
@@ -594,14 +598,14 @@ internal class RemoteThreeStoneAiSession(
 
         private fun finishCompleted() {
             val request = requestHint
-                ?: return fail(AiErrorCode.INVALID_REQUEST, "local AI request is invalid")
+                ?: return fail(AiErrorCode.INVALID_REQUEST, "AI request is invalid")
             val snapshot = runCatching { output.snapshot() }.getOrElse {
-                return fail(AiErrorCode.PROVIDER_FAILED, "local AI output finalization failed")
+                return fail(AiErrorCode.PROVIDER_FAILED, "AI output finalization failed")
             }
             val bytes = snapshot.text.toByteArray(Charsets.UTF_8)
             val usage = if (request.options.reportUsage) {
                 generationStatistics.get()?.toAiUsage()
-                    ?: return fail(AiErrorCode.PROVIDER_FAILED, "local AI usage is unavailable")
+                    ?: return fail(AiErrorCode.PROVIDER_FAILED, "AI usage is unavailable")
             } else {
                 null
             }
@@ -628,7 +632,7 @@ internal class RemoteThreeStoneAiSession(
                     effectiveMaximumOutputBytes = request.options.maximumOutputBytes,
                 )
             } catch (_: Throwable) {
-                return fail(AiErrorCode.PROVIDER_FAILED, "local AI completion validation failed")
+                return fail(AiErrorCode.PROVIDER_FAILED, "AI completion validation failed")
             }
             if (!terminal.compareAndSet(false, true)) return
             val encodedUsage = usage?.let(AiCommonCodec::encodeUsage)
@@ -659,14 +663,14 @@ internal class RemoteThreeStoneAiSession(
                             terminalCause.compareAndSet(cause, TerminalCause.TIMEOUT)
                         ) {
                             requestBackendCancel()
-                            fail(AiErrorCode.TIMEOUT, "local AI request timed out")
+                            fail(AiErrorCode.TIMEOUT, "AI request timed out")
                         }
                     },
                     timeoutMillis,
                     TimeUnit.MILLISECONDS,
                 )
             } catch (_: RejectedExecutionException) {
-                fail(AiErrorCode.PROVIDER_FAILED, "local AI timeout scheduler is unavailable")
+                fail(AiErrorCode.PROVIDER_FAILED, "AI timeout scheduler is unavailable")
                 return
             }
             if (!timeoutFuture.compareAndSet(null, scheduled) || !isActive) scheduled.cancel(false)
@@ -683,7 +687,7 @@ internal class RemoteThreeStoneAiSession(
     private data class FixedConfiguration(
         val protocolVersion: AiProtocolVersion,
         val providerId: String,
-        val modelId: String,
+        val targetId: String,
         val maximumOutputBytes: Long,
         val maximumOutputTokens: Long?,
         val reportUsage: Boolean,
@@ -702,7 +706,7 @@ internal class RemoteThreeStoneAiSession(
             ) = FixedConfiguration(
                 protocolVersion = request.protocolVersion,
                 providerId = request.providerId,
-                modelId = request.modelId,
+                targetId = request.targetId,
                 maximumOutputBytes = request.options.maximumOutputBytes,
                 maximumOutputTokens = request.options.maximumOutputTokens,
                 reportUsage = request.options.reportUsage,
@@ -721,5 +725,5 @@ internal class RemoteThreeStoneAiSession(
     private class SessionStopped : RuntimeException()
     private class UnsupportedProtocol : RuntimeException()
     private class UnsupportedSurface : RuntimeException()
-    private class ModelUnavailable : RuntimeException()
+    private class TargetUnavailable : RuntimeException()
 }

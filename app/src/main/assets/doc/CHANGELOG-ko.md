@@ -6,16 +6,16 @@
 
 # v1.1.0
 
-###### 2026/08/24
+###### 2026/08/25
 
 * `기능` AutoJs6 공식 로컬 AI 플러그인의 브랜드와 런타임 식별자를 3-Stone AI로 통일
 * `기능` 프로세스 간 통합에 중립적인 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 및 `IAiProvider`/`IAiSession`/`IAiCallback` 식별자를 사용하고 교체된 식별자의 alias는 유지하지 않음
-* `기능` AutoJs6 `ai.ask`/`ai.chat`/`ai.stream`의 `plugin: true` 축약 선택자 및 `ai.models` 모델 열거 지원
-* `기능` AI Provider 프로토콜 1.1을 통해 `temperature`, `topK`, `topP`, `maxTokens`를 LiteRT-LM sampling 및 출력 token 제어까지 전달
+* `기능` AI Provider V2 페이지형 target catalog를 통해 `local:*` 및 `profile:*`을 직접 공개하고 각 target의 provider/model/locality, 구성 및 가용 상태, capabilities, limits, controls, HTTPS origins를 독립적으로 선언
+* `기능` AI Provider V2 생성 요청을 통해 `temperature`, `topK`, `topP`, `maxTokens`를 LiteRT-LM sampling 및 출력 token 제어까지 전달
 * `기능` LiteRT-LM의 정확한 입력, 출력, 전체 token 수와 공급자 측에서 측정한 생성 시간을 `ai.chat().usage` 및 스트림 usage 이벤트로 보고
-* `기능` AI Provider 프로토콜 1.2 영구 세션과 AutoJs6 `ai.session` 여러 턴 Conversation 재사용을 추가하여 이전 기록 재전송 제거
+* `기능` AI Provider V2 영구 세션과 AutoJs6 `ai.session` 여러 턴 Conversation 재사용을 추가하여 이전 기록 재전송 제거
 * `기능` AutoJs6 `structuredJson`과 `responseSchema`를 통한 LiteRT-LM 네이티브 JSON Schema 제약 디코딩을 추가하고 단일 호출, 스트리밍, 영구 세션 및 완성 JSON의 엄격한 검증을 지원
-* `기능` 프로토콜 1.3과 AutoJs6 생성 옵션을 통한 명시적 `cpu`, `gpu`, `npu` backend profile, 기기 호환성 보고, 모델/profile별 캐시 격리 및 사용 불가 profile의 CPU fallback 금지; GPU는 OpenCL 로드 검사 성공 후에만 선언하고 NPU는 EAP runtime 미포함으로 사용 불가 유지
+* `기능` 명시적 `cpu`, `gpu`, `npu` backend profile을 AI Provider V2 선택형 target control로 제공하며 기기 호환성 보고, 모델/profile별 캐시 격리 및 사용 불가 profile의 CPU fallback 금지; GPU는 OpenCL 로드 검사 성공 후에만 선언하고 NPU는 EAP runtime 미포함으로 사용 불가 유지
 * `기능` 고정 LiteRT Community 모델을 사용자가 선택한 SAF 위치로 직접 다운로드하고 진행률, 정확한 취소, 불완전 파일 정리, LiteRT-LM 헤더 및 정확한 크기/SHA-256 검증, 다운로드 후 직접 가져오기를 지원
 * `기능` 런처에서 여는 대화 작업 공간에 스트리밍 Markdown, 영구 기록, 이전 메시지 편집 시 분기 교체 경고, 다중 결과 검색, 키보드 대응 입력을 추가
 * `기능` 테마 색상, 다크 모드, 앱 언어, 앱 및 개발자 정보, 버전 기록을 위한 앱 설정을 추가하고 가능한 항목의 기본값을 AutoJs6 따르기로 지정
@@ -23,29 +23,29 @@
 * `기능` 스트리밍 중 인라인 `$\text{...}$` 콘텐츠를 렌더링하고 일반 수학 명령과 위 첨자 및 아래 첨자 스타일을 지원
 * `기능` 플러그인이 관리하는 Android Keystore 자격 증명 저장소를 추가하고 AES-256-GCM, profile에 바인딩된 인증 암호문, 프로세스 간 원자적 비공개 파일, configured 상태만 조회 및 평문 즉시 삭제를 지원
 * `기능` HTTPS 전용 OpenAI Compatible endpoint를 위한 엄격한 비밀정보 비포함 온라인 profile 저장소를 추가하고 canonical UUID, 프로세스 간 원자적 metadata, provider 또는 origin 변경 시 자격 증명의 명시적 교체 또는 삭제를 강제
-* `기능` 사용자 지정 baseUrl, 자격 증명, 모델 profile을 위한 플러그인 내부 OpenAI Compatible HTTPS 실행 backend를 추가하고 제한된 SSE 및 JSON fallback 스트리밍, 정확한 취소, provider usage, 완료된 턴만의 영구 기록, JSON Schema 요청 mapping, 민감 정보 없는 고정 오류를 지원; AI Provider V1 호스트 라우팅은 계속 로컬 target만 공개
+* `기능` 사용자 지정 baseUrl, 자격 증명, 모델 profile을 위한 플러그인 내부 OpenAI Compatible HTTPS 실행 backend를 추가하고 제한된 SSE 및 JSON fallback 스트리밍, 정확한 취소, provider usage, 완료된 턴만의 영구 기록, JSON Schema 요청 mapping, 민감 정보 없는 고정 오류를 지원; 구성된 `profile:*` target이 AI Provider V2를 통해 직접 호출
 * `기능` 호스트 카탈로그와 정렬된 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 프리셋을 추가; 통합 온라인 실행 계층은 OpenAI-compatible 프로토콜을 재사용하고 Anthropic Messages와 Gemini GenerateContent 고유의 인증, 요청, SSE 종료, usage, JSON Schema를 각각 어댑트하며 프로토콜 간 또는 로컬/온라인 자동 fallback은 제공하지 않음
-* `기능` 10개 언어 온라인 서비스 설정 UI를 추가하여 profile 추가, 편집, 삭제, API 키 비노출 교체 및 지우기, 기본 대상 선택, 자격 증명 접근 전 종량제 네트워크 허용 적용, 취소 가능한 최대 120초 명시 연결 테스트를 지원; 설정은 프로세스 간 원자 문서를 공유하며 AI Provider V1은 계속 로컬 전용
+* `기능` 10개 언어 온라인 서비스 설정 UI를 추가하여 profile 추가, 편집, 삭제, API 키 비노출 교체 및 지우기, 기본 대상 선택, 자격 증명 접근 전 종량제 네트워크 허용 적용, 취소 가능한 최대 120초 명시 연결 테스트를 지원; 설정은 프로세스 간 원자 문서를 공유하고 V2 target catalog를 동적으로 갱신
 * `기능` 런처 채팅에 통합 로컬/클라우드 대상 선택기를 추가: 각 대화는 하나의 대상 스냅샷을 저장하고, 메시지가 있는 대화의 전환은 새 대화를 권장하며, 기존 문맥으로 계속하려면 명시적 확인과 변경 기록이 필요
 * `기능` 각 어시스턴트 응답에 실제 target/provider/model/locality 스냅샷을 추가: 다시 생성은 기록된 응답 대상을 정확히 재사용하며 대상 정체성이 바뀌거나 사용할 수 없으면 명확히 실패하고 현재 대화 대상으로 자동 대체하지 않음
 * `기능` 로컬 및 클라우드 생성 실패를 선택된 경계에 유지: 런처 chat은 민감한 정보가 없는 제한된 실패 원인을 추가하고 경계를 넘는 자동 대체가 없었음을 명시하며 부분 출력을 유지한 채 명시적인 수동 대상 전환을 제공
 * `수정` 실행 가능한 안내 예제의 암묵적 256 token 및 4 KiB 출력 제한을 제거하여 `maxTokens` 생략 시 모델 또는 engine 기본값을 사용하고 raw Binder 예제는 provider의 전체 64 KiB 출력 허용량을 사용하도록 수정
-* `수정` 10개 언어로 현지화된 플러그인 안내의 저수준 Binder 예제가 프로토콜 1.1의 14개 인자 `AiGenerationOptions` 생성자를 계속 호출하여 프로토콜 1.3 API에서 실패하던 문제 수정
+* `수정` 10개 언어로 현지화된 플러그인 안내의 저수준 Binder 예제를 최종 AI Provider V2 요청 및 target 목록 API로 갱신
 * `수정` 시스템 다크 모드에서도 모델 관리 화면이 라이트 테마 텍스트 색상을 유지해 본문, 체크박스, 모델 행을 어두운 배경에서 읽을 수 없던 문제 수정
 * `수정` 작성 영역을 소프트 키보드 위에 유지하고 활성 테마 색상 대비에 따라 보내기 버튼 글자색을 선택하며 이전, 다음, 닫기 검색 컨트롤을 통일
 * `수정` 생성 listener callback 안에서 session을 close할 때 callback quiescence가 자기 자신을 무한히 기다리던 교착을 수정; close는 다른 스레드에서 이미 실행 중인 callback을 계속 대기
 * `수정` Android가 신뢰된 `/data/user/0` 앱 데이터 루트를 `/data/data`로 canonicalize할 때 앱 비공개 온라인 profile 및 자격 증명 저장소를 잘못 거부하던 문제를 수정; 직접 자식 링크와 containment 이탈은 계속 거부
-* `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 로컬 플러그인 경로 정식화에 맞게 갱신
+* `개선` 플러그인 설명, 사용 안내 및 10개 언어 README를 호스트 `ai.*` 통합 target 경로 정식화에 맞게 갱신
 * `개선` ROADMAP을 항목별로 체크 가능한 기능 로드맵으로 재작성
 * `개선` 앱과 생성된 현지화 문서의 문장 부호를 ASCII로 통일하고 패키지 및 생성 문서를 검사하는 회귀 테스트를 추가
 * `개선` 공유 `AiBackend`/`AiTarget`/`AiBackendSession` 계층을 도입해 런처 채팅과 Binder provider가 `LiteRtLocalBackend`의 catalog, capabilities, session 생성, streaming 및 취소 경로를 공유
-* `개선` 로컬 `local:*` 및 온라인 `profile:*` target을 Application 수준의 단일 catalog와 dispatcher로 통합; V1 모델 목록은 로컬 전용으로 유지하며 HTTPS 실행 transport 구현 전까지 온라인 target을 unavailable로 정확히 표시
+* `개선` 로컬 `local:*` 및 온라인 `profile:*` target을 Application 수준의 단일 catalog와 dispatcher로 통합하고 AI Provider V2에서 둘 다 직접 공개; 현재 catalog에서 provider locality, credential mode, HTTPS origins를 동적으로 도출하며 자격 증명 byte는 공개하지 않음
 
 # v1.0.0
 
 ###### 2026/08/08
 
-* `기능` 플러그인 ID 및 엔진 `three-stone-ai`, provider ID `autojs6.three-stone-ai`, 변형 `default`인 기기 내 AI Provider 프로토콜 V1 provider
+* `기능` 플러그인 ID 및 엔진 `three-stone-ai`, provider ID `autojs6.three-stone-ai`, 변형 `default`인 기기 내 AI Provider 기반
 * `기능` System, user 및 assistant 기록과 credit 제어 스트리밍을 지원하는 CPU-only LiteRT-LM 일반 텍스트 생성
 * `기능` 8 GiB 상한, 여유 공간 예약, SHA-256, fsync 및 원자적 활성화를 포함한 `.litertlm`의 앱 전용 저장소 SAF 가져오기
 * `기능` 단일 활성 세션, 제한된 I/O, descriptor quota, 취소, timeout, 단일 종료 상태 및 동일 서명 AutoJs6 호출자 검증

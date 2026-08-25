@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "語言",
   "p_languages_all_supported_for_readme": "目前 README.md 支援以下語言",
   "h3_introduction": "簡介",
-  "p_introduction": "3-Stone AI 是 AutoJs6 的官方 AI 文字生成外掛. 它在明確選擇的 CPU 或相容 GPU backend 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段回傳純文字或受 schema 約束的 JSON 文字. 目前 AI Provider V1 宿主呼叫僅使用這些本機目標, 不連網也不上傳資料. 外掛設定可管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 與自訂 OpenAI Compatible profile, 加密憑證, 預設線上目標, 計量網路存取與明確連線測試. 啟動器聊天可將每個對話明確綁定到本機或已設定的線上目標; AI Provider V1 宿主 API 仍僅公開本機目標.",
+  "p_introduction": "3-Stone AI 是 AutoJs6 的官方 AI 文字生成外掛. 它可在明確選擇的 CPU 或相容 GPU backend 上執行使用者匯入的 LiteRT-LM 模型, 並且只連接使用者設定的線上 profile. 本機與線上執行位置共用一個 AI Provider V2 目標目錄, 受控串流管線及明確選擇邊界. 本機目標絕不連網或上傳資料; 線上目標僅在使用者明確選擇後執行, 且始終綁定外掛管理的憑證及其宣告的 HTTPS origin.",
   "h3_functions": "功能",
   "features": [
     "透過 Android 系統檔案選擇器匯入 `.litertlm` 模型套件, 並將驗證後的副本儲存到應用程式私人儲存空間.",
@@ -30,12 +30,12 @@
   "p_formats": "版本 1 僅宣告以下模型和文字範圍",
   "h3_plugin_interface": "外掛介面",
   "p_plugin_interface": "主程式透過以下識別發現並呼叫外掛",
-  "p_plugin_scope": "公開的 AI Provider V1 表面宣告 ON_DEVICE 執行位置和 NONE credential 模式. 它宣告 `streaming`, `usage`, `persistent-session` 與 `structured-json` 能力, 接受 `text/plain` 訊息輸入和 `application/json` 回應 schema, 並輸出 `text/plain` 或 `application/json` 文字. 協議 1.3 新增明確 backend profile 與裝置級可用性, 並禁止靜默回退 CPU. 外掛內部 REMOTE 目標不會透過 V1 公布.",
+  "p_plugin_scope": "AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 每個目標分別宣告 provider, model, locality, 設定及可用狀態, 能力, 限制, 控制項與 HTTPS origins. 目錄僅含本機目標時宣告 ON_DEVICE/NONE; 存在線上 profile 時宣告 HYBRID/PLUGIN_MANAGED 及其 HTTPS origins 精確聯集. 本機 backend profile 是可選目標控制項, 不可用 profile 或目標絕不靜默回退.",
   "p_plugin_packaging": "需要主程式建置版本 {{ required_host_build }} 或更高版本. 發布產物包含 {{ supported_abis }} APK.",
   "h3_host_integration_status": "主程式整合狀態",
-  "p_host_integration_status": "AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat` 與 `ai.stream` 支援本機外掛路由. `ai.session({ plugin: true })` 可建立持久多輪 Conversation, 後續 `ask`, `chat` 與 `stream` 呼叫只傳送新的使用者提示詞. `ai.ask(messages, { plugin: true })` 會依序保留純文字 `system`, `user` 與 `assistant` 訊息, 且最後一則訊息必須為 `user`. `ai.chat` 會在 `usage` 回傳精確 token 數, 並在 `usage.raw.durationMillis` 回傳實測生成耗時; `ai.stream` 會在完成前傳送同一份累計 usage. 傳入 `plugin: true` 即選擇本外掛, 單模型場景可省略模型 ID; `ai.models({ plugin: true })` 可列舉已匯入模型與 `backendProfiles`. 生成選項接受 `backend: 'cpu' | 'gpu' | 'npu'`; 不可用 profile 會明確失敗且絕不回退 CPU. 外掛未安裝, 未在外掛中心啟用或未匯入模型時, 指令碼會收到明確的錯誤提示. 亦可透過 `plugin: { component, providerId, modelId }` 顯式固定元件. `responseSchema` 會隱式啟用結構化輸出; 僅設定 `structuredJson: true` 時使用預設的物件根 schema. `ai.ask` 和 `ai.chat().text` 仍回傳 JSON 文字, 串流 delta 是未完整的 JSON 片段, 持久工作階段則在所有輪次固定使用同一 schema 與 backend.",
+  "p_host_integration_status": "AutoJs6 (組建 5276 及以上) 的 `ai.ask`, `ai.chat`, `ai.stream` 與 `ai.session` 透過 AI Provider V2 目標目錄同時呼叫已匯入本機模型及已設定線上 profile. 有序純文字 `system`, `user` 與 `assistant` 歷史會被保留, 持久工作階段後續輪次只傳送新的使用者提示詞, usage 包含精確 token 數及提供端實測耗時. 傳入 `plugin: true` 即選擇本外掛; 僅當目錄只有一個目標時才可省略模型 ID. 在 `ai.catalog()` 取代目前公開目錄 API 前, `ai.models({ plugin: true })` 會按模型投影全部本機及線上目標, `backendProfiles` 僅屬於本機目標. `plugin: { component, providerId, modelId }` 必須唯一解析到一個目標. 省略 `backend` 時使用目標預設值: 本機目標選擇 CPU, 線上目標不使用本機執行 profile. 顯式 `cpu`, `gpu` 或 `npu` 僅適用於本機目標; 不可用 profile 會失敗且不回退. 外掛缺失, 停用及目標未設定, 不可用或不唯一均會回傳明確錯誤. `responseSchema` 會隱式啟用結構化輸出; 僅設定 `structuredJson: true` 時使用預設物件根 schema. 完成呼叫回傳 JSON 文字, 串流 delta 可能是未完整 JSON 片段, 持久工作階段在所有輪次固定同一目標, schema 與可選 backend.",
   "h3_security": "安全性和隱私",
-  "p_security": "外掛為使用者主動發起的推薦模型下載及使用者設定的線上目標請求 `INTERNET` 權限; 目前 V1 本機生成不使用網路. 外掛不要求廣泛儲存權限. 目錄下載使用不可變 HTTPS 版本及固定位元組數與 SHA-256, 僅寫入使用者選擇的 SAF 位置; LiteRT-LM 檔頭, 大小, 摘要, flush 與 fsync 全部通過後才算完成. 匯入仍只讀取系統選擇器授予的 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬及雙方簽章.",
+  "p_security": "外掛為使用者主動發起的推薦模型下載及使用者設定的線上目標請求 `INTERNET` 權限; 本機生成不使用網路. 外掛不要求廣泛儲存權限. 目錄下載使用不可變 HTTPS 版本及固定位元組數與 SHA-256, 僅寫入使用者選擇的 SAF 位置; LiteRT-LM 檔頭, 大小, 摘要, flush 與 fsync 全部通過後才算完成. 匯入仍只讀取系統選擇器授予的 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬, 雙方簽章, 目標中繼資料及宣告來源邊界.",
   "h3_security_limits": "執行限制",
   "security_limits": [
     "模型匯入硬上限為 8 GiB, 且匯入後至少保留 256 MiB 可用空間.",
@@ -57,7 +57,7 @@
   "unsupported_capabilities": [
     "不宣告 reasoning 或 tools 能力.",
     "不接受 tool 角色訊息, tool schema, tool call 或 tool result.",
-    "不提供連網模型探索或任意 URL 模型下載. 啟動器聊天僅公開已匯入本機模型與使用者明確設定的線上 profile; AI Provider V1 宿主路由仍僅限本機目標, 且只能下載內建目錄中固定版本的推薦模型.",
+    "不提供連網模型探索或任意 URL 模型下載. 啟動器聊天與 AI Provider V2 僅公開已匯入本機模型及使用者明確設定的線上 profile, 且只能下載內建目錄中固定版本的推薦模型.",
     "不宣告 NPU 推論可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 僅在 `libOpenCL.so` 可載入時宣告, 且 `.litertlm` 副檔名本身仍不保證模型初始化成功."
   ],
   "h3_roadmap": "路線圖",

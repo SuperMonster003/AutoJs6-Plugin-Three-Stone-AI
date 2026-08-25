@@ -72,10 +72,10 @@
 
 - [x] 引入 `AiBackend` / `AiBackendSession` 通用抽象 (catalog / capabilities / createSession / stream / cancel), 现有 LiteRT 原生会话逻辑收敛到 `LiteRtLocalBackend`, 不重写; 启动器聊天与独立 `:provider` 进程的 Binder Service 共用同一 backend 实现及会话路径, 各进程实例由 Application 持有.
 - [x] 建立 `AiTarget` / `AiTargetCatalog` 值模型: 已导入本地模型统一映射为 `local:*` target, 含 targetId, backend/provider/model, locality, configured/available, capabilities, 执行 profile 与上下文/输出上限.
-- [x] 在线配置档案领域与目录层: 严格有界且不含凭据的 JSON, canonical UUID, HTTPS-only base URL, provider/origin 变更时强制明确替换或清除凭据, 跨进程锁 + fsync + 原子发布; 档案映射为 `profile:*` REMOTE/PLUGIN_MANAGED target 并与 `local:*` 合入 Application 级统一目录及会话分发. HTTP 执行器落地前在线 target 如实保持 `available=false`, Binder V1 模型列表仍仅公开本地模型.
+- [x] 在线配置档案领域与目录层: 严格有界且不含凭据的 JSON, canonical UUID, HTTPS-only base URL, provider/origin 变更时强制明确替换或清除凭据, 跨进程锁 + fsync + 原子发布; 档案映射为 `profile:*` REMOTE/PLUGIN_MANAGED target 并与 `local:*` 合入 Application 级统一目录及会话分发. Binder V2 目标目录直接公开本地与在线目标的非敏感元数据.
 - [x] 插件自有凭据仓库: Android Keystore AES-256-GCM 主密钥, 与 profile 绑定的认证密文, 应用私有 hash 文件名, fsync + 原子 rename, 进程内互斥 + 跨进程文件锁; 对外仅查询 configured, 插件内部仅在同步回调中短暂解密并在成功或异常后立即清零, 固定错误消息不携带底层敏感原因.
 - [ ] 在线档案与凭据真机安全冒烟: 验证默认进程写入后 `:provider` 可读取一致的非敏感档案与凭据状态, 并覆盖跨进程替换/清除, provider/origin 变更时的凭据重录, 进程终止重启, 锁屏重启, 元数据/密文损坏及清除应用数据后的 fail-closed 行为. (需真机, 由维护者执行)
-- [x] OpenAI Compatible Backend (自定义 baseUrl + key + 模型名): Application 级执行器通过统一 `AiBackendSession` 提供完成轮次多轮历史, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, JSON Schema 请求映射及固定且不含敏感信息的错误; 仅访问 profile 声明的 HTTPS 来源, 禁止重定向, 自动重试, cookie, cache, authenticator 及请求观察器, 不提供本地/在线自动回退. AI Provider V1 宿主路由仍按设计仅公开本地模型.
+- [x] OpenAI Compatible Backend (自定义 baseUrl + key + 模型名): Application 级执行器通过统一 `AiBackendSession` 提供完成轮次多轮历史, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, JSON Schema 请求映射及固定且不含敏感信息的错误; 仅访问 profile 声明的 HTTPS 来源, 禁止重定向, 自动重试, cookie, cache, authenticator 及请求观察器, 不提供本地/在线自动回退. AI Provider V2 按 `profile:*` target 精确路由在线执行.
 - [ ] OpenAI Compatible 真机互通与安全冒烟: 使用维护者控制的 HTTPS 测试 endpoint 验证自定义 baseUrl/key/model, SSE 与 JSON 回退, 长响应取消, 401/403/429/5xx, malformed/oversized response, profile/key 并发替换, 进程终止及网络切换. (需真机与测试凭据, 由维护者执行)
 - [x] 预置提供方模板: OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter 与宿主现有在线目录顺序及默认 baseUrl 对齐; 模型 ID 仍由 profile 明确填写. OpenAI/DeepSeek/OpenRouter 复用 OpenAI-compatible 格式, Anthropic Messages 与 Gemini GenerateContent 各自使用原生请求, 认证, SSE 终态, usage 与 JSON Schema 映射; 通用在线执行层不提供协议间或本地/在线自动回退. [开发契约](docs/dev/online-provider-backend.md)
 - [x] 在线服务设置页实现与离线验收: 10 语言配置档案添加/编辑/删除, 不回显 Key 的替换与清除, 默认在线目标选择, 实际执行前生效的移动/计量网络开关, 用户确认且可取消的 120 秒有界连接测试; 非敏感设置与档案共用 schema 2 跨进程原子文档, 未发布项目不保留 schema 1 兼容读取. [开发契约](docs/dev/online-provider-backend.md)
@@ -84,22 +84,22 @@
 - [x] 会话历史逐条保存实际 target/provider/model/locality 快照; "重新生成" 默认沿用原响应目标. 历史格式直接升级为 version 3, assistant 消息强制保存 backend 实际目标, 精确重新生成允许显示名变更但拒绝 provider/model/locality 漂移, 且不回退到会话默认目标. G8441 / Android 9 已在同一 PoloAPI Cloud target 上完成首次生成与重新生成, 两次响应均成功且目标保持 `OpenAI Compatible / PoloAPI / claude-opus-4-8`.
 - [x] 会话界面常显目标徽标: Local/Cloud, 提供方, 模型名; 次要信息展示 usage 与耗时, 在线目标标注可能产生费用. G8441 / Android 9 已验证 Cloud 目标栏常显完整身份, 首次生成显示 `18788 input | 106 output | 8.0 s`, 重新生成显示 `18786 input | 212 output | 6.0 s`; 在线费用提示已随目标选择器真机验收.
 - [x] 失败不静默跨界: 本地失败绝不自动转在线, 在线失败绝不自动转本地; 均给出明确错误与手动切换入口. Unified dispatcher 仅调用 targetId 的唯一 owner, 双向失败测试确认另一 backend 的会话创建次数保持为 0; 聊天按响应 target 的 Local/Cloud 边界追加有界且不含底层敏感详情的原因, 明示未自动跨界, 保留失败前的部分输出, 并在失败消息下提供可点击的手动目标选择入口. G8441 / Android 9 已在存在可用本地 Gemma target 时断网触发 PoloAPI Cloud 失败, 验证目标仍保持 Cloud, 明确显示无可用网络及未自动选择本地目标, 点击失败入口可打开仍以 PoloAPI 为当前项的手动选择器. 本地破坏性失败没有安全复现条件, 因此以双向确定性 owner-failure 测试覆盖, 不为勾选而损坏模型或私有配置.
-- [x] 统一流式管线: 在线与本地共用 Markdown 渲染, 取消, 重试, usage 与错误展示; 插件 UI 与 Binder Service 调用同一 `AiBackend` 层. 代码审计与离线回归确认 Application 级 `CompositeAiBackend` 是两个入口唯一的 backend 边界, 首轮/续轮统一使用 `GenerationListener` 与 `GenerationStatistics`, UI 统一进入 Markdown/完成/失败状态机, Binder V1 会话统一映射 chunk/usage/终态; `cancelAndClose` 契约保证取消异常也不会跳过资源释放, 架构测试禁止两个入口重新直接构造本地或在线实现. G8441 / Android 9 已覆盖 PoloAPI Cloud 首次生成, 重新生成, usage/耗时与失败展示; 同一设备随后以 Local `gemma-4-E2B-it-litert-lm.litertlm` 流式生成 30 项 Markdown 内容, 中止后保留已到达的 1-4 项并显示 `Generation stopped`, 再从同一响应重新生成完成 30 项且显示 `42 input | 543 output | 242.7 s`. 本地和在线均未出现迟到终态或跨边界目标切换.
+- [x] 统一流式管线: 在线与本地共用 Markdown 渲染, 取消, 重试, usage 与错误展示; 插件 UI 与 Binder Service 调用同一 `AiBackend` 层. 代码审计与离线回归确认 Application 级 `CompositeAiBackend` 是两个入口唯一的 backend 边界, 首轮/续轮统一使用 `GenerationListener` 与 `GenerationStatistics`, UI 统一进入 Markdown/完成/失败状态机, Binder V2 会话统一映射 text/reasoning/toolCall/usage/finishReason 及 completed/failed/cancelled 唯一终态; `cancelAndClose` 契约保证取消异常也不会跳过资源释放, 架构测试禁止两个入口重新直接构造本地或在线实现. G8441 / Android 9 已覆盖 PoloAPI Cloud 首次生成, 重新生成, usage/耗时与失败展示; 同一设备随后以 Local `gemma-4-E2B-it-litert-lm.litertlm` 流式生成 30 项 Markdown 内容, 中止后保留已到达的 1-4 项并显示 `Generation stopped`, 再从同一响应重新生成完成 30 项且显示 `42 input | 543 output | 242.7 s`. 本地和在线均未出现迟到终态或跨边界目标切换.
 
 ## P2 通用 AI Provider 协议 V2 (宿主, 中性命名)
 
-- [ ] 将现有中性 `plugin-api/ai-provider-api` 从 V1 模型目录语义扩展到 V2 统一目标语义, 复用 `ai-common-api` 的 locality/credential 定义; 直接升级且不增加旧接口兼容层.
-- [ ] 定义 `AiTargetInfo`: targetId, providerId, profileId, modelId, displayName, locality, capabilities, availability, configured, 上下文/输出上限, supportedControls, declaredOrigins.
-- [ ] 统一 Catalog 接口: 目标目录分页枚举替代 "仅本地模型列表"; 本地 backend profile 降级为可选扩展字段.
-- [ ] 标准化流式事件: text / reasoning / toolCall / usage / finishReason, 与终态语义 (completed / failed / cancelled) 一致化.
-- [ ] 放开 `REMOTE` / `HYBRID` provider: 执行器不再仅接受 ON_DEVICE + NONE; 强制 HTTPS 来源声明校验与 `PLUGIN_MANAGED` 凭据模式, 宿主会话层继续拒收任何凭据字节.
-- [ ] 协议一致性测试: fake provider 扩展 remote/hybrid 用例, descriptor 与信任校验 fail-closed 行为回归.
+- [x] 将中性 `plugin-api/ai-provider-api` 直接升级为 V2 统一目标语义, 复用 `ai-common-api` 的 locality/credential 定义; AIDL, codec, schema, host transport 与真实插件均只保留 V2 接口及名称, 未增加旧接口兼容层.
+- [x] 定义 `AiTargetInfo`: targetId, providerId, profileId, modelId, displayName, locality, capabilities, availability, configured, 上下文/输出上限, supportedControls, declaredOrigins; `local:*` / `profile:*` target 与实际服务 provider 身份彼此独立且分别校验.
+- [x] 统一 Catalog 接口: `listTargets` 及单次消费 continuation token 分页替代仅本地模型目录; 本地 backend profile 为可选目标扩展, 真实插件直接枚举 Application 级统一目录.
+- [x] 标准化流式事件: chunk 中分别承载 text/reasoning, toolCall 与 usage 独立事件, completion 强制携带 finishReason 及已校验的最终聚合输出; completed/failed/cancelled 由唯一终态 gate 管理, 无载荷完成兼容入口已移除.
+- [x] 放开 `REMOTE` / `HYBRID` provider: 宿主按目标 locality 与 credentialMode 规划, 远程来源必须属于固定插件描述符声明的 HTTPS origins 且凭据模式必须为 `PLUGIN_MANAGED`; 宿主请求, 计划, cache key, 日志及 Binder 对象均无凭据字节.
+- [x] 协议一致性测试: fake provider 覆盖 local/remote/hybrid/unconfigured target, 目标服务 provider 与 Binder 插件身份解耦, origin/capability/locality 越权, descriptor/UID/FD/终态 hostile 场景及信任校验 fail-closed; 宿主 API, fake conformance, 宿主调用链与真实插件 JVM 测试通过.
 
-## P3 宿主 `ai.*` 全量接通插件
+## P3 宿主 `ai.*` 全量接通插件 (直接替换旧目录 API)
 
-- [ ] `ai.ask/chat/stream/session` 支持统一 `target` 选择器 (`local:*` / `profile:*`); `plugin: true` 直接映射官方默认本地目标.
+- [ ] `ai.ask/chat/stream/session` 支持统一 `target` 选择器 (`local:*` / `profile:*`); `plugin: true` 仅作为选择官方插件默认 target 的简写, 不再限定本地目标.
 - [ ] 新增 `ai.catalog()`: 返回本地与在线全部目标 (id, displayName, provider, model, locality, configured, available, capabilities).
-- [ ] `ai.models()` / `ai.profiles()` / `ai.providers()` / `ai.isConfigured()` 转为统一 Catalog 的兼容视图.
+- [ ] 直接移除 `ai.models()` / `ai.profiles()` / `ai.providers()` / `ai.isConfigured()` 及内部 `AiPluginModelList*` 目录类型, 统一由 `ai.catalog()` 取代; 不保留别名, 兼容视图或旧名称源码.
 - [ ] 插件路由响应补齐 reasoning, toolCalls, finishReason, profile 与完整 usage, 与宿主在线路径能力对称.
 - [ ] 错误码统一: 插件缺失/禁用/协议不兼容/目标未配置返回稳定错误 (如 `AI_PROVIDER_UNAVAILABLE`, `TARGET_NOT_CONFIGURED`), 不静默改路由.
 - [ ] 宿主 d.ts 与 docs.autojs6.com 文档更新 (target 路由完整示例).
@@ -108,15 +108,15 @@
 
 - [ ] 宿主 "AI 服务设置" 页改为插件统一设置入口: 已安装跳插件设置, 未安装/被禁用显示安装或启用引导.
 - [ ] 在线 API Key 迁移采用 "插件内重新输入" 方案; 不设计宿主到插件的凭据传输通道, 设置公开契约禁止承载凭据.
-- [ ] 宿主既有在线配置转只读兼容 (旧脚本 `profile` 调用仍可用), 设置页提供迁移提示.
-- [ ] 脚本内裸 `apiKey`/`baseUrl` 用法进入弃用周期: 文档标注, 运行时弃用提示, 推荐 `target`.
+- [ ] 直接移除宿主既有在线配置, profile 路由与读取路径; 用户已在插件中重新录入的配置作为唯一来源, 不保留只读迁移或旧脚本兼容分支.
+- [ ] 直接移除脚本内裸 `apiKey` / `baseUrl` 参数与相关实现; 在线调用只接受插件管理的 `target`, 不设置弃用周期.
 
-## P5 宿主瘦身 (兼容期后)
+## P5 宿主瘦身 (直接替换)
 
 - [ ] 评估并移除宿主在线提供方 HTTP 实现与请求构造 (`AiRequestFactory` 等), `ai.*` 在线能力完全由插件承载.
-- [ ] 移除宿主在线配置编辑 UI 与 `AiProviderVault` 写路径 (保留只读迁移提示至少一个版本).
-- [ ] 宿主最终仅保留: `ai.*` API 外观, 插件发现与信任, 协议协商, Binder 生命周期, 错误规范化与兼容层.
-- [ ] 插件与宿主切换 V2 后直接移除 V1 协议语义与测试夹具.
+- [ ] 移除宿主在线配置编辑 UI, `AiProviderVault` 及全部读写路径, 不保留迁移提示或历史配置读取代码.
+- [ ] 宿主最终仅保留: `ai.*` API 外观, 插件发现与信任, 协议协商, Binder 生命周期与错误规范化; 不保留旧实现兼容层.
+- [x] 插件与宿主已直接切换 V2 并移除旧协议接口, codec, 名称, 服务实现与测试夹具; 后续瘦身无需保留协议兼容分支.
 
 ## 设计边界 (不做的事)
 

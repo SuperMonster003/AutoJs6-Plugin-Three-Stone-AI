@@ -13,10 +13,10 @@ import org.autojs.plugin.ai.common.api.AiCommonLimits
 import org.autojs.plugin.ai.common.api.AiError
 import org.autojs.plugin.ai.common.api.AiErrorCode
 import org.autojs.plugin.ai.provider.api.AiProviderCodec
-import org.autojs.plugin.ai.provider.api.IAiModelListCallback
 import org.autojs.plugin.ai.provider.api.IAiCallback
 import org.autojs.plugin.ai.provider.api.IAiProvider
 import org.autojs.plugin.ai.provider.api.IAiSession
+import org.autojs.plugin.ai.provider.api.IAiTargetListCallback
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -29,7 +29,7 @@ class ThreeStoneAiProviderService : Service() {
     private lateinit var worker: ExecutorService
     private lateinit var timeoutScheduler: ScheduledExecutorService
     private lateinit var callbackLane: SerialCallbackLane
-    private lateinit var modelPager: ModelPager
+    private lateinit var targetPager: TargetPager
     private lateinit var aiBackend: AiBackend
     private val activeSession = AtomicReference<RemoteThreeStoneAiSession?>()
     private val sessions = ConcurrentHashMap.newKeySet<RemoteThreeStoneAiSession>()
@@ -44,8 +44,7 @@ class ThreeStoneAiProviderService : Service() {
         callbackLane = SerialCallbackLane()
         val pluginApplication = application as ThreeStoneAiApplication
         aiBackend = pluginApplication.aiBackend
-        // Provider protocol V1 lists only local models; unified target listing arrives in V2.
-        modelPager = ModelPager(pluginApplication.localBackend::catalog)
+        targetPager = TargetPager(aiBackend::catalog)
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
@@ -55,7 +54,7 @@ class ThreeStoneAiProviderService : Service() {
         sessions.toList().forEach(RemoteThreeStoneAiSession::serviceDestroyed)
         sessions.clear()
         worker.shutdownNow()
-        modelPager.close()
+        targetPager.close()
         timeoutScheduler.shutdownNow()
         callbackLane.close()
         super.onDestroy()
@@ -64,7 +63,7 @@ class ThreeStoneAiProviderService : Service() {
     private val binder = object : IAiProvider.Stub() {
         override fun getProviderInfo(): ByteArray {
             callerVerifier.enforceAllowedCaller()
-            return AiCommonCodec.encodeProviderInfo(aiProviderInfo())
+            return AiCommonCodec.encodeProviderInfo(aiProviderInfo(aiBackend.catalog()))
         }
 
         override fun getCapabilities(): ByteArray {
@@ -72,25 +71,25 @@ class ThreeStoneAiProviderService : Service() {
             return AiProviderCodec.encodeCapabilities(ThreeStoneAiPlugin.capabilities)
         }
 
-        override fun listModels(request: ByteArray, callback: IAiModelListCallback) {
+        override fun listTargets(request: ByteArray, callback: IAiTargetListCallback) {
             callerVerifier.enforceAllowedCaller()
             try {
                 BinderInputPolicy.requireEnvelopeSize(request.size)
             } catch (_: IllegalArgumentException) {
-                publishModelListError(callback, AiErrorCode.INVALID_REQUEST, "Model-list request is invalid")
+                publishTargetListError(callback, AiErrorCode.INVALID_REQUEST, "Target-list request is invalid")
                 return
             }
             val requestCopy = request.copyOf()
             if (!submitListWork {
                     val result = runCatching { decodeListRequest(requestCopy) }
-                        .mapCatching(modelPager::page)
-                        .mapCatching(::encodeModelPage)
+                        .mapCatching(targetPager::page)
+                        .mapCatching(::encodeTargetPage)
                     callbackLane.dispatch(
                         callback = {
                             result.fold(
                                 onSuccess = callback::onPage,
                                 onFailure = { error ->
-                                    val failure = classifyModelListFailure(error)
+                                    val failure = classifyTargetListFailure(error)
                                     callback.onFailed(
                                         AiCommonCodec.encodeError(
                                             AiError(
@@ -106,7 +105,7 @@ class ThreeStoneAiProviderService : Service() {
                     )
                 }
             ) {
-                publishModelListError(callback, AiErrorCode.BACKPRESSURE, "Model-list queue is full")
+                publishTargetListError(callback, AiErrorCode.BACKPRESSURE, "Target-list queue is full")
             }
         }
 
@@ -170,7 +169,7 @@ class ThreeStoneAiProviderService : Service() {
         false
     }
 
-    private fun publishModelListError(callback: IAiModelListCallback, code: Int, message: String) {
+    private fun publishTargetListError(callback: IAiTargetListCallback, code: Int, message: String) {
         callbackLane.dispatch(
             callback = { callback.onFailed(AiCommonCodec.encodeError(AiError(code, message))) },
             onFailure = {},
@@ -178,26 +177,26 @@ class ThreeStoneAiProviderService : Service() {
     }
 
     private fun decodeListRequest(request: ByteArray) = try {
-        AiProviderCodec.decodeModelListRequest(request)
+        AiProviderCodec.decodeTargetListRequest(request)
     } catch (error: Throwable) {
-        throw InvalidModelListRequestException()
+        throw InvalidTargetListRequestException()
     }
 
-    private fun encodeModelPage(page: org.autojs.plugin.ai.provider.api.AiModelPage): ByteArray = try {
-        AiProviderCodec.encodeModelPage(page)
+    private fun encodeTargetPage(page: org.autojs.plugin.ai.provider.api.AiTargetPage): ByteArray = try {
+        AiProviderCodec.encodeTargetPage(page)
     } catch (error: Throwable) {
-        throw ModelListingFailedException(error)
+        throw TargetListingFailedException(error)
     }
 
-    private fun classifyModelListFailure(error: Throwable): ModelListFailure = when (error) {
-        is UnsupportedModelListProtocolException ->
-            ModelListFailure(AiErrorCode.UNSUPPORTED_PROTOCOL, "Model-list protocol is unsupported")
-        is ModelListingUnavailableException ->
-            ModelListFailure(AiErrorCode.PROVIDER_UNAVAILABLE, "Model catalog is unavailable")
-        is ModelListingFailedException ->
-            ModelListFailure(AiErrorCode.PROVIDER_FAILED, "Model listing failed")
-        else -> ModelListFailure(AiErrorCode.INVALID_REQUEST, "Model-list request is invalid")
+    private fun classifyTargetListFailure(error: Throwable): TargetListFailure = when (error) {
+        is UnsupportedTargetListProtocolException ->
+            TargetListFailure(AiErrorCode.UNSUPPORTED_PROTOCOL, "Target-list protocol is unsupported")
+        is TargetCatalogUnavailableException ->
+            TargetListFailure(AiErrorCode.PROVIDER_UNAVAILABLE, "Target catalog is unavailable")
+        is TargetListingFailedException ->
+            TargetListFailure(AiErrorCode.PROVIDER_FAILED, "Target listing failed")
+        else -> TargetListFailure(AiErrorCode.INVALID_REQUEST, "Target-list request is invalid")
     }
 
-    private data class ModelListFailure(val code: Int, val message: String)
+    private data class TargetListFailure(val code: Int, val message: String)
 }

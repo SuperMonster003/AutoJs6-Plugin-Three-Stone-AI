@@ -39,7 +39,7 @@ The current README.md supports the following languages:
 
 ******
 
-3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. Current AI Provider V1 host calls use those local targets without network access or data upload. The plugin settings manage OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter, and custom OpenAI-compatible profiles, encrypted credentials, the default online target, metered-network access, and explicit connection tests. Launcher chat can explicitly bind each conversation to a local or configured online target; AI Provider V1 host APIs remain local-only.
+3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend and connects only to user-configured online profiles. Local and online destinations share one AI Provider V2 target catalog, controlled streaming pipeline, and explicit selection boundary. Local targets never access the network or upload data; online targets run only after the user selects one and remain bound to its plugin-managed credential and declared HTTPS origin.
 
 ******
 
@@ -94,11 +94,11 @@ plugin id: three-stone-ai
 protocol provider id: autojs6.three-stone-ai
 engine: three-stone-ai
 variant: default
-protocol: V1.2-V1.3
+protocol: V2
 required host build: 5276
 ```
 
-The public AI Provider V1 surface declares ON_DEVICE execution and the NONE credential mode. It declares the `streaming`, `usage`, `persistent-session`, and `structured-json` capabilities, accepts `text/plain` message input and `application/json` response schemas, and emits `text/plain` or `application/json` text. Protocol 1.3 adds explicit backend profiles and device-scoped availability without CPU fallback. Plugin-internal REMOTE targets are not advertised through V1.
+AI Provider V2 exposes one paged catalog of `local:*` and `profile:*` targets. Each target independently declares provider, model, locality, configuration and availability, capabilities, limits, controls, and HTTPS origins. A local-only catalog declares ON_DEVICE/NONE; the presence of online profiles declares HYBRID/PLUGIN_MANAGED and the exact union of their HTTPS origins. Local backend profiles remain an optional target control, and unavailable profiles or targets never fall back silently.
 
 Host build 5276 or later is required. Releases include arm64-v8a, x86_64, universal APK variants.
 
@@ -108,7 +108,7 @@ Host build 5276 or later is required. Releases include arm64-v8a, x86_64, univer
 
 ******
 
-> In AutoJs6 (build 5276 and later), `ai.ask`, `ai.chat`, and `ai.stream` support the local plugin route. `ai.session({ plugin: true })` creates a persistent multi-turn Conversation whose later `ask`, `chat`, and `stream` calls send only the new user prompt. `ai.ask(messages, { plugin: true })` preserves ordered plain-text `system`, `user`, and `assistant` messages, and the final message must be `user`. `ai.chat` returns exact token counts in `usage` and the measured generation duration in `usage.raw.durationMillis`; `ai.stream` emits the same cumulative usage before completion. Pass `plugin: true` to select this plugin, and the model ID may be omitted when only one model is imported; `ai.models({ plugin: true })` lists imported models and their `backendProfiles`. Generation accepts `backend: 'cpu' | 'gpu' | 'npu'`; unavailable profiles fail explicitly and never fall back to CPU. When the plugin is not installed, not enabled in Plugin Center, or has no imported model, scripts receive a clear error message. A fully pinned `plugin: { component, providerId, modelId }` selector is also supported. `responseSchema` implies structured output; `structuredJson: true` without a schema uses a default object-root schema. `ai.ask` and `ai.chat().text` still return JSON text, streamed deltas are partial JSON text, and a persistent session keeps one fixed schema and backend for every turn.
+> In AutoJs6 (build 5276 and later), `ai.ask`, `ai.chat`, `ai.stream`, and `ai.session` use the AI Provider V2 target catalog for both imported local models and configured online profiles. Ordered plain-text `system`, `user`, and `assistant` history is preserved, later persistent-session turns send only the new user prompt, and usage includes exact token counts plus provider-measured duration. Pass `plugin: true` to select this plugin; the model ID may be omitted only when the catalog contains one target. Until `ai.catalog()` replaces the current public listing API, `ai.models({ plugin: true })` projects every local and online target by model, with `backendProfiles` present only for local targets. A `plugin: { component, providerId, modelId }` selector must resolve to exactly one target. Omit `backend` to use the target default: local targets select CPU and online targets use no local execution profile. Explicit `cpu`, `gpu`, or `npu` is local-only; unavailable profiles fail without fallback. Missing, disabled, unconfigured, unavailable, or ambiguous targets return explicit errors. `responseSchema` implies structured output; `structuredJson: true` without a schema uses a default object-root schema. Completed calls return JSON text, streamed deltas may be partial JSON text, and a persistent session fixes one target, schema, and optional backend for every turn.
 
 ******
 
@@ -116,7 +116,7 @@ Host build 5276 or later is required. Releases include arm64-v8a, x86_64, univer
 
 ******
 
-The plugin requests `INTERNET` for user-triggered recommended-model downloads and requests to a user-configured online target; current V1 local generation does not use the network. It requests no broad storage permission. Catalog downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, and matching signatures.
+The plugin requests `INTERNET` for user-triggered recommended-model downloads and requests to a user-configured online target; local generation does not use the network. It requests no broad storage permission. Catalog downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, matching signatures, target metadata, and declared origin boundaries.
 
 ******
 
@@ -147,7 +147,7 @@ The plugin requests `INTERNET` for user-triggered recommended-model downloads an
 
 - Reasoning and tools are not declared.
 - Tool-role messages, tool schemas, tool calls, and tool results are not accepted.
-- There is no network model discovery or arbitrary-URL model download. Launcher chat exposes only imported local models and explicitly configured online profiles; AI Provider V1 host routing remains local-only, and only the pinned built-in recommendation catalog can be downloaded.
+- There is no network model discovery or arbitrary-URL model download. Launcher chat and AI Provider V2 expose only imported local models and explicitly configured online profiles, and only the pinned built-in recommendation catalog can be downloaded.
 - NPU inference is not declared: the profile is discoverable as `unavailable` with `npu-runtime-not-packaged`. GPU is declared only when `libOpenCL.so` is loadable, and a `.litertlm` extension alone still does not guarantee model initialization.
 
 ******
@@ -168,16 +168,16 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 # v1.1.0
 
-###### 2026/08/24
+###### 2026/08/25
 
 * `Feature` Plugin brand and runtime identity standardized as 3-Stone AI across display names, package and component names, discovery identifiers, build artifacts, and documentation
 * `Feature` Cross-process integration uses the neutral `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER`, and `IAiProvider`/`IAiSession`/`IAiCallback` identities without aliases from replaced identities
-* `Feature` Compatible with the AutoJs6 `plugin: true` shorthand selector for `ai.ask`/`ai.chat`/`ai.stream` and the `ai.models` model listing
-* `Feature` Forwarded `temperature`, `topK`, `topP`, and `maxTokens` through AI Provider protocol 1.1 to LiteRT-LM sampling and output-token controls
+* `Feature` Exposed `local:*` and `profile:*` directly through the paged AI Provider V2 target catalog, with independent provider/model/locality, configured and available state, capabilities, limits, controls, and HTTPS origins for every target
+* `Feature` Forwarded `temperature`, `topK`, `topP`, and `maxTokens` through AI Provider V2 generation requests to LiteRT-LM sampling and output-token controls
 * `Feature` Reported exact LiteRT-LM input, output, and total token counts plus provider-measured generation duration through AutoJs6 `ai.chat().usage` and stream usage events
-* `Feature` Added AI Provider protocol 1.2 persistent sessions and AutoJs6 `ai.session` multi-turn Conversation reuse without resending prior history
+* `Feature` Added AI Provider V2 persistent sessions and AutoJs6 `ai.session` multi-turn Conversation reuse without resending prior history
 * `Feature` Added native LiteRT-LM JSON Schema constrained decoding through AutoJs6 `structuredJson` and `responseSchema`, with single-call, streaming, and persistent-session support plus strict completed-JSON validation
-* `Feature` Explicit `cpu`, `gpu`, and `npu` backend profiles through protocol 1.3 and AutoJs6 generation options, with device compatibility reporting, model/profile cache isolation, and no fallback from unavailable profiles; GPU is declared only after an OpenCL load probe and NPU remains unavailable because its EAP runtime is not packaged
+* `Feature` Exposed explicit `cpu`, `gpu`, and `npu` backend profiles as optional AI Provider V2 target controls, with device compatibility reporting, model/profile cache isolation, and no fallback from unavailable profiles; GPU is declared only after an OpenCL load probe and NPU remains unavailable because its EAP runtime is not packaged
 * `Feature` Direct downloads of pinned LiteRT Community models to a user-selected SAF location, with progress, precise cancellation, incomplete-file cleanup, LiteRT-LM header and exact size/SHA-256 verification, and a download-to-import handoff
 * `Feature` Added a launcher conversation workspace with streaming Markdown, persistent history, warned branch replacement when editing prior prompts, multi-result search, and keyboard-aware input
 * `Feature` Added application settings for theme color, dark mode, app language, app and developer information, and release history, with Follow AutoJs6 as the default wherever possible
@@ -185,29 +185,29 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Feature` Rendered inline `$\text{...}$` content during streaming, with common math commands plus superscript and subscript styling
 * `Feature` Added a plugin-managed Android Keystore credential store with AES-256-GCM, profile-bound authenticated ciphertext, cross-process atomic private files, configured-only status checks, and immediate plaintext zeroization
 * `Feature` Added a strict non-secret online profile repository for HTTPS-only OpenAI-compatible endpoints, with canonical UUIDs, cross-process atomic metadata, and mandatory credential replacement or clearing when the provider or origin changes
-* `Feature` Added the plugin-internal OpenAI-compatible HTTPS execution backend for custom base URL, credential, and model profiles, with bounded SSE and JSON-fallback streaming, precise cancellation, provider usage, completed-turn persistent history, JSON Schema request mapping, and fixed non-sensitive errors; AI Provider V1 host routing remains local-only
+* `Feature` Added the plugin-internal OpenAI-compatible HTTPS execution backend for custom base URL, credential, and model profiles, with bounded SSE and JSON-fallback streaming, precise cancellation, provider usage, completed-turn persistent history, JSON Schema request mapping, and fixed non-sensitive errors; configured `profile:*` targets invoke it directly through AI Provider V2
 * `Feature` Added OpenAI, Anthropic, Gemini, DeepSeek, and OpenRouter presets aligned with the host catalog; the unified online execution layer reuses the OpenAI-compatible protocol and separately adapts native Anthropic Messages and Gemini GenerateContent authentication, requests, SSE terminals, usage, and JSON Schema without cross-protocol or local/online fallback
-* `Feature` Added the 10-language online-services settings UI for profile add/edit/delete, non-disclosing API-key replacement and clearing, default-target selection, metered-network opt-in enforced before credential access, and explicit cancellable 120-second connection tests; settings share the atomic cross-process profile document and AI Provider V1 remains local-only
+* `Feature` Added the 10-language online-services settings UI for profile add/edit/delete, non-disclosing API-key replacement and clearing, default-target selection, metered-network opt-in enforced before credential access, and explicit cancellable 120-second connection tests; settings share the atomic cross-process profile document and refresh the V2 target catalog dynamically
 * `Feature` Added a unified local/cloud target selector to launcher chat: every conversation persists one target snapshot, populated conversations recommend starting a new conversation when switching, and continuing with retained context requires explicit confirmation and records the change
 * `Feature` Added an actual target/provider/model/locality snapshot to every assistant response; regeneration precisely reuses the recorded response target, fails explicitly on identity drift or unavailability, and never silently falls back to the current conversation target
 * `Feature` Kept local and cloud generation failures on their selected boundary: launcher chat appends a bounded non-secret reason, states that no cross-boundary fallback occurred, and exposes an explicit manual target switch without discarding partial output
 * `Fix` Removed the runnable instruction examples' implicit 256-token and 4 KiB output caps: omitted `maxTokens` now uses the model or engine default, while the raw Binder example uses the provider's full 64 KiB output allowance
-* `Fix` Fixed the raw Binder sample in the 10 localized plugin instructions still invoking the 14-argument protocol 1.1 `AiGenerationOptions` constructor, which failed against the protocol 1.3 API
+* `Fix` Updated the raw Binder sample in all 10 localized plugin instructions to the final AI Provider V2 request and target-list API
 * `Fix` Fixed the model manager retaining light-theme text colors in system dark mode, which made body text, checkboxes, and model rows unreadable against the dark background
 * `Fix` Kept the composer visible above the soft keyboard, selected send-button text for contrast with the active theme color, and unified the previous, next, and close search controls
 * `Fix` Fixed a session close invoked from inside a generation listener callback waiting on itself indefinitely; close still waits for callbacks already running on other threads
 * `Fix` Fixed app-private online-profile and credential storage being rejected when Android canonicalizes the trusted `/data/user/0` app-data root to `/data/data`; direct-child links and containment escapes remain rejected
-* `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` local plugin route
+* `Improvement` Updated the plugin description, instructions, and 10-language README to match the formalized host `ai.*` unified target route
 * `Improvement` Rewrote the ROADMAP as a feature roadmap with individually checkable items
 * `Improvement` Normalized application and generated localized text to ASCII punctuation, with a regression test covering packaged and generated text
 * `Improvement` Introduced a shared `AiBackend`/`AiTarget`/`AiBackendSession` layer so launcher chat and the Binder provider use the same `LiteRtLocalBackend` catalog, capabilities, session creation, streaming, and cancellation path
-* `Improvement` Merged local `local:*` and online `profile:*` targets into one application-level catalog and dispatcher; the V1 model listing remains local-only and online targets report unavailable until their HTTPS execution transport is implemented
+* `Improvement` Merged local `local:*` and online `profile:*` targets into one application-level catalog and dispatcher, exposed both directly through AI Provider V2, and derived provider locality, credential mode, and allowed HTTPS origins from the current catalog without exposing credential bytes
 
 # v1.0.0
 
 ###### 2026/08/08
 
-* `Feature` AI Provider protocol V1 provider running entirely on device, with plugin ID and engine `three-stone-ai`, provider ID `autojs6.three-stone-ai`, and variant `default`
+* `Feature` AI Provider foundation with plugin ID and engine `three-stone-ai`, provider ID `autojs6.three-stone-ai`, and variant `default`
 * `Feature` CPU-only LiteRT-LM plain-text generation with system, user, and assistant history plus credit-backed streaming
 * `Feature` SAF import of `.litertlm` into app-private storage with an 8 GiB limit, free-space reserve, SHA-256, fsync, and atomic activation
 * `Feature` One active session, bounded I/O, descriptor quotas, cancellation, timeout, one terminal state, and same-signature AutoJs6 caller verification

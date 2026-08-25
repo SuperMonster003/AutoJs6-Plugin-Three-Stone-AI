@@ -387,7 +387,7 @@ try {
 
     var request = new TextApi.AiProviderRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 3),
+        new CommonApi.AiProtocolVersion(2, 0),
         "autojs6.three-stone-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),
@@ -476,7 +476,7 @@ Safety and operational limits:
 - Omit `maxTokens` (or pass raw-protocol `maximumOutputTokens` as `null`) to use the model or engine default; the provider's 64 KiB output safety limit still applies.
 - Streaming, usage, persistent sessions, structured JSON, `text/plain`, and `application/json` are declared. Reasoning and tools are unsupported.
 - A response schema must be a JSON object no larger than 64 KiB; supported keywords follow the bundled LiteRT-LM/LLGuidance runtime. Completed structured output is parsed and validated strictly, so provide enough `maxTokens` for the entire JSON value.
-- Usage token counts come from LiteRT-LM Conversation KV-cache and decode counters without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, model listing, and dispatch time.
+- Usage token counts come from LiteRT-LM Conversation KV-cache and decode counters without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, target catalog discovery, and dispatch time.
 - The plugin requests `INTERNET` only for explicit recommended-model downloads and no broad storage permission. Inference never uses the network; SAF grants access only to the user-selected source or destination.
 - Only the same-signature AutoJs6 host may bind the provider service.
 - Previous model generations named by SHA-256 hash are retained for cross-process safety and continue to occupy app-private storage.

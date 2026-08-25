@@ -39,7 +39,7 @@ El README.md actual admite los siguientes idiomas:
 
 ******
 
-3-Stone AI es el plugin oficial de generación de texto con IA para AutoJs6. Ejecuta los modelos LiteRT-LM importados por el usuario en un backend CPU seleccionado explícitamente o en una GPU compatible, acepta un historial de mensajes de texto plano y devuelve texto plano o texto JSON restringido por un schema mediante una sesión de streaming controlada. Las llamadas actuales del host AI Provider V1 usan esos objetivos locales sin acceso a la red ni subida de datos. Los ajustes del plugin gestionan perfiles de OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter y OpenAI Compatible personalizados, credenciales cifradas, el destino en línea predeterminado, las redes medidas y pruebas de conexión explícitas. El chat del iniciador puede vincular explícitamente cada conversación a un destino local o en línea configurado; las APIs V1 del host siguen siendo solo locales.
+3-Stone AI es el plugin oficial de generación de texto con IA para AutoJs6. Ejecuta los modelos LiteRT-LM importados por el usuario en un backend CPU seleccionado explícitamente o en una GPU compatible, y también llama a perfiles OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter y OpenAI Compatible configurados por el usuario. AI Provider V2 expone directamente esos destinos locales y en línea en un catálogo unificado; cada solicitud selecciona un destino explícito y los destinos locales funcionan sin acceso a la red ni subida de datos. Los ajustes del plugin gestionan credenciales cifradas, el destino en línea predeterminado, las redes medidas y pruebas de conexión explícitas.
 
 ******
 
@@ -94,11 +94,11 @@ plugin id: three-stone-ai
 protocol provider id: autojs6.three-stone-ai
 engine: three-stone-ai
 variant: default
-protocol: V1.2-V1.3
+protocol: V2
 required host build: 5276
 ```
 
-La superficie pública de AI Provider V1 declara ejecución ON_DEVICE y modo credential NONE. Declara las capacidades `streaming`, `usage`, `persistent-session` y `structured-json`, acepta mensajes `text/plain` y schemas de respuesta `application/json`, y emite texto `text/plain` o `application/json`. El protocolo 1.3 añade perfiles backend explícitos y disponibilidad por dispositivo sin retorno silencioso a CPU. Los objetivos REMOTE internos del plugin no se anuncian mediante V1.
+AI Provider V2 expone un único catálogo paginado de destinos `local:*` y `profile:*`. Cada destino declara por separado provider, modelo, localidad, configuración y disponibilidad, capacidades, límites, controles y orígenes HTTPS. Un catálogo solo local declara ON_DEVICE/NONE; la presencia de perfiles en línea declara HYBRID/PLUGIN_MANAGED y la unión exacta de sus orígenes HTTPS. El perfil backend local sigue siendo un control opcional del destino y nunca hay retorno silencioso desde perfiles o destinos no disponibles.
 
 Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes APK arm64-v8a, x86_64, universal.
 
@@ -108,7 +108,7 @@ Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes
 
 ******
 
-> En AutoJs6 (compilación 5276 y posteriores), `ai.ask`, `ai.chat` y `ai.stream` admiten la ruta de plugin local. `ai.session({ plugin: true })` crea una Conversation persistente de varios turnos cuyas llamadas posteriores a `ask`, `chat` y `stream` solo envían el nuevo prompt de usuario. `ai.ask(messages, { plugin: true })` conserva en orden los mensajes de texto sin formato con roles `system`, `user` y `assistant`, y el último mensaje debe tener el rol `user`. `ai.chat` devuelve recuentos exactos de tokens en `usage` y la duración medida en `usage.raw.durationMillis`; `ai.stream` emite el mismo usage acumulado antes de completarse. Pase `plugin: true` para seleccionar este plugin, y el ID de modelo puede omitirse cuando solo hay un modelo importado; `ai.models({ plugin: true })` enumera los modelos y sus `backendProfiles`. La generación acepta `backend: 'cpu' | 'gpu' | 'npu'`; un perfil no disponible falla explícitamente y nunca vuelve a CPU. Si el plugin no está instalado, no está habilitado en el Centro de plugins o no tiene modelo, los scripts reciben un error claro. También se admite el selector explícito `plugin: { component, providerId, modelId }`. `responseSchema` activa implícitamente la salida estructurada; `structuredJson: true` sin schema usa uno predeterminado con raíz de objeto. `ai.ask` y `ai.chat().text` siguen devolviendo texto JSON, los deltas de streaming son texto JSON parcial y una sesión persistente conserva un único schema y backend fijos en todos sus turnos.
+> En AutoJs6 (compilación 5276 y posteriores), `ai.ask`, `ai.chat`, `ai.stream` y `ai.session` usan el catálogo de destinos AI Provider V2 tanto para modelos locales importados como para profiles en línea configurados. Se conserva el historial ordenado `system`, `user` y `assistant`, los turnos posteriores de una sesión persistente envían solo el nuevo prompt y usage incluye tokens exactos y duración medida por el proveedor. `plugin: true` selecciona este plugin; el ID de modelo solo puede omitirse cuando el catálogo contiene un destino. Hasta que `ai.catalog()` sustituya la API pública de listado actual, `ai.models({ plugin: true })` proyecta por modelo todos los destinos locales y en línea, con `backendProfiles` solo para destinos locales. `plugin: { component, providerId, modelId }` debe resolverse a un único destino. Omitir `backend` usa el valor predeterminado del destino: CPU para local y ningún profile de ejecución local para en línea. `cpu`, `gpu` o `npu` explícitos son solo locales; un profile no disponible falla sin fallback. Un plugin ausente o deshabilitado y un destino no configurado, no disponible o ambiguo devuelven errores explícitos. `responseSchema` activa la salida estructurada; `structuredJson: true` sin schema usa una raíz object predeterminada. Las llamadas completas devuelven texto JSON, los deltas pueden ser JSON parcial y una sesión persistente fija un destino, schema y backend opcional para todos los turnos.
 
 ******
 
@@ -116,7 +116,7 @@ Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes
 
 ******
 
-El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario y solicitudes a un objetivo online configurado por el usuario; la generación local V1 actual no usa la red. No solicita ningún permiso general de almacenamiento. Las descargas usan revisiones HTTPS inmutables, tamaño y SHA-256 fijados, y solo escriben en la ubicación SAF elegida; deben superar cabecera LiteRT-LM, tamaño, resumen, flush y fsync. La importación sigue leyendo solo un URI del selector, escribe una copia verificada en `files/models` y la activa atómicamente. Los servicios también verifican el paquete AutoJs6, el UID y las firmas.
+El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario y solicitudes a un destino en línea configurado explícitamente; los destinos locales no usan la red. Las credenciales permanecen en el almacenamiento privado cifrado del plugin y nunca cruzan Binder ni el catálogo de destinos. No solicita ningún permiso general de almacenamiento. Las descargas usan revisiones HTTPS inmutables, tamaño y SHA-256 fijados, y solo escriben en la ubicación SAF elegida; deben superar cabecera LiteRT-LM, tamaño, resumen, flush y fsync. Los servicios también verifican el paquete AutoJs6, el UID y las firmas.
 
 ******
 
@@ -147,7 +147,7 @@ El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas p
 
 - No se declaran reasoning ni tools.
 - No se aceptan mensajes con rol tool, schemas de herramientas, tool calls ni tool results.
-- No hay descubrimiento de modelos por red ni descargas desde URL arbitrarias. El chat del iniciador solo expone modelos locales importados y perfiles en línea configurados explícitamente; el host AI Provider V1 sigue siendo solo local y solo puede descargarse el catálogo integrado fijado.
+- No hay descubrimiento de modelos por red ni descargas desde URL arbitrarias. El catálogo de destinos solo expone modelos locales importados y perfiles en línea configurados explícitamente; únicamente puede descargarse el catálogo de recomendaciones integrado y fijado.
 - No se declara inferencia NPU: el perfil es visible como `unavailable` con `npu-runtime-not-packaged`. GPU solo se declara si `libOpenCL.so` puede cargarse y la extensión `.litertlm` aún no garantiza que el modelo se inicialice.
 
 ******
@@ -168,16 +168,16 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 # v1.1.0
 
-###### 2026/08/24
+###### 2026/08/25
 
 * `Función` Identidad de marca y de ejecución del plugin oficial de IA local de AutoJs6 consolidada como 3-Stone AI
 * `Función` La integración entre procesos usa las identidades neutrales `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` e `IAiProvider`/`IAiSession`/`IAiCallback` sin conservar alias de las identidades reemplazadas
-* `Función` Compatible con el selector abreviado `plugin: true` de `ai.ask`/`ai.chat`/`ai.stream` y la enumeración de modelos `ai.models` de AutoJs6
-* `Función` Transferencia de `temperature`, `topK`, `topP` y `maxTokens` mediante el protocolo AI Provider 1.1 a los controles de muestreo y tokens de salida de LiteRT-LM
+* `Función` Exposición directa de `local:*` y `profile:*` en el catálogo paginado de destinos de AI Provider V2, con provider/model/locality, estados configured y available, capacidades, límites, controles y orígenes HTTPS independientes para cada destino
+* `Función` Transferencia de `temperature`, `topK`, `topP` y `maxTokens` mediante solicitudes de generación AI Provider V2 a los controles de muestreo y tokens de salida de LiteRT-LM
 * `Función` Informe de los recuentos exactos de tokens de entrada, salida y totales de LiteRT-LM, junto con la duración de generación medida por el proveedor, mediante `ai.chat().usage` y eventos usage de streaming
-* `Función` Sesiones persistentes del protocolo AI Provider 1.2 y reutilización de Conversation de varios turnos con `ai.session` de AutoJs6 sin reenviar el historial anterior
+* `Función` Sesiones persistentes de AI Provider V2 y reutilización de Conversation de varios turnos con `ai.session` de AutoJs6 sin reenviar el historial anterior
 * `Función` Decodificación nativa restringida por JSON Schema de LiteRT-LM mediante `structuredJson` y `responseSchema` de AutoJs6, compatible con llamadas únicas, streaming y sesiones persistentes, con validación estricta del JSON completo
-* `Función` Perfiles backend explícitos `cpu`, `gpu` y `npu` mediante el protocolo 1.3 y las opciones de generación de AutoJs6, con informe de compatibilidad del dispositivo, aislamiento de caché por modelo/perfil y sin fallback desde perfiles no disponibles; GPU solo se declara tras una prueba de carga de OpenCL y NPU permanece no disponible porque su runtime EAP no está empaquetado
+* `Función` Perfiles backend explícitos `cpu`, `gpu` y `npu` como controles opcionales de destino de AI Provider V2, con informe de compatibilidad del dispositivo, aislamiento de caché por modelo/perfil y sin fallback desde perfiles no disponibles; GPU solo se declara tras una prueba de carga de OpenCL y NPU permanece no disponible porque su runtime EAP no está empaquetado
 * `Función` Descarga directa de modelos LiteRT Community fijados a una ubicación SAF elegida, con progreso, cancelación precisa, limpieza, verificación de cabecera LiteRT-LM, tamaño y SHA-256, e importación directa posterior
 * `Función` Se añadió un espacio de conversación iniciable con Markdown en streaming, historial persistente, aviso al sustituir una rama tras editar mensajes anteriores, búsqueda con varios resultados y entrada adaptada al teclado
 * `Función` Se añadieron ajustes de aplicación para color del tema, modo oscuro, idioma, información de la aplicación y del desarrollador e historial de versiones, con Seguir AutoJs6 como valor predeterminado cuando sea posible
@@ -185,29 +185,29 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Función` Se renderiza contenido `$\text{...}$` en línea durante el streaming, con comandos matemáticos comunes y estilos de superíndice y subíndice
 * `Función` Se añadió un almacén de credenciales gestionado por el plugin con Android Keystore, AES-256-GCM, texto cifrado autenticado vinculado al profile, archivos privados atómicos entre procesos, consultas limitadas al estado configured y borrado inmediato del texto sin cifrar
 * `Función` Se añadió un repositorio estricto y sin secretos de perfiles en línea para endpoints OpenAI Compatible solo por HTTPS, con UUID canónicos, metadatos atómicos entre procesos y reemplazo o eliminación obligatorios de la credencial al cambiar el provider o el origin
-* `Función` Se añadió el backend interno del plugin para ejecución HTTPS OpenAI Compatible con perfiles de baseUrl, credencial y modelo personalizados, streaming SSE acotado y fallback JSON, cancelación precisa, usage del provider, historial persistente de turnos completados, mapping de JSON Schema y errores fijos sin datos sensibles; el enrutamiento del host AI Provider V1 sigue limitado a objetivos locales
+* `Función` Se añadió el backend interno del plugin para ejecución HTTPS OpenAI Compatible con perfiles de baseUrl, credencial y modelo personalizados, streaming SSE acotado y fallback JSON, cancelación precisa, usage del provider, historial persistente de turnos completados, mapping de JSON Schema y errores fijos sin datos sensibles; los destinos `profile:*` configurados lo invocan directamente mediante AI Provider V2
 * `Función` Se añadieron preajustes de OpenAI, Anthropic, Gemini, DeepSeek y OpenRouter alineados con el catálogo del host; la capa unificada de ejecución en línea reutiliza el protocolo compatible con OpenAI y adapta por separado la autenticación, las solicitudes, los terminales SSE, el uso y JSON Schema nativos de Anthropic Messages y Gemini GenerateContent, sin fallback entre protocolos ni entre local y en línea
-* `Función` Se añadió la UI de servicios en línea en 10 idiomas para añadir, editar y eliminar perfiles, sustituir y borrar claves API sin mostrarlas, elegir el destino predeterminado, exigir permiso para redes medidas antes de leer credenciales y ejecutar pruebas explícitas cancelables de hasta 120 segundos; los ajustes comparten el documento atómico entre procesos y AI Provider V1 sigue siendo solo local
+* `Función` Se añadió la UI de servicios en línea en 10 idiomas para añadir, editar y eliminar perfiles, sustituir y borrar claves API sin mostrarlas, elegir el destino predeterminado, exigir permiso para redes medidas antes de leer credenciales y ejecutar pruebas explícitas cancelables de hasta 120 segundos; los ajustes comparten el documento atómico entre procesos y actualizan dinámicamente el catálogo de destinos V2
 * `Función` Se añadió un selector unificado de destinos locales y en la nube al chat del iniciador: cada conversación conserva una instantánea de destino, las conversaciones con mensajes recomiendan iniciar una nueva al cambiar y continuar con el contexto exige confirmación explícita y registra el cambio
 * `Función` Se añadió a cada respuesta del asistente una instantánea del destino, proveedor, modelo y ubicación reales; la regeneración reutiliza exactamente el destino registrado, falla explícitamente si cambia o deja de estar disponible y nunca recurre silenciosamente al destino actual de la conversación
 * `Función` Los fallos de generación local y en la nube permanecen en el destino seleccionado: el chat del iniciador añade una causa acotada sin datos sensibles, indica que no hubo fallback entre límites y ofrece un cambio manual explícito de destino sin descartar la salida parcial
 * `Corrección` Se eliminaron los límites implícitos de 256 tokens y 4 KiB de los ejemplos ejecutables: omitir `maxTokens` usa ahora el valor predeterminado del modelo o motor y el ejemplo Binder directo usa los 64 KiB completos permitidos por el proveedor
-* `Corrección` Se corrigió el ejemplo Binder de bajo nivel de las instrucciones localizadas en 10 idiomas, que aún invocaba el constructor `AiGenerationOptions` de 14 argumentos del protocolo 1.1 y fallaba con la API del protocolo 1.3
+* `Corrección` Se actualizó el ejemplo Binder de bajo nivel de las 10 instrucciones localizadas a las API finales de solicitud y lista de destinos de AI Provider V2
 * `Corrección` Se corrigió que el gestor de modelos conservara los colores de texto del tema claro en el modo oscuro del sistema, lo que hacía ilegibles el texto, las casillas y las filas de modelos sobre el fondo oscuro
 * `Corrección` Se mantuvo el editor visible sobre el teclado, se eligió el texto del botón Enviar según el contraste con el color del tema y se unificaron los controles de búsqueda anterior, siguiente y cerrar
 * `Corrección` Se corrigió el bloqueo al cerrar una session desde un callback listener de generación, donde la espera de inactividad se esperaba a sí misma indefinidamente; el cierre sigue esperando los callbacks ya activos en otros hilos
 * `Corrección` Se corrigió el rechazo del almacenamiento privado de perfiles en línea y credenciales cuando Android canonicaliza la raíz confiable `/data/user/0` como `/data/data`; se siguen rechazando los enlaces de hijos directos y las fugas de contención
-* `Mejora` Descripción del plugin, instrucciones y README en 10 idiomas actualizados conforme a la formalización de la ruta de plugin local `ai.*`
+* `Mejora` Descripción del plugin, instrucciones y README en 10 idiomas actualizados conforme a la formalización de la ruta unificada de destinos `ai.*`
 * `Mejora` ROADMAP reescrito como hoja de ruta de funciones con elementos verificables individualmente
 * `Mejora` Se normalizó la puntuación ASCII en la aplicación y en el texto localizado generado, con una prueba de regresión para el texto empaquetado y generado
 * `Mejora` Se introdujo una capa compartida `AiBackend`/`AiTarget`/`AiBackendSession` para que el chat del iniciador y el proveedor Binder usen la misma ruta `LiteRtLocalBackend` de catálogo, capacidades, creación de sesiones, streaming y cancelación
-* `Mejora` Se combinaron los targets locales `local:*` y en línea `profile:*` en un catálogo y despachador únicos a nivel de Application; la lista de modelos V1 sigue siendo solo local y los targets en línea se marcan unavailable hasta implementar su transporte HTTPS
+* `Mejora` Se combinaron los targets locales `local:*` y en línea `profile:*` en un catálogo y despachador únicos a nivel de Application, se expusieron ambos directamente mediante AI Provider V2 y se derivaron dinámicamente provider locality, credential mode y HTTPS origins sin exponer bytes de credenciales
 
 # v1.0.0
 
 ###### 2026/08/08
 
-* `Función` Provider en el dispositivo para el protocolo AI Provider V1 con ID y motor `three-stone-ai`, provider ID `autojs6.three-stone-ai` y variante `default`
+* `Función` Base de AI Provider en el dispositivo con ID y motor `three-stone-ai`, provider ID `autojs6.three-stone-ai` y variante `default`
 * `Función` Generación de texto sin formato con LiteRT-LM y CPU, historial system, user y assistant y streaming controlado por credits
 * `Función` Importación SAF de `.litertlm` al almacenamiento privado con límite de 8 GiB, reserva de espacio, SHA-256, fsync y activación atómica
 * `Función` Una sesión activa, I/O limitada, cuotas de descriptores, cancelación, timeout, un estado terminal y verificación del llamador AutoJs6 con la misma firma

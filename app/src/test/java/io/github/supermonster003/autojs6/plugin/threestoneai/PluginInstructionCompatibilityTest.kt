@@ -9,7 +9,7 @@ import java.io.File
 class PluginInstructionCompatibilityTest {
 
     @Test
-    fun rawBinderExamplesUseTheProtocol13GenerationOptionsSignature() {
+    fun rawBinderExamplesUseTheProtocol20GenerationOptionsSignature() {
         val resourceRoot = listOf(
             File("src/main/res"),
             File("app/src/main/res"),
@@ -43,12 +43,8 @@ class PluginInstructionCompatibilityTest {
                 countConstructorArguments(source, GENERATION_OPTIONS_MARKER),
             )
             assertTrue(
-                "$label must opt in to protocol 1.3",
-                source.contains("new CommonApi.AiProtocolVersion(1, 3)"),
-            )
-            assertFalse(
-                "$label must not retain the obsolete protocol 1.1 example",
-                source.contains("new CommonApi.AiProtocolVersion(1, 1)"),
+                "$label must use protocol 2.0",
+                source.contains("new CommonApi.AiProtocolVersion(2, 0)"),
             )
             assertTrue(
                 "$label must document the persistent-session argument",

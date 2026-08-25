@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "언어",
   "p_languages_all_supported_for_readme": "현재 README.md는 다음 언어를 지원합니다",
   "h3_introduction": "소개",
-  "p_introduction": "3-Stone AI는 AutoJs6의 공식 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 현재 AI Provider V1 호스트 호출은 이 로컬 대상을 사용하며 네트워크 접근이나 데이터 업로드를 하지 않습니다. 플러그인 설정에서 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 및 사용자 지정 OpenAI Compatible profile, 암호화된 자격 증명, 기본 온라인 대상, 종량제 네트워크 및 명시적 연결 테스트를 관리할 수 있습니다. 런처 채팅은 각 대화를 로컬 또는 설정된 온라인 대상에 명시적으로 고정할 수 있으며 AI Provider V1 호스트 API는 계속 로컬 전용입니다.",
+  "p_introduction": "3-Stone AI는 AutoJs6의 공식 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고 사용자가 구성한 online profile에만 연결합니다. 로컬 및 온라인 실행 위치는 하나의 AI Provider V2 target catalog, 제어된 스트리밍 파이프라인, 명시적 선택 경계를 공유합니다. 로컬 대상은 네트워크에 접근하거나 데이터를 업로드하지 않으며, 온라인 대상은 사용자가 명시적으로 선택한 경우에만 플러그인이 관리하는 자격 증명과 선언된 HTTPS origin에 고정되어 실행됩니다.",
   "h3_functions": "기능",
   "features": [
     "Android 시스템 선택기로 `.litertlm` 모델 패키지를 가져오고 검증된 복사본을 앱 전용 저장소에 보관합니다.",
@@ -30,12 +30,12 @@
   "p_formats": "버전 1은 다음 모델 및 텍스트 범위만 선언합니다",
   "h3_plugin_interface": "플러그인 인터페이스",
   "p_plugin_interface": "호스트는 다음 식별자로 플러그인을 검색하고 호출합니다",
-  "p_plugin_scope": "공개 AI Provider V1 표면은 ON_DEVICE 실행과 NONE credential 모드를 선언합니다. `streaming`, `usage`, `persistent-session`, `structured-json` 기능을 선언하고, `text/plain` 메시지와 `application/json` 응답 schema를 입력받아 `text/plain` 또는 `application/json` 텍스트를 출력합니다. 프로토콜 1.3은 명시적 backend profile과 기기별 가용성을 추가하며 CPU로의 자동 전환을 금지합니다. 플러그인 내부 REMOTE 대상은 V1을 통해 알리지 않습니다.",
+  "p_plugin_scope": "AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 catalog로 공개합니다. 각 대상은 provider, model, locality, 구성/가용성, capabilities, limits, controls, HTTPS origins를 개별적으로 선언합니다. 로컬 전용 catalog는 ON_DEVICE/NONE을 선언하고 online profile이 있으면 HYBRID/PLUGIN_MANAGED와 HTTPS origins의 정확한 합집합을 선언합니다. 로컬 backend profile은 선택적 target control이며 사용할 수 없는 profile이나 대상으로 자동 전환하지 않습니다.",
   "p_plugin_packaging": "호스트 build {{ required_host_build }} 이상이 필요합니다. 릴리스에는 {{ supported_abis }} APK 변형이 포함됩니다.",
   "h3_host_integration_status": "호스트 통합 상태",
-  "p_host_integration_status": "AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`은 로컬 플러그인 경로를 지원합니다. `ai.session({ plugin: true })`은 영구적인 여러 턴 Conversation을 만들며 이후 `ask`, `chat`, `stream` 호출은 새 사용자 프롬프트만 전송합니다. `ai.ask(messages, { plugin: true })`는 일반 텍스트 `system`, `user`, `assistant` 메시지의 순서를 유지하며 마지막 메시지는 `user` 역할이어야 합니다. `ai.chat`은 정확한 token 수를 `usage`에, 측정된 생성 시간을 `usage.raw.durationMillis`에 반환하며, `ai.stream`은 완료 전에 같은 누적 usage를 전송합니다. `plugin: true`를 전달하면 이 플러그인이 선택되고, 모델이 하나뿐인 경우 모델 ID를 생략할 수 있습니다. `ai.models({ plugin: true })`로 모델과 `backendProfiles`를 열거할 수 있습니다. 생성은 `backend: 'cpu' | 'gpu' | 'npu'`를 받으며 사용 불가 profile은 명시적으로 실패하고 CPU로 전환되지 않습니다. 플러그인이 설치되지 않았거나 플러그인 센터에서 비활성화되었거나 모델이 없으면 스크립트에 명확한 오류가 전달됩니다. `plugin: { component, providerId, modelId }`로 명시적 고정도 가능합니다. `responseSchema`는 구조화 출력을 암시적으로 활성화하고, schema 없이 `structuredJson: true`만 지정하면 기본 object-root schema를 사용합니다. `ai.ask`와 `ai.chat().text`는 계속 JSON 텍스트를 반환하고 스트림 delta는 부분 JSON 텍스트이며, 영구 세션은 모든 턴에 하나의 고정 schema와 backend를 사용합니다.",
+  "p_host_integration_status": "AutoJs6 (빌드 5276 이상)의 `ai.ask`, `ai.chat`, `ai.stream`, `ai.session`은 AI Provider V2 target catalog에서 가져온 로컬 모델과 설정된 온라인 profile을 모두 사용합니다. 순서가 있는 `system`, `user`, `assistant` 기록을 유지하고 영구 세션의 다음 턴은 새 사용자 프롬프트만 보내며 usage에는 정확한 token 수와 provider 측정 시간이 포함됩니다. `plugin: true`는 이 플러그인을 선택하고 모델 ID는 catalog에 target이 하나뿐일 때만 생략할 수 있습니다. `ai.catalog()`가 현재 공개 목록 API를 대체하기 전까지 `ai.models({ plugin: true })`는 모든 로컬/온라인 target을 모델로 투영하며 `backendProfiles`는 로컬 target에만 있습니다. `plugin: { component, providerId, modelId }`는 정확히 하나의 target으로 해석되어야 합니다. `backend`를 생략하면 로컬은 CPU, 온라인은 로컬 실행 profile 없음을 사용합니다. 명시적 `cpu`, `gpu`, `npu`는 로컬 전용이며 사용 불가 profile은 fallback 없이 실패합니다. 플러그인 누락/비활성화와 설정되지 않음/사용 불가/모호한 target은 명시적 오류를 반환합니다. `responseSchema`는 구조화 출력을 활성화하고 schema 없는 `structuredJson: true`는 기본 object-root schema를 사용합니다. 완료 호출은 JSON 텍스트를 반환하고 stream delta는 부분 JSON일 수 있으며 영구 세션은 모든 턴에 같은 target, schema, 선택적 backend를 고정합니다.",
   "h3_security": "보안 및 개인정보 보호",
-  "p_security": "사용자가 시작한 권장 모델 다운로드와 사용자가 구성한 online 대상 요청에 `INTERNET` 권한을 사용하지만, 현재 V1 로컬 생성은 네트워크를 사용하지 않습니다. 광범위한 저장소 권한은 요청하지 않습니다. 다운로드는 변경 불가능한 HTTPS 리비전, 고정 크기와 SHA-256을 사용하고 선택한 SAF 위치에만 쓰며 LiteRT-LM 헤더, 크기, 다이제스트, flush, fsync가 모두 통과해야 완료됩니다. 가져오기는 계속 선택기 URI만 읽고 검증 사본을 `files/models`에 써서 원자적으로 활성화합니다. Provider는 AutoJs6 패키지, UID, 서명도 검증합니다.",
+  "p_security": "사용자가 시작한 권장 모델 다운로드와 사용자가 구성한 online 대상 요청에 `INTERNET` 권한을 사용하지만 로컬 생성은 네트워크를 사용하지 않습니다. 광범위한 저장소 권한은 요청하지 않습니다. 다운로드는 변경 불가능한 HTTPS 리비전, 고정 크기와 SHA-256을 사용하고 선택한 SAF 위치에만 쓰며 LiteRT-LM 헤더, 크기, 다이제스트, flush, fsync가 모두 통과해야 완료됩니다. 가져오기는 계속 선택기 URI만 읽고 검증 사본을 `files/models`에 써서 원자적으로 활성화합니다. Provider는 AutoJs6 패키지, UID, 서명, target metadata 및 선언된 origin 경계도 검증합니다.",
   "h3_security_limits": "운영 제한",
   "security_limits": [
     "모델 가져오기에는 8 GiB의 엄격한 상한이 있고 완료 후 최소 256 MiB의 여유 공간이 필요합니다.",
@@ -57,7 +57,7 @@
   "unsupported_capabilities": [
     "Reasoning 및 tools는 선언하지 않습니다.",
     "Tool 역할 메시지, tool schema, tool call 및 tool result를 받지 않습니다.",
-    "네트워크 모델 검색이나 임의 URL 모델 다운로드는 없습니다. 런처 채팅에는 가져온 로컬 모델과 명시적으로 설정된 온라인 profile만 표시됩니다. AI Provider V1 호스트 라우팅은 계속 로컬 전용이며 고정된 내장 권장 카탈로그만 다운로드할 수 있습니다.",
+    "네트워크 모델 검색이나 임의 URL 모델 다운로드는 없습니다. 런처 채팅과 AI Provider V2에는 가져온 로컬 모델과 명시적으로 설정된 온라인 profile만 표시되며 고정된 내장 권장 카탈로그만 다운로드할 수 있습니다.",
     "NPU 추론은 선언하지 않습니다. profile은 `npu-runtime-not-packaged` 사유의 `unavailable`로 검색됩니다. GPU는 `libOpenCL.so`를 로드할 수 있을 때만 선언되며 `.litertlm` 확장자만으로 모델 초기화를 보장하지 않습니다."
   ],
   "h3_roadmap": "로드맵",

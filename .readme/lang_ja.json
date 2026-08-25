@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "言語",
   "p_languages_all_supported_for_readme": "現在の README.md は次の言語に対応しています",
   "h3_introduction": "概要",
-  "p_introduction": "3-Stone AI は AutoJs6 の公式 AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, プレーンテキストのメッセージ履歴を受け取り, 制御されたストリーミングセッションでプレーンテキストまたは schema によって制約された JSON テキストを返します. 現在の AI Provider V1 ホスト呼び出しはこれらのローカルターゲットを使用し, ネットワークアクセスもデータ送信も行いません. プラグイン設定では OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter とカスタム OpenAI Compatible profile, 暗号化認証情報, 既定オンラインターゲット, 従量制ネットワーク, 明示接続テストを管理できます. ランチャーチャットは各会話をローカルまたは設定済みオンラインターゲットへ明示的に固定でき, AI Provider V1 ホスト API は引き続きローカル専用です.",
+  "p_introduction": "3-Stone AI は AutoJs6 の公式 AI テキスト生成プラグインです. ユーザーがインポートした LiteRT-LM モデルを明示選択した CPU または互換 GPU backend 上で実行し, ユーザー設定済み online profile のみに接続します. ローカルとオンラインの実行先は 1 つの AI Provider V2 target catalog, 制御されたストリーミングパイプライン, 明示選択境界を共有します. ローカルターゲットはネットワークアクセスもデータ送信も行わず, オンラインターゲットはユーザーが明示選択した場合のみ, プラグイン管理の認証情報と宣言済み HTTPS origin に固定して実行されます.",
   "h3_functions": "機能",
   "features": [
     "Android システムピッカーから `.litertlm` モデルパッケージをインポートし, 検証済みコピーをアプリ専用ストレージに保存します.",
@@ -30,12 +30,12 @@
   "p_formats": "バージョン 1 は次のモデルとテキスト範囲だけを宣言します",
   "h3_plugin_interface": "プラグインインターフェース",
   "p_plugin_interface": "ホストは次の識別情報でプラグインを検出して呼び出します",
-  "p_plugin_scope": "公開 AI Provider V1 サーフェスは ON_DEVICE 実行と NONE credential モードを宣言します. `streaming`, `usage`, `persistent-session`, `structured-json` 機能を宣言し, `text/plain` メッセージと `application/json` 応答 schema を受け取り, `text/plain` または `application/json` テキストを出力します. プロトコル 1.3 は明示 backend profile と端末別可用性を追加し, CPU への暗黙フォールバックを禁止します. プラグイン内部の REMOTE ターゲットは V1 では公開されません.",
+  "p_plugin_scope": "AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのページ化 catalog で公開します. 各ターゲットは provider, model, locality, 設定/可用性, capabilities, limits, controls, HTTPS origins を個別に宣言します. ローカル専用 catalog は ON_DEVICE/NONE を宣言し, online profile が存在する場合は HYBRID/PLUGIN_MANAGED と HTTPS origins の正確な和集合を宣言します. ローカル backend profile は任意の target control であり, 使用不可 profile やターゲットへ暗黙にフォールバックしません.",
   "p_plugin_packaging": "ホスト build {{ required_host_build }} 以降が必要です. リリースには {{ supported_abis }} APK variant が含まれます.",
   "h3_host_integration_status": "ホスト統合状態",
-  "p_host_integration_status": "AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream` はローカルプラグイン経路に対応. `ai.session({ plugin: true })` は永続的な複数ターン Conversation を作成し, その後の `ask`, `chat`, `stream` は新しいユーザープロンプトだけを送信します. `ai.ask(messages, { plugin: true })` はプレーンテキストの `system`, `user`, `assistant` メッセージを順序どおり保持し, 最後のメッセージは `user` である必要があります. `ai.chat` は正確な token 数を `usage` に, 実測生成時間を `usage.raw.durationMillis` に返し, `ai.stream` は完了前に同じ累積 usage を送信します. `plugin: true` を渡すと本プラグインが選択され, モデルが 1 つだけの場合はモデル ID を省略可能. `ai.models({ plugin: true })` でモデルと `backendProfiles` を列挙できます. 生成は `backend: 'cpu' | 'gpu' | 'npu'` を受け付け, 利用不可 profile は明示エラーとなり CPU へ戻りません. プラグイン未インストール, プラグインセンターで無効, モデル未インポートの場合, スクリプトには明確なエラーが通知されます. `plugin: { component, providerId, modelId }` による明示固定も可能です. `responseSchema` は構造化出力を暗黙に有効化し, schema なしの `structuredJson: true` は既定の object-root schema を使用します. `ai.ask` と `ai.chat().text` は引き続き JSON テキストを返し, ストリーム delta は部分的な JSON テキストです. 永続セッションでは全ターンで 1 つの固定 schema と backend を使用します.",
+  "p_host_integration_status": "AutoJs6 (ビルド 5276 以降) の `ai.ask`, `ai.chat`, `ai.stream`, `ai.session` は, インポート済みローカルモデルと設定済みオンライン profile の両方を AI Provider V2 ターゲットカタログから使用します. 順序付き `system`, `user`, `assistant` 履歴を保持し, 永続セッションの後続ターンは新しいユーザープロンプトだけを送信し, usage は正確な token 数と provider 実測時間を含みます. `plugin: true` は本プラグインを選択し, モデル ID はカタログにターゲットが 1 つだけの場合に限り省略可能です. `ai.catalog()` が現在の公開一覧 API を置き換えるまで, `ai.models({ plugin: true })` は全ローカル/オンラインターゲットをモデルとして投影し, `backendProfiles` はローカルターゲットだけに付きます. `plugin: { component, providerId, modelId }` は 1 つのターゲットへ一意に解決される必要があります. `backend` を省略するとローカルは CPU, オンラインはローカル実行 profile なしを使用します. 明示的な `cpu`, `gpu`, `npu` はローカル専用で, 利用不可 profile は fallback せず失敗します. プラグインの欠落/無効化, 未設定/利用不可/曖昧なターゲットは明示エラーになります. `responseSchema` は構造化出力を有効化し, schema なしの `structuredJson: true` は既定の object-root schema を使用します. 完了呼び出しは JSON テキストを返し, ストリーム delta は部分 JSON となる場合があり, 永続セッションは全ターンで同じターゲット, schema, 任意 backend を固定します.",
   "h3_security": "セキュリティとプライバシー",
-  "p_security": "ユーザーが開始する推奨モデルのダウンロードとユーザー設定 online ターゲットへのリクエストに `INTERNET` 権限を要求しますが, 現在の V1 ローカル生成はネットワークを使用しません. 広範なストレージ権限は要求しません. ダウンロードは不変 HTTPS リビジョン, 固定サイズと SHA-256 を使い, 選択された SAF 保存先だけへ書き込みます; LiteRT-LM ヘッダー, サイズ, ダイジェスト, flush, fsync がすべて成功するまで完了扱いにしません. インポートは引き続きピッカー URI のみを読み, 検証済みコピーを `files/models` に書いて原子的に有効化します. Provider は AutoJs6 パッケージ, UID, 署名も検証します.",
+  "p_security": "ユーザーが開始する推奨モデルのダウンロードとユーザー設定 online ターゲットへのリクエストに `INTERNET` 権限を要求しますが, ローカル生成はネットワークを使用しません. 広範なストレージ権限は要求しません. ダウンロードは不変 HTTPS リビジョン, 固定サイズと SHA-256 を使い, 選択された SAF 保存先だけへ書き込みます; LiteRT-LM ヘッダー, サイズ, ダイジェスト, flush, fsync がすべて成功するまで完了扱いにしません. インポートは引き続きピッカー URI のみを読み, 検証済みコピーを `files/models` に書いて原子的に有効化します. Provider は AutoJs6 パッケージ, UID, 署名, target metadata, 宣言済み origin 境界も検証します.",
   "h3_security_limits": "動作制限",
   "security_limits": [
     "モデルのインポートには 8 GiB の厳格な上限があり, 完了後に 256 MiB 以上の空き容量が必要です.",
@@ -57,7 +57,7 @@
   "unsupported_capabilities": [
     "Reasoning と tools は宣言しません.",
     "Tool role メッセージ, tool schema, tool call, tool result は受け付けません.",
-    "ネットワークでのモデル探索や任意 URL からのモデルダウンロードはありません. ランチャーチャットに表示されるのはインポート済みローカルモデルと明示設定されたオンライン profile のみです; AI Provider V1 ホストルーティングはローカル専用のままで, ダウンロードできるのは固定された内蔵推奨カタログだけです.",
+    "ネットワークでのモデル探索や任意 URL からのモデルダウンロードはありません. ランチャーチャットと AI Provider V2 が公開するのはインポート済みローカルモデルと明示設定されたオンライン profile のみで, ダウンロードできるのは固定された内蔵推奨カタログだけです.",
     "NPU 推論は宣言しません. profile は `npu-runtime-not-packaged` 理由付きの `unavailable` として確認できます. GPU は `libOpenCL.so` を読み込める場合だけ宣言され, `.litertlm` 拡張子だけではモデル初期化を保証しません."
   ],
   "h3_roadmap": "ロードマップ",

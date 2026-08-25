@@ -47,7 +47,7 @@ class PayloadMaterializerTest {
             requestId = "request-structured-json",
             protocolVersion = AiProviderProtocol.HOST_PROTOCOL_RANGE.maximum,
             providerId = ThreeStoneAiPlugin.PROVIDER_ID,
-            modelId = "litertlm.${"ab".repeat(16)}",
+            targetId = "local:litertlm.${"ab".repeat(16)}",
             messages = listOf(
                 AiMessage(
                     role = AiMessageRole.USER,

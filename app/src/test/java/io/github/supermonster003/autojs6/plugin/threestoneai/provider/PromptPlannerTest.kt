@@ -127,7 +127,7 @@ class PromptPlannerTest {
         requestId = "request-1",
         protocolVersion = AiProviderProtocol.HOST_PROTOCOL_RANGE.maximum,
         providerId = ThreeStoneAiPlugin.PROVIDER_ID,
-        modelId = "litertlm.${"ab".repeat(16)}",
+        targetId = "local:litertlm.${"ab".repeat(16)}",
         messages = roles.map { role ->
             val bytes = "text".toByteArray()
             AiMessage(

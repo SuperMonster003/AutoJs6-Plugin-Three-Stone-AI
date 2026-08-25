@@ -1,6 +1,6 @@
 # Online Provider Backend
 
-本文记录 P1 插件内部统一在线执行层, 在线服务设置页与启动器聊天目标选择器的实际契约. 它不改变 AI Provider V1 的本地模型公开范围; 用户可在插件设置中管理在线 target, 并在插件启动器聊天中明确选择本地或在线 target. 宿主脚本仍要等 V2 统一目标协议接入后才能选择在线 target.
+本文记录插件内部统一在线执行层, 在线服务设置页, 启动器聊天目标选择器及 AI Provider V2 统一目标目录的实际契约. 用户可在插件设置中管理在线 target, 并在插件启动器聊天中明确选择本地或在线 target; Binder 目录以相同 `local:*` / `profile:*` 身份向宿主公开非敏感目标元数据.
 
 ## 提供方目录
 
@@ -61,7 +61,7 @@
 - `ThreeStoneAiApplication` 是 backend 组合根, 只公开一个由本地和在线实现组成的 Application 级 `CompositeAiBackend`. 启动器聊天通过它读取目录并建立会话; `ThreeStoneAiProviderService` 将同一个 `aiBackend` 交给每个 Binder session, `RemoteThreeStoneAiSession` 也只能通过 `AiBackend.createSession` 建立实际会话. 架构回归测试禁止聊天或 Binder 入口重新直接构造 `LiteRtLocalBackend`, `LiteRtLocalSession`, `OnlineAiBackend` 或 `OnlineAiSession`.
 - `AiBackendSession.stream` / `streamNext` 和单一 `GenerationListener` 是本地与在线共同的增量边界. 聊天不按 backend 类型选择渲染器: 所有 text delta 都进入同一个节流缓冲与 `MarkdownMessageView`, 完成都由 `GenerationStatistics` 生成 usage/耗时, 失败都进入同一消息状态机并保留已到达的部分文本. "重新生成" 只解析原响应 target 后重新走同一发送路径, 不调用 backend 专用重试接口.
 - 停止, Activity 销毁和异常终止使用 `AiBackendSession.cancelAndClose`: 先请求取消, 再无条件释放会话, 即使取消本身抛出异常也不会跳过 `close`. 本地与在线 session 的 callback gate 会在关闭后抑制迟到终态; Binder 的用户取消, 超时与服务销毁也复用同一生命周期契约, 再映射为协议自己的 `cancelled` / `failed` 终态.
-- 当前 Binder V1 的模型目录按协议仍只枚举本地模型, 因而 `ModelPager` 有意读取 `localBackend.catalog`; 这不形成执行旁路, 每个 Binder generation 仍经 Application 级 `aiBackend` 解析其 `local:*` target. 本地与在线统一目录进入 Binder/宿主 API 属于 Roadmap P2/P3 的 V2 工作, 不在此处伪造旧协议兼容层.
+- Binder V2 的 `TargetPager` 直接读取 Application 级 `aiBackend.catalog`, 分页枚举本地与在线目标. 每个 session 以目录返回的精确 targetId 经同一 `aiBackend` 解析, 不存在另一套本地目录, 在线旁路或旧协议兼容层.
 - 离线测试覆盖统一接口的流式文本, 首轮/续轮, usage, 取消后资源释放, 迟到 callback 隔离, 在线失败后重试以及 Binder chunk/usage/单终态规则. G8441 / Android 9 已验证 Cloud 首次生成, 重新生成, usage/耗时和错误呈现, 本轮加固后的 arm64 APK 也已使用保留应用数据的覆盖安装部署到同一设备. 同一设备随后以 Local `gemma-4-E2B-it-litert-lm.litertlm` 流式生成 30 项 Markdown 内容: 用户中止后界面保留已到达的 1-4 项并显示 `Generation stopped`; 长按该响应重新生成后完整输出 30 项, 目标仍为 Local 且显示 `42 input | 543 output | 242.7 s`. 本地和在线两侧均未出现迟到终态或跨边界目标切换, 因而无需人为损坏模型或配置来补充失败证据.
 
 ## 请求映射

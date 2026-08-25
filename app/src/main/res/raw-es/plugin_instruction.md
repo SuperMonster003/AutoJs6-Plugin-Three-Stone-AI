@@ -387,7 +387,7 @@ try {
 
     var request = new TextApi.AiProviderRequest(
         java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(1, 3),
+        new CommonApi.AiProtocolVersion(2, 0),
         "autojs6.three-stone-ai",
         MODEL_ID,
         java.util.Collections.singletonList(message),

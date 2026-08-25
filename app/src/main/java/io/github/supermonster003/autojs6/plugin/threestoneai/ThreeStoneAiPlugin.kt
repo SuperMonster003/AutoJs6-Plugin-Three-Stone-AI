@@ -3,6 +3,8 @@ package io.github.supermonster003.autojs6.plugin.threestoneai
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetCatalog
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
 import org.autojs.plugin.ai.common.api.AiCredentialMode
 import org.autojs.plugin.ai.common.api.AiDataLocality
 import org.autojs.plugin.ai.common.api.AiProviderInfo
@@ -49,7 +51,45 @@ internal object ThreeStoneAiPlugin {
     )
 }
 
-internal fun Context.aiProviderInfo(): AiProviderInfo {
+internal fun Context.aiProviderInfo(catalog: AiTargetCatalog): AiProviderInfo {
+    val implementation = pluginImplementationVersion()
+    val declaration = ThreeStoneAiProviderDeclarationPolicy.from(catalog)
+    return AiProviderInfo(
+        providerId = ThreeStoneAiPlugin.PROVIDER_ID,
+        displayName = getString(R.string.app_name),
+        implementationVersionName = implementation.name,
+        implementationVersionCode = implementation.code,
+        protocolRange = AiProviderProtocol.HOST_PROTOCOL_RANGE,
+        locality = declaration.locality,
+        credentialMode = declaration.credentialMode,
+        declaredHttpsOrigins = declaration.declaredHttpsOrigins,
+        supportedAbis = ThreeStoneAiPlugin.SUPPORTED_ABIS,
+        minimumHostVersionCode = ThreeStoneAiPlugin.REQUIRED_HOST_VERSION,
+    )
+}
+
+internal data class ThreeStoneAiProviderDeclaration(
+    val locality: Int,
+    val credentialMode: Int,
+    val declaredHttpsOrigins: List<String>,
+)
+
+internal object ThreeStoneAiProviderDeclarationPolicy {
+    fun from(catalog: AiTargetCatalog): ThreeStoneAiProviderDeclaration {
+        val remoteTargets = catalog.targets.filter { target -> target.locality == AiTargetLocality.REMOTE }
+        val hasRemoteTargets = remoteTargets.isNotEmpty()
+        return ThreeStoneAiProviderDeclaration(
+            locality = if (hasRemoteTargets) AiDataLocality.HYBRID else AiDataLocality.ON_DEVICE,
+            credentialMode = if (hasRemoteTargets) AiCredentialMode.PLUGIN_MANAGED else AiCredentialMode.NONE,
+            declaredHttpsOrigins = remoteTargets
+                .flatMap { target -> target.declaredHttpsOrigins }
+                .distinct()
+                .sorted(),
+        )
+    }
+}
+
+private fun Context.pluginImplementationVersion(): PluginImplementationVersion {
     val packageInfo = packageManager.getPackageInfo(packageName, 0)
     val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         packageInfo.longVersionCode
@@ -57,22 +97,11 @@ internal fun Context.aiProviderInfo(): AiProviderInfo {
         @Suppress("DEPRECATION")
         packageInfo.versionCode.toLong()
     }
-    return AiProviderInfo(
-        providerId = ThreeStoneAiPlugin.PROVIDER_ID,
-        displayName = getString(R.string.app_name),
-        implementationVersionName = packageInfo.versionName.orEmpty(),
-        implementationVersionCode = versionCode,
-        protocolRange = AiProviderProtocol.HOST_PROTOCOL_RANGE,
-        locality = AiDataLocality.ON_DEVICE,
-        credentialMode = AiCredentialMode.NONE,
-        declaredHttpsOrigins = emptyList(),
-        supportedAbis = ThreeStoneAiPlugin.SUPPORTED_ABIS,
-        minimumHostVersionCode = ThreeStoneAiPlugin.REQUIRED_HOST_VERSION,
-    )
+    return PluginImplementationVersion(packageInfo.versionName.orEmpty(), versionCode)
 }
 
 internal fun Context.threeStoneAiPluginInfo(): PluginInfo {
-    val provider = aiProviderInfo()
+    val implementation = pluginImplementationVersion()
     return PluginInfo().apply {
         name = getString(R.string.app_name)
         description = getString(R.string.plugin_description)
@@ -81,8 +110,8 @@ internal fun Context.threeStoneAiPluginInfo(): PluginInfo {
             .use { it.readText() }
         author = getString(R.string.plugin_author)
         collaborators = null
-        versionName = provider.implementationVersionName
-        versionCode = provider.implementationVersionCode
+        versionName = implementation.name
+        versionCode = implementation.code
         versionDate = getString(R.string.plugin_version_date)
         id = ThreeStoneAiPlugin.ENGINE
         engine = ThreeStoneAiPlugin.ENGINE
@@ -93,3 +122,5 @@ internal fun Context.threeStoneAiPluginInfo(): PluginInfo {
         }
     }
 }
+
+private data class PluginImplementationVersion(val name: String, val code: Long)

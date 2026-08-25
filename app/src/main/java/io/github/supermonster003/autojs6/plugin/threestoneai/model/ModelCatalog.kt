@@ -213,7 +213,7 @@ internal object ModelCatalogPolicy {
             .toList()
     }
 
-    /** Changes only when fields exposed by model listing change. */
+    /** Changes only when local fields exposed by the unified target catalog change. */
     fun listingGeneration(
         document: ModelCatalogDocument,
         capabilityIds: List<String>,

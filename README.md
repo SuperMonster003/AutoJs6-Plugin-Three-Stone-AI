@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI 是 AutoJs6 的官方 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 当前 AI Provider V1 宿主调用只使用这些本地目标, 不联网也不上传数据. 插件设置可管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 及自定义 OpenAI Compatible profile, 加密凭据, 默认在线目标, 计量网络访问与显式连接测试. 启动器聊天可将每个会话明确绑定到本地或已配置的在线目标; AI Provider V1 宿主 API 仍只公开本地目标.
+3-Stone AI 是 AutoJs6 的官方 AI 文本生成插件. 它可在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 并且只连接用户配置的在线 profile. 本地与在线执行位置共用一个 AI Provider V2 目标目录, 受控流式管线及明确选择边界. 本地目标绝不联网或上传数据; 在线目标仅在用户明确选择后执行, 且始终绑定插件管理的凭据及其声明的 HTTPS origin.
 
 ******
 
@@ -94,11 +94,11 @@ plugin id: three-stone-ai
 protocol provider id: autojs6.three-stone-ai
 engine: three-stone-ai
 variant: default
-protocol: V1.2-V1.3
+protocol: V2
 required host build: 5276
 ```
 
-公开的 AI Provider V1 表面声明 ON_DEVICE 执行位置和 NONE credential 模式. 它声明 `streaming`, `usage`, `persistent-session` 与 `structured-json` 能力, 接受 `text/plain` 消息输入和 `application/json` 响应 schema, 并输出 `text/plain` 或 `application/json` 文本. 协议 1.3 增加显式 backend profile 和设备级可用性, 且禁止静默回退到 CPU. 插件内部 REMOTE 目标不会通过 V1 公布.
+AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 每个目标分别声明 provider, model, locality, 配置及可用状态, 能力, 限制, 控件与 HTTPS origins. 目录仅含本地目标时声明 ON_DEVICE/NONE; 存在在线 profile 时声明 HYBRID/PLUGIN_MANAGED 及其 HTTPS origins 精确并集. 本地 backend profile 是可选目标控件, 不可用 profile 或目标绝不静默回退.
 
 需要宿主构建版本 5276 或更高版本. 发布产物包含 arm64-v8a, x86_64, universal APK.
 
@@ -108,7 +108,7 @@ required host build: 5276
 
 ******
 
-> AutoJs6 (构建 5276 及以上) 的 `ai.ask`, `ai.chat` 与 `ai.stream` 支持本地插件路由. `ai.session({ plugin: true })` 可创建持久多轮 Conversation, 后续 `ask`, `chat` 与 `stream` 调用只发送新的用户提示词. `ai.ask(messages, { plugin: true })` 会按顺序保留纯文本 `system`, `user` 与 `assistant` 消息, 且最后一条消息必须为 `user`. `ai.chat` 会在 `usage` 中返回精确 token 数, 并在 `usage.raw.durationMillis` 中返回实测生成耗时; `ai.stream` 会在完成前发送同一份累计 usage. 传入 `plugin: true` 即选择本插件, 单模型场景可省略模型 ID; `ai.models({ plugin: true })` 可枚举已导入模型及其 `backendProfiles`. 生成选项接受 `backend: 'cpu' | 'gpu' | 'npu'`; 不可用 profile 会明确失败且绝不回退 CPU. 插件未安装, 未在插件中心启用或未导入模型时, 脚本会收到明确的错误提示. 也可通过 `plugin: { component, providerId, modelId }` 显式固定组件. `responseSchema` 会隐式启用结构化输出; 仅设置 `structuredJson: true` 时使用默认的对象根 schema. `ai.ask` 和 `ai.chat().text` 仍返回 JSON 文本, 流式 delta 是不完整的 JSON 片段, 持久会话则在所有轮次固定使用同一 schema 和 backend.
+> AutoJs6 (构建 5276 及以上) 的 `ai.ask`, `ai.chat`, `ai.stream` 与 `ai.session` 通过 AI Provider V2 目标目录同时调用已导入本地模型和已配置在线 profile. 有序纯文本 `system`, `user` 与 `assistant` 历史会被保留, 持久会话后续轮次只发送新的用户提示词, usage 包含精确 token 数与提供端实测耗时. 传入 `plugin: true` 即选择本插件; 仅当目录只有一个目标时才可省略模型 ID. 在 `ai.catalog()` 取代当前公开目录 API 前, `ai.models({ plugin: true })` 会按模型投影全部本地与在线目标, `backendProfiles` 仅属于本地目标. `plugin: { component, providerId, modelId }` 必须唯一解析到一个目标. 省略 `backend` 时使用目标默认值: 本地目标选择 CPU, 在线目标不使用本地执行 profile. 显式 `cpu`, `gpu` 或 `npu` 仅适用于本地目标; 不可用 profile 会失败且不回退. 插件缺失, 禁用及目标未配置, 不可用或不唯一均返回明确错误. `responseSchema` 会隐式启用结构化输出; 仅设置 `structuredJson: true` 时使用默认对象根 schema. 完成调用返回 JSON 文本, 流式 delta 可能是不完整 JSON 片段, 持久会话在所有轮次固定同一目标, schema 与可选 backend.
 
 ******
 
@@ -116,7 +116,7 @@ required host build: 5276
 
 ******
 
-插件为用户主动发起的推荐模型下载及用户配置的在线目标请求 `INTERNET` 权限; 当前 V1 本地生成不使用网络. 插件不请求广泛存储权限. 目录下载使用不可变 HTTPS 版本及固定字节数和 SHA-256, 仅写入用户选择的 SAF 位置; LiteRT-LM 文件头, 大小, 摘要, flush 与 fsync 全部通过后才算完成. 导入仍只读取系统选择器授予的 URI, 将验证副本流式写入应用私有 `files/models` 并原子激活. Provider 服务还会核验 AutoJs6 包名, 调用 UID 归属及双方签名.
+插件为用户主动发起的推荐模型下载及用户配置的在线目标请求 `INTERNET` 权限; 本地生成不使用网络. 插件不请求广泛存储权限. 目录下载使用不可变 HTTPS 版本及固定字节数和 SHA-256, 仅写入用户选择的 SAF 位置; LiteRT-LM 文件头, 大小, 摘要, flush 与 fsync 全部通过后才算完成. 导入仍只读取系统选择器授予的 URI, 将验证副本流式写入应用私有 `files/models` 并原子激活. Provider 服务还会核验 AutoJs6 包名, 调用 UID 归属, 双方签名, 目标元数据及声明来源边界.
 
 ******
 
@@ -147,7 +147,7 @@ required host build: 5276
 
 - 不声明 reasoning 或 tools 能力.
 - 不接受 tool 角色消息, tool schema, tool call 或 tool result.
-- 不提供联网模型发现或任意 URL 模型下载. 启动器聊天只公开已导入本地模型与用户明确配置的在线 profile; AI Provider V1 宿主路由仍仅限本地目标, 且只能下载内置目录中固定版本的推荐模型.
+- 不提供联网模型发现或任意 URL 模型下载. 启动器聊天与 AI Provider V2 只公开已导入本地模型及用户明确配置的在线 profile, 且只能下载内置目录中固定版本的推荐模型.
 - 不声明 NPU 推理可用: profile 可发现但以 `npu-runtime-not-packaged` 标记为 `unavailable`. GPU 仅在 `libOpenCL.so` 可加载时声明, 且 `.litertlm` 扩展名本身仍不保证模型初始化成功.
 
 ******
@@ -168,16 +168,16 @@ required host build: 5276
 
 # v1.1.0
 
-###### 2026/08/24
+###### 2026/08/25
 
 * `新增` 插件品牌与运行时标识统一为 3-Stone AI, 同步应用名, 包名, 组件名, 发现标识, 构建产物及文档
 * `新增` 跨进程集成统一采用中性 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 及 `IAiProvider`/`IAiSession`/`IAiCallback` 身份, 不保留被替换身份的别名
-* `新增` 适配 AutoJs6 `ai.ask`/`ai.chat`/`ai.stream` 的 `plugin: true` 简写选择器及 `ai.models` 模型枚举
-* `新增` 通过 AI Provider 协议 1.1 将 `temperature`, `topK`, `topP` 与 `maxTokens` 透传至 LiteRT-LM 采样和输出 token 控制
+* `新增` 通过 AI Provider V2 分页目标目录直接公开 `local:*` 与 `profile:*`, 每项目标独立声明 provider/model/locality, 配置与可用状态, capabilities, limits, controls 及 HTTPS origins
+* `新增` 通过 AI Provider V2 生成请求将 `temperature`, `topK`, `topP` 与 `maxTokens` 透传至 LiteRT-LM 采样和输出 token 控制
 * `新增` 通过 AutoJs6 `ai.chat().usage` 和流式 usage 事件返回 LiteRT-LM 精确的输入, 输出及总 token 数, 以及插件实测生成耗时
-* `新增` AI Provider 协议 1.2 持久会话及 AutoJs6 `ai.session` 多轮 Conversation 复用, 后续轮次无需重传既有历史
+* `新增` AI Provider V2 持久会话及 AutoJs6 `ai.session` 多轮 Conversation 复用, 后续轮次无需重传既有历史
 * `新增` 通过 AutoJs6 `structuredJson` 与 `responseSchema` 启用 LiteRT-LM 原生 JSON Schema 约束解码, 支持单次调用, 流式输出和持久会话, 并严格验证完整 JSON
-* `新增` 通过协议 1.3 与 AutoJs6 生成选项提供显式 `cpu`, `gpu` 和 `npu` backend profile, 包含设备兼容性报告, 模型/profile 缓存隔离及不可用 profile 禁止回退; GPU 仅在 OpenCL 加载探测成功后声明, NPU 因未打包 EAP runtime 而保持不可用
+* `新增` 将显式 `cpu`, `gpu` 和 `npu` backend profile 作为 AI Provider V2 可选目标控件, 包含设备兼容性报告, 模型/profile 缓存隔离及不可用 profile 禁止回退; GPU 仅在 OpenCL 加载探测成功后声明, NPU 因未打包 EAP runtime 而保持不可用
 * `新增` 将固定版本的 LiteRT Community 推荐模型直接下载到用户选择的 SAF 位置, 支持进度, 精确取消, 残缺文件清理, LiteRT-LM 文件头与精确大小/SHA-256 校验, 以及下载后直接导入
 * `新增` 新增可由启动器打开的会话工作区, 支持流式 Markdown, 持久会话历史, 编辑旧消息时的分支替换风险提醒, 多结果搜索及软键盘适配输入
 * `新增` 新增主题色, 暗色模式, 应用语言, 应用与开发者信息及版本历史等应用设置, 可跟随 AutoJs6 的选项默认均设为跟随 AutoJs6
@@ -185,29 +185,29 @@ required host build: 5276
 * `新增` 支持在流式输出中渲染内联 `$\text{...}$` 内容, 并适配常用数学命令, 上标与下标样式
 * `新增` 新增插件自管的 Android Keystore 凭据仓库, 使用 AES-256-GCM, 与 profile 绑定的认证密文, 跨进程原子私有文件, 仅 configured 状态查询及明文即时清零
 * `新增` 新增严格的非敏感在线配置档案仓库, 仅接受 HTTPS OpenAI Compatible 端点, 使用 canonical UUID 与跨进程原子元数据, 并在 provider 或 origin 变更时强制明确替换或清除凭据
-* `新增` 新增插件内部 OpenAI Compatible HTTPS 执行后端, 支持自定义 baseUrl, 凭据和模型名, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, 完成轮次多轮历史, JSON Schema 请求映射及不含敏感信息的固定错误; AI Provider V1 宿主路由仍仅公开本地目标
+* `新增` 新增插件内部 OpenAI Compatible HTTPS 执行后端, 支持自定义 baseUrl, 凭据和模型名, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, 完成轮次多轮历史, JSON Schema 请求映射及不含敏感信息的固定错误; 已配置的 `profile:*` 目标可通过 AI Provider V2 直接调用
 * `新增` 新增与宿主目录对齐的 OpenAI, Anthropic, Gemini, DeepSeek 与 OpenRouter 预置模板; 统一在线执行层复用 OpenAI-compatible 协议, 并分别适配 Anthropic Messages 与 Gemini GenerateContent 的原生认证, 请求, SSE 终态, usage 和 JSON Schema, 不提供协议间或本地/在线自动回退
-* `新增` 新增 10 语言在线服务设置 UI, 支持档案添加, 编辑, 删除, 不回显的 API Key 替换与清除, 默认目标选择, 在读取凭据前强制执行的计量网络开关, 以及可取消且最长 120 秒的显式连接测试; 设置与档案共用跨进程原子文档, AI Provider V1 仍只公开本地目标
+* `新增` 新增 10 语言在线服务设置 UI, 支持档案添加, 编辑, 删除, 不回显的 API Key 替换与清除, 默认目标选择, 在读取凭据前强制执行的计量网络开关, 以及可取消且最长 120 秒的显式连接测试; 设置与档案共用跨进程原子文档并动态刷新 V2 目标目录
 * `新增` 启动器聊天新增统一本地/云端目标选择器: 每个会话持久化一个目标快照, 有消息的会话切换时默认建议新建会话, 携带既有上下文继续当前会话必须明确确认并记录变更
 * `新增` 会话历史为每条助手回复保存实际 target/provider/model/locality 快照; 重新生成默认精确沿用原响应目标, 目标身份变化或不可用时明确失败, 不静默回退到当前会话目标
 * `新增` 本地和云端生成失败始终停留在所选边界: 启动器聊天追加有界且不含敏感信息的失败原因, 明确说明未发生跨边界自动回退, 并在保留部分输出的同时提供显式手动目标切换入口
 * `修复` 移除插件说明可运行示例默认设置的 256 token 与 4 KiB 输出限制: 省略 `maxTokens` 时改用模型或引擎默认值, raw Binder 示例使用插件完整的 64 KiB 输出额度
-* `修复` 修复 10 种本地化插件说明中的底层 Binder 示例仍调用协议 1.1 的 14 参数 `AiGenerationOptions` 构造方法, 导致其在协议 1.3 API 下报告 Java 构造方法不存在
+* `修复` 将 10 种本地化插件说明中的底层 Binder 示例更新为最终 AI Provider V2 请求及目标目录 API
 * `修复` 修复模型管理界面在系统暗色模式下仍使用亮色主题文字, 导致正文, 复选框和模型列表与深色背景对比不足
 * `修复` 确保输入框位于软键盘上方, 根据当前主题色对比度选择发送按钮文字颜色, 并统一搜索的上一个, 下一个及关闭控件
 * `修复` 修复在生成 listener callback 内关闭 session 时 callback quiescence 等待自身而死锁; 关闭仍会等待其他线程中已开始的 callback
 * `修复` 修复 Android 将可信的 `/data/user/0` 应用数据根规范化为 `/data/data` 时误拒绝应用私有在线档案与凭据存储的问题; 仍会拒绝直接子项符号链接及目录逃逸
-* `优化` 更新插件描述, 使用说明及 10 种语言的 README, 与宿主 `ai.*` 本地插件路由的正式化保持一致
+* `优化` 更新插件描述, 使用说明及 10 种语言的 README, 与宿主 `ai.*` 统一目标路由的正式化保持一致
 * `优化` 重写 ROADMAP 为可逐项勾选的功能路线图
 * `优化` 将应用及生成的本地化文档标点统一为 ASCII, 并增加覆盖打包文本和生成文本的回归测试
 * `优化` 引入共享的 `AiBackend`/`AiTarget`/`AiBackendSession` 层, 使启动器聊天和 Binder Provider 共用 `LiteRtLocalBackend` 的目录, 能力, 会话创建, 流式输出及取消路径
-* `优化` 将本地 `local:*` 与在线 `profile:*` 目标合入 Application 级统一目录及分发层; V1 模型列表仍仅公开本地模型, HTTPS 执行传输落地前在线目标如实标记为 unavailable
+* `优化` 将本地 `local:*` 与在线 `profile:*` 目标合入 Application 级统一目录及分发层, 通过 AI Provider V2 直接公开二者, 并从当前目录动态推导 provider locality, credential mode 和 HTTPS origins, 不公开凭据字节
 
 # v1.0.0
 
 ###### 2026/08/08
 
-* `新增` AI Provider 协议 V1 设备端 provider, 插件 ID 和引擎为 `three-stone-ai`, provider ID 为 `autojs6.three-stone-ai`, 变体为 `default`
+* `新增` 设备端 AI Provider 基础实现, 插件 ID 和引擎为 `three-stone-ai`, provider ID 为 `autojs6.three-stone-ai`, 变体为 `default`
 * `新增` CPU-only LiteRT-LM 纯文本生成, 支持 system, user 和 assistant 历史及 credit 背压流式输出
 * `新增` 通过 SAF 导入 `.litertlm` 到应用私有存储, 包含 8 GiB 上限, 空间预留, SHA-256, fsync 和原子激活
 * `新增` 单活动会话, 有界 I/O, descriptor 配额, 取消, 超时, 唯一终态及同签名 AutoJs6 调用方核验

@@ -142,6 +142,12 @@
     <string name="chat_generation_stopped">생성이 중지됨</string>
     <string name="chat_generation_failed">생성에 실패했습니다. 선택한 대상과 설정을 확인한 후 다시 시도하세요.</string>
     <string name="chat_generation_failed_short">생성 실패</string>
+    <string name="chat_generation_failure_local">%1$s에서 로컬 생성에 실패했습니다. 클라우드 대상으로 자동 전환하지 않았습니다.\n\n%2$s</string>
+    <string name="chat_generation_failure_cloud">%1$s에서 클라우드 생성에 실패했습니다. 로컬 대상으로 자동 전환하지 않았습니다.\n\n%2$s</string>
+    <string name="chat_generation_failure_target_unavailable">기록된 대상을 더 이상 사용할 수 없습니다.</string>
+    <string name="chat_generation_failure_local_execution">선택한 온디바이스 모델이 이 요청을 완료하지 못했습니다.</string>
+    <string name="chat_generation_failure_unknown">선택한 대상이 이 요청을 완료하지 못했습니다.</string>
+    <string name="chat_generation_failure_choose_target">생성 실패 | 다른 대상 선택</string>
     <string name="chat_new_conversation">새 대화</string>
     <string name="chat_model_settings">모델 및 저장공간 설정</string>
     <string name="chat_clipboard_label">AI 메시지</string>
@@ -330,12 +336,12 @@
     <string name="online_ai_test_timed_out">연결 테스트 시간 초과</string>
     <string name="online_ai_test_failed">연결 테스트 실패</string>
     <string name="online_ai_test_failure_credential">API 키가 없거나 사용할 수 없습니다. 다시 입력하고 재시도하세요.</string>
-    <string name="online_ai_test_failure_profile_changed">테스트 중 프로필이 변경되었습니다. 최신 설정으로 재시도하세요.</string>
+    <string name="online_ai_test_failure_profile_changed">요청이 완료되기 전에 프로필이 변경되었습니다. 최신 설정으로 재시도하세요.</string>
     <string name="online_ai_test_failure_authentication">제공자가 API 키 또는 계정 권한을 거부했습니다.</string>
     <string name="online_ai_test_failure_rate_limit">제공자 속도 제한에 도달했습니다. 나중에 다시 시도하세요.</string>
     <string name="online_ai_test_failure_provider">제공자가 요청을 거부했거나 현재 사용할 수 없습니다.</string>
     <string name="online_ai_test_failure_network">사용 가능한 네트워크 연결이 없습니다.</string>
-    <string name="online_ai_test_failure_metered">모바일 또는 종량제 네트워크 접근이 꺼져 있습니다. 위에서 켜거나 비종량제 네트워크를 사용하세요.</string>
+    <string name="online_ai_test_failure_metered">모바일 또는 종량제 네트워크 접근이 꺼져 있습니다. 온라인 서비스에서 켜거나 비종량제 네트워크를 사용하세요.</string>
     <string name="online_ai_test_failure_timeout">제공자가 제한 시간 전에 응답하지 않았습니다.</string>
     <string name="online_ai_test_failure_tls">안전한 TLS 연결을 설정할 수 없습니다.</string>
     <string name="online_ai_test_failure_response">제공자가 지원되지 않거나 잘못된 응답을 반환했습니다.</string>

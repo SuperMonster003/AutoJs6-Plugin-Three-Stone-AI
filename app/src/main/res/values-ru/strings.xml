@@ -142,6 +142,12 @@
     <string name="chat_generation_stopped">Генерация остановлена</string>
     <string name="chat_generation_failed">Сбой генерации. Проверьте выбранную цель и её настройки, затем повторите попытку.</string>
     <string name="chat_generation_failed_short">Сбой генерации</string>
+    <string name="chat_generation_failure_local">Локальная генерация для %1$s завершилась ошибкой. Облачная цель не была выбрана автоматически.\n\n%2$s</string>
+    <string name="chat_generation_failure_cloud">Облачная генерация для %1$s завершилась ошибкой. Локальная цель не была выбрана автоматически.\n\n%2$s</string>
+    <string name="chat_generation_failure_target_unavailable">Записанная цель больше недоступна.</string>
+    <string name="chat_generation_failure_local_execution">Выбранная модель на устройстве не смогла выполнить этот запрос.</string>
+    <string name="chat_generation_failure_unknown">Выбранная цель не смогла выполнить этот запрос.</string>
+    <string name="chat_generation_failure_choose_target">Сбой генерации | Выбрать другую цель</string>
     <string name="chat_new_conversation">Новый диалог</string>
     <string name="chat_model_settings">Настройки моделей и хранилища</string>
     <string name="chat_clipboard_label">сообщение ИИ</string>
@@ -330,12 +336,12 @@
     <string name="online_ai_test_timed_out">Время проверки подключения истекло</string>
     <string name="online_ai_test_failed">Проверка подключения завершилась ошибкой</string>
     <string name="online_ai_test_failure_credential">Ключ API отсутствует или недоступен. Введите его снова и повторите попытку.</string>
-    <string name="online_ai_test_failure_profile_changed">Профиль изменился во время проверки. Повторите попытку с последними настройками.</string>
+    <string name="online_ai_test_failure_profile_changed">Профиль изменился до завершения запроса. Повторите попытку с последними настройками.</string>
     <string name="online_ai_test_failure_authentication">Поставщик отклонил ключ API или разрешение учетной записи.</string>
     <string name="online_ai_test_failure_rate_limit">Достигнуто ограничение частоты поставщика. Повторите попытку позже.</string>
     <string name="online_ai_test_failure_provider">Поставщик отклонил запрос или недоступен.</string>
     <string name="online_ai_test_failure_network">Нет доступного сетевого подключения.</string>
-    <string name="online_ai_test_failure_metered">Доступ через мобильную или тарифицируемую сеть выключен. Включите его выше или используйте нетарифицируемую сеть.</string>
+    <string name="online_ai_test_failure_metered">Доступ через мобильную или тарифицируемую сеть выключен. Включите его в онлайн-сервисах или используйте нетарифицируемую сеть.</string>
     <string name="online_ai_test_failure_timeout">Поставщик не ответил до истечения времени.</string>
     <string name="online_ai_test_failure_tls">Не удалось установить безопасное подключение TLS.</string>
     <string name="online_ai_test_failure_response">Поставщик вернул неподдерживаемый или недопустимый ответ.</string>

@@ -142,6 +142,12 @@
     <string name="chat_generation_stopped">تم إيقاف التوليد</string>
     <string name="chat_generation_failed">فشل التوليد. تحقق من الهدف المحدد وإعداداته ثم حاول مرة أخرى.</string>
     <string name="chat_generation_failed_short">فشل التوليد</string>
+    <string name="chat_generation_failure_local">فشل التوليد المحلي عبر %1$s. لم يتم اختيار هدف سحابي تلقائيا.\n\n%2$s</string>
+    <string name="chat_generation_failure_cloud">فشل التوليد السحابي عبر %1$s. لم يتم اختيار هدف محلي تلقائيا.\n\n%2$s</string>
+    <string name="chat_generation_failure_target_unavailable">الهدف المسجل لم يعد متاحا.</string>
+    <string name="chat_generation_failure_local_execution">تعذر على النموذج المحدد على الجهاز إكمال هذا الطلب.</string>
+    <string name="chat_generation_failure_unknown">تعذر على الهدف المحدد إكمال هذا الطلب.</string>
+    <string name="chat_generation_failure_choose_target">فشل التوليد | اختيار هدف آخر</string>
     <string name="chat_new_conversation">محادثة جديدة</string>
     <string name="chat_model_settings">إعدادات النماذج والتخزين</string>
     <string name="chat_clipboard_label">رسالة ذكاء اصطناعي</string>
@@ -330,12 +336,12 @@
     <string name="online_ai_test_timed_out">انتهت مهلة اختبار الاتصال</string>
     <string name="online_ai_test_failed">فشل اختبار الاتصال</string>
     <string name="online_ai_test_failure_credential">مفتاح API مفقود أو غير متاح. أدخله مجددا ثم أعد المحاولة.</string>
-    <string name="online_ai_test_failure_profile_changed">تغير الملف الشخصي أثناء الاختبار. أعد المحاولة باستخدام أحدث الإعدادات.</string>
+    <string name="online_ai_test_failure_profile_changed">تغير الملف الشخصي قبل اكتمال الطلب. أعد المحاولة باستخدام أحدث الإعدادات.</string>
     <string name="online_ai_test_failure_authentication">رفض المزود مفتاح API أو إذن الحساب.</string>
     <string name="online_ai_test_failure_rate_limit">تم بلوغ حد معدل المزود. أعد المحاولة لاحقا.</string>
     <string name="online_ai_test_failure_provider">رفض المزود الطلب أو أنه غير متاح.</string>
     <string name="online_ai_test_failure_network">لا يوجد اتصال شبكة قابل للاستخدام.</string>
-    <string name="online_ai_test_failure_metered">تم إيقاف الوصول عبر الشبكة المحمولة أو المحسوبة. فعله أعلاه أو استخدم شبكة غير محسوبة.</string>
+    <string name="online_ai_test_failure_metered">تم إيقاف الوصول عبر الشبكة المحمولة أو المحسوبة. فعله في الخدمات عبر الإنترنت أو استخدم شبكة غير محسوبة.</string>
     <string name="online_ai_test_failure_timeout">لم يستجب المزود قبل انتهاء المهلة.</string>
     <string name="online_ai_test_failure_tls">تعذر إنشاء اتصال TLS آمن.</string>
     <string name="online_ai_test_failure_response">أعاد المزود استجابة غير مدعومة أو غير صالحة.</string>

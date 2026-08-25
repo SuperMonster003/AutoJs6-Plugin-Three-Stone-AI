@@ -992,13 +992,16 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun updateMessageMeta(message: ChatMessage, meta: TextView) {
+        val failed = message.role == ChatMessageRole.ASSISTANT &&
+            message.status == ChatMessageStatus.FAILED
         val value = if (message.role == ChatMessageRole.USER) {
             ""
         } else {
             when (message.status) {
                 ChatMessageStatus.GENERATING -> getString(R.string.chat_streaming)
                 ChatMessageStatus.STOPPED -> getString(R.string.chat_generation_stopped)
-                ChatMessageStatus.FAILED -> getString(R.string.chat_generation_failed_short)
+                ChatMessageStatus.FAILED ->
+                    getString(R.string.chat_generation_failure_choose_target)
                 ChatMessageStatus.COMPLETE -> if (uiSettings.showGenerationUsage) {
                     message.usage?.let(::formatUsage).orEmpty()
                 } else {
@@ -1007,8 +1010,19 @@ class ChatActivity : ConfiguredActivity() {
             }
         }
         meta.text = value
-        meta.isClickable = false
-        meta.setTextColor(appPalette.secondaryText)
+        meta.isClickable = failed
+        meta.isFocusable = failed
+        meta.minimumHeight = if (failed) dp(40) else 0
+        meta.gravity = when {
+            failed -> Gravity.CENTER_VERTICAL
+            message.role == ChatMessageRole.USER -> Gravity.END
+            else -> Gravity.NO_GRAVITY
+        }
+        meta.setOnClickListener(if (failed) View.OnClickListener { showTargetSelector() } else null)
+        meta.contentDescription = value
+        meta.background = null
+        if (failed) applySelectableBackground(meta)
+        meta.setTextColor(if (failed) appPalette.accent else appPalette.secondaryText)
         meta.visibility = if (value.isEmpty()) View.GONE else View.VISIBLE
     }
 
@@ -1195,7 +1209,14 @@ class ChatActivity : ConfiguredActivity() {
 
         override fun onFailed(error: Throwable, statistics: GenerationStatistics?) {
             Log.e(TAG, "Launcher chat generation failed", error)
-            mainHandler.post { failGeneration(generationId, assistantMessageId, actualTarget) }
+            mainHandler.post {
+                failGeneration(
+                    generationId = generationId,
+                    assistantMessageId = assistantMessageId,
+                    error = error,
+                    actualTarget = actualTarget,
+                )
+            }
         }
     }
 
@@ -1210,12 +1231,14 @@ class ChatActivity : ConfiguredActivity() {
                     action()
                 } catch (error: Throwable) {
                     Log.e(TAG, "Launcher chat generation crashed", error)
-                    mainHandler.post { failGeneration(generationId, assistantMessageId) }
+                    mainHandler.post {
+                        failGeneration(generationId, assistantMessageId, error)
+                    }
                 }
             }
         } catch (error: RejectedExecutionException) {
             Log.e(TAG, "Launcher chat worker rejected generation", error)
-            mainHandler.post { failGeneration(generationId, assistantMessageId) }
+            mainHandler.post { failGeneration(generationId, assistantMessageId, error) }
         }
     }
 
@@ -1300,18 +1323,21 @@ class ChatActivity : ConfiguredActivity() {
     private fun failGeneration(
         generationId: Long,
         assistantMessageId: Long,
+        error: Throwable,
         actualTarget: ConversationTargetSnapshot? = null,
     ) {
         if (!isGenerationCurrent(generationId)) return
         flushTextDelta(generationId, assistantMessageId)
         val current = messages.singleOrNull { message -> message.id == assistantMessageId }
         if (current != null) {
+            val failedTarget = actualTarget ?: checkNotNull(current.target)
+            val failureText = generationFailureText(failedTarget, error)
             replaceMessage(
                 current.copy(
-                    text = current.text.ifEmpty { getString(R.string.chat_generation_failed) },
+                    text = current.text.withGenerationFailure(failureText),
                     status = ChatMessageStatus.FAILED,
                     usage = null,
-                    target = actualTarget ?: current.target,
+                    target = failedTarget,
                 ),
             )
         }
@@ -2262,6 +2288,45 @@ class ChatActivity : ConfiguredActivity() {
         )
     }
 
+    private fun generationFailureText(
+        target: ConversationTargetSnapshot,
+        error: Throwable,
+    ): String {
+        val failure = ChatGenerationFailurePolicy.classify(target, error)
+        val template = when (failure.locality) {
+            AiTargetLocality.LOCAL -> R.string.chat_generation_failure_local
+            AiTargetLocality.REMOTE -> R.string.chat_generation_failure_cloud
+        }
+        return getString(
+            template,
+            targetSummary(target),
+            getString(failure.kind.detailResource()),
+        )
+    }
+
+    private fun ChatGenerationFailureKind.detailResource(): Int = when (this) {
+        ChatGenerationFailureKind.TARGET_UNAVAILABLE ->
+            R.string.chat_generation_failure_target_unavailable
+        ChatGenerationFailureKind.LOCAL_EXECUTION ->
+            R.string.chat_generation_failure_local_execution
+        ChatGenerationFailureKind.CREDENTIAL -> R.string.online_ai_test_failure_credential
+        ChatGenerationFailureKind.PROFILE_CHANGED ->
+            R.string.online_ai_test_failure_profile_changed
+        ChatGenerationFailureKind.AUTHENTICATION ->
+            R.string.online_ai_test_failure_authentication
+        ChatGenerationFailureKind.RATE_LIMIT -> R.string.online_ai_test_failure_rate_limit
+        ChatGenerationFailureKind.PROVIDER -> R.string.online_ai_test_failure_provider
+        ChatGenerationFailureKind.NETWORK -> R.string.online_ai_test_failure_network
+        ChatGenerationFailureKind.METERED_NETWORK -> R.string.online_ai_test_failure_metered
+        ChatGenerationFailureKind.TIMEOUT -> R.string.online_ai_test_failure_timeout
+        ChatGenerationFailureKind.TLS -> R.string.online_ai_test_failure_tls
+        ChatGenerationFailureKind.RESPONSE -> R.string.online_ai_test_failure_response
+        ChatGenerationFailureKind.UNKNOWN -> R.string.chat_generation_failure_unknown
+    }
+
+    private fun String.withGenerationFailure(failureText: String): String =
+        if (isBlank()) failureText else trimEnd() + GENERATION_FAILURE_SEPARATOR + failureText
+
     private fun saveConversationTarget(outState: Bundle) {
         val snapshot = conversationTarget ?: return
         outState.putString(STATE_CONVERSATION_TARGET_ID, snapshot.targetId)
@@ -2532,6 +2597,7 @@ class ChatActivity : ConfiguredActivity() {
         const val NEAR_BOTTOM_DP = 96
         const val DISABLED_ALPHA = 0.42f
         const val PLACEHOLDER_ALPHA = 0.65f
+        const val GENERATION_FAILURE_SEPARATOR = "\n\n---\n\n"
         const val NO_USAGE = -1L
         const val MAXIMUM_SAVED_MESSAGES = 48
         const val MAXIMUM_SAVED_CHARACTERS = 128 * 1_024

@@ -142,6 +142,12 @@
     <string name="chat_generation_stopped">Generación detenida</string>
     <string name="chat_generation_failed">La generación falló. Comprueba el destino seleccionado y sus ajustes e inténtalo de nuevo.</string>
     <string name="chat_generation_failed_short">La generación falló</string>
+    <string name="chat_generation_failure_local">La generación local falló para %1$s. No se seleccionó automáticamente ningún destino en la nube.\n\n%2$s</string>
+    <string name="chat_generation_failure_cloud">La generación en la nube falló para %1$s. No se seleccionó automáticamente ningún destino local.\n\n%2$s</string>
+    <string name="chat_generation_failure_target_unavailable">El destino registrado ya no está disponible.</string>
+    <string name="chat_generation_failure_local_execution">El modelo seleccionado en el dispositivo no pudo completar esta solicitud.</string>
+    <string name="chat_generation_failure_unknown">El destino seleccionado no pudo completar esta solicitud.</string>
+    <string name="chat_generation_failure_choose_target">La generación falló | Elegir otro destino</string>
     <string name="chat_new_conversation">Nueva conversación</string>
     <string name="chat_model_settings">Ajustes de modelos y almacenamiento</string>
     <string name="chat_clipboard_label">mensaje de IA</string>
@@ -330,12 +336,12 @@
     <string name="online_ai_test_timed_out">La prueba de conexión agotó el tiempo</string>
     <string name="online_ai_test_failed">Falló la prueba de conexión</string>
     <string name="online_ai_test_failure_credential">Falta la clave API o no está disponible. Introdúcela otra vez y reintenta.</string>
-    <string name="online_ai_test_failure_profile_changed">El perfil cambió durante la prueba. Reintenta con los ajustes más recientes.</string>
+    <string name="online_ai_test_failure_profile_changed">El perfil cambió antes de que terminara la solicitud. Reintenta con los ajustes más recientes.</string>
     <string name="online_ai_test_failure_authentication">El proveedor rechazó la clave API o el permiso de la cuenta.</string>
     <string name="online_ai_test_failure_rate_limit">Se alcanzó el límite de solicitudes del proveedor. Inténtalo más tarde.</string>
     <string name="online_ai_test_failure_provider">El proveedor rechazó la solicitud o no está disponible.</string>
     <string name="online_ai_test_failure_network">No hay una conexión de red utilizable.</string>
-    <string name="online_ai_test_failure_metered">El acceso por red móvil o medida está desactivado. Actívalo arriba o usa una red sin medición.</string>
+    <string name="online_ai_test_failure_metered">El acceso por red móvil o medida está desactivado. Actívalo en Servicios en línea o usa una red sin medición.</string>
     <string name="online_ai_test_failure_timeout">El proveedor no respondió antes del tiempo límite.</string>
     <string name="online_ai_test_failure_tls">No se pudo establecer la conexión TLS segura.</string>
     <string name="online_ai_test_failure_response">El proveedor devolvió una respuesta no compatible o no válida.</string>

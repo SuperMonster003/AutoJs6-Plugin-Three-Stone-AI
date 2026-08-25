@@ -142,6 +142,12 @@
     <string name="chat_generation_stopped">生成を停止しました</string>
     <string name="chat_generation_failed">生成に失敗しました. 選択したターゲットとその設定を確認して再試行してください.</string>
     <string name="chat_generation_failed_short">生成に失敗しました</string>
+    <string name="chat_generation_failure_local">%1$s でのローカル生成に失敗しました. クラウドターゲットへ自動的に切り替えていません.\n\n%2$s</string>
+    <string name="chat_generation_failure_cloud">%1$s でのクラウド生成に失敗しました. ローカルターゲットへ自動的に切り替えていません.\n\n%2$s</string>
+    <string name="chat_generation_failure_target_unavailable">記録されたターゲットは利用できなくなりました.</string>
+    <string name="chat_generation_failure_local_execution">選択した端末上のモデルはこのリクエストを完了できませんでした.</string>
+    <string name="chat_generation_failure_unknown">選択したターゲットはこのリクエストを完了できませんでした.</string>
+    <string name="chat_generation_failure_choose_target">生成に失敗 | 別のターゲットを選択</string>
     <string name="chat_new_conversation">新しい会話</string>
     <string name="chat_model_settings">モデルとストレージの設定</string>
     <string name="chat_clipboard_label">AI メッセージ</string>
@@ -330,12 +336,12 @@
     <string name="online_ai_test_timed_out">接続テストがタイムアウトしました</string>
     <string name="online_ai_test_failed">接続テストに失敗しました</string>
     <string name="online_ai_test_failure_credential">API キーがないか利用できません. 再入力して再試行してください.</string>
-    <string name="online_ai_test_failure_profile_changed">テスト中にプロファイルが変更されました. 最新の設定で再試行してください.</string>
+    <string name="online_ai_test_failure_profile_changed">リクエストの完了前にプロファイルが変更されました. 最新の設定で再試行してください.</string>
     <string name="online_ai_test_failure_authentication">プロバイダーが API キーまたはアカウント権限を拒否しました.</string>
     <string name="online_ai_test_failure_rate_limit">プロバイダーのレート制限に達しました. 後でもう一度お試しください.</string>
     <string name="online_ai_test_failure_provider">プロバイダーがリクエストを拒否したか, 現在利用できません.</string>
     <string name="online_ai_test_failure_network">利用可能なネットワーク接続がありません.</string>
-    <string name="online_ai_test_failure_metered">モバイル回線または従量制ネットワークのアクセスがオフです. 上で有効にするか, 非従量制ネットワークを使用してください.</string>
+    <string name="online_ai_test_failure_metered">モバイル回線または従量制ネットワークのアクセスがオフです. オンラインサービスで有効にするか, 非従量制ネットワークを使用してください.</string>
     <string name="online_ai_test_failure_timeout">タイムアウトまでにプロバイダーから応答がありませんでした.</string>
     <string name="online_ai_test_failure_tls">安全な TLS 接続を確立できませんでした.</string>
     <string name="online_ai_test_failure_response">プロバイダーが未対応または無効な応答を返しました.</string>

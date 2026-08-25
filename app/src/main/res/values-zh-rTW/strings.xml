@@ -142,6 +142,12 @@
     <string name="chat_generation_stopped">已停止生成</string>
     <string name="chat_generation_failed">生成失敗. 請檢查所選目標及其設定, 然後再試一次.</string>
     <string name="chat_generation_failed_short">生成失敗</string>
+    <string name="chat_generation_failure_local">%1$s 的本機生成失敗. 未自動選擇任何雲端目標.\n\n%2$s</string>
+    <string name="chat_generation_failure_cloud">%1$s 的雲端生成失敗. 未自動選擇任何本機目標.\n\n%2$s</string>
+    <string name="chat_generation_failure_target_unavailable">記錄的目標已無法使用.</string>
+    <string name="chat_generation_failure_local_execution">所選的裝置端模型無法完成此請求.</string>
+    <string name="chat_generation_failure_unknown">所選的目標無法完成此請求.</string>
+    <string name="chat_generation_failure_choose_target">生成失敗 | 選擇其他目標</string>
     <string name="chat_new_conversation">新增對話</string>
     <string name="chat_model_settings">模型與儲存空間設定</string>
     <string name="chat_clipboard_label">AI 訊息</string>
@@ -330,12 +336,12 @@
     <string name="online_ai_test_timed_out">連線測試逾時</string>
     <string name="online_ai_test_failed">連線測試失敗</string>
     <string name="online_ai_test_failure_credential">API Key 遺失或無法使用. 請重新輸入後重試.</string>
-    <string name="online_ai_test_failure_profile_changed">測試期間設定檔已變更. 請使用最新設定重試.</string>
+    <string name="online_ai_test_failure_profile_changed">請求完成前設定檔已變更. 請使用最新設定重試.</string>
     <string name="online_ai_test_failure_authentication">供應商拒絕了 API Key 或帳號權限.</string>
     <string name="online_ai_test_failure_rate_limit">已達供應商速率限制. 請稍後重試.</string>
     <string name="online_ai_test_failure_provider">供應商拒絕了請求或目前無法使用.</string>
     <string name="online_ai_test_failure_network">沒有可用的網路連線.</string>
-    <string name="online_ai_test_failure_metered">行動網路或計量付費網路存取已關閉. 請在上方啟用, 或使用非計量付費網路.</string>
+    <string name="online_ai_test_failure_metered">行動網路或計量付費網路存取已關閉. 請在線上服務中啟用, 或使用非計量付費網路.</string>
     <string name="online_ai_test_failure_timeout">供應商未在逾時前回應.</string>
     <string name="online_ai_test_failure_tls">無法建立安全 TLS 連線.</string>
     <string name="online_ai_test_failure_response">供應商傳回了不支援或無效的回應.</string>

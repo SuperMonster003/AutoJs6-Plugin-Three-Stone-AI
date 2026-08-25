@@ -83,7 +83,7 @@
 - [x] 聊天 UI 目标选择器: 每个会话固定默认 target; 切换目标默认建议新会话, 继续当前会话需明确确认并记录目标快照. G8441 / Android 9 已验证统一目录中的 PoloAPI Cloud target 绑定, 费用提示, 当前项勾选与重复选择无副作用; 多 target 和已有消息会话的分支由策略测试覆盖.
 - [x] 会话历史逐条保存实际 target/provider/model/locality 快照; "重新生成" 默认沿用原响应目标. 历史格式直接升级为 version 3, assistant 消息强制保存 backend 实际目标, 精确重新生成允许显示名变更但拒绝 provider/model/locality 漂移, 且不回退到会话默认目标. G8441 / Android 9 已在同一 PoloAPI Cloud target 上完成首次生成与重新生成, 两次响应均成功且目标保持 `OpenAI Compatible / PoloAPI / claude-opus-4-8`.
 - [x] 会话界面常显目标徽标: Local/Cloud, 提供方, 模型名; 次要信息展示 usage 与耗时, 在线目标标注可能产生费用. G8441 / Android 9 已验证 Cloud 目标栏常显完整身份, 首次生成显示 `18788 input | 106 output | 8.0 s`, 重新生成显示 `18786 input | 212 output | 6.0 s`; 在线费用提示已随目标选择器真机验收.
-- [ ] 失败不静默跨界: 本地失败绝不自动转在线, 在线失败绝不自动转本地; 均给出明确错误与手动切换入口.
+- [ ] 失败不静默跨界: 本地失败绝不自动转在线, 在线失败绝不自动转本地; 均给出明确错误与手动切换入口. 源码与离线验收已完成: unified dispatcher 仅调用 targetId 的唯一 owner, 双向失败测试确认另一 backend 的会话创建次数保持为 0; 聊天按响应 target 的 Local/Cloud 边界追加有界且不含底层敏感详情的原因, 明示未自动跨界, 保留失败前的部分输出, 并在失败消息下提供可点击的手动目标选择入口. 待 G8441 分别触发一次本地与在线生成失败并验证手动切换后勾选.
 - [ ] 统一流式管线: 在线与本地共用 Markdown 渲染, 取消, 重试, usage 与错误展示; 插件 UI 与 Binder Service 调用同一 `AiBackend` 层.
 
 ## P2 通用 AI Provider 协议 V2 (宿主, 中性命名)

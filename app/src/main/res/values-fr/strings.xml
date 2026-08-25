@@ -142,6 +142,12 @@
     <string name="chat_generation_stopped">Génération arrêtée</string>
     <string name="chat_generation_failed">Échec de la génération. Vérifiez la cible sélectionnée et ses paramètres, puis réessayez.</string>
     <string name="chat_generation_failed_short">Échec de la génération</string>
+    <string name="chat_generation_failure_local">La génération locale a échoué pour %1$s. Aucune cible cloud n\'a été sélectionnée automatiquement.\n\n%2$s</string>
+    <string name="chat_generation_failure_cloud">La génération cloud a échoué pour %1$s. Aucune cible locale n\'a été sélectionnée automatiquement.\n\n%2$s</string>
+    <string name="chat_generation_failure_target_unavailable">La cible enregistrée n\'est plus disponible.</string>
+    <string name="chat_generation_failure_local_execution">Le modèle sélectionné sur l\'appareil n\'a pas pu traiter cette requête.</string>
+    <string name="chat_generation_failure_unknown">La cible sélectionnée n\'a pas pu traiter cette requête.</string>
+    <string name="chat_generation_failure_choose_target">Échec de la génération | Choisir une autre cible</string>
     <string name="chat_new_conversation">Nouvelle conversation</string>
     <string name="chat_model_settings">Paramètres des modèles et du stockage</string>
     <string name="chat_clipboard_label">message d\'IA</string>
@@ -330,12 +336,12 @@
     <string name="online_ai_test_timed_out">Délai du test de connexion dépassé</string>
     <string name="online_ai_test_failed">Échec du test de connexion</string>
     <string name="online_ai_test_failure_credential">La clé API est absente ou indisponible. Saisissez-la de nouveau et réessayez.</string>
-    <string name="online_ai_test_failure_profile_changed">Le profil a changé pendant le test. Réessayez avec les derniers réglages.</string>
+    <string name="online_ai_test_failure_profile_changed">Le profil a changé avant la fin de la requête. Réessayez avec les derniers réglages.</string>
     <string name="online_ai_test_failure_authentication">Le fournisseur a refusé la clé API ou les autorisations du compte.</string>
     <string name="online_ai_test_failure_rate_limit">La limite de débit du fournisseur est atteinte. Réessayez plus tard.</string>
     <string name="online_ai_test_failure_provider">Le fournisseur a refusé la requête ou est indisponible.</string>
     <string name="online_ai_test_failure_network">Aucune connexion réseau utilisable.</string>
-    <string name="online_ai_test_failure_metered">Le réseau mobile ou facturé est désactivé. Activez-le ci-dessus ou utilisez un réseau non facturé.</string>
+    <string name="online_ai_test_failure_metered">Le réseau mobile ou facturé est désactivé. Activez-le dans Services en ligne ou utilisez un réseau non facturé.</string>
     <string name="online_ai_test_failure_timeout">Le fournisseur ne répond pas avant la fin du délai.</string>
     <string name="online_ai_test_failure_tls">Impossible de créer la connexion TLS sécurisée.</string>
     <string name="online_ai_test_failure_response">Le fournisseur a renvoyé une réponse non prise en charge ou incorrecte.</string>

@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai.backend
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -80,6 +81,43 @@ class CompositeAiBackendTest {
     }
 
     @Test
+    fun sessionFailureNeverFallsBackAcrossLocalAndRemoteBackends() {
+        val local = target("local:model", "local", AiTargetLocality.LOCAL)
+        val remote = target("profile:remote", "remote", AiTargetLocality.REMOTE)
+        val localFailure = IllegalStateException("local marker")
+        val remoteFailure = IllegalStateException("remote marker")
+        val localBackend = FakeBackend(
+            "local",
+            AiTargetCatalog("local-1", local.targetId, listOf(local)),
+            failure = localFailure,
+        )
+        val remoteBackend = FakeBackend(
+            "remote",
+            AiTargetCatalog("remote-1", remote.targetId, listOf(remote)),
+            failure = remoteFailure,
+        )
+        val backend = CompositeAiBackend(listOf(localBackend, remoteBackend))
+
+        assertSame(
+            localFailure,
+            assertThrows(IllegalStateException::class.java) {
+                backend.createSession(AiBackendSessionRequest(local.targetId))
+            },
+        )
+        assertEquals(1, localBackend.created)
+        assertEquals(0, remoteBackend.created)
+
+        assertSame(
+            remoteFailure,
+            assertThrows(IllegalStateException::class.java) {
+                backend.createSession(AiBackendSessionRequest(remote.targetId))
+            },
+        )
+        assertEquals(1, localBackend.created)
+        assertEquals(1, remoteBackend.created)
+    }
+
+    @Test
     fun duplicateTargetsAndAmbiguousOwnershipAreRejected() {
         val target = target("profile:shared", "first", AiTargetLocality.REMOTE)
         val first = FakeBackend("first", AiTargetCatalog("one", null, listOf(target)))
@@ -96,6 +134,7 @@ class CompositeAiBackendTest {
         override val backendId: String,
         private val targetCatalog: AiTargetCatalog,
         private val session: AiBackendSession? = null,
+        private val failure: RuntimeException? = null,
     ) : AiBackend {
         var created = 0
             private set
@@ -104,6 +143,7 @@ class CompositeAiBackendTest {
         override fun catalog() = targetCatalog
         override fun createSession(request: AiBackendSessionRequest): AiBackendSession {
             created += 1
+            failure?.let { throw it }
             return requireNotNull(session)
         }
     }

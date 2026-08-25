@@ -1,11 +1,11 @@
 {
   "$name": "简体中文",
   "text_current_lowercase": "当前",
-  "text_plugin_synopsis": "本地 AI 插件. LiteRT-LM 推理始终在本地; 推荐模型下载仅由用户明确发起",
+  "text_plugin_synopsis": "统一 AI 插件. LiteRT-LM 推理始终在本地; 在线目标始终由用户明确选择",
   "h3_languages_with_ascii": "语言",
   "p_languages_all_supported_for_readme": "当前 README.md 支持以下语言",
   "h3_introduction": "简介",
-  "p_introduction": "3-Stone AI 是 AutoJs6 的官方 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 当前 AI Provider V1 宿主调用只使用这些本地目标, 不联网也不上传数据. 插件设置现可管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 及自定义 OpenAI Compatible profile, 加密凭据, 默认在线目标, 计量网络访问与显式连接测试. 聊天 UI 和 AI Provider V1 宿主 API 仍不会路由到在线目标.",
+  "p_introduction": "3-Stone AI 是 AutoJs6 的官方 AI 文本生成插件. 它在显式选择的 CPU 或兼容 GPU backend 上运行用户导入的 LiteRT-LM 模型, 接收纯文本消息历史, 并通过受控流式会话返回纯文本或受 schema 约束的 JSON 文本. 当前 AI Provider V1 宿主调用只使用这些本地目标, 不联网也不上传数据. 插件设置可管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 及自定义 OpenAI Compatible profile, 加密凭据, 默认在线目标, 计量网络访问与显式连接测试. 启动器聊天可将每个会话明确绑定到本地或已配置的在线目标; AI Provider V1 宿主 API 仍只公开本地目标.",
   "h3_functions": "功能",
   "features": [
     "通过 Android 系统文件选择器导入 `.litertlm` 模型包, 并将验证后的副本保存到应用私有存储.",
@@ -21,7 +21,8 @@
     "通过 credit 背压按序传送文本 chunk, 并只发布一个完成, 错误或取消终态.",
     "列出, 选择和重命名已导入模型, 删除未选中模型, 并在管理界面一键回收未引用模型文件.",
     "通过 AutoJs6 显式选择 `cpu`, `gpu` 或 `npu` backend; CPU 为默认值, GPU 仅在 OpenCL 加载探测通过后开放, NPU 因未打包 EAP 运行时而明确报告不可用.",
-    "在应用设置中管理内置及自定义在线 profile, Android Keystore 凭据, 默认在线目标, 计量网络访问和显式有界连接测试."
+    "在应用设置中管理内置及自定义在线 profile, Android Keystore 凭据, 默认在线目标, 计量网络访问和显式有界连接测试.",
+    "将每个启动器会话绑定到一个本地或在线目标快照; 更改有消息的会话时默认建议新建会话, 继续当前会话必须明确确认并记录变更."
   ],
   "h3_formats": "模型和数据格式",
   "p_formats": "版本 1 仅声明以下模型和文本范围",
@@ -54,7 +55,7 @@
   "unsupported_capabilities": [
     "不声明 reasoning 或 tools 能力.",
     "不接受 tool 角色消息, tool schema, tool call 或 tool result.",
-    "不提供联网模型发现或任意 URL 模型下载. 当前 UI 可配置在线 profile 及其默认值, 但聊天目标选择与 AI Provider V1 宿主路由尚未公开在线目标; 目前只能下载内置目录中固定版本的推荐模型.",
+    "不提供联网模型发现或任意 URL 模型下载. 启动器聊天只公开已导入本地模型与用户明确配置的在线 profile; AI Provider V1 宿主路由仍仅限本地目标, 且只能下载内置目录中固定版本的推荐模型.",
     "不声明 NPU 推理可用: profile 可发现但以 `npu-runtime-not-packaged` 标记为 `unavailable`. GPU 仅在 `libOpenCL.so` 可加载时声明, 且 `.litertlm` 扩展名本身仍不保证模型初始化成功."
   ],
   "h3_roadmap": "路线图",

@@ -1,20 +1,28 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
+import java.nio.ByteBuffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ConversationHistoryTest {
     @Test
-    fun `codec round trips messages usage and model metadata`() {
+    fun `codec round trips messages usage and target snapshot`() {
         val original = StoredConversation(
             id = "conversation-1",
             title = "First question",
             createdAtMillis = 100L,
             updatedAtMillis = 200L,
-            modelId = "model-id",
-            modelDisplayName = "Gemma",
+            target = ConversationTargetSnapshot(
+                targetId = "profile:00000000-0000-0000-0000-000000000001",
+                providerId = "openai-compatible",
+                modelId = "provider-model-id",
+                displayName = "PoloAPI",
+                locality = AiTargetLocality.REMOTE,
+            ),
             messages = listOf(
                 ChatMessage(1, ChatMessageRole.USER, "First question"),
                 ChatMessage(
@@ -29,6 +37,16 @@ class ConversationHistoryTest {
         val restored = ConversationHistoryCodec.decode(ConversationHistoryCodec.encode(listOf(original)))
 
         assertEquals(listOf(original), restored)
+    }
+
+    @Test
+    fun `codec rejects the unpublished model-only version instead of retaining compatibility`() {
+        val encoded = ConversationHistoryCodec.encode(emptyList())
+        ByteBuffer.wrap(encoded).putInt(Int.SIZE_BYTES, 1)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ConversationHistoryCodec.decode(encoded)
+        }
     }
 
     @Test
@@ -128,8 +146,7 @@ class ConversationHistoryTest {
         title = id,
         createdAtMillis = 10,
         updatedAtMillis = updatedAt,
-        modelId = null,
-        modelDisplayName = null,
+        target = null,
         messages = emptyList(),
     )
 }

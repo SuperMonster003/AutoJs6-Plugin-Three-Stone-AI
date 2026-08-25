@@ -195,8 +195,8 @@ class ConversationHistoryActivity : ConfiguredActivity() {
         val updated = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
             .format(Date(conversation.updatedAtMillis))
         val countAndTime = getString(R.string.chat_history_count_and_time, messageCount, updated)
-        val metadata = conversation.modelDisplayName?.takeIf(String::isNotBlank)?.let { modelName ->
-            getString(R.string.chat_history_metadata, countAndTime, modelName)
+        val metadata = conversation.target?.displayName?.takeIf(String::isNotBlank)?.let { targetName ->
+            getString(R.string.chat_history_metadata, countAndTime, targetName)
         } ?: countAndTime
         val preview = conversation.messages.asReversed().firstOrNull { message ->
             message.text.isNotBlank() && message.role != ChatMessageRole.NOTICE

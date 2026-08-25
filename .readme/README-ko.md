@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="three-stone-ai-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>로컬 AI 플러그인. LiteRT-LM 추론은 항상 로컬이며 모델 다운로드는 명시적입니다</p>
+  <p>통합 AI 플러그인. LiteRT-LM은 항상 로컬이며 온라인 대상은 명시적으로 선택됩니다</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI?label=Release"/></a>
@@ -39,7 +39,7 @@
 
 ******
 
-3-Stone AI는 AutoJs6의 공식 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 현재 AI Provider V1 호스트 호출은 이 로컬 대상을 사용하며 네트워크 접근이나 데이터 업로드를 하지 않습니다. 플러그인 설정에서 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 및 사용자 지정 OpenAI Compatible profile, 암호화된 자격 증명, 기본 온라인 대상, 종량제 네트워크 및 명시적 연결 테스트를 관리할 수 있습니다. 채팅과 AI Provider V1 호스트 API는 아직 온라인 대상으로 라우팅하지 않습니다.
+3-Stone AI는 AutoJs6의 공식 AI 텍스트 생성 플러그인입니다. 사용자가 가져온 LiteRT-LM 모델을 명시적으로 선택한 CPU 또는 호환 GPU backend에서 실행하고, 일반 텍스트 메시지 기록을 받아 제어된 스트리밍 세션으로 일반 텍스트 또는 schema로 제한된 JSON 텍스트를 반환합니다. 현재 AI Provider V1 호스트 호출은 이 로컬 대상을 사용하며 네트워크 접근이나 데이터 업로드를 하지 않습니다. 플러그인 설정에서 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 및 사용자 지정 OpenAI Compatible profile, 암호화된 자격 증명, 기본 온라인 대상, 종량제 네트워크 및 명시적 연결 테스트를 관리할 수 있습니다. 런처 채팅은 각 대화를 로컬 또는 설정된 온라인 대상에 명시적으로 고정할 수 있으며 AI Provider V1 호스트 API는 계속 로컬 전용입니다.
 
 ******
 
@@ -61,6 +61,7 @@
 - 가져온 모델을 나열하고 선택하고 이름을 변경하며, 선택되지 않은 모델을 삭제하고 관리 화면에서 참조되지 않은 모델 파일을 회수합니다.
 - AutoJs6에서 `cpu`, `gpu`, `npu` backend를 명시적으로 선택합니다. CPU가 기본값이며 GPU는 OpenCL 로드 검사를 통과할 때만 노출되고, NPU는 EAP runtime 미포함으로 사용 불가가 명시됩니다.
 - 앱 설정에서 기본 제공 및 사용자 지정 온라인 profile, Android Keystore 자격 증명, 기본 온라인 대상, 종량제 네트워크 및 명시적인 제한형 연결 테스트를 관리합니다.
+- 각 런처 대화를 하나의 로컬 또는 온라인 대상 스냅샷에 고정합니다. 메시지가 있는 대화에서 변경하면 새 대화를 권장하고 계속하려면 명시적 확인과 변경 기록이 필요합니다.
 
 ******
 
@@ -144,7 +145,7 @@ required host build: 5276
 
 - Reasoning 및 tools는 선언하지 않습니다.
 - Tool 역할 메시지, tool schema, tool call 및 tool result를 받지 않습니다.
-- 네트워크 모델 검색이나 임의 URL 모델 다운로드는 없습니다. UI에서 온라인 profile과 기본값을 구성할 수 있지만, 채팅 대상 선택과 AI Provider V1 호스트 라우팅에는 아직 온라인 대상이 노출되지 않습니다. 고정된 내장 권장 카탈로그만 다운로드할 수 있습니다.
+- 네트워크 모델 검색이나 임의 URL 모델 다운로드는 없습니다. 런처 채팅에는 가져온 로컬 모델과 명시적으로 설정된 온라인 profile만 표시됩니다. AI Provider V1 호스트 라우팅은 계속 로컬 전용이며 고정된 내장 권장 카탈로그만 다운로드할 수 있습니다.
 - NPU 추론은 선언하지 않습니다. profile은 `npu-runtime-not-packaged` 사유의 `unavailable`로 검색됩니다. GPU는 `libOpenCL.so`를 로드할 수 있을 때만 선언되며 `.litertlm` 확장자만으로 모델 초기화를 보장하지 않습니다.
 
 ******
@@ -185,6 +186,7 @@ required host build: 5276
 * `기능` 사용자 지정 baseUrl, 자격 증명, 모델 profile을 위한 플러그인 내부 OpenAI Compatible HTTPS 실행 backend를 추가하고 제한된 SSE 및 JSON fallback 스트리밍, 정확한 취소, provider usage, 완료된 턴만의 영구 기록, JSON Schema 요청 mapping, 민감 정보 없는 고정 오류를 지원; AI Provider V1 호스트 라우팅은 계속 로컬 target만 공개
 * `기능` 호스트 카탈로그와 정렬된 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 프리셋을 추가; 통합 온라인 실행 계층은 OpenAI-compatible 프로토콜을 재사용하고 Anthropic Messages와 Gemini GenerateContent 고유의 인증, 요청, SSE 종료, usage, JSON Schema를 각각 어댑트하며 프로토콜 간 또는 로컬/온라인 자동 fallback은 제공하지 않음
 * `기능` 10개 언어 온라인 서비스 설정 UI를 추가하여 profile 추가, 편집, 삭제, API 키 비노출 교체 및 지우기, 기본 대상 선택, 자격 증명 접근 전 종량제 네트워크 허용 적용, 취소 가능한 최대 120초 명시 연결 테스트를 지원; 설정은 프로세스 간 원자 문서를 공유하며 AI Provider V1은 계속 로컬 전용
+* `기능` 런처 채팅에 통합 로컬/클라우드 대상 선택기를 추가: 각 대화는 하나의 대상 스냅샷을 저장하고, 메시지가 있는 대화의 전환은 새 대화를 권장하며, 기존 문맥으로 계속하려면 명시적 확인과 변경 기록이 필요
 * `수정` 실행 가능한 안내 예제의 암묵적 256 token 및 4 KiB 출력 제한을 제거하여 `maxTokens` 생략 시 모델 또는 engine 기본값을 사용하고 raw Binder 예제는 provider의 전체 64 KiB 출력 허용량을 사용하도록 수정
 * `수정` 10개 언어로 현지화된 플러그인 안내의 저수준 Binder 예제가 프로토콜 1.1의 14개 인자 `AiGenerationOptions` 생성자를 계속 호출하여 프로토콜 1.3 API에서 실패하던 문제 수정
 * `수정` 시스템 다크 모드에서도 모델 관리 화면이 라이트 테마 텍스트 색상을 유지해 본문, 체크박스, 모델 행을 어두운 배경에서 읽을 수 없던 문제 수정

@@ -35,7 +35,7 @@
 - [x] `app_name` = `3-Stone AI` (translatable=false), 新启动图标落位, About 页与 README 徽标引用同步.
 - [x] `chat_role_assistant` 统一为品牌名 `3-Stone AI` (移除各语言旧译名覆盖).
 - [x] 主题设置资源 key 改为 `app_settings_theme_three_stone_ai`, 10 语言 value 同步为 "3-Stone AI 橙色" 系.
-- [x] `plugin_description` 统一使用本地 AI 能力描述, 不混入历史品牌词.
+- [x] `plugin_description` 统一使用私有本地模型与用户配置在线服务的最终产品能力描述, 不混入历史品牌词.
 
 ### 插件: 文档管线
 
@@ -79,8 +79,8 @@
 - [ ] OpenAI Compatible 真机互通与安全冒烟: 使用维护者控制的 HTTPS 测试 endpoint 验证自定义 baseUrl/key/model, SSE 与 JSON 回退, 长响应取消, 401/403/429/5xx, malformed/oversized response, profile/key 并发替换, 进程终止及网络切换. (需真机与测试凭据, 由维护者执行)
 - [x] 预置提供方模板: OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter 与宿主现有在线目录顺序及默认 baseUrl 对齐; 模型 ID 仍由 profile 明确填写. OpenAI/DeepSeek/OpenRouter 复用 OpenAI-compatible 格式, Anthropic Messages 与 Gemini GenerateContent 各自使用原生请求, 认证, SSE 终态, usage 与 JSON Schema 映射; 通用在线执行层不提供协议间或本地/在线自动回退. [开发契约](docs/dev/online-provider-backend.md)
 - [x] 在线服务设置页实现与离线验收: 10 语言配置档案添加/编辑/删除, 不回显 Key 的替换与清除, 默认在线目标选择, 实际执行前生效的移动/计量网络开关, 用户确认且可取消的 120 秒有界连接测试; 非敏感设置与档案共用 schema 2 跨进程原子文档, 未发布项目不保留 schema 1 兼容读取. [开发契约](docs/dev/online-provider-backend.md)
-- [ ] 在线服务设置页真机冒烟: G8441 / Android 9 已验证空配置初始化, 并修复系统 `/data/user/0` 到 `/data/data` 的可信路径规范化误判; 仍需覆盖六种提供方, 新增/编辑/删除, provider/origin 变更强制重录 Key, 默认目标跨进程可见, Wi-Fi/移动及计量网络切换, 连接测试成功/取消/超时/错误映射, 旋转与进程重启. (需维护者控制的测试凭据, 由维护者执行)
-- [ ] 聊天 UI 目标选择器: 每个会话固定默认 target; 切换目标默认建议新会话, 继续当前会话需明确确认并记录目标快照.
+- [ ] 在线服务设置页真机冒烟: G8441 / Android 9 已验证空配置初始化, 并修复系统 `/data/user/0` 到 `/data/data` 的可信路径规范化误判; 同一设备已在插件端新增并配置 PoloAPI OpenAI-compatible profile, 连接测试成功且实测耗时不足 10 秒. 仍需覆盖其余提供方, 编辑/删除, provider/origin 变更强制重录 Key, 默认目标跨进程可见, Wi-Fi/移动及计量网络切换, 连接测试取消/超时/错误映射, 旋转与进程重启. (需维护者控制的测试凭据, 由维护者执行)
+- [x] 聊天 UI 目标选择器: 每个会话固定默认 target; 切换目标默认建议新会话, 继续当前会话需明确确认并记录目标快照. G8441 / Android 9 已验证统一目录中的 PoloAPI Cloud target 绑定, 费用提示, 当前项勾选与重复选择无副作用; 多 target 和已有消息会话的分支由策略测试覆盖.
 - [ ] 会话历史逐条保存实际 target/provider/model/locality 快照; "重新生成" 默认沿用原响应目标.
 - [ ] 会话界面常显目标徽标: Local/Cloud, 提供方, 模型名; 次要信息展示 usage 与耗时, 在线目标标注可能产生费用.
 - [ ] 失败不静默跨界: 本地失败绝不自动转在线, 在线失败绝不自动转本地; 均给出明确错误与手动切换入口.

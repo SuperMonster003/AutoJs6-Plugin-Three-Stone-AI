@@ -1,11 +1,11 @@
 {
   "$name": "繁體中文 (台灣)",
   "text_current_lowercase": "目前",
-  "text_plugin_synopsis": "本機 AI 外掛. LiteRT-LM 推論始終在本地; 推薦模型下載僅由使用者明確發起",
+  "text_plugin_synopsis": "統一 AI 外掛. LiteRT-LM 推論始終在本機; 線上目標始終由使用者明確選取",
   "h3_languages_with_ascii": "語言",
   "p_languages_all_supported_for_readme": "目前 README.md 支援以下語言",
   "h3_introduction": "簡介",
-  "p_introduction": "3-Stone AI 是 AutoJs6 的官方 AI 文字生成外掛. 它在明確選擇的 CPU 或相容 GPU backend 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段回傳純文字或受 schema 約束的 JSON 文字. 目前 AI Provider V1 宿主呼叫僅使用這些本機目標, 不連網也不上傳資料. 外掛設定現在可管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 與自訂 OpenAI Compatible profile, 加密憑證, 預設線上目標, 計量網路存取與明確連線測試. 聊天 UI 與 AI Provider V1 宿主 API 仍不會路由到線上目標.",
+  "p_introduction": "3-Stone AI 是 AutoJs6 的官方 AI 文字生成外掛. 它在明確選擇的 CPU 或相容 GPU backend 上執行使用者匯入的 LiteRT-LM 模型, 接收純文字訊息歷史, 並透過受控串流工作階段回傳純文字或受 schema 約束的 JSON 文字. 目前 AI Provider V1 宿主呼叫僅使用這些本機目標, 不連網也不上傳資料. 外掛設定可管理 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 與自訂 OpenAI Compatible profile, 加密憑證, 預設線上目標, 計量網路存取與明確連線測試. 啟動器聊天可將每個對話明確綁定到本機或已設定的線上目標; AI Provider V1 宿主 API 仍僅公開本機目標.",
   "h3_functions": "功能",
   "features": [
     "透過 Android 系統檔案選擇器匯入 `.litertlm` 模型套件, 並將驗證後的副本儲存到應用程式私人儲存空間.",
@@ -21,7 +21,8 @@
     "透過 credit 背壓依序傳送文字 chunk, 並只發布一個完成, 錯誤或取消終態.",
     "列出, 選取及重新命名已匯入模型, 刪除未選取模型, 並在管理介面一鍵回收未參照模型檔案.",
     "透過 AutoJs6 明確選擇 `cpu`, `gpu` 或 `npu` backend; CPU 為預設值, GPU 僅在 OpenCL 載入探測通過後開放, NPU 因未封裝 EAP runtime 而明確回報不可用.",
-    "在應用程式設定管理內建及自訂線上 profile, Android Keystore 憑證, 預設線上目標, 計量網路存取與明確有界連線測試."
+    "在應用程式設定管理內建及自訂線上 profile, Android Keystore 憑證, 預設線上目標, 計量網路存取與明確有界連線測試.",
+    "將每個啟動器對話綁定到一個本機或線上目標快照; 變更已有訊息的對話時預設建議新增對話, 繼續目前對話必須明確確認並記錄變更."
   ],
   "h3_formats": "模型和資料格式",
   "p_formats": "版本 1 僅宣告以下模型和文字範圍",
@@ -54,7 +55,7 @@
   "unsupported_capabilities": [
     "不宣告 reasoning 或 tools 能力.",
     "不接受 tool 角色訊息, tool schema, tool call 或 tool result.",
-    "不提供連網模型探索或任意 URL 模型下載. 目前 UI 可設定線上 profile 及其預設值, 但聊天目標選擇與 AI Provider V1 宿主路由尚未公開線上目標; 目前僅能下載內建目錄中固定版本的推薦模型.",
+    "不提供連網模型探索或任意 URL 模型下載. 啟動器聊天僅公開已匯入本機模型與使用者明確設定的線上 profile; AI Provider V1 宿主路由仍僅限本機目標, 且只能下載內建目錄中固定版本的推薦模型.",
     "不宣告 NPU 推論可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 僅在 `libOpenCL.so` 可載入時宣告, 且 `.litertlm` 副檔名本身仍不保證模型初始化成功."
   ],
   "h3_roadmap": "路線圖",

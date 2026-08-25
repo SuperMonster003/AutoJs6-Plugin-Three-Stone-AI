@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -10,8 +11,7 @@ internal data class StoredConversation(
     val title: String,
     val createdAtMillis: Long,
     val updatedAtMillis: Long,
-    val modelId: String?,
-    val modelDisplayName: String?,
+    val target: ConversationTargetSnapshot?,
     val messages: List<ChatMessage>,
 ) {
     init {
@@ -92,8 +92,14 @@ internal object ConversationHistoryPolicy {
 
     private fun StoredConversation.estimatedBytes(): Int = estimatedMessageBytes() +
         id.toByteArray(Charsets.UTF_8).size + title.toByteArray(Charsets.UTF_8).size +
-        modelId.orEmpty().toByteArray(Charsets.UTF_8).size +
-        modelDisplayName.orEmpty().toByteArray(Charsets.UTF_8).size + CONVERSATION_OVERHEAD_BYTES
+        target.estimatedBytes() + CONVERSATION_OVERHEAD_BYTES
+
+    private fun ConversationTargetSnapshot?.estimatedBytes(): Int = this?.let { snapshot ->
+        snapshot.targetId.toByteArray(Charsets.UTF_8).size +
+            snapshot.providerId.toByteArray(Charsets.UTF_8).size +
+            snapshot.modelId.toByteArray(Charsets.UTF_8).size +
+            snapshot.displayName.toByteArray(Charsets.UTF_8).size + TARGET_OVERHEAD_BYTES
+    } ?: 0
 
     private val WHITESPACE = Regex("\\s+")
     private const val MAXIMUM_TITLE_CHARACTERS = 64
@@ -102,6 +108,7 @@ internal object ConversationHistoryPolicy {
     private const val MAXIMUM_HISTORY_BYTES = 24 * 1_024 * 1_024
     private const val MESSAGE_OVERHEAD_BYTES = 80
     private const val CONVERSATION_OVERHEAD_BYTES = 128
+    private const val TARGET_OVERHEAD_BYTES = 64
 }
 
 internal data class ConversationSearchMatch(
@@ -214,8 +221,14 @@ internal object ConversationHistoryCodec {
         output.writeText(conversation.title, MAXIMUM_TITLE_BYTES)
         output.writeLong(conversation.createdAtMillis)
         output.writeLong(conversation.updatedAtMillis)
-        output.writeNullableText(conversation.modelId, MAXIMUM_MODEL_ID_BYTES)
-        output.writeNullableText(conversation.modelDisplayName, MAXIMUM_MODEL_NAME_BYTES)
+        output.writeBoolean(conversation.target != null)
+        conversation.target?.let { target ->
+            output.writeText(target.targetId, MAXIMUM_TARGET_ID_BYTES)
+            output.writeText(target.providerId, MAXIMUM_PROVIDER_ID_BYTES)
+            output.writeText(target.modelId, MAXIMUM_MODEL_ID_BYTES)
+            output.writeText(target.displayName, MAXIMUM_TARGET_NAME_BYTES)
+            output.writeText(target.locality.name, MAXIMUM_ENUM_BYTES)
+        }
         require(conversation.messages.size <= ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION)
         output.writeInt(conversation.messages.size)
         conversation.messages.forEach { message ->
@@ -237,8 +250,17 @@ internal object ConversationHistoryCodec {
         val title = input.readText(MAXIMUM_TITLE_BYTES)
         val createdAt = input.readLong()
         val updatedAt = input.readLong()
-        val modelId = input.readNullableText(MAXIMUM_MODEL_ID_BYTES)
-        val modelName = input.readNullableText(MAXIMUM_MODEL_NAME_BYTES)
+        val target = if (input.readBoolean()) {
+            ConversationTargetSnapshot(
+                targetId = input.readText(MAXIMUM_TARGET_ID_BYTES),
+                providerId = input.readText(MAXIMUM_PROVIDER_ID_BYTES),
+                modelId = input.readText(MAXIMUM_MODEL_ID_BYTES),
+                displayName = input.readText(MAXIMUM_TARGET_NAME_BYTES),
+                locality = AiTargetLocality.valueOf(input.readText(MAXIMUM_ENUM_BYTES)),
+            )
+        } else {
+            null
+        }
         val messageCount = input.readBoundedCount(
             ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION,
         )
@@ -256,7 +278,7 @@ internal object ConversationHistoryCodec {
                 add(ChatMessage(messageId, role, text, status, usage))
             }
         }
-        return StoredConversation(id, title, createdAt, updatedAt, modelId, modelName, messages)
+        return StoredConversation(id, title, createdAt, updatedAt, target, messages)
     }
 
     private fun DataOutputStream.writeText(value: String, maximumBytes: Int) {
@@ -266,19 +288,11 @@ internal object ConversationHistoryCodec {
         write(bytes)
     }
 
-    private fun DataOutputStream.writeNullableText(value: String?, maximumBytes: Int) {
-        writeBoolean(value != null)
-        if (value != null) writeText(value, maximumBytes)
-    }
-
     private fun DataInputStream.readText(maximumBytes: Int): String {
         val size = readInt()
         require(size in 0..maximumBytes) { "Invalid conversation history text length" }
         return ByteArray(size).also(::readFully).toString(Charsets.UTF_8)
     }
-
-    private fun DataInputStream.readNullableText(maximumBytes: Int): String? =
-        if (readBoolean()) readText(maximumBytes) else null
 
     private fun DataInputStream.readBoundedCount(maximum: Int): Int = readInt().also { count ->
         require(count in 0..maximum) { "Invalid conversation history item count" }
@@ -286,11 +300,13 @@ internal object ConversationHistoryCodec {
 
     const val MAXIMUM_FILE_BYTES = 32 * 1_024 * 1_024
     private const val MAGIC = 0x33534143 // 3SAC
-    private const val VERSION = 1
+    private const val VERSION = 2
     private const val MAXIMUM_ID_BYTES = 128
     private const val MAXIMUM_TITLE_BYTES = 512
+    private const val MAXIMUM_TARGET_ID_BYTES = 512
+    private const val MAXIMUM_PROVIDER_ID_BYTES = 256
     private const val MAXIMUM_MODEL_ID_BYTES = 512
-    private const val MAXIMUM_MODEL_NAME_BYTES = 1_024
+    private const val MAXIMUM_TARGET_NAME_BYTES = 1_024
     private const val MAXIMUM_ENUM_BYTES = 32
     private const val MAXIMUM_MESSAGE_BYTES = 2 * 1_024 * 1_024
 }

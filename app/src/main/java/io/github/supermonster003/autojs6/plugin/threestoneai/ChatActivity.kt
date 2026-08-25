@@ -39,17 +39,19 @@ import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSession
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetIds
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetCatalog
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationMessage
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRole
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationStatistics
-import io.github.supermonster003.autojs6.plugin.threestoneai.model.ImportedModel
-import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelHealthStatus
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelManagerState
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import java.util.Locale
 import java.util.UUID
@@ -57,13 +59,13 @@ import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicLong
 
-/** Launcher surface for direct, private, multi-turn interaction with the selected local model. */
+/** Launcher surface for explicit, multi-turn interaction with one conversation-bound AI target. */
 class ChatActivity : ConfiguredActivity() {
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var historyStore: ConversationHistoryStore
     private lateinit var uiSettingsStore: ChatUiSettingsStore
     private lateinit var toolbar: Toolbar
-    private lateinit var modelStatus: TextView
+    private lateinit var targetStatus: TextView
     private lateinit var searchNavigationBar: LinearLayout
     private lateinit var searchView: SearchView
     private lateinit var searchResultCount: TextView
@@ -89,15 +91,14 @@ class ChatActivity : ConfiguredActivity() {
     private val backendLock = Any()
     private val deltaLock = Any()
     private val backendExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "litertlm-chat").apply { isDaemon = true }
+        Thread(runnable, "three-stone-ai-chat").apply { isDaemon = true }
     }
 
     private var nextMessageId = 1L
     private var currentConversationId = newConversationId()
     private var conversationCreatedAtMillis = System.currentTimeMillis()
     private var conversationUpdatedAtMillis = conversationCreatedAtMillis
-    private var conversationModelId: String? = null
-    private var conversationModelDisplayName: String? = null
+    private var conversationTarget: ConversationTargetSnapshot? = null
     private var uiSettings = ChatUiSettings()
     private var editingMessageId: Long? = null
     private var draftBeforeEditing: String? = null
@@ -109,9 +110,8 @@ class ChatActivity : ConfiguredActivity() {
     private var currentSearchMatchIndex = -1
     private var persistenceScheduled = false
     private var allowDeletedConversationRevival = false
-    private var catalogAvailability = CatalogAvailability.LOADING
-    private var selectedModel: ImportedModel? = null
-    private var resolvedCatalogObserved = false
+    private var targetCatalogAvailability = TargetCatalogAvailability.LOADING
+    private var targetCatalog: AiTargetCatalog? = null
     private var isGenerating = false
     private var activeGenerationId: Long? = null
     private var activeAssistantMessageId: Long? = null
@@ -161,7 +161,7 @@ class ChatActivity : ConfiguredActivity() {
         }
         renderEditingState()
         renderTranscript()
-        renderModelUi()
+        renderTargetUi()
         applyUiSettings()
         historyStore.rememberLastConversation(currentConversationId)
     }
@@ -293,8 +293,7 @@ class ChatActivity : ConfiguredActivity() {
         outState.putString(STATE_CONVERSATION_ID, currentConversationId)
         outState.putLong(STATE_CONVERSATION_CREATED_AT, conversationCreatedAtMillis)
         outState.putLong(STATE_CONVERSATION_UPDATED_AT, conversationUpdatedAtMillis)
-        outState.putString(STATE_CONVERSATION_MODEL_ID, conversationModelId)
-        outState.putString(STATE_CONVERSATION_MODEL_NAME, conversationModelDisplayName)
+        saveConversationTarget(outState)
         outState.putString(STATE_COMPOSER_TEXT, input.text.toString())
         outState.putString(
             STATE_SEARCH_QUERY,
@@ -341,7 +340,7 @@ class ChatActivity : ConfiguredActivity() {
             showBack = false,
         )
         root.addView(toolbar)
-        root.addView(createModelBar())
+        root.addView(createTargetBar())
         root.addView(createSearchNavigationBar())
         root.addView(View(this).apply { setBackgroundColor(getColor(R.color.divider)) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
@@ -395,12 +394,12 @@ class ChatActivity : ConfiguredActivity() {
         return root
     }
 
-    private fun createModelBar(): View = LinearLayout(this).apply {
+    private fun createTargetBar(): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         isClickable = true
         isFocusable = true
-        contentDescription = getString(R.string.chat_open_model_settings)
+        contentDescription = getString(R.string.chat_open_target_selector)
         minimumHeight = dp(36)
         setPaddingRelative(dp(18), dp(3), dp(12), dp(3))
         background = roundedRipple(
@@ -408,20 +407,20 @@ class ChatActivity : ConfiguredActivity() {
             rippleColor = R.color.chat_ripple,
             radiusDp = 0,
         )
-        setOnClickListener { openModelManager() }
+        setOnClickListener { showTargetSelector() }
 
         addView(TextView(context).apply {
             text = "\u25cf"
             textSize = 10f
             setTextColor(appPalette.accent)
         }, LinearLayout.LayoutParams(dp(18), LinearLayout.LayoutParams.WRAP_CONTENT))
-        modelStatus = TextView(context).apply {
+        targetStatus = TextView(context).apply {
             textSize = 12f
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
             setTextColor(getColor(R.color.text_color_secondary))
         }
-        addView(modelStatus, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        addView(targetStatus, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         addView(TextView(context).apply {
             text = "\u203a"
             textSize = 24f
@@ -534,9 +533,9 @@ class ChatActivity : ConfiguredActivity() {
                 ),
             )
             emptyActionButton = Button(context).apply {
-                text = getString(R.string.chat_manage_models)
+                text = getString(R.string.chat_choose_target)
                 isAllCaps = false
-                setOnClickListener { openModelManager() }
+                setOnClickListener { showTargetSelector() }
             }
             addView(emptyActionButton, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -703,66 +702,37 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun renderManagerState(state: ModelManagerState) {
         if (destroyed) return
-        val availability = when {
-            state.snapshot != null -> CatalogAvailability.READY
-            state.importState === ModelImportState.Preparing -> CatalogAvailability.LOADING
-            else -> CatalogAvailability.UNAVAILABLE
+        val catalogResult = runCatching {
+            (application as ThreeStoneAiApplication).aiBackend.catalog()
         }
-        val newlySelected = state.snapshot?.selectedModel
-        val catalogResolved = availability != CatalogAvailability.LOADING
-        if (catalogResolved && !resolvedCatalogObserved) {
-            resolvedCatalogObserved = true
-        } else if (
-            catalogResolved && resolvedCatalogObserved &&
-            newlySelected?.modelId != selectedModel?.modelId
-        ) {
-            handleSelectedModelChange(newlySelected)
+        targetCatalog = catalogResult.getOrNull()
+        targetCatalogAvailability = when {
+            catalogResult.isSuccess -> TargetCatalogAvailability.READY
+            state.importState === ModelImportState.Preparing -> TargetCatalogAvailability.LOADING
+            else -> TargetCatalogAvailability.UNAVAILABLE
         }
-        selectedModel = newlySelected
-        catalogAvailability = availability
-        renderModelUi()
+        if (conversationTarget == null && messages.isEmpty()) {
+            conversationTarget = targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot)
+        }
+        renderTargetUi()
     }
 
-    private fun handleSelectedModelChange(newModel: ImportedModel?) {
-        if (isGenerating) stopGeneration(showToast = false)
-        closeCurrentBackend()
-        conversationModelId = newModel?.modelId
-        conversationModelDisplayName = newModel?.displayName
-        if (messages.isNotEmpty()) {
-            val notice = newModel?.let { model ->
-                getString(R.string.chat_model_changed, model.displayName)
-            } ?: getString(R.string.chat_model_removed)
-            appendMessage(
-                ChatMessage(
-                    id = allocateMessageId(),
-                    role = ChatMessageRole.NOTICE,
-                    text = notice,
-                ),
+    private fun renderTargetUi() {
+        if (!::targetStatus.isInitialized) return
+        val snapshot = conversationTarget
+        val resolved = resolvedConversationTarget()
+        targetStatus.text = when {
+            targetCatalogAvailability == TargetCatalogAvailability.LOADING ->
+                getString(R.string.chat_target_loading)
+            targetCatalogAvailability == TargetCatalogAvailability.UNAVAILABLE ->
+                getString(R.string.chat_target_catalog_unavailable)
+            snapshot == null -> getString(R.string.chat_no_target)
+            resolved == null || !resolved.configured || !resolved.available ||
+                !resolved.capabilities.streaming -> getString(
+                R.string.chat_target_unavailable_format,
+                targetSummary(snapshot),
             )
-        }
-    }
-
-    private fun renderModelUi() {
-        if (!::modelStatus.isInitialized) return
-        val model = selectedModel
-        modelStatus.text = when {
-            catalogAvailability == CatalogAvailability.LOADING ->
-                getString(R.string.chat_model_loading)
-            catalogAvailability == CatalogAvailability.UNAVAILABLE ->
-                getString(R.string.chat_model_unavailable)
-            model == null -> getString(R.string.chat_no_model)
-            model.healthStatus == ModelHealthStatus.AVAILABLE -> model.displayName
-            else -> getString(
-                R.string.chat_model_format,
-                model.displayName,
-                getString(
-                    when (model.healthStatus) {
-                        ModelHealthStatus.AVAILABLE -> error("Handled above")
-                        ModelHealthStatus.INCOMPATIBLE -> R.string.model_health_incompatible
-                        ModelHealthStatus.NOT_CHECKED -> R.string.model_health_not_checked
-                    },
-                ),
-            )
+            else -> targetSummary(snapshot)
         }
         renderEmptyState()
         renderComposerState()
@@ -772,43 +742,50 @@ class ChatActivity : ConfiguredActivity() {
         if (!::emptyState.isInitialized) return
         emptyState.visibility = if (messages.isEmpty()) View.VISIBLE else View.GONE
         if (messages.isNotEmpty()) return
-        val modelReady = catalogAvailability == CatalogAvailability.READY && selectedModel != null
+        val targetReady = isConversationTargetReady()
         when {
-            catalogAvailability == CatalogAvailability.LOADING -> {
-                emptyTitle.text = getString(R.string.chat_preparing_title)
-                emptyDescription.text = getString(R.string.chat_preparing_description)
+            targetCatalogAvailability == TargetCatalogAvailability.LOADING -> {
+                emptyTitle.text = getString(R.string.chat_target_loading_title)
+                emptyDescription.text = getString(R.string.chat_target_loading_description)
             }
-            catalogAvailability == CatalogAvailability.UNAVAILABLE -> {
-                emptyTitle.text = getString(R.string.chat_catalog_error_title)
-                emptyDescription.text = getString(R.string.chat_catalog_error_description)
+            targetCatalogAvailability == TargetCatalogAvailability.UNAVAILABLE -> {
+                emptyTitle.text = getString(R.string.chat_target_catalog_error_title)
+                emptyDescription.text = getString(R.string.chat_target_catalog_error_description)
             }
-            selectedModel == null -> {
-                emptyTitle.text = getString(R.string.chat_no_model_title)
-                emptyDescription.text = getString(R.string.chat_no_model_description)
+            conversationTarget == null -> {
+                emptyTitle.text = getString(R.string.chat_no_target_title)
+                emptyDescription.text = getString(R.string.chat_no_target_description)
+            }
+            !targetReady -> {
+                emptyTitle.text = getString(R.string.chat_target_unavailable_title)
+                emptyDescription.text = getString(
+                    R.string.chat_target_unavailable_description,
+                    conversationTarget?.displayName.orEmpty(),
+                )
             }
             else -> {
                 emptyTitle.text = getString(R.string.chat_welcome_title)
                 emptyDescription.text = getString(
                     R.string.chat_welcome_description,
-                    selectedModel?.displayName.orEmpty(),
+                    conversationTarget?.displayName.orEmpty(),
                 )
             }
         }
-        emptyActionButton.visibility = if (modelReady) View.GONE else View.VISIBLE
+        emptyActionButton.visibility = if (targetReady) View.GONE else View.VISIBLE
         suggestionButtons.forEach { suggestion ->
-            suggestion.visibility = if (modelReady) View.VISIBLE else View.GONE
-            suggestion.isEnabled = modelReady && !isGenerating
+            suggestion.visibility = if (targetReady) View.VISIBLE else View.GONE
+            suggestion.isEnabled = targetReady && !isGenerating
         }
     }
 
     private fun renderComposerState() {
         if (!::input.isInitialized || !::sendButton.isInitialized) return
-        val modelReady = catalogAvailability == CatalogAvailability.READY && selectedModel != null
-        input.isEnabled = modelReady && !isGenerating
-        input.hint = if (modelReady) {
+        val targetReady = isConversationTargetReady()
+        input.isEnabled = targetReady && !isGenerating
+        input.hint = if (targetReady) {
             getString(R.string.chat_input_hint)
         } else {
-            getString(R.string.chat_input_no_model_hint)
+            getString(R.string.chat_input_no_target_hint)
         }
         sendButton.text = getString(
             when {
@@ -817,10 +794,10 @@ class ChatActivity : ConfiguredActivity() {
                 else -> R.string.chat_send
             },
         )
-        sendButton.isEnabled = isGenerating || (modelReady && input.text.toString().isNotBlank())
+        sendButton.isEnabled = isGenerating || (targetReady && input.text.toString().isNotBlank())
         sendButton.alpha = if (sendButton.isEnabled) 1f else DISABLED_ALPHA
         if (::suggestionButtons.isInitialized) {
-            suggestionButtons.forEach { it.isEnabled = modelReady && !isGenerating }
+            suggestionButtons.forEach { it.isEnabled = targetReady && !isGenerating }
         }
         refreshEditableMessageActions()
     }
@@ -1001,7 +978,7 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun sendSuggestedPrompt(prompt: String) {
-        if (selectedModel == null || isGenerating) return
+        if (!isConversationTargetReady() || isGenerating) return
         input.setText(prompt)
         input.setSelection(input.text.length)
         sendCurrentMessage()
@@ -1009,9 +986,9 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun sendCurrentMessage() {
         if (isGenerating) return
-        val model = selectedModel
-        if (catalogAvailability != CatalogAvailability.READY || model == null) {
-            openModelManager()
+        val target = resolvedConversationTarget()
+        if (!isConversationTargetReady() || target == null) {
+            showTargetSelector()
             return
         }
         val promptText = input.text.toString().trim()
@@ -1043,8 +1020,6 @@ class ChatActivity : ConfiguredActivity() {
         activeGenerationId = generationId
         activeAssistantMessageId = assistantMessage.id
         isGenerating = true
-        conversationModelId = model.modelId
-        conversationModelDisplayName = model.displayName
         if (retainedPrefix != null) {
             closeCurrentBackend()
             messages.clear()
@@ -1070,22 +1045,23 @@ class ChatActivity : ConfiguredActivity() {
         renderComposerState()
         renderEmptyState()
         persistConversationNow()
-        startBackendTurn(model, promptText, assistantMessage.id, generationId)
+        startBackendTurn(target, promptText, assistantMessage.id, generationId)
     }
 
     private fun startBackendTurn(
-        model: ImportedModel,
+        target: AiTarget,
         promptText: String,
         assistantMessageId: Long,
         generationId: Long,
     ) {
         val listener = generationListener(generationId, assistantMessageId)
         val prompt = GenerationMessage(GenerationRole.USER, listOf(promptText))
-        val targetId = AiTargetIds.local(model.modelId)
+        val targetId = target.targetId
         var reusableBackend: AiBackendSession? = null
         var backendToReplace: AiBackendSession? = null
         synchronized(backendLock) {
-            val reusable = activeBackend != null && activeBackendTargetId == targetId &&
+            val reusable = target.capabilities.persistentSession &&
+                activeBackend != null && activeBackendTargetId == targetId &&
                 !ChatConversationPolicy.shouldRotateBackend(completedTurnsOnBackend)
             if (reusable) {
                 reusableBackend = activeBackend
@@ -1116,7 +1092,7 @@ class ChatActivity : ConfiguredActivity() {
             val created = (application as ThreeStoneAiApplication).aiBackend.createSession(
                 AiBackendSessionRequest(
                     targetId = targetId,
-                    executionProfileId = AiProviderBackendProfile.CPU,
+                    executionProfileId = target.chatExecutionProfileId(),
                 ),
             )
             val installed = synchronized(backendLock) {
@@ -1322,7 +1298,9 @@ class ChatActivity : ConfiguredActivity() {
         }
     }
 
-    private fun startNewConversation() {
+    private fun startNewConversation(
+        target: ConversationTargetSnapshot? = targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot),
+    ) {
         if (isGenerating) stopGeneration(showToast = false) else generationEpoch.incrementAndGet()
         persistConversationNow()
         closeCurrentBackend()
@@ -1334,15 +1312,13 @@ class ChatActivity : ConfiguredActivity() {
         currentConversationId = newConversationId()
         conversationCreatedAtMillis = System.currentTimeMillis()
         conversationUpdatedAtMillis = conversationCreatedAtMillis
-        conversationModelId = selectedModel?.modelId
-        conversationModelDisplayName = selectedModel?.displayName
+        conversationTarget = target
         allowDeletedConversationRevival = false
         cancelEditing(restoreDraft = false)
         closeSearch()
         input.text.clear()
         historyStore.rememberLastConversation(currentConversationId)
-        renderEmptyState()
-        renderComposerState()
+        renderTargetUi()
     }
 
     private fun closeCurrentBackend() {
@@ -1817,8 +1793,7 @@ class ChatActivity : ConfiguredActivity() {
             ),
             createdAtMillis = conversationCreatedAtMillis,
             updatedAtMillis = conversationUpdatedAtMillis,
-            modelId = conversationModelId,
-            modelDisplayName = conversationModelDisplayName,
+            target = conversationTarget,
             messages = messages.toList(),
         )
         val persisted = runCatching {
@@ -1844,8 +1819,7 @@ class ChatActivity : ConfiguredActivity() {
         currentConversationId = conversation.id
         conversationCreatedAtMillis = conversation.createdAtMillis
         conversationUpdatedAtMillis = conversation.updatedAtMillis
-        conversationModelId = conversation.modelId
-        conversationModelDisplayName = conversation.modelDisplayName
+        conversationTarget = conversation.target
         nextMessageId = (messages.maxOfOrNull(ChatMessage::id) ?: 0L) + 1L
         markdownCache.clear()
         allowDeletedConversationRevival = false
@@ -1865,8 +1839,198 @@ class ChatActivity : ConfiguredActivity() {
         input.text.clear()
         applyStoredConversation(target)
         renderTranscript()
-        renderModelUi()
+        renderTargetUi()
         applyUiSettings()
+    }
+
+    private fun resolvedConversationTarget(): AiTarget? =
+        ConversationTargetPolicy.resolve(conversationTarget, targetCatalog)
+
+    private fun isConversationTargetReady(): Boolean {
+        if (targetCatalogAvailability != TargetCatalogAvailability.READY) return false
+        val target = resolvedConversationTarget() ?: return false
+        return target.configured && target.available && target.capabilities.streaming
+    }
+
+    private fun targetSummary(snapshot: ConversationTargetSnapshot): String = getString(
+        R.string.chat_target_status_format,
+        targetLocalityLabel(snapshot.locality),
+        targetProviderLabel(snapshot.providerId, snapshot.locality),
+        snapshot.displayName,
+        snapshot.modelId,
+    )
+
+    private fun targetLocalityLabel(locality: AiTargetLocality): String = getString(
+        when (locality) {
+            AiTargetLocality.LOCAL -> R.string.chat_target_locality_local
+            AiTargetLocality.REMOTE -> R.string.chat_target_locality_cloud
+        },
+    )
+
+    private fun targetProviderLabel(providerId: String, locality: AiTargetLocality): String {
+        if (locality == AiTargetLocality.LOCAL) return getString(R.string.app_name)
+        val provider = runCatching { OnlineAiProvider.fromProviderId(providerId) }.getOrNull()
+            ?: return providerId
+        return if (provider == OnlineAiProvider.OPENAI_COMPATIBLE) {
+            getString(R.string.online_ai_provider_custom)
+        } else {
+            OnlineAiProviderCatalog.templateFor(provider).displayName
+        }
+    }
+
+    private fun showTargetSelector() {
+        val catalog = targetCatalog
+        if (
+            targetCatalogAvailability != TargetCatalogAvailability.READY ||
+            catalog == null || catalog.targets.isEmpty()
+        ) {
+            showTargetConfigurationDialog()
+            return
+        }
+        val targets = catalog.targets
+        val labels = targets.map(::targetSelectorLabel).toTypedArray()
+        val selectedIndex = targets.indexOfFirst { target ->
+            target.targetId == conversationTarget?.targetId
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.chat_target_selector_title)
+            .setSingleChoiceItems(labels, selectedIndex) { dialog, index ->
+                val target = targets[index]
+                dialog.dismiss()
+                if (!target.configured || !target.available || !target.capabilities.streaming) {
+                    showUnavailableTargetDialog(target)
+                } else {
+                    requestTargetSelection(target)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun targetSelectorLabel(target: AiTarget): String {
+        val snapshot = ConversationTargetSnapshot.from(target)
+        val suffix = buildString {
+            if (!target.configured || !target.available || !target.capabilities.streaming) {
+                append(getString(R.string.chat_target_unavailable_suffix))
+            }
+            if (target.locality == AiTargetLocality.REMOTE) {
+                append(getString(R.string.chat_target_cost_suffix))
+            }
+        }
+        return getString(
+            R.string.chat_target_selector_item,
+            targetLocalityLabel(target.locality),
+            targetProviderLabel(target.providerId, target.locality),
+            snapshot.displayName,
+            snapshot.modelId,
+            suffix,
+        )
+    }
+
+    private fun requestTargetSelection(target: AiTarget) {
+        when (
+            ConversationTargetPolicy.selectionDisposition(
+                current = conversationTarget,
+                candidate = target,
+                hasMessages = messages.isNotEmpty(),
+            )
+        ) {
+            ConversationTargetSelectionDisposition.UNCHANGED -> Unit
+            ConversationTargetSelectionDisposition.APPLY ->
+                applyConversationTarget(target, announce = false)
+            ConversationTargetSelectionDisposition.CONFIRM_EXISTING_CONVERSATION ->
+                confirmTargetChange(target)
+        }
+    }
+
+    private fun confirmTargetChange(target: AiTarget) {
+        val destinationWarning = if (target.locality == AiTargetLocality.REMOTE) {
+            getString(R.string.chat_target_change_cloud_warning)
+        } else {
+            getString(R.string.chat_target_change_local_warning)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.chat_target_change_title)
+            .setMessage(
+                getString(
+                    R.string.chat_target_change_message,
+                    target.displayName,
+                    destinationWarning,
+                ),
+            )
+            .setNegativeButton(android.R.string.cancel, null)
+            .setNeutralButton(R.string.chat_target_continue_current) { _, _ ->
+                applyConversationTarget(target, announce = true)
+            }
+            .setPositiveButton(R.string.chat_target_start_new) { _, _ ->
+                startNewConversation(ConversationTargetSnapshot.from(target))
+            }
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun applyConversationTarget(target: AiTarget, announce: Boolean) {
+        if (isGenerating) stopGeneration(showToast = false)
+        closeCurrentBackend()
+        val snapshot = ConversationTargetSnapshot.from(target)
+        conversationTarget = snapshot
+        if (announce && messages.isNotEmpty()) {
+            appendMessage(
+                ChatMessage(
+                    id = allocateMessageId(),
+                    role = ChatMessageRole.NOTICE,
+                    text = getString(R.string.chat_target_changed_notice, targetSummary(snapshot)),
+                ),
+            )
+            persistConversationNow()
+        } else {
+            if (messages.isNotEmpty()) {
+                markConversationChanged()
+                persistConversationNow()
+            }
+            renderTargetUi()
+        }
+    }
+
+    private fun showUnavailableTargetDialog(target: AiTarget) {
+        val settingsLabel = when (target.locality) {
+            AiTargetLocality.LOCAL -> R.string.chat_model_settings
+            AiTargetLocality.REMOTE -> R.string.online_ai_settings_title
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.chat_target_unavailable_title)
+            .setMessage(getString(R.string.chat_target_unavailable_picker_message, target.displayName))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(settingsLabel) { _, _ -> openTargetSettings(target.locality) }
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun showTargetConfigurationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.chat_target_selector_empty_title)
+            .setMessage(R.string.chat_target_selector_empty_message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setNeutralButton(R.string.chat_model_settings) { _, _ -> openModelManager() }
+            .setPositiveButton(R.string.online_ai_settings_title) { _, _ -> openOnlineAiSettings() }
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun openTargetSettings(locality: AiTargetLocality) = when (locality) {
+        AiTargetLocality.LOCAL -> openModelManager()
+        AiTargetLocality.REMOTE -> openOnlineAiSettings()
+    }
+
+    private fun AiTarget.chatExecutionProfileId(): String? = when (locality) {
+        AiTargetLocality.REMOTE -> null
+        AiTargetLocality.LOCAL -> executionProfiles
+            .firstOrNull { profile ->
+                profile.profileId == AiProviderBackendProfile.CPU && profile.available
+            }
+            ?.profileId
+            ?: executionProfiles.firstOrNull { profile -> profile.available }?.profileId
     }
 
     private fun showKeyboard(target: View) {
@@ -1889,6 +2053,10 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun openModelManager() {
         startActivity(Intent(this, ModelManagerActivity::class.java))
+    }
+
+    private fun openOnlineAiSettings() {
+        startActivity(Intent(this, OnlineAiSettingsActivity::class.java))
     }
 
     private fun copyMessage(messageId: Long): Boolean {
@@ -1978,6 +2146,32 @@ class ChatActivity : ConfiguredActivity() {
         )
     }
 
+    private fun saveConversationTarget(outState: Bundle) {
+        val snapshot = conversationTarget ?: return
+        outState.putString(STATE_CONVERSATION_TARGET_ID, snapshot.targetId)
+        outState.putString(STATE_CONVERSATION_TARGET_PROVIDER_ID, snapshot.providerId)
+        outState.putString(STATE_CONVERSATION_TARGET_MODEL_ID, snapshot.modelId)
+        outState.putString(STATE_CONVERSATION_TARGET_NAME, snapshot.displayName)
+        outState.putString(STATE_CONVERSATION_TARGET_LOCALITY, snapshot.locality.name)
+    }
+
+    private fun restoreConversationTarget(state: Bundle): ConversationTargetSnapshot? {
+        val targetId = state.getString(STATE_CONVERSATION_TARGET_ID) ?: return null
+        val providerId = state.getString(STATE_CONVERSATION_TARGET_PROVIDER_ID) ?: return null
+        val modelId = state.getString(STATE_CONVERSATION_TARGET_MODEL_ID) ?: return null
+        val displayName = state.getString(STATE_CONVERSATION_TARGET_NAME) ?: return null
+        val locality = state.getString(STATE_CONVERSATION_TARGET_LOCALITY) ?: return null
+        return runCatching {
+            ConversationTargetSnapshot(
+                targetId = targetId,
+                providerId = providerId,
+                modelId = modelId,
+                displayName = displayName,
+                locality = AiTargetLocality.valueOf(locality),
+            )
+        }.getOrNull()
+    }
+
     private fun restoreTranscript(state: Bundle?): Boolean {
         if (state == null) return false
         restoredComposerText = state.getString(STATE_COMPOSER_TEXT)
@@ -2042,8 +2236,7 @@ class ChatActivity : ConfiguredActivity() {
             STATE_CONVERSATION_UPDATED_AT,
             conversationCreatedAtMillis,
         ).coerceAtLeast(conversationCreatedAtMillis)
-        conversationModelId = state.getString(STATE_CONVERSATION_MODEL_ID)
-        conversationModelDisplayName = state.getString(STATE_CONVERSATION_MODEL_NAME)
+        conversationTarget = restoreConversationTarget(state)
         if (messages.none { message -> message.id == editingMessageId }) editingMessageId = null
         return true
     }
@@ -2161,7 +2354,7 @@ class ChatActivity : ConfiguredActivity() {
         val document: MarkdownDocument,
     )
 
-    private enum class CatalogAvailability {
+    private enum class TargetCatalogAvailability {
         LOADING,
         UNAVAILABLE,
         READY,
@@ -2197,8 +2390,11 @@ class ChatActivity : ConfiguredActivity() {
         const val STATE_CONVERSATION_ID = "chatConversationId"
         const val STATE_CONVERSATION_CREATED_AT = "chatConversationCreatedAt"
         const val STATE_CONVERSATION_UPDATED_AT = "chatConversationUpdatedAt"
-        const val STATE_CONVERSATION_MODEL_ID = "chatConversationModelId"
-        const val STATE_CONVERSATION_MODEL_NAME = "chatConversationModelName"
+        const val STATE_CONVERSATION_TARGET_ID = "chatConversationTargetId"
+        const val STATE_CONVERSATION_TARGET_PROVIDER_ID = "chatConversationTargetProviderId"
+        const val STATE_CONVERSATION_TARGET_MODEL_ID = "chatConversationTargetModelId"
+        const val STATE_CONVERSATION_TARGET_NAME = "chatConversationTargetName"
+        const val STATE_CONVERSATION_TARGET_LOCALITY = "chatConversationTargetLocality"
         const val STATE_COMPOSER_TEXT = "chatComposerText"
         const val STATE_SEARCH_QUERY = "chatSearchQuery"
         const val STATE_EDITING_MESSAGE_ID = "chatEditingMessageId"

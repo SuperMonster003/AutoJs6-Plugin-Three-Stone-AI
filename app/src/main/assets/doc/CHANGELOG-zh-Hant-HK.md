@@ -26,6 +26,7 @@
 * `新增` 新增插件內部 OpenAI Compatible HTTPS 執行 backend, 支援自訂 baseUrl, 憑據及模型名稱, 有界 SSE 同 JSON fallback 串流回應, 精確取消, provider usage, 完成輪次多輪歷史, JSON Schema 請求映射及不含敏感資料嘅固定錯誤; AI Provider V1 宿主路由仍只公開本地目標
 * `新增` 新增同宿主目錄對齊嘅 OpenAI, Anthropic, Gemini, DeepSeek 同 OpenRouter 預設模板; 統一在線執行層重用 OpenAI-compatible 協議, 並分別適配 Anthropic Messages 同 Gemini GenerateContent 嘅原生認證, 請求, SSE 終態, usage 同 JSON Schema, 唔提供協議之間或本地/在線自動 fallback
 * `新增` 新增 10 種語言網上服務設定 UI, 支援設定檔新增, 編輯, 刪除, 唔回顯嘅 API Key 取代同清除, 預設目標選擇, 喺讀取憑證前強制執行嘅計量網絡開關, 同可取消且最長 120 秒嘅顯式連線測試; 設定同檔案共用跨進程原子文件, AI Provider V1 仍然只公開本機目標
+* `新增` 啟動器聊天新增統一本機/雲端目標選擇器: 每個對話持久化一個目標快照, 有訊息嘅對話切換時預設建議新增對話, 帶住既有上下文繼續目前對話必須明確確認並記錄變更
 * `修復` 移除插件說明可執行範例預設設定嘅 256 token 同 4 KiB 輸出限制: 省略 `maxTokens` 時改用模型或引擎預設值, raw Binder 範例使用插件完整嘅 64 KiB 輸出額度
 * `修復` 修復 10 種本地化插件說明中的底層 Binder 範例仍呼叫協議 1.1 的 14 參數 `AiGenerationOptions` 建構方法, 導致喺協議 1.3 API 下報告 Java 建構方法不存在
 * `修復` 修復模型管理介面在系統深色模式下仍使用淺色主題文字, 導致正文, 核取方塊及模型清單與深色背景對比不足

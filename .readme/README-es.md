@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="three-stone-ai-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>Plugin de IA local. La inferencia LiteRT-LM sigue local; las descargas son explícitas</p>
+  <p>Plugin de IA unificado. LiteRT-LM sigue local; los destinos en línea siempre se eligen explícitamente</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI?label=Release"/></a>
@@ -39,7 +39,7 @@ El README.md actual admite los siguientes idiomas:
 
 ******
 
-3-Stone AI es el plugin oficial de generación de texto con IA para AutoJs6. Ejecuta los modelos LiteRT-LM importados por el usuario en un backend CPU seleccionado explícitamente o en una GPU compatible, acepta un historial de mensajes de texto plano y devuelve texto plano o texto JSON restringido por un schema mediante una sesión de streaming controlada. Las llamadas actuales del host AI Provider V1 usan esos objetivos locales sin acceso a la red ni subida de datos. Los ajustes del plugin ya gestionan perfiles de OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter y OpenAI Compatible personalizados, credenciales cifradas, el destino en línea predeterminado, las redes medidas y pruebas de conexión explícitas. El chat y las APIs V1 del host todavía no enrutan a objetivos en línea.
+3-Stone AI es el plugin oficial de generación de texto con IA para AutoJs6. Ejecuta los modelos LiteRT-LM importados por el usuario en un backend CPU seleccionado explícitamente o en una GPU compatible, acepta un historial de mensajes de texto plano y devuelve texto plano o texto JSON restringido por un schema mediante una sesión de streaming controlada. Las llamadas actuales del host AI Provider V1 usan esos objetivos locales sin acceso a la red ni subida de datos. Los ajustes del plugin gestionan perfiles de OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter y OpenAI Compatible personalizados, credenciales cifradas, el destino en línea predeterminado, las redes medidas y pruebas de conexión explícitas. El chat del iniciador puede vincular explícitamente cada conversación a un destino local o en línea configurado; las APIs V1 del host siguen siendo solo locales.
 
 ******
 
@@ -61,6 +61,7 @@ El README.md actual admite los siguientes idiomas:
 - Enumerar, seleccionar y renombrar modelos importados, eliminar modelos no seleccionados y recuperar desde el gestor los archivos de modelos sin referencia.
 - Seleccionar explícitamente `cpu`, `gpu` o `npu` desde AutoJs6; CPU es el valor predeterminado, GPU se expone solo tras una prueba de carga OpenCL y NPU se informa como no disponible porque su runtime EAP no está incluido.
 - Gestionar perfiles en línea integrados y personalizados, credenciales de Android Keystore, el destino en línea predeterminado, redes medidas y pruebas de conexión explícitas y limitadas desde los ajustes.
+- Vincular cada conversación del iniciador a una instantánea de destino local o en línea; al cambiar una conversación con mensajes se recomienda una nueva, y continuar exige confirmación explícita y registra el cambio.
 
 ******
 
@@ -144,7 +145,7 @@ El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas p
 
 - No se declaran reasoning ni tools.
 - No se aceptan mensajes con rol tool, schemas de herramientas, tool calls ni tool results.
-- No hay descubrimiento de modelos por red ni descargas de modelos desde URL arbitrarias. La UI permite configurar perfiles en línea y su valor predeterminado, pero la selección de destino del chat y el enrutamiento del host AI Provider V1 todavía no exponen destinos en línea; solo puede descargarse el catálogo integrado fijado.
+- No hay descubrimiento de modelos por red ni descargas desde URL arbitrarias. El chat del iniciador solo expone modelos locales importados y perfiles en línea configurados explícitamente; el host AI Provider V1 sigue siendo solo local y solo puede descargarse el catálogo integrado fijado.
 - No se declara inferencia NPU: el perfil es visible como `unavailable` con `npu-runtime-not-packaged`. GPU solo se declara si `libOpenCL.so` puede cargarse y la extensión `.litertlm` aún no garantiza que el modelo se inicialice.
 
 ******
@@ -185,6 +186,7 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Función` Se añadió el backend interno del plugin para ejecución HTTPS OpenAI Compatible con perfiles de baseUrl, credencial y modelo personalizados, streaming SSE acotado y fallback JSON, cancelación precisa, usage del provider, historial persistente de turnos completados, mapping de JSON Schema y errores fijos sin datos sensibles; el enrutamiento del host AI Provider V1 sigue limitado a objetivos locales
 * `Función` Se añadieron preajustes de OpenAI, Anthropic, Gemini, DeepSeek y OpenRouter alineados con el catálogo del host; la capa unificada de ejecución en línea reutiliza el protocolo compatible con OpenAI y adapta por separado la autenticación, las solicitudes, los terminales SSE, el uso y JSON Schema nativos de Anthropic Messages y Gemini GenerateContent, sin fallback entre protocolos ni entre local y en línea
 * `Función` Se añadió la UI de servicios en línea en 10 idiomas para añadir, editar y eliminar perfiles, sustituir y borrar claves API sin mostrarlas, elegir el destino predeterminado, exigir permiso para redes medidas antes de leer credenciales y ejecutar pruebas explícitas cancelables de hasta 120 segundos; los ajustes comparten el documento atómico entre procesos y AI Provider V1 sigue siendo solo local
+* `Función` Se añadió un selector unificado de destinos locales y en la nube al chat del iniciador: cada conversación conserva una instantánea de destino, las conversaciones con mensajes recomiendan iniciar una nueva al cambiar y continuar con el contexto exige confirmación explícita y registra el cambio
 * `Corrección` Se eliminaron los límites implícitos de 256 tokens y 4 KiB de los ejemplos ejecutables: omitir `maxTokens` usa ahora el valor predeterminado del modelo o motor y el ejemplo Binder directo usa los 64 KiB completos permitidos por el proveedor
 * `Corrección` Se corrigió el ejemplo Binder de bajo nivel de las instrucciones localizadas en 10 idiomas, que aún invocaba el constructor `AiGenerationOptions` de 14 argumentos del protocolo 1.1 y fallaba con la API del protocolo 1.3
 * `Corrección` Se corrigió que el gestor de modelos conservara los colores de texto del tema claro en el modo oscuro del sistema, lo que hacía ilegibles el texto, las casillas y las filas de modelos sobre el fondo oscuro

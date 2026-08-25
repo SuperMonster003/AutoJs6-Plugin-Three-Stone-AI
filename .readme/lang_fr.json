@@ -1,11 +1,11 @@
 {
   "$name": "Français",
   "text_current_lowercase": "actuel",
-  "text_plugin_synopsis": "Plugin IA locale. L'inférence LiteRT-LM reste locale; les téléchargements sont déclenchés explicitement",
+  "text_plugin_synopsis": "Plugin IA unifié. LiteRT-LM reste local; les cibles en ligne sont toujours choisies explicitement",
   "h3_languages_with_ascii": "Langues",
   "p_languages_all_supported_for_readme": "Le fichier README.md actuel prend en charge les langues suivantes",
   "h3_introduction": "Introduction",
-  "p_introduction": "3-Stone AI est le plugin officiel de génération de texte IA pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Les appels actuels de l'hôte AI Provider V1 utilisent ces cibles locales sans accès réseau ni envoi de données. Les réglages du plugin gèrent maintenant les profils OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter et OpenAI Compatible personnalisés, les identifiants chiffrés, la cible en ligne par défaut, les réseaux facturés et les tests de connexion explicites. Le chat et les API hôte V1 ne routent toujours pas vers les cibles en ligne.",
+  "p_introduction": "3-Stone AI est le plugin officiel de génération de texte IA pour AutoJs6. Il exécute les modèles LiteRT-LM importés par l'utilisateur sur un backend CPU explicitement choisi ou sur un GPU compatible, accepte un historique de messages en texte brut et renvoie du texte brut ou du texte JSON contraint par un schema via une session de streaming contrôlée. Les appels actuels de l'hôte AI Provider V1 utilisent ces cibles locales sans accès réseau ni envoi de données. Les réglages du plugin gèrent les profils OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter et OpenAI Compatible personnalisés, les identifiants chiffrés, la cible en ligne par défaut, les réseaux facturés et les tests de connexion explicites. Le chat du lanceur peut associer explicitement chaque conversation à une cible locale ou en ligne configurée; les API hôte V1 restent locales uniquement.",
   "h3_functions": "Fonctions",
   "features": [
     "Importer un paquet de modèle `.litertlm` avec le sélecteur système Android et conserver une copie vérifiée dans le stockage privé de l'application.",
@@ -21,7 +21,8 @@
     "Transmettre les chunks de texte dans l'ordre avec une contre-pression par credits et publier un seul état terminal terminé, échoué ou annulé.",
     "Lister, sélectionner et renommer les modèles importés, supprimer les modèles non sélectionnés et récupérer les fichiers de modèle non référencés depuis le gestionnaire.",
     "Sélectionner explicitement le backend `cpu`, `gpu` ou `npu` via AutoJs6; CPU est utilisé par défaut, GPU seulement après une sonde de chargement OpenCL, et NPU est signalé indisponible car son runtime EAP n'est pas inclus.",
-    "Gérer les profils en ligne intégrés et personnalisés, les identifiants Android Keystore, la cible en ligne par défaut, les réseaux facturés et les tests de connexion explicites et limités dans les réglages."
+    "Gérer les profils en ligne intégrés et personnalisés, les identifiants Android Keystore, la cible en ligne par défaut, les réseaux facturés et les tests de connexion explicites et limités dans les réglages.",
+    "Associer chaque conversation du lanceur à un instantané de cible locale ou en ligne; un nouveau chat est recommandé lors du changement d'une conversation remplie, et continuer exige une confirmation explicite enregistrée."
   ],
   "h3_formats": "Formats du modèle et des données",
   "p_formats": "La version 1 déclare uniquement le périmètre suivant",
@@ -54,7 +55,7 @@
   "unsupported_capabilities": [
     "Reasoning et tools ne sont pas déclarés.",
     "Les messages de rôle tool, les schemas d'outils, les tool calls et les tool results ne sont pas acceptés.",
-    "Aucune découverte réseau de modèles ni aucun téléchargement de modèle depuis une URL arbitraire. La UI permet de configurer les profils en ligne et leur valeur par défaut, mais la sélection de cible du chat et le routage hôte AI Provider V1 ne proposent pas encore les cibles en ligne; seul le catalogue intégré épinglé est téléchargeable.",
+    "Aucune découverte réseau de modèles ni aucun téléchargement depuis une URL arbitraire. Le chat du lanceur ne présente que les modèles locaux importés et les profils en ligne explicitement configurés; le routage hôte AI Provider V1 reste local uniquement et seul le catalogue intégré épinglé est téléchargeable.",
     "L'inférence NPU n'est pas déclarée: le profil reste visible comme `unavailable` avec `npu-runtime-not-packaged`. GPU n'est déclaré que si `libOpenCL.so` est chargeable, et l'extension `.litertlm` ne garantit toujours pas l'initialisation du modèle."
   ],
   "h3_roadmap": "Feuille de route",

@@ -5,7 +5,7 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="three-stone-ai-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>Local AI plugin. LiteRT-LM inference stays local; optional model downloads are explicit</p>
+  <p>Unified AI plugin. LiteRT-LM stays local; online targets are always selected explicitly</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI?label=Release"/></a>
@@ -39,7 +39,7 @@ The current README.md supports the following languages:
 
 ******
 
-3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. Current AI Provider V1 host calls use those local targets without network access or data upload. The plugin settings now manage OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter, and custom OpenAI-compatible profiles, encrypted credentials, the default online target, metered-network access, and explicit connection tests. Chat and AI Provider V1 host APIs still do not route to online targets.
+3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend, accepts a plain-text message history, and returns plain text or schema-constrained JSON text through a controlled streaming session. Current AI Provider V1 host calls use those local targets without network access or data upload. The plugin settings manage OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter, and custom OpenAI-compatible profiles, encrypted credentials, the default online target, metered-network access, and explicit connection tests. Launcher chat can explicitly bind each conversation to a local or configured online target; AI Provider V1 host APIs remain local-only.
 
 ******
 
@@ -61,6 +61,7 @@ The current README.md supports the following languages:
 - List, select, and rename imported models, delete unselected models, and reclaim unreferenced model files from the manager.
 - Select an explicit `cpu`, `gpu`, or `npu` backend through AutoJs6; CPU is the default, GPU is exposed only after an OpenCL loader probe, and NPU is reported unavailable because its EAP runtime is not packaged.
 - Manage built-in and custom online profiles, Android Keystore credentials, the default online target, metered-network access, and explicit bounded connection tests in the app settings.
+- Bind each launcher conversation to one local or online target snapshot; changing a populated conversation recommends a new conversation, while continuing requires explicit confirmation and records the change.
 
 ******
 
@@ -144,7 +145,7 @@ The plugin requests `INTERNET` for user-triggered recommended-model downloads an
 
 - Reasoning and tools are not declared.
 - Tool-role messages, tool schemas, tool calls, and tool results are not accepted.
-- There is no network model discovery or arbitrary-URL model download. The UI can configure online profiles and their default, but chat target selection and AI Provider V1 host routing do not expose online targets yet; only the pinned built-in recommendation catalog can be downloaded.
+- There is no network model discovery or arbitrary-URL model download. Launcher chat exposes only imported local models and explicitly configured online profiles; AI Provider V1 host routing remains local-only, and only the pinned built-in recommendation catalog can be downloaded.
 - NPU inference is not declared: the profile is discoverable as `unavailable` with `npu-runtime-not-packaged`. GPU is declared only when `libOpenCL.so` is loadable, and a `.litertlm` extension alone still does not guarantee model initialization.
 
 ******
@@ -185,6 +186,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Feature` Added the plugin-internal OpenAI-compatible HTTPS execution backend for custom base URL, credential, and model profiles, with bounded SSE and JSON-fallback streaming, precise cancellation, provider usage, completed-turn persistent history, JSON Schema request mapping, and fixed non-sensitive errors; AI Provider V1 host routing remains local-only
 * `Feature` Added OpenAI, Anthropic, Gemini, DeepSeek, and OpenRouter presets aligned with the host catalog; the unified online execution layer reuses the OpenAI-compatible protocol and separately adapts native Anthropic Messages and Gemini GenerateContent authentication, requests, SSE terminals, usage, and JSON Schema without cross-protocol or local/online fallback
 * `Feature` Added the 10-language online-services settings UI for profile add/edit/delete, non-disclosing API-key replacement and clearing, default-target selection, metered-network opt-in enforced before credential access, and explicit cancellable 120-second connection tests; settings share the atomic cross-process profile document and AI Provider V1 remains local-only
+* `Feature` Added a unified local/cloud target selector to launcher chat: every conversation persists one target snapshot, populated conversations recommend starting a new conversation when switching, and continuing with retained context requires explicit confirmation and records the change
 * `Fix` Removed the runnable instruction examples' implicit 256-token and 4 KiB output caps: omitted `maxTokens` now uses the model or engine default, while the raw Binder example uses the provider's full 64 KiB output allowance
 * `Fix` Fixed the raw Binder sample in the 10 localized plugin instructions still invoking the 14-argument protocol 1.1 `AiGenerationOptions` constructor, which failed against the protocol 1.3 API
 * `Fix` Fixed the model manager retaining light-theme text colors in system dark mode, which made body text, checkboxes, and model rows unreadable against the dark background

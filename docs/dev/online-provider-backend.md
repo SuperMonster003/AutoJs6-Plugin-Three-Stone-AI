@@ -44,6 +44,7 @@
 - 用户确认继续当前会话后, 页面关闭既有 backend session, 更新会话级目标快照, 写入可见的 target-change notice 并立即持久化. 若已保存 target 从目录消失或变为不可用, 会话保持原快照并禁用发送, 不自动采用新的默认 target.
 - 每条 assistant 占位消息在请求开始前先捕获目录中的目标快照; backend session 建立后再以 `AiBackendSession.target` 校正并立即持久化实际 target. 完成, 失败, 停止及 Activity 状态恢复均保留 target/provider/model/locality, user 与 notice 消息则禁止携带目标快照.
 - "重新生成" 精确沿用原响应快照, 但不改写会话默认 target. 历史 targetId 只有在 providerId, modelId 与 locality 仍一致时才可解析; 仅显示名重命名可继续. 目标被删除, 不可用或身份漂移时明确失败并提供对应设置入口, 绝不回退到当前会话目标. 当原响应目标不同于会话默认目标时, 确认对话框会显示实际目标以及本地/云端隐私和费用边界.
+- G8441 / Android 9 真机以 `Cloud / OpenAI Compatible / PoloAPI / claude-opus-4-8` 完成首次生成与同一响应的重新生成. 两次目标栏身份保持一致且响应内容不同; provider usage 与耗时分别显示为 `18788 input | 106 output | 8.0 s` 和 `18786 input | 212 output | 6.0 s`.
 
 文本历史仍可作为跨目标上下文使用, 但每条响应的执行来源独立可审计; target 变化不会改写已经完成的响应快照.
 

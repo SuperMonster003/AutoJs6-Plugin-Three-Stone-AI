@@ -104,7 +104,7 @@
 - [x] 插件路由响应补齐 reasoning, toolCalls, finishReason, target/plugin/profile 与完整 usage, 流式增量及持久会话同步公开精确目标元数据.
 - [x] 错误码统一: 插件缺失/禁用/协议不兼容/目标未知或未配置/目标或 backend 不可用/能力不匹配均返回稳定错误, 不静默改路由.
 - [x] 宿主 d.ts, Ace Editor 内置声明与 docs.autojs6.com/离线文档已更新, 覆盖目录, 精确 target, 默认 target, 本机/在线差异, 完整响应及禁止回退语义.
-- [ ] P3 统一宿主公开 API 真机冒烟: 在 G8441 验证 `ai.catalog()` 默认标记, 精确本机与在线 target 的完成响应元数据, `plugin: true` 默认目标, 以及不存在 target 返回 `TARGET_NOT_FOUND` 且不回退. [维护者脚本](docs/dev/p3-host-public-api-smoke.md)
+- [x] P3 统一宿主公开 API 真机冒烟: G8441 / Android 9 已验证 `ai.catalog()` 返回稳定 generation、远程默认 target 与本机/在线目录; 精确在线 target 和 `plugin: true` 默认目标均返回完整 target/provider/model/finishReason/usage 元数据（分别耗时 6.127 s、4.260 s）; 不存在 target 稳定返回 `TARGET_NOT_FOUND` 且未回退; 精确本机 target 成功完成并返回完整元数据（8.835 s）; 全脚本 27.527 s. [维护者脚本](docs/dev/p3-host-public-api-smoke.md)
 
 ## P4 设置入口与配置迁移
 

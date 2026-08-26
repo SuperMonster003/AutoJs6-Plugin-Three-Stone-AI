@@ -10,6 +10,7 @@
 
 * `Feature` Plugin brand and runtime identity standardized as 3-Stone AI across display names, package and component names, discovery identifiers, build artifacts, and documentation
 * `Feature` Cross-process integration uses the neutral `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER`, and `IAiProvider`/`IAiSession`/`IAiCallback` identities without aliases from replaced identities
+* `Feature` Added a signature-protected, exported, parameterless AI settings entry so AutoJs6 can open the plugin's unified settings without sending profile or credential data
 * `Feature` Exposed `local:*` and `profile:*` directly through the paged AI Provider V2 target catalog, with independent provider/model/locality, configured and available state, capabilities, limits, controls, HTTPS origins, and an exact `isDefault` marker for every target
 * `Feature` Forwarded `temperature`, `topK`, `topP`, and `maxTokens` through AI Provider V2 generation requests to LiteRT-LM sampling and output-token controls
 * `Feature` Reported exact LiteRT-LM input, output, and total token counts plus provider-measured generation duration through AutoJs6 `ai.chat().usage` and stream usage events

@@ -172,6 +172,7 @@ required host build: 5276
 
 * `ميزة` اعتماد 3-Stone AI كهوية نهائية للعلامة التجارية ووقت التشغيل لاضافة الذكاء الاصطناعي المحلية الرسمية في AutoJs6
 * `ميزة` يستخدم التكامل بين العمليات هويات `ai-provider-api` و `org.autojs.plugin.ai.provider.api` و `org.autojs.plugin.AI_PROVIDER` و `IAiProvider`/`IAiSession`/`IAiCallback` المحايدة من دون الاحتفاظ باسماء بديلة للهويات المستبدلة
+* `ميزة` إضافة مدخل إعدادات AI مصدر ومحمي بإذن توقيع ومن دون معاملات كي يفتح AutoJs6 إعدادات الملحق الموحدة من دون إرسال بيانات الملفات التعريفية أو بيانات الاعتماد
 * `ميزة` عرض `local:*` و `profile:*` مباشرة في كتالوج أهداف AI Provider V2 المقسم إلى صفحات, مع provider/model/locality وحالتي configured وavailable والقدرات والحدود وعناصر التحكم وHTTPS origins وعلامة `isDefault` دقيقة مستقلة لكل هدف
 * `ميزة` تمرير `temperature` و `topK` و `topP` و `maxTokens` عبر طلبات توليد AI Provider V2 إلى عناصر تحكم sampling و output tokens في LiteRT-LM
 * `ميزة` إرجاع أعداد رموز الإدخال والإخراج والمجموع الدقيقة من LiteRT-LM مع مدة التوليد المقاسة لدى المزود عبر `ai.chat().usage` وأحداث usage للبث

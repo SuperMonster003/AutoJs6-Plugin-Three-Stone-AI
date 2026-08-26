@@ -10,6 +10,7 @@
 
 * `Fonction` Identité de marque et d'exécution du plugin IA locale officiel d'AutoJs6 finalisée sous le nom 3-Stone AI
 * `Fonction` L'intégration interprocessus utilise les identités neutres `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` et `IAiProvider`/`IAiSession`/`IAiCallback` sans conserver d'alias des identités remplacées
+* `Fonction` Entrée de réglages AI exportée, sans paramètre et protégée par une permission de signature afin qu'AutoJs6 ouvre les réglages unifiés du plugin sans envoyer de données de profil ni d'identification
 * `Fonction` Exposition directe de `local:*` et `profile:*` dans le catalogue paginé de cibles AI Provider V2, avec provider/model/locality, états configured et available, capacités, limites, contrôles, origines HTTPS et un marqueur `isDefault` exact indépendants pour chaque cible
 * `Fonction` Transmission de `temperature`, `topK`, `topP` et `maxTokens` par les requêtes de génération AI Provider V2 vers les contrôles d'échantillonnage et de tokens de sortie de LiteRT-LM
 * `Fonction` Rapport des nombres exacts de tokens d'entrée, de sortie et totaux de LiteRT-LM, avec la durée de génération mesurée côté fournisseur, via `ai.chat().usage` et les événements usage du streaming

@@ -59,7 +59,7 @@
 - [x] 插件 `gradlew --offline :app:testDebugUnitTest :app:assembleDebug` 通过.
 - [x] 宿主 `ai-provider-api` 与 `ai-provider-conformance` 单测/构建通过, App AI 路由及设置相关 213 个单测通过.
 - [x] 双仓全量扫描: 被替换身份的 CamelCase, kebab-case, package/action, 自然语言品牌词, 文件名, 目录名与 AAR 均为 0 残留, 不设白名单.
-- [ ] 真机冒烟: 安装新包名 APK, `ai.ask("...", { plugin: true })` 走通, 宿主 "AI 服务设置" 跳转插件正常, 插件中心识别正常. (需真机, 由维护者执行)
+- [x] 真机冒烟: G8441 / Android 9 已覆盖新包名 APK 覆盖安装, `plugin: true` 默认目标生成, 宿主 "AI 服务设置" 精确跳转插件, 以及宿主启用状态与官方信任识别; 插件设置与在线配置在覆盖安装后保持正常.
 
 ### 发布收尾 (发布时执行)
 
@@ -100,24 +100,24 @@
 
 - [x] `ai.ask/chat/stream/session` 支持统一 `target` 选择器 (`local:*` / `profile:*`); `plugin: true` 仅作为选择官方插件默认 target 的简写, 不再限定本地目标.
 - [x] 新增 `ai.catalog()`: 返回本地与在线全部目标, 包含身份, 配置/可用状态, 能力, 控制项, 限制, 来源, 默认标记与本地 backend profile.
-- [x] 直接移除未发布的旧公开目录、配置探测入口及内部模型列表投影类型, 全部由 `ai.catalog()` 取代; 不保留别名, 兼容视图或旧名称源码.
+- [x] 直接移除未发布的旧公开目录, 配置探测入口及内部模型列表投影类型, 全部由 `ai.catalog()` 取代; 不保留别名, 兼容视图或旧名称源码.
 - [x] 插件路由响应补齐 reasoning, toolCalls, finishReason, target/plugin/profile 与完整 usage, 流式增量及持久会话同步公开精确目标元数据.
 - [x] 错误码统一: 插件缺失/禁用/协议不兼容/目标未知或未配置/目标或 backend 不可用/能力不匹配均返回稳定错误, 不静默改路由.
 - [x] 宿主 d.ts, Ace Editor 内置声明与 docs.autojs6.com/离线文档已更新, 覆盖目录, 精确 target, 默认 target, 本机/在线差异, 完整响应及禁止回退语义.
-- [x] P3 统一宿主公开 API 真机冒烟: G8441 / Android 9 已验证 `ai.catalog()` 返回稳定 generation、远程默认 target 与本机/在线目录; 精确在线 target 和 `plugin: true` 默认目标均返回完整 target/provider/model/finishReason/usage 元数据（分别耗时 6.127 s、4.260 s）; 不存在 target 稳定返回 `TARGET_NOT_FOUND` 且未回退; 精确本机 target 成功完成并返回完整元数据（8.835 s）; 全脚本 27.527 s. [维护者脚本](docs/dev/p3-host-public-api-smoke.md)
+- [x] P3 统一宿主公开 API 真机冒烟: G8441 / Android 9 已验证 `ai.catalog()` 返回稳定 generation, 远程默认 target 与本机/在线目录; 精确在线 target 和 `plugin: true` 默认目标均返回完整 target/provider/model/finishReason/usage 元数据 (分别耗时 6.127 s, 4.260 s); 不存在 target 稳定返回 `TARGET_NOT_FOUND` 且未回退; 精确本机 target 成功完成并返回完整元数据 (8.835 s); 全脚本 27.527 s. [维护者脚本](docs/dev/p3-host-public-api-smoke.md)
 
 ## P4 设置入口与配置迁移
 
-- [ ] 宿主 "AI 服务设置" 页改为插件统一设置入口: 已安装跳插件设置, 未安装/被禁用显示安装或启用引导.
-- [ ] 在线 API Key 迁移采用 "插件内重新输入" 方案; 不设计宿主到插件的凭据传输通道, 设置公开契约禁止承载凭据.
-- [ ] 直接移除宿主既有在线配置, profile 路由与读取路径; 用户已在插件中重新录入的配置作为唯一来源, 不保留只读迁移或旧脚本兼容分支.
-- [ ] 直接移除脚本内裸 `apiKey` / `baseUrl` 参数与相关实现; 在线调用只接受插件管理的 `target`, 不设置弃用周期.
+- [x] 宿主 "AI 服务设置" 已改为插件统一设置入口: 可信且启用的已安装插件打开唯一受保护的无参数设置 Activity; 缺失, Android 停用, 插件中心停用或入口不可信分别进入确定的安装, 系统启用, 插件启用或更新引导. G8441 / Android 9 已从宿主偏好项精确跳转并打开插件在线服务页. [真机记录](docs/dev/p4-p5-host-plugin-settings-smoke.md)
+- [x] 在线 API Key 采用 "插件内重新输入" 方案; 新设置契约明确无 extras, URI, clip data, result payload 或配置字段, 不存在宿主到插件的凭据传输通道. G8441 已验证 shell UID 被签名权限拒绝, 携带额外参数的授权调用由插件立即拒绝.
+- [x] 宿主既有在线配置, profile 路由与读取路径已物理删除; 插件内已录入配置是唯一来源, 无只读迁移或脚本分支. G8441 覆盖安装后 PoloAPI 档案, 默认目标, 凭据配置状态和网络策略完整保留.
+- [x] 脚本公开选项只保留插件 `target` 及规范生成控制; 宿主不再接收裸在线连接或凭据参数, 未设置弃用周期或别名.
 
 ## P5 宿主瘦身 (直接替换)
 
-- [ ] 评估并移除宿主在线提供方 HTTP 实现与请求构造 (`AiRequestFactory` 等), `ai.*` 在线能力完全由插件承载.
-- [ ] 移除宿主在线配置编辑 UI, `AiProviderVault` 及全部读写路径, 不保留迁移提示或历史配置读取代码.
-- [ ] 宿主最终仅保留: `ai.*` API 外观, 插件发现与信任, 协议协商, Binder 生命周期与错误规范化; 不保留旧实现兼容层.
+- [x] 宿主在线 HTTP 执行, 响应/SSE 解析和请求构造源码及测试已物理删除; `ai.*` 的本地与在线执行均由所选插件 `target` 承载.
+- [x] 宿主在线配置编辑 Activity/Fragment/layout, 凭据仓库及全部读写路径已物理删除, 无迁移提示或历史配置读取代码.
+- [x] 宿主最终只保留 `ai.*` API 外观, 插件发现与信任, 协议协商, Binder 生命周期, 设置入口与错误规范化; 专项单测, 全量源码扫描, Debug APK 和 AndroidTest 编译通过, 无旧执行分支.
 - [x] 插件与宿主已直接切换 V2 并移除旧协议接口, codec, 名称, 服务实现与测试夹具; 后续瘦身无需保留协议兼容分支.
 
 ## 设计边界 (不做的事)

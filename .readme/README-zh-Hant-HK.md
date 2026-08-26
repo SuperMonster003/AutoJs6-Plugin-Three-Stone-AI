@@ -172,6 +172,7 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 同 `profile:*` 目標. 
 
 * `新增` 插件品牌與運行時標識統一為 3-Stone AI, 同步應用名, 包名, 組件名, 發現標識, 構建產物及文檔
 * `新增` 跨進程集成統一採用中性 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 及 `IAiProvider`/`IAiSession`/`IAiCallback` 身份, 不保留被取代身份的別名
+* `新增` 增加受簽名權限保護, 可導出且無參數嘅 AI 設定入口, AutoJs6 可直接打開插件統一設定而唔發送設定檔或憑證資料
 * `新增` 透過 AI Provider V2 分頁目標目錄直接公開 `local:*` 同 `profile:*`, 每個目標獨立聲明 provider/model/locality, 設定同可用狀態, capabilities, limits, controls, HTTPS origins 及精確嘅 `isDefault` 標記
 * `新增` 透過 AI Provider V2 生成請求將 `temperature`, `topK`, `topP` 同 `maxTokens` 傳遞至 LiteRT-LM 採樣及輸出 token 控制
 * `新增` 透過 AutoJs6 `ai.chat().usage` 同串流 usage 事件回傳 LiteRT-LM 精確嘅輸入, 輸出及總 token 數, 以及插件實測生成耗時

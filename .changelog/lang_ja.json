@@ -10,6 +10,7 @@
       "feature": [
         "AutoJs6 公式ローカル AI プラグインのブランドとランタイム識別子を 3-Stone AI に統一",
         "プロセス間統合に中立な `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER`, `IAiProvider`/`IAiSession`/`IAiCallback` 識別子を採用し, 置換前の識別子 alias は保持しない",
+        "署名権限で保護された export 済み無引数 AI 設定エントリを追加し, AutoJs6 から profile や認証情報を送信せずプラグインの統合設定を起動可能",
         "AI Provider V2 のページ分割ターゲットカタログから `local:*` と `profile:*` を直接公開し, 各ターゲットの provider/model/locality, 設定/可用状態, capabilities, limits, controls, HTTPS origins, 正確な `isDefault` マーカーを個別に宣言",
         "AI Provider V2 生成リクエストで `temperature`, `topK`, `topP`, `maxTokens` を LiteRT-LM の sampling と出力 token 制御まで伝達",
         "LiteRT-LM の正確な入力, 出力, 合計 token 数とプロバイダー実測の生成時間を `ai.chat().usage` とストリーム usage イベントで報告",

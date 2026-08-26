@@ -57,9 +57,15 @@
 
         <activity
             android:name=".AppSettingsActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/app_settings_title"
-            android:parentActivityName=".ChatActivity" />
+            android:parentActivityName=".ChatActivity"
+            android:permission="org.autojs.permission.PLUGIN">
+            <intent-filter>
+                <action android:name="org.autojs.plugin.AI_PROVIDER_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".OnlineAiSettingsActivity"

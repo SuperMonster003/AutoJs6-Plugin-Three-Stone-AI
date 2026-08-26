@@ -172,6 +172,7 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 * `Función` Identidad de marca y de ejecución del plugin oficial de IA local de AutoJs6 consolidada como 3-Stone AI
 * `Función` La integración entre procesos usa las identidades neutrales `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` e `IAiProvider`/`IAiSession`/`IAiCallback` sin conservar alias de las identidades reemplazadas
+* `Función` Entrada de configuración de AI exportada, sin parámetros y protegida por permiso de firma para que AutoJs6 abra la configuración unificada del plugin sin enviar datos de perfiles ni credenciales
 * `Función` Exposición directa de `local:*` y `profile:*` en el catálogo paginado de destinos de AI Provider V2, con provider/model/locality, estados configured y available, capacidades, límites, controles, orígenes HTTPS y una marca `isDefault` exacta independientes para cada destino
 * `Función` Transferencia de `temperature`, `topK`, `topP` y `maxTokens` mediante solicitudes de generación AI Provider V2 a los controles de muestreo y tokens de salida de LiteRT-LM
 * `Función` Informe de los recuentos exactos de tokens de entrada, salida y totales de LiteRT-LM, junto con la duración de generación medida por el proveedor, mediante `ai.chat().usage` y eventos usage de streaming

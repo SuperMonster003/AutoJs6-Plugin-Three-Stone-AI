@@ -18,6 +18,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import org.autojs.plugin.ai.provider.api.AiProviderSettingsContract
 
 class AppSettingsActivity : ConfiguredActivity() {
     private lateinit var settingsStore: ApplicationSettingsStore
@@ -26,6 +27,10 @@ class AppSettingsActivity : ConfiguredActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!acceptsSettingsIntent(intent)) {
+            finish()
+            return
+        }
         settingsStore = ApplicationSettingsStore(applicationContext)
         hostResult = AutoJs6HostSettingsClient.query(this)
         val stored = settingsStore.load()
@@ -35,6 +40,14 @@ class AppSettingsActivity : ConfiguredActivity() {
             }
         }
         setContentView(createContentView())
+    }
+
+    private fun acceptsSettingsIntent(intent: Intent): Boolean {
+        val action = intent.action ?: return true
+        return action == AiProviderSettingsContract.ACTION_OPEN_SETTINGS &&
+            intent.data == null &&
+            intent.clipData == null &&
+            intent.extras == null
     }
 
     private fun createContentView(): View = LinearLayout(this).apply {

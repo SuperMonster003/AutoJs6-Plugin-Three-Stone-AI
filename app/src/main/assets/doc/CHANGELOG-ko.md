@@ -10,6 +10,7 @@
 
 * `기능` AutoJs6 공식 로컬 AI 플러그인의 브랜드와 런타임 식별자를 3-Stone AI로 통일
 * `기능` 프로세스 간 통합에 중립적인 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 및 `IAiProvider`/`IAiSession`/`IAiCallback` 식별자를 사용하고 교체된 식별자의 alias는 유지하지 않음
+* `기능` 서명 권한으로 보호되고 export된 무인자 AI 설정 진입점을 추가하여 AutoJs6가 profile 또는 자격 증명 데이터를 보내지 않고 플러그인 통합 설정을 열 수 있음
 * `기능` AI Provider V2 페이지형 target catalog를 통해 `local:*` 및 `profile:*`을 직접 공개하고 각 target의 provider/model/locality, 구성 및 가용 상태, capabilities, limits, controls, HTTPS origins와 정확한 `isDefault` 표식을 독립적으로 선언
 * `기능` AI Provider V2 생성 요청을 통해 `temperature`, `topK`, `topP`, `maxTokens`를 LiteRT-LM sampling 및 출력 token 제어까지 전달
 * `기능` LiteRT-LM의 정확한 입력, 출력, 전체 token 수와 공급자 측에서 측정한 생성 시간을 `ai.chat().usage` 및 스트림 usage 이벤트로 보고

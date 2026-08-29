@@ -1,29 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Ink & Stone palette, night: warm near-black foundation with a lifted lapis accent. -->
+    <color name="window_background">#131211</color>
+    <color name="surface">#1C1B19</color>
+    <color name="surface_variant">#242220</color>
+    <color name="text_color_primary">#EDEBE7</color>
+    <color name="text_color_secondary">#A19D96</color>
+    <color name="divider">#2B2926</color>
+    <color name="outline">#3A3733</color>
+    <color name="brand_primary">#93ACF2</color>
+    <color name="brand_on_primary">#0E1220</color>
+
+    <color name="chat_user_surface">#262F49</color>
+    <color name="chat_assistant_surface">#201F1D</color>
+    <color name="chat_notice_surface">#232631</color>
+    <color name="chat_input_surface">#1C1B19</color>
+    <color name="chat_border">#35322E</color>
+    <color name="chat_ripple">#3393ACF2</color>
+    <color name="chat_markdown_code_surface">#2BFFFFFF</color>
+    <color name="chat_markdown_quote">#97938B</color>
+    <color name="chat_markdown_link">#93ACF2</color>
+    <color name="chat_search_match">#66827A00</color>
+    <color name="chat_search_match_current">#B3E65100</color>
+
+    <color name="verification_match">#FF81C784</color>
+    <color name="verification_mismatch">#FFEF9A9A</color>
+    <color name="validation_error">#FFEF9A9A</color>
+
+    <!-- Legacy tokens kept until the resource reconciliation pass retires them. -->
     <color name="color_primary">#B96500</color>
     <color name="color_primary_dark">#6E3700</color>
     <color name="color_secondary">#4DD0E1</color>
     <color name="toolbar_text">#FFFFFFFF</color>
-    <color name="verification_match">#FF81C784</color>
-    <color name="verification_mismatch">#FFEF9A9A</color>
-    <color name="window_background">#FF0D1117</color>
-    <color name="text_color_primary">#FFFFFFFF</color>
-    <color name="text_color_secondary">#B3FFFFFF</color>
-    <color name="divider">#33FFFFFF</color>
-    <color name="validation_error">#FFEF9A9A</color>
     <color name="chat_accent">#FF4DD0E1</color>
     <color name="chat_action">#FF4DD0E1</color>
     <color name="chat_on_action">#FF082A2F</color>
-    <color name="chat_user_surface">#FF163F45</color>
-    <color name="chat_assistant_surface">#FF1A222C</color>
-    <color name="chat_notice_surface">#FF152A30</color>
-    <color name="chat_input_surface">#FF151C24</color>
-    <color name="chat_border">#3D9EB6BC</color>
-    <color name="chat_ripple">#334DD0E1</color>
     <color name="chat_action_ripple">#33000000</color>
-    <color name="chat_markdown_code_surface">#2FFFFFFF</color>
-    <color name="chat_markdown_quote">#FF90A4AE</color>
-    <color name="chat_markdown_link">#FF80DEEA</color>
-    <color name="chat_search_match">#66827A00</color>
-    <color name="chat_search_match_current">#B3E65100</color>
 </resources>

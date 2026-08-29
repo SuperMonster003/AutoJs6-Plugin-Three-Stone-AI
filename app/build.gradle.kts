@@ -136,6 +136,7 @@ androidComponents {
 
 dependencies {
     implementation(libs.appcompat)
+    implementation(libs.material)
     implementation(libs.gson)
     implementation(libs.okhttp)
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.2.21")

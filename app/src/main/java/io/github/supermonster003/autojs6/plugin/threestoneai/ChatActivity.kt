@@ -188,15 +188,15 @@ class ChatActivity : ConfiguredActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menu.add(0, MENU_NEW_CONVERSATION, 0, R.string.chat_new_conversation).apply {
-            icon = tintedDrawable(R.drawable.ic_add_24, appPalette.onPrimary)
+            icon = tintedDrawable(R.drawable.ic_add_24, appPalette.primaryText)
             setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         }
         menu.add(0, MENU_CONVERSATION_HISTORY, 1, R.string.chat_history_title).apply {
-            icon = tintedDrawable(R.drawable.ic_history_24, appPalette.onPrimary)
+            icon = tintedDrawable(R.drawable.ic_history_24, appPalette.primaryText)
             setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         }
         searchMenuItem = menu.add(0, MENU_SEARCH, 2, R.string.chat_search_menu).apply {
-            icon = tintedDrawable(R.drawable.ic_search_24, appPalette.onPrimary)
+            icon = tintedDrawable(R.drawable.ic_search_24, appPalette.primaryText)
             actionView = createSearchActionView()
             setShowAsAction(
                 MenuItem.SHOW_AS_ACTION_IF_ROOM or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW,
@@ -239,7 +239,7 @@ class ChatActivity : ConfiguredActivity() {
             )
             icon = tintedDrawable(
                 if (searchExpanded) R.drawable.ic_arrow_up_24 else R.drawable.ic_add_24,
-                appPalette.onPrimary,
+                appPalette.primaryText,
             )
             isEnabled = if (searchExpanded) hasSearchResults else messages.isNotEmpty()
         }
@@ -249,13 +249,13 @@ class ChatActivity : ConfiguredActivity() {
             )
             icon = tintedDrawable(
                 if (searchExpanded) R.drawable.ic_arrow_down_24 else R.drawable.ic_history_24,
-                appPalette.onPrimary,
+                appPalette.primaryText,
             )
             isEnabled = !searchExpanded || hasSearchResults
         }
         menu.findItem(MENU_SEARCH)?.apply {
             isEnabled = searchExpanded || messages.any { message -> message.text.isNotBlank() }
-            icon = tintedDrawable(R.drawable.ic_search_24, appPalette.onPrimary)
+            icon = tintedDrawable(R.drawable.ic_search_24, appPalette.primaryText)
         }
     }
 
@@ -423,7 +423,7 @@ class ChatActivity : ConfiguredActivity() {
             R.string.app_name,
             showBack = false,
         )
-        toolbar.navigationIcon = tintedDrawable(R.drawable.ic_menu_24, appPalette.onPrimary)
+        toolbar.navigationIcon = tintedDrawable(R.drawable.ic_menu_24, appPalette.primaryText)
         toolbar.setNavigationContentDescription(R.string.navigation_open_drawer)
         toolbar.setNavigationOnClickListener {
             persistConversationNow()
@@ -613,8 +613,8 @@ class ChatActivity : ConfiguredActivity() {
             gravity = Gravity.CENTER_VERTICAL
             includeFontPadding = false
             minimumHeight = 0
-            setTextColor(appPalette.onPrimary)
-            setHintTextColor(AppColorPolicy.withAlpha(appPalette.onPrimary, 0xB3))
+            setTextColor(appPalette.primaryText)
+            setHintTextColor(appPalette.secondaryText)
             setPaddingRelative(0, 0, 0, 0)
             background = null
             tintEditText(this)

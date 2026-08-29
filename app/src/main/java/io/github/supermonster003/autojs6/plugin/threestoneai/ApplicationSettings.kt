@@ -38,7 +38,7 @@ internal data class ApplicationSettings(
 
 internal object AppSettingsPolicy {
     const val AUTOJS6_DEFAULT_THEME_COLOR = -8_531 // #FFDEAD
-    const val THREE_STONE_AI_THEME_COLOR = -1_533_440 // #FFE89A00
+    const val THREE_STONE_AI_THEME_COLOR = -12_952_376 // #FF3A5CC8 (lapis; rendered per-mode via R.color.brand_primary)
 
     fun normalizeOpaqueColor(color: Int): Int = color or -0x1000000
 

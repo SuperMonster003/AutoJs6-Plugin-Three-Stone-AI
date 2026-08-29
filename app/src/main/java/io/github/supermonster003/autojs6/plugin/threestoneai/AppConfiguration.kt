@@ -28,6 +28,7 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import com.google.android.material.progressindicator.BaseProgressIndicator
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
@@ -181,6 +182,9 @@ internal data class AppThemePalette(
     val onPrimary: Int,
     val accent: Int,
     val windowBackground: Int,
+    val surface: Int,
+    val surfaceVariant: Int,
+    val outline: Int,
     val primaryText: Int,
     val secondaryText: Int,
     val divider: Int,
@@ -200,7 +204,15 @@ internal data class AppThemePalette(
                     ?.themeColorPrimary
                     ?: AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR
                 AppThemeSelection.CUSTOM -> settings.customThemeColor
-            }.let(AppSettingsPolicy::normalizeOpaqueColor)
+            }.let(AppSettingsPolicy::normalizeOpaqueColor).let { normalized ->
+                // The brand color adapts to the active mode; arbitrary host or custom
+                // colors keep their single value and rely on the contrast machinery.
+                if (normalized == AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR) {
+                    context.getColor(R.color.brand_primary)
+                } else {
+                    normalized
+                }
+            }
             val background = context.getColor(R.color.window_background)
             val isDark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
                 Configuration.UI_MODE_NIGHT_YES
@@ -209,6 +221,9 @@ internal data class AppThemePalette(
                 onPrimary = AppColorPolicy.onThemeColor(primary, isDark),
                 accent = AppColorPolicy.readableAccent(primary, background),
                 windowBackground = background,
+                surface = context.getColor(R.color.surface),
+                surfaceVariant = context.getColor(R.color.surface_variant),
+                outline = context.getColor(R.color.outline),
                 primaryText = context.getColor(R.color.text_color_primary),
                 secondaryText = context.getColor(R.color.text_color_secondary),
                 divider = context.getColor(R.color.divider),
@@ -217,26 +232,14 @@ internal data class AppThemePalette(
                     primary,
                     context.getColor(R.color.text_color_primary),
                 ),
-                assistantSurface = AppColorPolicy.retoneSurface(
-                    context.getColor(R.color.chat_assistant_surface),
-                    primary,
-                    context.getColor(R.color.text_color_primary),
-                ),
+                assistantSurface = context.getColor(R.color.chat_assistant_surface),
                 noticeSurface = AppColorPolicy.retoneSurface(
                     context.getColor(R.color.chat_notice_surface),
                     primary,
                     context.getColor(R.color.text_color_secondary),
                 ),
-                inputSurface = AppColorPolicy.retoneSurface(
-                    context.getColor(R.color.chat_input_surface),
-                    primary,
-                    context.getColor(R.color.text_color_primary),
-                ),
-                chatBorder = AppColorPolicy.retoneSurface(
-                    context.getColor(R.color.chat_border),
-                    primary,
-                    context.getColor(R.color.text_color_primary),
-                ),
+                inputSurface = context.getColor(R.color.chat_input_surface),
+                chatBorder = context.getColor(R.color.chat_border),
                 isDark = isDark,
             )
         }
@@ -301,9 +304,12 @@ abstract class ConfiguredActivity : AppCompatActivity() {
     ): Toolbar = Toolbar(this).apply {
         title = getString(titleResource)
         subtitle = subtitleText
-        setBackgroundColor(appPalette.primary)
-        setTitleTextColor(appPalette.onPrimary)
-        setSubtitleTextColor(AppColorPolicy.withAlpha(appPalette.onPrimary, 0xB3))
+        setBackgroundColor(appPalette.windowBackground)
+        // Pin explicit text appearances so Material toolbar defaults cannot shift metrics.
+        setTitleTextAppearance(this@ConfiguredActivity, R.style.AppToolbarTitle)
+        setSubtitleTextAppearance(this@ConfiguredActivity, R.style.AppToolbarSubtitle)
+        setTitleTextColor(appPalette.primaryText)
+        setSubtitleTextColor(appPalette.secondaryText)
         // AppCompat intentionally uses a taller action bar on large screens (normally 64 dp
         // instead of 56 dp). Keeping a hard-coded phone minimum lets the Toolbar grow to the
         // tablet height while still aligning its children against the shorter minimum, which
@@ -313,7 +319,7 @@ abstract class ConfiguredActivity : AppCompatActivity() {
         this@ConfiguredActivity.setSupportActionBar(this)
         supportActionBar?.setDisplayHomeAsUpEnabled(showBack)
         if (showBack) {
-            navigationIcon = tintedDrawable(R.drawable.ic_arrow_back_24, appPalette.onPrimary)
+            navigationIcon = tintedDrawable(R.drawable.ic_arrow_back_24, appPalette.primaryText)
             setNavigationContentDescription(R.string.navigation_back)
             setNavigationOnClickListener { finish() }
         }
@@ -335,15 +341,15 @@ abstract class ConfiguredActivity : AppCompatActivity() {
     }
 
     internal fun createStatusBarBackground(): View = View(this).apply {
-        setBackgroundColor(appPalette.primary)
+        setBackgroundColor(appPalette.windowBackground)
     }
 
     internal fun tintToolbarIcons(toolbar: Toolbar) {
         centerToolbarChildren(toolbar)
-        toolbar.navigationIcon = toolbar.navigationIcon?.tinted(appPalette.onPrimary)
-        toolbar.overflowIcon = toolbar.overflowIcon?.tinted(appPalette.onPrimary)
-        toolbar.menu.tintIcons(appPalette.onPrimary)
-        toolbar.collapseIcon = toolbar.collapseIcon?.tinted(appPalette.onPrimary)
+        toolbar.navigationIcon = toolbar.navigationIcon?.tinted(appPalette.primaryText)
+        toolbar.overflowIcon = toolbar.overflowIcon?.tinted(appPalette.primaryText)
+        toolbar.menu.tintIcons(appPalette.primaryText)
+        toolbar.collapseIcon = toolbar.collapseIcon?.tinted(appPalette.primaryText)
     }
 
     private fun centerToolbarChildren(toolbar: Toolbar) {
@@ -376,6 +382,12 @@ abstract class ConfiguredActivity : AppCompatActivity() {
             is CompoundButton -> root.buttonTintList = controlTintList()
             is CheckedTextView -> root.checkMarkTintList = controlTintList()
             is EditText -> tintEditText(root)
+            // Material progress indicators ignore progressTintList; keep this branch above
+            // the plain ProgressBar one, which they subclass.
+            is BaseProgressIndicator<*> -> {
+                root.setIndicatorColor(appPalette.accent)
+                root.trackColor = AppColorPolicy.withAlpha(appPalette.accent, 0x33)
+            }
             is ProgressBar -> {
                 root.progressTintList = ColorStateList.valueOf(appPalette.accent)
                 root.indeterminateTintList = ColorStateList.valueOf(appPalette.accent)
@@ -456,9 +468,9 @@ abstract class ConfiguredActivity : AppCompatActivity() {
     internal fun uiDp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun applyWindowAppearance() {
-        window.statusBarColor = appPalette.primary
+        window.statusBarColor = appPalette.windowBackground
         window.navigationBarColor = appPalette.windowBackground
-        val lightStatusBackground = AppColorPolicy.luminance(appPalette.primary) >= 0.179
+        val lightStatusBackground = AppColorPolicy.luminance(appPalette.windowBackground) >= 0.179
         val lightNavigationBackground = AppColorPolicy.luminance(appPalette.windowBackground) >= 0.179
         val decorView = window.decorView
         decorView.post {

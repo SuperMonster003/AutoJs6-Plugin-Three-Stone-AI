@@ -56,15 +56,15 @@ class ConversationHistoryActivity : ConfiguredActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menu.add(0, MENU_SELECT, 0, R.string.chat_history_select).apply {
-            icon = tintedDrawable(R.drawable.ic_select_all_24, appPalette.onPrimary)
+            icon = tintedDrawable(R.drawable.ic_select_all_24, appPalette.primaryText)
             setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
         }
         menu.add(0, MENU_SELECT_ALL, 1, R.string.chat_history_select_all).apply {
-            icon = tintedDrawable(R.drawable.ic_select_all_24, appPalette.onPrimary)
+            icon = tintedDrawable(R.drawable.ic_select_all_24, appPalette.primaryText)
             setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
         }
         menu.add(0, MENU_DELETE, 2, R.string.chat_history_delete_selected).apply {
-            icon = tintedDrawable(R.drawable.ic_delete_24, appPalette.onPrimary)
+            icon = tintedDrawable(R.drawable.ic_delete_24, appPalette.primaryText)
             setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         }
         menu.add(0, MENU_CLEAR, 3, R.string.chat_history_clear_all)

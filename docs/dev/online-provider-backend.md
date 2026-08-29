@@ -13,7 +13,7 @@
 | `gemini` | Gemini | `https://generativelanguage.googleapis.com/v1beta` | Gemini GenerateContent | `x-goog-api-key` | `responseMimeType` + `responseSchema` |
 | `deepseek` | DeepSeek | `https://api.deepseek.com` | OpenAI-compatible Chat Completions | `Authorization: Bearer` | 不声明; 当前公开契约只有 text/json_object, 不冒充 strict schema |
 | `openrouter` | OpenRouter | `https://openrouter.ai/api/v1` | OpenAI-compatible Chat Completions | `Authorization: Bearer` | strict `json_schema` |
-| `openai-compatible` | OpenAI Compatible | 无 | OpenAI-compatible Chat Completions | `Authorization: Bearer` | 由用户配置的服务负责兑现 |
+| `openai-compatible` | OpenAI-compatible | 无 | OpenAI-compatible Chat Completions | `Authorization: Bearer` | 由用户配置的服务负责兑现 |
 
 参考提供方公开契约: [OpenAI Chat Completions](https://platform.openai.com/docs/api-reference/chat), [Anthropic Messages](https://platform.claude.com/docs/en/api/messages), [Anthropic streaming](https://platform.claude.com/docs/en/build-with-claude/streaming), [Gemini GenerateContent](https://ai.google.dev/api/generate-content), [DeepSeek Chat Completions](https://api-docs.deepseek.com/api/create-chat-completion/), [OpenRouter Chat Completions](https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request).
 
@@ -31,7 +31,7 @@
 
 非敏感 profile 文档直接采用 schema 2, 将 `defaultProfileId` 与 `allowMeteredNetwork` 和档案列表放在同一个跨进程锁, fsync 与原子 rename 事务内. 本项目尚未发布, 因此不提供 schema 1 读取或迁移分支; 不支持的文档会 fail closed. 凭据仍完全独立保存在 Android Keystore 保护的密文仓库中.
 
-"测试连接" 是一次用户确认后才会执行的真实生成: 固定发送 `Reply with OK.`, 最多请求 8 个输出 token, 不保存或显示响应文本, 可随时取消, UI 在 120 秒后主动取消活动 Call. 测试调用统一 `OnlineAiBackend` 和协议适配器, 因而同时验证 profile, Key, 网络策略, 请求认证, 协议解析及正常终态. 它可能产生提供方费用, 所以 UI 在每次执行前明确提示. 120 秒上限覆盖了 G8441 上维护者早期观测到约 64 秒才完成的宿主在线调用, 同时保持测试有界; 同一设备随后在插件端配置 PoloAPI OpenAI-compatible profile 后, 连接测试实测成功且耗时不足 10 秒.
+"测试连接" 是一次用户确认后才会执行的真实生成: 固定发送 `Reply with OK.`, 最多请求 8 个输出 token, 不保存或显示响应文本, 可随时取消, UI 在 120 秒后主动取消活动 Call. 测试调用统一 `OnlineAiBackend` 和协议适配器, 因而同时验证 profile, Key, 网络策略, 请求认证, 协议解析及正常终态. 120 秒上限覆盖了 G8441 上维护者早期观测到约 64 秒才完成的宿主在线调用, 同时保持测试有界; 同一设备随后在插件端配置 PoloAPI OpenAI-compatible profile 后, 连接测试实测成功且耗时不足 10 秒.
 
 ## 启动器聊天目标绑定
 
@@ -39,12 +39,12 @@
 
 - 新的空会话只在首次解析统一目录时捕获一次默认 target. 后续本地模型选择或默认在线档案变化不会静默改写当前会话.
 - `ConversationTargetSnapshot` 保存 targetId, providerId, modelId, displayName 与 locality. 会话级目标与每条 assistant 消息的实际执行目标共用该不可变快照. 会话历史二进制格式直接升级为 version 3; 项目尚未发布, 因此不保留 version 1/2 的读取或迁移分支.
-- 顶部目标栏始终显示 Local/Cloud, provider, 显示名与 modelId, 点击后列出统一目录中的全部 target. 未配置或不可用 target 不能被选中, 只提供相应的本地模型或在线服务设置入口; Cloud 项明确标注可能产生费用.
-- 空会话可直接更换 target. 已有消息的会话默认主操作是使用所选 target 新建会话; "继续当前会话" 是次要操作, 对话框会明确说明保留消息将作为上下文交给新 target, Cloud 情况额外说明数据离开设备及可能产生费用.
+- 顶部目标栏始终显示 Local/Cloud, provider, 显示名与 modelId, 点击后列出统一目录中的全部 target. 未配置或不可用 target 不能被选中, 只提供相应的模型管理入口.
+- 空会话可直接更换 target. 已有消息的会话默认主操作是使用所选 target 新建会话; "继续当前会话" 是次要操作, 对话框会明确说明保留消息将作为上下文交给新 target, Cloud 情况额外说明数据会发送到所选在线服务.
 - 用户确认继续当前会话后, 页面关闭既有 backend session, 更新会话级目标快照, 写入可见的 target-change notice 并立即持久化. 若已保存 target 从目录消失或变为不可用, 会话保持原快照并禁用发送, 不自动采用新的默认 target.
 - 每条 assistant 占位消息在请求开始前先捕获目录中的目标快照; backend session 建立后再以 `AiBackendSession.target` 校正并立即持久化实际 target. 完成, 失败, 停止及 Activity 状态恢复均保留 target/provider/model/locality, user 与 notice 消息则禁止携带目标快照.
 - "重新生成" 精确沿用原响应快照, 但不改写会话默认 target. 历史 targetId 只有在 providerId, modelId 与 locality 仍一致时才可解析; 仅显示名重命名可继续. 目标被删除, 不可用或身份漂移时明确失败并提供对应设置入口, 绝不回退到当前会话目标. 当原响应目标不同于会话默认目标时, 确认对话框会显示实际目标以及本地/云端隐私和费用边界.
-- G8441 / Android 9 真机以 `Cloud / OpenAI Compatible / PoloAPI / claude-opus-4-8` 完成首次生成与同一响应的重新生成. 两次目标栏身份保持一致且响应内容不同; provider usage 与耗时分别显示为 `18788 input | 106 output | 8.0 s` 和 `18786 input | 212 output | 6.0 s`.
+- G8441 / Android 9 真机以 `Cloud / OpenAI-compatible / PoloAPI / claude-opus-4-8` 完成首次生成与同一响应的重新生成. 两次目标栏身份保持一致且响应内容不同; provider usage 与耗时分别显示为 `18788 input | 106 output | 8.0 s` 和 `18786 input | 212 output | 6.0 s`.
 
 文本历史仍可作为跨目标上下文使用, 但每条响应的执行来源独立可审计; target 变化不会改写已经完成的响应快照.
 

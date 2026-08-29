@@ -78,6 +78,49 @@ class OnlineAiBackendTest {
     }
 
     @Test
+    fun everySelectedModelIsPublishedAndAlternativeSelectionUsesItsExactModel() {
+        val fixture = fixture()
+        val multiModelProfile = profile().copy(
+            modelId = "model-b",
+            modelIds = listOf("model-a", "model-b", "model-c"),
+        )
+        fixture.registry.save(multiModelProfile, replacement("execution-secret"))
+        fixture.registry.setDefaultProfile(multiModelProfile.profileId)
+        val execution = RecordingExecution()
+        val backend = OnlineAiBackend(fixture.registry, execution)
+
+        val catalog = backend.catalog()
+        assertEquals(3, catalog.targets.size)
+        assertEquals(listOf("model-a", "model-b", "model-c"), catalog.targets.map { it.modelId })
+        assertEquals(
+            AiTargetIds.profileModel(
+                multiModelProfile.profileId,
+                multiModelProfile.modelIds.first(),
+                multiModelProfile.modelId,
+            ),
+            catalog.defaultTargetId,
+        )
+        val alternative = catalog.targets.single { it.modelId == "model-c" }
+        assertNotEquals(AiTargetIds.profile(multiModelProfile.profileId), alternative.targetId)
+        assertEquals(multiModelProfile.profileId, AiTargetIds.requireProfileId(alternative.targetId))
+
+        backend.createSession(AiBackendSessionRequest(alternative.targetId))
+
+        assertEquals("model-c", execution.profile?.modelId)
+        assertEquals(multiModelProfile.modelIds, execution.profile?.modelIds)
+        assertEquals("execution-secret", execution.credential)
+
+        val targetIdsBefore = catalog.targets.associate { target -> target.modelId to target.targetId }
+        fixture.registry.save(multiModelProfile.copy(modelId = "model-c"))
+        val changedDefaultCatalog = backend.catalog()
+        assertEquals(
+            targetIdsBefore,
+            changedDefaultCatalog.targets.associate { target -> target.modelId to target.targetId },
+        )
+        assertEquals(targetIdsBefore.getValue("model-c"), changedDefaultCatalog.defaultTargetId)
+    }
+
+    @Test
     fun injectedExecutionControlsAvailabilityCapabilitiesAndSessionCreation() {
         val fixture = fixture()
         fixture.registry.save(profile(), replacement("execution-secret"))

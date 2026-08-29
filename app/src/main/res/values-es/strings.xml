@@ -2,14 +2,14 @@
 <resources>
     <string name="button_cancel_download">Cancelar descarga</string>
     <string name="button_choose_download_location">Elegir ubicación</string>
-    <string name="button_download_model">Descargar modelo recomendado</string>
+    <string name="button_download_model">Explorar modelos LiteRT-LM</string>
     <string name="button_import_downloaded_model">Importar modelo descargado</string>
     <string name="button_view_model_source">Fuente del modelo</string>
     <string name="download_already_running">Ya hay una descarga de modelo en curso</string>
     <string name="download_cancelled">Descarga cancelada.</string>
     <string name="download_cancelling">Cancelando la descarga de %1$s...</string>
     <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">Modelos LiteRT-LM recomendados</string>
+    <string name="download_catalog_title">Modelos LiteRT-LM</string>
     <string name="download_cleanup_failed">No se pudo limpiar el destino incompleto. Elimínalo manualmente.</string>
     <string name="download_cleanup_truncated">Se limpió el contenido incompleto, pero puede quedar un documento vacío.</string>
     <string name="download_confirm_message">Tamaño: %1$s\nSHA-256 fijado: %2$s\nLicencia: %3$s\n\nElige cualquier ubicación escribible en el selector del sistema. Usa Wi-Fi salvo que quieras utilizar datos móviles. El modelo se verifica antes de permitir su importación.</string>
@@ -103,7 +103,6 @@
     <string name="chat_target_locality_local">Local</string>
     <string name="chat_target_locality_cloud">Nube</string>
     <string name="chat_target_unavailable_suffix"> | No disponible</string>
-    <string name="chat_target_cost_suffix"> | Puede generar costes</string>
     <string name="chat_target_selector_title">Elegir destino de la conversación</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">Preparando destinos de IA</string>
@@ -122,7 +121,7 @@
     <string name="chat_welcome_description">%1$s está vinculado a esta conversación. Haz una pregunta o prueba una sugerencia.</string>
     <string name="chat_target_change_title">Cambiar el destino de la conversación?</string>
     <string name="chat_target_change_message">Se recomienda iniciar una conversación nueva. Si continúas aquí con %1$s, los mensajes conservados se proporcionarán como contexto a ese destino. %2$s</string>
-    <string name="chat_target_change_cloud_warning">Las solicitudes en la nube salen de este dispositivo y pueden generar costes del proveedor.</string>
+    <string name="chat_target_change_cloud_warning">Las solicitudes en la nube se envían al servicio en línea seleccionado.</string>
     <string name="chat_target_change_local_warning">Las solicitudes locales permanecen en este dispositivo.</string>
     <string name="chat_target_continue_current">Continuar aquí</string>
     <string name="chat_target_start_new">Iniciar conversación nueva</string>
@@ -169,12 +168,10 @@
     <string name="chat_editing_message">Editando un mensaje anterior</string>
     <string name="chat_cancel_editing">Cancelar</string>
     <string name="chat_save_and_send">Guardar y enviar</string>
-    <string name="chat_search_menu">Buscar en la conversación</string>
+    <string name="chat_search_menu">Buscar</string>
     <string name="chat_search_hint">Buscar mensajes</string>
-    <string name="chat_search_previous">Resultado anterior</string>
-    <string name="chat_search_next">Resultado siguiente</string>
-    <string name="chat_search_close">Cerrar búsqueda</string>
-    <string name="chat_search_result_count">%1$d/%2$d</string>
+    <string name="chat_search_previous">Anterior</string>
+    <string name="chat_search_next">Siguiente</string>
     <string name="chat_settings_title">Ajustes de conversación</string>
     <string name="chat_font_size">Tamaño de letra de los mensajes</string>
     <string name="chat_font_size_small">Pequeño</string>
@@ -200,7 +197,7 @@
     <string name="chat_positive_integer_error">Introduce un entero positivo</string>
     <string name="chat_nonnegative_number_error">Introduce un número finito igual o superior a 0</string>
     <string name="chat_probability_error">Introduce un número finito entre 0 y 1</string>
-    <string name="model_manager_title">Ajustes de modelos y almacenamiento</string>
+    <string name="model_manager_title">Modelos</string>
     <string name="about_app_and_developer">Acerca de la aplicación y el desarrollador</string>
     <string name="about_app_summary">Chat de IA privado en el dispositivo y gestión de modelos para AutoJs6</string>
     <string name="about_developer">Desarrollador</string>
@@ -243,7 +240,7 @@
     <string name="app_settings_theme_three_stone_ai">Naranja 3-Stone AI</string>
     <string name="app_settings_theme_purple">Morado</string>
     <string name="app_settings_theme_teal">Verde azulado</string>
-    <string name="app_settings_title">Ajustes de la aplicación</string>
+    <string name="app_settings_title">Ajustes</string>
     <string name="release_history_load_failed">No se pudo cargar el historial de versiones local</string>
     <string name="release_history_title">Historial de versiones</string>
     <string name="navigation_back">Atrás</string>
@@ -291,7 +288,7 @@
     <string name="online_ai_yes">Sí</string>
     <string name="online_ai_no">No</string>
     <string name="online_ai_provider">Proveedor</string>
-    <string name="online_ai_provider_custom">Compatible con OpenAI</string>
+    <string name="online_ai_provider_custom">OpenAI-compatible</string>
     <string name="online_ai_profile_name">Nombre del perfil</string>
     <string name="online_ai_profile_name_hint">Por ejemplo, Trabajo</string>
     <string name="online_ai_base_url">URL base HTTPS</string>
@@ -328,7 +325,7 @@
     <string name="online_ai_profile_deleted">Perfil en línea eliminado</string>
     <string name="online_ai_profile_delete_failed">No se pudo eliminar el perfil en línea</string>
     <string name="online_ai_test_title">Probar la conexión?</string>
-    <string name="online_ai_test_message">Esto envía una indicación breve a %1$s y puede generar cargos del proveedor. El texto de respuesta no se guarda. Continuar?</string>
+    <string name="online_ai_test_message">Esto envía una indicación breve a %1$s. El texto de respuesta no se guarda. Continuar?</string>
     <string name="online_ai_test_start">Probar</string>
     <string name="online_ai_test_progress">Probando %1$s...</string>
     <string name="online_ai_test_success">Prueba de conexión correcta</string>

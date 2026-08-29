@@ -25,6 +25,7 @@ class OnlineAiProfilePolicyTest {
         assertEquals("https://api.example.com/v1", normalized.baseUrl)
         assertEquals("https://api.example.com", normalized.declaredHttpsOrigin)
         assertEquals("model-a", normalized.modelId)
+        assertEquals(listOf("model-a"), normalized.modelIds)
     }
 
     @Test
@@ -114,7 +115,51 @@ class OnlineAiProfilePolicyTest {
         }
         assertThrows(IllegalArgumentException::class.java) {
             OnlineAiProfileCodec.decode(
-                text.replace("\"schema\":2", "\"schema\":1").toByteArray(),
+                text.replace("\"schema\":3", "\"schema\":1").toByteArray(),
+            )
+        }
+    }
+
+    @Test
+    fun currentCodecRoundTripsMultipleModelsAndMigratesLegacyDocuments() {
+        val configuredProfile = profile().copy(
+            modelId = "model-b",
+            modelIds = listOf("model-a", "model-b", "model-c"),
+        )
+        val encoded = OnlineAiProfileCodec.encode(
+            OnlineAiProfileDocument(revision = 3L, profiles = listOf(configuredProfile)),
+        )
+        val decoded = OnlineAiProfileCodec.decode(encoded)
+
+        assertEquals("model-b", decoded.profiles.single().modelId)
+        assertEquals(listOf("model-a", "model-b", "model-c"), decoded.profiles.single().modelIds)
+
+        val legacy = encoded.toString(Charsets.UTF_8)
+            .replace("\"schema\":3", "\"schema\":2")
+            .replace(",\"modelIds\":[\"model-a\",\"model-b\",\"model-c\"]", "")
+            .toByteArray()
+        val migrated = OnlineAiProfileCodec.decode(legacy).profiles.single()
+
+        assertEquals("model-b", migrated.modelId)
+        assertEquals(listOf("model-b"), migrated.modelIds)
+    }
+
+    @Test
+    fun profilesRequireASelectedDefaultModelAndBoundedSchemaNumbers() {
+        assertThrows(IllegalArgumentException::class.java) {
+            OnlineAiProfilePolicy.normalizeProfile(profile().copy(modelIds = emptyList()))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            OnlineAiProfilePolicy.normalizeProfile(
+                profile().copy(modelId = "model-b", modelIds = listOf("model-a")),
+            )
+        }
+        val encoded = OnlineAiProfileCodec.encode(
+            OnlineAiProfileDocument(revision = 1L, profiles = listOf(profile())),
+        ).toString(Charsets.UTF_8)
+        assertThrows(IllegalArgumentException::class.java) {
+            OnlineAiProfileCodec.decode(
+                encoded.replace("\"schema\":3", "\"schema\":4294967299").toByteArray(),
             )
         }
     }

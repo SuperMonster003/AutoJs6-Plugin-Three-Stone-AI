@@ -2,14 +2,14 @@
 <resources>
     <string name="button_cancel_download">Cancel download</string>
     <string name="button_choose_download_location">Choose save location</string>
-    <string name="button_download_model">Download recommended model</string>
+    <string name="button_download_model">Browse LiteRT-LM models</string>
     <string name="button_import_downloaded_model">Import downloaded model</string>
     <string name="button_view_model_source">Model source</string>
     <string name="download_already_running">A model download is already running</string>
     <string name="download_cancelled">Model download cancelled.</string>
     <string name="download_cancelling">Cancelling %1$s download...</string>
     <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">Recommended LiteRT-LM models</string>
+    <string name="download_catalog_title">LiteRT-LM models</string>
     <string name="download_cleanup_failed">The incomplete destination could not be cleared. Delete it manually.</string>
     <string name="download_cleanup_truncated">The incomplete content was cleared, but an empty document may remain.</string>
     <string name="download_confirm_message">Download size: %1$s\nPinned SHA-256: %2$s\nLicense: %3$s\n\nChoose any writable location in the system file picker. Use Wi-Fi unless you intend to use mobile data. The model is verified before it is offered for import.</string>
@@ -103,7 +103,6 @@
     <string name="chat_target_locality_local">Local</string>
     <string name="chat_target_locality_cloud">Cloud</string>
     <string name="chat_target_unavailable_suffix"> | Unavailable</string>
-    <string name="chat_target_cost_suffix"> | May incur charges</string>
     <string name="chat_target_selector_title">Choose conversation target</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">Preparing AI targets</string>
@@ -122,7 +121,7 @@
     <string name="chat_welcome_description">%1$s is bound to this conversation. Ask a question below or try a suggestion.</string>
     <string name="chat_target_change_title">Change conversation target?</string>
     <string name="chat_target_change_message">Starting a new conversation is recommended. If you continue here with %1$s, retained messages will be supplied as context to that target. %2$s</string>
-    <string name="chat_target_change_cloud_warning">Cloud requests leave this device and may incur provider charges.</string>
+    <string name="chat_target_change_cloud_warning">Cloud requests are sent to the selected online service.</string>
     <string name="chat_target_change_local_warning">Local requests remain on this device.</string>
     <string name="chat_target_continue_current">Continue here</string>
     <string name="chat_target_start_new">Start new conversation</string>
@@ -169,12 +168,10 @@
     <string name="chat_editing_message">Editing an earlier message</string>
     <string name="chat_cancel_editing">Cancel</string>
     <string name="chat_save_and_send">Save &amp; send</string>
-    <string name="chat_search_menu">Search conversation</string>
+    <string name="chat_search_menu">Search</string>
     <string name="chat_search_hint">Search messages</string>
-    <string name="chat_search_previous">Previous result</string>
-    <string name="chat_search_next">Next result</string>
-    <string name="chat_search_close">Close search</string>
-    <string name="chat_search_result_count">%1$d/%2$d</string>
+    <string name="chat_search_previous">Previous</string>
+    <string name="chat_search_next">Next</string>
     <string name="chat_settings_title">Conversation settings</string>
     <string name="chat_font_size">Message font size</string>
     <string name="chat_font_size_small">Small</string>
@@ -200,7 +197,7 @@
     <string name="chat_positive_integer_error">Enter a positive integer</string>
     <string name="chat_nonnegative_number_error">Enter a finite number that is 0 or greater</string>
     <string name="chat_probability_error">Enter a finite number from 0 to 1</string>
-    <string name="model_manager_title">Model and storage settings</string>
+    <string name="model_manager_title">Models</string>
     <string name="about_app_and_developer">About app and developer</string>
     <string name="about_app_summary">Private local AI chat and model management for AutoJs6</string>
     <string name="about_developer">Developer</string>
@@ -243,7 +240,7 @@
     <string name="app_settings_theme_three_stone_ai">3-Stone AI orange</string>
     <string name="app_settings_theme_purple">Purple</string>
     <string name="app_settings_theme_teal">Teal</string>
-    <string name="app_settings_title">Application settings</string>
+    <string name="app_settings_title">Settings</string>
     <string name="release_history_load_failed">Unable to load local version history</string>
     <string name="release_history_title">Version history</string>
     <string name="navigation_back">Back</string>
@@ -291,7 +288,7 @@
     <string name="online_ai_yes">Yes</string>
     <string name="online_ai_no">No</string>
     <string name="online_ai_provider">Provider</string>
-    <string name="online_ai_provider_custom">OpenAI Compatible</string>
+    <string name="online_ai_provider_custom">OpenAI-compatible</string>
     <string name="online_ai_profile_name">Profile name</string>
     <string name="online_ai_profile_name_hint">For example, Work</string>
     <string name="online_ai_base_url">HTTPS base URL</string>
@@ -328,7 +325,7 @@
     <string name="online_ai_profile_deleted">Online profile deleted</string>
     <string name="online_ai_profile_delete_failed">Could not delete the online profile</string>
     <string name="online_ai_test_title">Test connection?</string>
-    <string name="online_ai_test_message">This sends a short prompt to %1$s and may incur provider charges. Response text is not saved. Continue?</string>
+    <string name="online_ai_test_message">This sends a short prompt to %1$s. Response text is not saved. Continue?</string>
     <string name="online_ai_test_start">Test</string>
     <string name="online_ai_test_progress">Testing %1$s...</string>
     <string name="online_ai_test_success">Connection test succeeded</string>

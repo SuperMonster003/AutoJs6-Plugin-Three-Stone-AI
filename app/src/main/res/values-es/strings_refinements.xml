@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigation_open_drawer">Abrir el panel de navegación</string>
+    <string name="drawer_restart">Reiniciar</string>
+    <string name="drawer_exit">Salir</string>
+</resources>

@@ -83,10 +83,14 @@ internal class OnlineAiHttpExecution private constructor(
         }
         val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
         require(supports(normalized)) { "Online AI profile protocol is unsupported" }
-        require(target.targetId == AiTargetIds.profile(normalized.profileId))
+        require(AiTargetIds.requireProfileId(target.targetId) == normalized.profileId)
         require(target.profileId == normalized.profileId)
         require(target.modelId == normalized.modelId)
         require(target.declaredHttpsOrigins == listOf(normalized.declaredHttpsOrigin))
+        require(credentialAccess.profile.profileId == normalized.profileId)
+        require(credentialAccess.profile.provider == normalized.provider)
+        require(credentialAccess.profile.baseUrl == normalized.baseUrl)
+        require(normalized.modelId in credentialAccess.profile.modelIds)
         return OnlineAiSession(
             target = target,
             profile = normalized,

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigation_open_drawer">ナビゲーション ドロワーを開く</string>
+    <string name="drawer_restart">再起動</string>
+    <string name="drawer_exit">終了</string>
+</resources>

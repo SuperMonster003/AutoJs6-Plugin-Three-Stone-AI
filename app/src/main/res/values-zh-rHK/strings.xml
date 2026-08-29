@@ -2,14 +2,14 @@
 <resources>
     <string name="button_cancel_download">取消下載</string>
     <string name="button_choose_download_location">選擇儲存位置</string>
-    <string name="button_download_model">下載建議模型</string>
+    <string name="button_download_model">瀏覽 LiteRT-LM 模型</string>
     <string name="button_import_downloaded_model">匯入已下載模型</string>
     <string name="button_view_model_source">模型來源</string>
     <string name="download_already_running">已有模型下載正在執行</string>
     <string name="download_cancelled">模型下載已取消.</string>
     <string name="download_cancelling">正在取消 %1$s 下載...</string>
     <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">建議的 LiteRT-LM 模型</string>
+    <string name="download_catalog_title">LiteRT-LM 模型</string>
     <string name="download_cleanup_failed">無法清除未完整的目標檔案, 請手動刪除.</string>
     <string name="download_cleanup_truncated">未完整內容已清空, 但可能仍留有空白文件.</string>
     <string name="download_confirm_message">下載大小: %1$s\n固定 SHA-256: %2$s\n授權條款: %3$s\n\n請在系統檔案選擇器中選擇任何可寫入位置. 除非有意使用流動數據, 否則建議使用 Wi-Fi. 模型通過驗證後才可匯入.</string>
@@ -103,7 +103,6 @@
     <string name="chat_target_locality_local">本機</string>
     <string name="chat_target_locality_cloud">雲端</string>
     <string name="chat_target_unavailable_suffix"> | 無法使用</string>
-    <string name="chat_target_cost_suffix"> | 可能產生費用</string>
     <string name="chat_target_selector_title">選擇對話目標</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">正在準備 AI 目標</string>
@@ -122,7 +121,7 @@
     <string name="chat_welcome_description">%1$s 已固定為此對話的目標. 請在下方提問, 或嘗試一個建議.</string>
     <string name="chat_target_change_title">更改對話目標?</string>
     <string name="chat_target_change_message">建議新增對話. 如果繼續在目前對話使用 %1$s, 保留的訊息將作為上下文提供給該目標. %2$s</string>
-    <string name="chat_target_change_cloud_warning">雲端要求會離開此裝置, 並可能產生服務供應商費用.</string>
+    <string name="chat_target_change_cloud_warning">雲端要求會傳送至所選的線上服務.</string>
     <string name="chat_target_change_local_warning">本機要求會保留在此裝置上.</string>
     <string name="chat_target_continue_current">繼續目前對話</string>
     <string name="chat_target_start_new">新增對話</string>
@@ -169,12 +168,10 @@
     <string name="chat_editing_message">正在編輯較早的訊息</string>
     <string name="chat_cancel_editing">取消</string>
     <string name="chat_save_and_send">儲存並傳送</string>
-    <string name="chat_search_menu">搜尋對話</string>
+    <string name="chat_search_menu">搜尋</string>
     <string name="chat_search_hint">搜尋訊息</string>
-    <string name="chat_search_previous">上一個結果</string>
-    <string name="chat_search_next">下一個結果</string>
-    <string name="chat_search_close">關閉搜尋</string>
-    <string name="chat_search_result_count">%1$d/%2$d</string>
+    <string name="chat_search_previous">上一個</string>
+    <string name="chat_search_next">下一個</string>
     <string name="chat_settings_title">對話設定</string>
     <string name="chat_font_size">訊息字體大小</string>
     <string name="chat_font_size_small">小</string>
@@ -200,7 +197,7 @@
     <string name="chat_positive_integer_error">請輸入正整數</string>
     <string name="chat_nonnegative_number_error">請輸入不小於 0 嘅有限數值</string>
     <string name="chat_probability_error">請輸入 0 至 1 之間嘅有限數值</string>
-    <string name="model_manager_title">模型與儲存空間設定</string>
+    <string name="model_manager_title">模型</string>
     <string name="about_app_and_developer">關於應用程式與開發者</string>
     <string name="about_app_summary">為 AutoJs6 提供私有嘅本機 AI 對話與模型管理</string>
     <string name="about_developer">開發者</string>
@@ -243,7 +240,7 @@
     <string name="app_settings_theme_three_stone_ai">3-Stone AI 橙色</string>
     <string name="app_settings_theme_purple">紫色</string>
     <string name="app_settings_theme_teal">青色</string>
-    <string name="app_settings_title">應用程式設定</string>
+    <string name="app_settings_title">設定</string>
     <string name="release_history_load_failed">無法載入本機版本記錄</string>
     <string name="release_history_title">版本記錄</string>
     <string name="navigation_back">返回</string>
@@ -291,7 +288,7 @@
     <string name="online_ai_yes">是</string>
     <string name="online_ai_no">否</string>
     <string name="online_ai_provider">供應商</string>
-    <string name="online_ai_provider_custom">OpenAI 相容</string>
+    <string name="online_ai_provider_custom">OpenAI-compatible</string>
     <string name="online_ai_profile_name">設定檔名稱</string>
     <string name="online_ai_profile_name_hint">例如, 工作</string>
     <string name="online_ai_base_url">HTTPS base URL</string>
@@ -328,7 +325,7 @@
     <string name="online_ai_profile_deleted">網上設定檔已刪除</string>
     <string name="online_ai_profile_delete_failed">無法刪除網上設定檔</string>
     <string name="online_ai_test_title">測試連線?</string>
-    <string name="online_ai_test_message">這會向 %1$s 傳送一則短提示, 並可能產生供應商費用. 回應文字不會儲存. 是否繼續?</string>
+    <string name="online_ai_test_message">這會向 %1$s 傳送一則短提示. 回應文字不會儲存. 是否繼續?</string>
     <string name="online_ai_test_start">測試</string>
     <string name="online_ai_test_progress">正在測試 %1$s...</string>
     <string name="online_ai_test_success">連線測試成功</string>

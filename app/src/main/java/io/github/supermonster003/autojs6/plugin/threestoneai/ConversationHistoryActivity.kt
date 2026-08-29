@@ -126,6 +126,11 @@ class ConversationHistoryActivity : ConfiguredActivity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(appPalette.windowBackground)
         }
+        val statusBarBackground = createStatusBarBackground()
+        root.addView(
+            statusBarBackground,
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
+        )
         toolbar = createAppToolbar(R.string.chat_history_title, showBack = true)
         toolbar.setNavigationOnClickListener {
             if (selectionMode) leaveSelectionMode() else finish()
@@ -152,7 +157,7 @@ class ConversationHistoryActivity : ConfiguredActivity() {
             },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f),
         )
-        applySystemBarInsets(root)
+        applySystemBarInsets(root, statusBarBackground)
         return root
     }
 

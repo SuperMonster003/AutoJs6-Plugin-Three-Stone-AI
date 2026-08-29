@@ -56,7 +56,10 @@ internal data class OnlineAiProfile(
     val displayName: String,
     val provider: OnlineAiProvider,
     val baseUrl: String,
+    /** Model used when this profile is selected as the default target. */
     val modelId: String,
+    /** Every model exposed by this credential destination, in user-defined display order. */
+    val modelIds: List<String> = listOf(modelId),
 ) {
     val declaredHttpsOrigin: String
         get() = OnlineAiProfileUrls.origin(baseUrl)
@@ -67,6 +70,7 @@ internal data class OnlineAiProfile(
             provider: OnlineAiProvider,
             baseUrl: String,
             modelId: String,
+            modelIds: List<String> = listOf(modelId),
         ): OnlineAiProfile = OnlineAiProfilePolicy.normalizeProfile(
             OnlineAiProfile(
                 profileId = UUID.randomUUID().toString(),
@@ -74,6 +78,7 @@ internal data class OnlineAiProfile(
                 provider = provider,
                 baseUrl = baseUrl,
                 modelId = modelId,
+                modelIds = modelIds,
             ),
         )
     }
@@ -104,9 +109,11 @@ internal data class OnlineAiProfileDeletion(
 )
 
 internal object OnlineAiProfilePolicy {
-    const val SCHEMA = 2
+    const val SCHEMA = 3
+    const val LEGACY_SCHEMA = 2
     const val MAXIMUM_PROFILES = 100
     const val MAXIMUM_MODEL_ID_BYTES = 256
+    const val MAXIMUM_MODELS_PER_PROFILE = 32
 
     fun empty(): OnlineAiProfileDocument = OnlineAiProfileDocument(
         revision = 1L,
@@ -139,14 +146,33 @@ internal object OnlineAiProfilePolicy {
         val profileId = canonicalProfileId(profile.profileId)
         val displayName = Normalizer.normalize(profile.displayName.trim(), Normalizer.Form.NFC)
         requireSafeText(displayName, AiCommonLimits.MAX_DISPLAY_NAME_BYTES, "Online AI profile display name")
-        val modelId = profile.modelId.trim()
-        requireSafeText(modelId, MAXIMUM_MODEL_ID_BYTES, "Online AI model ID")
+        val modelId = normalizeModelId(profile.modelId)
+        val modelIds = normalizeModelIds(profile.modelIds)
+        require(modelIds.size <= MAXIMUM_MODELS_PER_PROFILE) {
+            "An online AI profile has too many model IDs"
+        }
+        require(modelId in modelIds) { "The default online AI model ID must be selected" }
         return profile.copy(
             profileId = profileId,
             displayName = displayName,
             baseUrl = OnlineAiProfileUrls.normalize(profile.baseUrl),
             modelId = modelId,
+            modelIds = modelIds,
         )
+    }
+
+    fun normalizeModelIds(values: Iterable<String>): List<String> = values
+        .map(::normalizeModelId)
+        .distinct()
+        .also { result ->
+            require(result.isNotEmpty()) { "Select at least one online AI model ID" }
+            require(result.size <= MAXIMUM_MODELS_PER_PROFILE) {
+                "An online AI profile has too many model IDs"
+            }
+        }
+
+    private fun normalizeModelId(value: String): String = value.trim().also { modelId ->
+        requireSafeText(modelId, MAXIMUM_MODEL_ID_BYTES, "Online AI model ID")
     }
 
     fun upsert(

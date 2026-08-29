@@ -71,7 +71,7 @@ internal object OnlineAiProviderCatalog {
             ),
             OnlineAiProviderTemplate(
                 provider = OnlineAiProvider.OPENAI_COMPATIBLE,
-                displayName = "OpenAI Compatible",
+                displayName = "OpenAI-compatible",
                 defaultBaseUrl = null,
                 structuredJson = true,
             ),

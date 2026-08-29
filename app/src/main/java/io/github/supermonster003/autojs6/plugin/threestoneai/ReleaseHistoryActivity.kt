@@ -15,6 +15,11 @@ class ReleaseHistoryActivity : ConfiguredActivity() {
     private fun createContentView(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setBackgroundColor(appPalette.windowBackground)
+        val statusBarBackground = createStatusBarBackground()
+        addView(
+            statusBarBackground,
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
+        )
         addView(createAppToolbar(R.string.release_history_title, showBack = true))
         addView(ScrollView(context).apply {
             isFillViewport = true
@@ -32,7 +37,7 @@ class ReleaseHistoryActivity : ConfiguredActivity() {
             0,
             1f,
         ))
-        applySystemBarInsets(this)
+        applySystemBarInsets(this, statusBarBackground)
     }
 
     private fun loadReleaseHistory(): MarkdownDocument? {

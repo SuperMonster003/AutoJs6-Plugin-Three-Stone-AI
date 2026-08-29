@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigation_open_drawer">Open navigation drawer</string>
+    <string name="drawer_restart">Restart</string>
+    <string name="drawer_exit">Exit</string>
+</resources>

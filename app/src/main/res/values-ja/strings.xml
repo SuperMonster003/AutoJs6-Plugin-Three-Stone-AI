@@ -2,14 +2,14 @@
 <resources>
     <string name="button_cancel_download">ダウンロードをキャンセル</string>
     <string name="button_choose_download_location">保存先を選択</string>
-    <string name="button_download_model">推奨モデルをダウンロード</string>
+    <string name="button_download_model">LiteRT-LM モデルを閲覧</string>
     <string name="button_import_downloaded_model">ダウンロード済みモデルをインポート</string>
     <string name="button_view_model_source">モデルの配布元</string>
     <string name="download_already_running">モデルのダウンロードがすでに実行中です</string>
     <string name="download_cancelled">モデルのダウンロードをキャンセルしました.</string>
     <string name="download_cancelling">%1$s のダウンロードをキャンセルしています...</string>
     <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">推奨 LiteRT-LM モデル</string>
+    <string name="download_catalog_title">LiteRT-LM モデル</string>
     <string name="download_cleanup_failed">不完全な保存先を消去できませんでした. 手動で削除してください.</string>
     <string name="download_cleanup_truncated">不完全な内容は消去されましたが, 空のドキュメントが残っている場合があります.</string>
     <string name="download_confirm_message">ダウンロードサイズ: %1$s\n固定 SHA-256: %2$s\nライセンス: %3$s\n\nシステムのファイル選択画面で書き込み可能な保存先を選んでください. モバイルデータを使う意図がなければ Wi-Fi を使用してください. モデルは検証後にのみインポートできます.</string>
@@ -103,7 +103,6 @@
     <string name="chat_target_locality_local">ローカル</string>
     <string name="chat_target_locality_cloud">クラウド</string>
     <string name="chat_target_unavailable_suffix"> | 利用不可</string>
-    <string name="chat_target_cost_suffix"> | 料金が発生する場合があります</string>
     <string name="chat_target_selector_title">会話ターゲットを選択</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">AI ターゲットを準備中</string>
@@ -122,7 +121,7 @@
     <string name="chat_welcome_description">%1$s がこの会話に固定されています. 下で質問するか, 候補を試してください.</string>
     <string name="chat_target_change_title">会話ターゲットを変更しますか?</string>
     <string name="chat_target_change_message">新しい会話の開始を推奨します. %1$s でこの会話を続けると, 保持されたメッセージがコンテキストとしてそのターゲットに渡されます. %2$s</string>
-    <string name="chat_target_change_cloud_warning">クラウド要求はこの端末の外へ送信され, プロバイダー料金が発生する場合があります.</string>
+    <string name="chat_target_change_cloud_warning">クラウド要求は選択したオンラインサービスに送信されます.</string>
     <string name="chat_target_change_local_warning">ローカル要求はこの端末内に留まります.</string>
     <string name="chat_target_continue_current">この会話を続ける</string>
     <string name="chat_target_start_new">新しい会話を開始</string>
@@ -169,12 +168,10 @@
     <string name="chat_editing_message">以前のメッセージを編集中</string>
     <string name="chat_cancel_editing">キャンセル</string>
     <string name="chat_save_and_send">保存して送信</string>
-    <string name="chat_search_menu">会話を検索</string>
+    <string name="chat_search_menu">検索</string>
     <string name="chat_search_hint">メッセージを検索</string>
-    <string name="chat_search_previous">前の結果</string>
-    <string name="chat_search_next">次の結果</string>
-    <string name="chat_search_close">検索を閉じる</string>
-    <string name="chat_search_result_count">%1$d/%2$d</string>
+    <string name="chat_search_previous">前へ</string>
+    <string name="chat_search_next">次へ</string>
     <string name="chat_settings_title">会話設定</string>
     <string name="chat_font_size">メッセージの文字サイズ</string>
     <string name="chat_font_size_small">小</string>
@@ -200,7 +197,7 @@
     <string name="chat_positive_integer_error">正の整数を入力してください</string>
     <string name="chat_nonnegative_number_error">0 以上の有限数を入力してください</string>
     <string name="chat_probability_error">0 から 1 の有限数を入力してください</string>
-    <string name="model_manager_title">モデルとストレージの設定</string>
+    <string name="model_manager_title">モデル</string>
     <string name="about_app_and_developer">アプリと開発者について</string>
     <string name="about_app_summary">AutoJs6 向けのプライベートなローカル AI チャットとモデル管理</string>
     <string name="about_developer">開発者</string>
@@ -243,7 +240,7 @@
     <string name="app_settings_theme_three_stone_ai">3-Stone AI オレンジ</string>
     <string name="app_settings_theme_purple">紫</string>
     <string name="app_settings_theme_teal">ティール</string>
-    <string name="app_settings_title">アプリ設定</string>
+    <string name="app_settings_title">設定</string>
     <string name="release_history_load_failed">ローカルのバージョン履歴を読み込めません</string>
     <string name="release_history_title">バージョン履歴</string>
     <string name="navigation_back">戻る</string>
@@ -291,7 +288,7 @@
     <string name="online_ai_yes">はい</string>
     <string name="online_ai_no">いいえ</string>
     <string name="online_ai_provider">プロバイダー</string>
-    <string name="online_ai_provider_custom">OpenAI 互換</string>
+    <string name="online_ai_provider_custom">OpenAI-compatible</string>
     <string name="online_ai_profile_name">プロファイル名</string>
     <string name="online_ai_profile_name_hint">例, 仕事</string>
     <string name="online_ai_base_url">HTTPS base URL</string>
@@ -328,7 +325,7 @@
     <string name="online_ai_profile_deleted">オンラインプロファイルを削除しました</string>
     <string name="online_ai_profile_delete_failed">オンラインプロファイルを削除できませんでした</string>
     <string name="online_ai_test_title">接続をテストしますか?</string>
-    <string name="online_ai_test_message">短いプロンプトを %1$s に送信します. プロバイダー料金が発生する場合があります. 応答テキストは保存されません. 続行しますか?</string>
+    <string name="online_ai_test_message">短いプロンプトを %1$s に送信します. 応答テキストは保存されません. 続行しますか?</string>
     <string name="online_ai_test_start">テスト</string>
     <string name="online_ai_test_progress">%1$s をテスト中...</string>
     <string name="online_ai_test_success">接続テストに成功しました</string>

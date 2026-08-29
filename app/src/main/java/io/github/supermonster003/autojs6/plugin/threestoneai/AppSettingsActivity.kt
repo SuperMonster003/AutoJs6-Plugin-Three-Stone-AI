@@ -11,6 +11,7 @@ import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.CheckBox
 import android.widget.CheckedTextView
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -18,12 +19,17 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.SwitchCompat
 import org.autojs.plugin.ai.provider.api.AiProviderSettingsContract
 
 class AppSettingsActivity : ConfiguredActivity() {
     private lateinit var settingsStore: ApplicationSettingsStore
     private lateinit var settings: ApplicationSettings
     private lateinit var hostResult: AutoJs6HostSettingsResult
+    private lateinit var chatSettingsStore: ChatUiSettingsStore
+    private lateinit var chatSettings: ChatUiSettings
+    private lateinit var updateSettingsStore: AppUpdateSettingsStore
+    private lateinit var updateController: AppUpdateController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,13 +39,17 @@ class AppSettingsActivity : ConfiguredActivity() {
         }
         settingsStore = ApplicationSettingsStore(applicationContext)
         hostResult = AutoJs6HostSettingsClient.query(this)
-        val stored = settingsStore.load()
-        settings = if (hostResult.selectable) stored else {
-            AppSettingsPolicy.fallbackWithoutAutoJs6(stored).also { fallback ->
-                if (hostResult.definitiveAbsence && fallback != stored) settingsStore.save(fallback)
-            }
-        }
+        settings = settingsStore.load()
+        chatSettingsStore = ChatUiSettingsStore(applicationContext)
+        chatSettings = chatSettingsStore.load()
+        updateSettingsStore = AppUpdateSettingsStore(applicationContext)
+        updateController = AppUpdateController(this, updateSettingsStore)
         setContentView(createContentView())
+    }
+
+    override fun onDestroy() {
+        if (::updateController.isInitialized) updateController.cancel()
+        super.onDestroy()
     }
 
     private fun acceptsSettingsIntent(intent: Intent): Boolean {
@@ -53,6 +63,11 @@ class AppSettingsActivity : ConfiguredActivity() {
     private fun createContentView(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setBackgroundColor(appPalette.windowBackground)
+        val statusBarBackground = createStatusBarBackground()
+        addView(
+            statusBarBackground,
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
+        )
         addView(createAppToolbar(R.string.app_settings_title, showBack = true))
         addView(ScrollView(context).apply {
             isFillViewport = true
@@ -62,7 +77,7 @@ class AppSettingsActivity : ConfiguredActivity() {
             0,
             1f,
         ))
-        applySystemBarInsets(this)
+        applySystemBarInsets(this, statusBarBackground)
     }
 
     private fun createSettingsContent(): View = LinearLayout(this).apply {
@@ -71,44 +86,99 @@ class AppSettingsActivity : ConfiguredActivity() {
 
         addView(category(R.string.app_settings_appearance))
         addView(settingRow(
-            title = getString(R.string.app_settings_theme_color),
-            summary = themeSummary(settings),
-            onClick = ::showThemeColorDialog,
+            title = getString(R.string.app_settings_language),
+            summary = followAwareLabel(settings.language == AppLanguage.FOLLOW_AUTOJS6) {
+                getString(settings.language.labelResource())
+            },
+            onClick = ::showLanguageDialog,
         ))
         addView(divider())
         addView(settingRow(
             title = getString(R.string.app_settings_dark_mode),
-            summary = getString(settings.darkMode.labelResource()),
+            summary = followAwareLabel(settings.darkMode == AppDarkMode.FOLLOW_AUTOJS6) {
+                getString(settings.darkMode.labelResource())
+            },
             onClick = ::showDarkModeDialog,
         ))
         addView(divider())
         addView(settingRow(
-            title = getString(R.string.app_settings_language),
-            summary = getString(settings.language.labelResource()),
-            onClick = ::showLanguageDialog,
+            title = getString(R.string.app_settings_theme_color),
+            summary = themeSummary(settings),
+            onClick = ::showThemeColorDialog,
         ))
-        addView(TextView(context).apply {
-            text = getString(
-                if (hostResult.selectable) {
-                    R.string.app_settings_follow_autojs6_explanation
-                } else {
-                    R.string.app_settings_follow_autojs6_unavailable_explanation
-                },
-            )
-            textSize = 12.5f
-            setTextColor(appPalette.secondaryText)
-            setLineSpacing(0f, 1.12f)
-            setPaddingRelative(dp(20), dp(10), dp(20), dp(16))
-        })
+        // addView(TextView(context).apply {
+        //     text = getString(
+        //         if (hostResult.selectable) {
+        //             R.string.app_settings_follow_autojs6_explanation
+        //         } else {
+        //             R.string.app_settings_follow_autojs6_unavailable_explanation
+        //         },
+        //     )
+        //     textSize = 12.5f
+        //     setTextColor(appPalette.secondaryText)
+        //     setLineSpacing(0f, 1.12f)
+        //     setPaddingRelative(dp(20), dp(10), dp(20), dp(16))
+        // })
 
-        addView(category(R.string.app_settings_online_ai_category))
+        addView(category(R.string.app_settings_conversation))
         addView(settingRow(
-            title = getString(R.string.app_settings_online_ai),
-            summary = getString(R.string.app_settings_online_ai_summary),
+            title = getString(R.string.chat_font_size),
+            summary = getString(chatSettings.fontSize.labelResource()),
+            onClick = ::showFontSizeDialog,
+        ))
+        addView(divider())
+        addView(switchSettingRow(
+            title = getString(R.string.chat_follow_streaming_output),
+            summary = getString(R.string.app_settings_follow_streaming_summary),
+            checked = chatSettings.followStreamingOutput,
+        ) { checked -> saveChatSettings(chatSettings.copy(followStreamingOutput = checked)) })
+        addView(divider())
+        addView(switchSettingRow(
+            title = getString(R.string.chat_show_generation_usage),
+            summary = getString(R.string.app_settings_show_usage_summary),
+            checked = chatSettings.showGenerationUsage,
+        ) { checked -> saveChatSettings(chatSettings.copy(showGenerationUsage = checked)) })
+        addView(divider())
+        addView(settingRow(
+            title = getString(R.string.chat_enter_key_behavior),
+            summary = getString(chatSettings.enterKeyBehavior.labelResource()),
+            onClick = ::showEnterKeyDialog,
+        ))
+        addView(divider())
+        addView(settingRow(
+            title = getString(R.string.chat_settings_generation_section),
+            summary = generationSettingsSummary(),
+            onClick = ::showGenerationSettingsDialog,
+        ))
+
+        addView(category(R.string.app_settings_updates))
+        addView(settingRow(
+            title = getString(R.string.app_update_check),
+            summary = currentVersionSummary(),
+            onClick = updateController::checkManually,
+        ))
+        addView(divider())
+        addView(switchSettingRow(
+            title = getString(R.string.app_update_automatic),
+            summary = getString(R.string.app_update_automatic_summary),
+            checked = updateSettingsStore.automaticChecksEnabled,
+        ) { checked -> updateSettingsStore.automaticChecksEnabled = checked })
+        addView(divider())
+        addView(settingRow(
+            title = getString(R.string.app_update_manage_ignored),
+            summary = resources.getQuantityString(
+                R.plurals.app_update_ignored_count,
+                updateSettingsStore.ignoredTags.size,
+                updateSettingsStore.ignoredTags.size,
+            ),
+            onClick = ::showIgnoredUpdatesDialog,
+        ))
+        addView(divider())
+        addView(settingRow(
+            title = getString(R.string.release_history_title),
+            summary = getString(R.string.app_update_release_history_summary),
             onClick = {
-                startActivity(
-                    Intent(this@AppSettingsActivity, OnlineAiSettingsActivity::class.java),
-                )
+                startActivity(Intent(this@AppSettingsActivity, ReleaseHistoryActivity::class.java))
             },
         ))
 
@@ -118,15 +188,7 @@ class AppSettingsActivity : ConfiguredActivity() {
             summary = getString(R.string.about_app_summary),
             onClick = { startActivity(Intent(this@AppSettingsActivity, AboutActivity::class.java)) },
         ))
-        addView(divider())
-        addView(settingRow(
-            title = getString(R.string.release_history_title),
-            summary = currentVersionSummary(),
-            onClick = {
-                startActivity(Intent(this@AppSettingsActivity, ReleaseHistoryActivity::class.java))
-            },
-        ))
-    }
+    }.also(::applyThemeToControls)
 
     private fun category(titleResource: Int) = TextView(this).apply {
         text = getString(titleResource)
@@ -158,6 +220,44 @@ class AppSettingsActivity : ConfiguredActivity() {
             })
             setOnClickListener { onClick() }
         }
+
+    private fun switchSettingRow(
+        title: String,
+        summary: String,
+        checked: Boolean,
+        onChanged: (Boolean) -> Unit,
+    ) = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = android.view.Gravity.CENTER_VERTICAL
+        minimumHeight = dp(72)
+        isClickable = true
+        isFocusable = true
+        contentDescription = "$title, $summary"
+        setPaddingRelative(dp(20), dp(10), dp(16), dp(10))
+        applySelectableBackground(this)
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(context).apply {
+                text = title
+                textSize = 16f
+                setTextColor(appPalette.primaryText)
+            })
+            addView(TextView(context).apply {
+                text = summary
+                textSize = 13f
+                setTextColor(appPalette.secondaryText)
+                setPaddingRelative(0, dp(3), dp(12), 0)
+            })
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        val toggle = SwitchCompat(context).apply {
+            isChecked = checked
+            thumbTintList = switchThumbTintList()
+            trackTintList = switchTrackTintList()
+            setOnCheckedChangeListener { _, value -> onChanged(value) }
+        }
+        addView(toggle)
+        setOnClickListener { toggle.toggle() }
+    }
 
     private fun divider() = View(this).apply {
         setBackgroundColor(appPalette.divider)
@@ -310,6 +410,237 @@ class AppSettingsActivity : ConfiguredActivity() {
             .also(::tintDialogButtons)
     }
 
+    private fun showFontSizeDialog() {
+        val values = ChatFontSize.entries
+        AlertDialog.Builder(this)
+            .setTitle(R.string.chat_font_size)
+            .setSingleChoiceItems(
+                values.map { getString(it.labelResource()) }.toTypedArray(),
+                values.indexOf(chatSettings.fontSize),
+            ) { dialog, index ->
+                dialog.dismiss()
+                saveChatSettings(chatSettings.copy(fontSize = values[index]), recreate = true)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun showEnterKeyDialog() {
+        val values = EnterKeyBehavior.entries
+        AlertDialog.Builder(this)
+            .setTitle(R.string.chat_enter_key_behavior)
+            .setSingleChoiceItems(
+                values.map { getString(it.labelResource()) }.toTypedArray(),
+                values.indexOf(chatSettings.enterKeyBehavior),
+            ) { dialog, index ->
+                dialog.dismiss()
+                saveChatSettings(chatSettings.copy(enterKeyBehavior = values[index]), recreate = true)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun showGenerationSettingsDialog() {
+        val working = chatSettings
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPaddingRelative(dp(22), dp(6), dp(22), dp(16))
+        }
+        val unlimitedTokens = themedCheckBox(
+            R.string.chat_maximum_output_tokens_unlimited,
+            working.maximumOutputTokens == null,
+        )
+        container.addView(unlimitedTokens)
+        container.addView(fieldLabel(R.string.chat_maximum_output_tokens))
+        val maximumTokensInput = settingsEditText(
+            working.maximumOutputTokensDraft.toString(),
+            InputType.TYPE_CLASS_NUMBER,
+        )
+        container.addView(maximumTokensInput)
+        fun updateMaximumTokensState(unlimited: Boolean) {
+            maximumTokensInput.isEnabled = !unlimited
+            maximumTokensInput.alpha = if (unlimited) DISABLED_ALPHA else 1f
+        }
+        updateMaximumTokensState(unlimitedTokens.isChecked)
+        unlimitedTokens.setOnCheckedChangeListener { _, checked ->
+            updateMaximumTokensState(checked)
+        }
+
+        val useModelDefaults = themedCheckBox(
+            R.string.chat_use_model_sampling_defaults,
+            working.useModelSamplingDefaults,
+        ).apply { setPaddingRelative(0, dp(12), 0, 0) }
+        container.addView(useModelDefaults)
+        container.addView(fieldLabel(R.string.chat_temperature))
+        val temperatureInput = settingsEditText(
+            working.temperature.toString(),
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
+        )
+        container.addView(temperatureInput)
+        container.addView(fieldLabel(R.string.chat_top_k))
+        val topKInput = settingsEditText(working.topK.toString(), InputType.TYPE_CLASS_NUMBER)
+        container.addView(topKInput)
+        container.addView(fieldLabel(R.string.chat_top_p))
+        val topPInput = settingsEditText(
+            working.topP.toString(),
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
+        )
+        container.addView(topPInput)
+        container.addView(TextView(this).apply {
+            text = getString(R.string.chat_generation_settings_help)
+            textSize = 12f
+            setTextColor(appPalette.secondaryText)
+            setPaddingRelative(0, dp(8), 0, dp(4))
+        })
+        val samplingInputs = listOf(temperatureInput, topKInput, topPInput)
+        fun updateSamplingState(useDefaults: Boolean) {
+            samplingInputs.forEach { input ->
+                input.isEnabled = !useDefaults
+                input.alpha = if (useDefaults) DISABLED_ALPHA else 1f
+            }
+        }
+        updateSamplingState(useModelDefaults.isChecked)
+        useModelDefaults.setOnCheckedChangeListener { _, checked -> updateSamplingState(checked) }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.chat_settings_generation_section)
+            .setView(ScrollView(this).apply {
+                setBackgroundColor(appPalette.windowBackground)
+                addView(container)
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.chat_settings_save, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.setLayout(
+                minOf((resources.displayMetrics.widthPixels * 0.94f).toInt(), dp(720)),
+                android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+            )
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val maximumTokens = if (unlimitedTokens.isChecked) {
+                    null
+                } else {
+                    maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
+                        ?: return@setOnClickListener showSettingError(
+                            maximumTokensInput,
+                            R.string.chat_positive_integer_error,
+                        )
+                }
+                val maximumTokensDraft = maximumTokens
+                    ?: maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
+                    ?: working.maximumOutputTokensDraft
+                val useDefaults = useModelDefaults.isChecked
+                val temperature = if (useDefaults) {
+                    working.temperature
+                } else {
+                    temperatureInput.text.toString().toDoubleOrNull()
+                        ?.takeIf { it.isFinite() && it >= 0.0 }
+                        ?: return@setOnClickListener showSettingError(
+                            temperatureInput,
+                            R.string.chat_nonnegative_number_error,
+                        )
+                }
+                val topK = if (useDefaults) {
+                    working.topK
+                } else {
+                    topKInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
+                        ?: return@setOnClickListener showSettingError(
+                            topKInput,
+                            R.string.chat_positive_integer_error,
+                        )
+                }
+                val topP = if (useDefaults) {
+                    working.topP
+                } else {
+                    topPInput.text.toString().toDoubleOrNull()
+                        ?.takeIf { it.isFinite() && it in 0.0..1.0 }
+                        ?: return@setOnClickListener showSettingError(
+                            topPInput,
+                            R.string.chat_probability_error,
+                        )
+                }
+                dialog.dismiss()
+                saveChatSettings(
+                    working.copy(
+                        maximumOutputTokens = maximumTokens,
+                        maximumOutputTokensDraft = maximumTokensDraft,
+                        useModelSamplingDefaults = useDefaults,
+                        temperature = temperature,
+                        topK = topK,
+                        topP = topP,
+                    ),
+                    recreate = true,
+                )
+            }
+            applyThemeToControls(container)
+        }
+        dialog.show()
+        tintDialogButtons(dialog)
+    }
+
+    private fun showIgnoredUpdatesDialog() {
+        val ignored = updateSettingsStore.ignoredTags.sorted()
+        if (ignored.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.app_update_manage_ignored)
+                .setMessage(R.string.app_update_no_ignored)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+                .also(::tintDialogButtons)
+            return
+        }
+        val selected = BooleanArray(ignored.size)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.app_update_manage_ignored)
+            .setMultiChoiceItems(ignored.toTypedArray(), selected) { _, index, checked ->
+                selected[index] = checked
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.app_update_stop_ignoring) { _, _ ->
+                updateSettingsStore.stopIgnoring(
+                    ignored.filterIndexed { index, _ -> selected[index] },
+                )
+                recreate()
+            }
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun themedCheckBox(textResource: Int, checked: Boolean) = CheckBox(this).apply {
+        text = getString(textResource)
+        isChecked = checked
+        setTextColor(appPalette.primaryText)
+        buttonTintList = controlTintList()
+        minimumHeight = dp(48)
+    }
+
+    private fun fieldLabel(textResource: Int) = TextView(this).apply {
+        text = getString(textResource)
+        textSize = 12.5f
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(appPalette.secondaryText)
+        setPaddingRelative(0, dp(8), 0, dp(3))
+    }
+
+    private fun settingsEditText(value: String, fieldInputType: Int) = EditText(this).apply {
+        setText(value)
+        setSelection(text.length)
+        inputType = fieldInputType
+        maxLines = 1
+        setSingleLine(true)
+        textSize = 14f
+        setTextColor(appPalette.primaryText)
+        setHintTextColor(appPalette.secondaryText)
+        backgroundTintList = ColorStateList.valueOf(appPalette.accent)
+    }
+
+    private fun showSettingError(input: EditText, messageResource: Int) {
+        input.error = getString(messageResource)
+        input.requestFocus()
+    }
+
     private fun saveSettings(updated: ApplicationSettings) {
         settingsStore.save(updated)
         settings = updated
@@ -317,20 +648,54 @@ class AppSettingsActivity : ConfiguredActivity() {
         recreate()
     }
 
+    private fun saveChatSettings(updated: ChatUiSettings, recreate: Boolean = false) {
+        chatSettings = updated
+        chatSettingsStore.save(updated)
+        if (recreate) recreate()
+    }
+
     private fun themeSummary(value: ApplicationSettings): String = when (value.themeSelection) {
-        AppThemeSelection.FOLLOW_AUTOJS6 -> getString(
-            R.string.app_settings_theme_follow_summary,
-            AppSettingsPolicy.colorHex(
-                hostResult.snapshot?.themeColorPrimary
-                    ?: AppSettingsPolicy.AUTOJS6_DEFAULT_THEME_COLOR,
-            ),
-        )
+        AppThemeSelection.FOLLOW_AUTOJS6 -> if (hostResult.selectable) {
+            getString(
+                R.string.app_settings_theme_follow_summary,
+                AppSettingsPolicy.colorHex(
+                    hostResult.snapshot?.themeColorPrimary
+                        ?: AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR,
+                ),
+            )
+        } else {
+            getString(
+                R.string.app_settings_theme_follow_unavailable_summary,
+                AppSettingsPolicy.colorHex(AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR),
+            )
+        }
         AppThemeSelection.CUSTOM -> AppSettingsPolicy.colorHex(value.customThemeColor)
     }
+
+    private fun followAwareLabel(followsHost: Boolean, fallback: () -> String): String =
+        if (followsHost && !hostResult.selectable) {
+            getString(R.string.app_settings_follow_autojs6_unavailable)
+        } else {
+            fallback()
+        }
 
     private fun currentVersionSummary(): String {
         val packageInfo = packageManager.getPackageInfo(packageName, 0)
         return getString(R.string.about_version_name, packageInfo.versionName.orEmpty())
+    }
+
+    private fun generationSettingsSummary(): String {
+        val output = chatSettings.maximumOutputTokens?.let { count ->
+            getString(R.string.app_settings_generation_limited, count)
+        } ?: getString(R.string.chat_maximum_output_tokens_unlimited)
+        val sampling = getString(
+            if (chatSettings.useModelSamplingDefaults) {
+                R.string.app_settings_generation_model_defaults
+            } else {
+                R.string.app_settings_generation_custom_sampling
+            },
+        )
+        return "$output | $sampling"
     }
 
     private fun AppDarkMode.labelResource(): Int = when (this) {
@@ -353,6 +718,18 @@ class AppSettingsActivity : ConfiguredActivity() {
         AppLanguage.KOREAN -> R.string.app_language_ko
         AppLanguage.RUSSIAN -> R.string.app_language_ru
         AppLanguage.ARABIC -> R.string.app_language_ar
+    }
+
+    private fun ChatFontSize.labelResource(): Int = when (this) {
+        ChatFontSize.SMALL -> R.string.chat_font_size_small
+        ChatFontSize.DEFAULT -> R.string.chat_font_size_default
+        ChatFontSize.LARGE -> R.string.chat_font_size_large
+        ChatFontSize.EXTRA_LARGE -> R.string.chat_font_size_extra_large
+    }
+
+    private fun EnterKeyBehavior.labelResource(): Int = when (this) {
+        EnterKeyBehavior.SEND -> R.string.chat_enter_key_send
+        EnterKeyBehavior.NEW_LINE -> R.string.chat_enter_key_new_line
     }
 
     private fun applySelectableBackground(view: View) {

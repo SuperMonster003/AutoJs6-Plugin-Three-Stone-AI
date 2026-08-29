@@ -10,8 +10,12 @@ import android.os.Bundle
 import android.text.InputFilter
 import android.text.InputType
 import android.text.format.Formatter
+import android.util.TypedValue
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -62,8 +66,9 @@ class ModelManagerActivity : ConfiguredActivity() {
     private lateinit var cancelImportButton: Button
     private lateinit var progress: ProgressBar
     private lateinit var catalogSummary: TextView
-    private lateinit var cleanupStorageButton: Button
+    private lateinit var onlineSummary: TextView
     private lateinit var catalogRows: LinearLayout
+    private var cleanupEnabled = false
     private var copyableModelId: String? = null
     private var cancellableOperationId: Long? = null
     private var cancellableDownloadOperationId: Long? = null
@@ -96,9 +101,10 @@ class ModelManagerActivity : ConfiguredActivity() {
                 PREFERENCE_CHECK_AFTER_IMPORT,
                 true,
             )
-        savedInstanceState?.takeIf { restored ->
+        val restoredManagerNotifications = savedInstanceState?.takeIf { restored ->
             restored.getString(STATE_PROCESS_SESSION_TOKEN) == importCoordinator.processSessionToken
-        }?.let { restored ->
+        }
+        restoredManagerNotifications?.let { restored ->
             lastNotifiedImportOperationId = restored.getLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID)
             lastNotifiedSelectionOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID)
@@ -110,6 +116,21 @@ class ModelManagerActivity : ConfiguredActivity() {
                 restored.getLong(STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID)
             lastNotifiedHealthCheckOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID)
+        }
+        if (restoredManagerNotifications == null) {
+            lastNotifiedImportOperationId = when (
+                val state = importCoordinator.managerState().importState
+            ) {
+                is ModelImportState.Succeeded -> state.operationId
+                is ModelImportState.Cancelled -> state.operationId
+                is ModelImportState.Failed -> state.operationId
+                ModelImportState.Preparing,
+                ModelImportState.Unavailable,
+                is ModelImportState.Ready,
+                is ModelImportState.Running,
+                is ModelImportState.Cancelling,
+                -> 0L
+            }
         }
         savedInstanceState?.takeIf { restored ->
             restored.getString(STATE_DOWNLOAD_PROCESS_SESSION_TOKEN) ==
@@ -125,6 +146,29 @@ class ModelManagerActivity : ConfiguredActivity() {
         super.onStart()
         renderManagerState(importCoordinator.attachManager(managerObserver))
         renderDownloadState(downloadCoordinator.attach(downloadObserver))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshOnlineSummary()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menu.add(0, MENU_CLEANUP_STORAGE, 0, R.string.button_cleanup_storage)
+        return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        menu.findItem(MENU_CLEANUP_STORAGE)?.isEnabled = cleanupEnabled
+        return super.onPrepareOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        MENU_CLEANUP_STORAGE -> {
+            cleanUnreferencedStorage()
+            true
+        }
+        else -> super.onOptionsItemSelected(item)
     }
 
     override fun onStop() {
@@ -164,6 +208,11 @@ class ModelManagerActivity : ConfiguredActivity() {
             REQUEST_OPEN_MODEL -> if (resultCode == RESULT_OK) {
                 data?.data?.let { uri -> importModel(uri, data.flags) }
             }
+            REQUEST_CHOOSE_LITERT_MODEL -> if (resultCode == RESULT_OK) {
+                data?.getStringExtra(LiteRtModelCatalogActivity.EXTRA_MODEL_ID)
+                    ?.let(RecommendedModelCatalog::find)
+                    ?.let(::confirmRecommendedModel)
+            }
             REQUEST_CREATE_MODEL_DOWNLOAD -> {
                 val model = pendingDownloadModelId?.let(RecommendedModelCatalog::find)
                 pendingDownloadModelId = null
@@ -184,9 +233,42 @@ class ModelManagerActivity : ConfiguredActivity() {
             setBackgroundColor(appPalette.windowBackground)
             setPadding(dp(24), dp(12), dp(24), dp(32))
             addView(TextView(context).apply {
+                text = getString(R.string.model_online_section_title)
+                textSize = 18f
+                setTextColor(appPalette.primaryText)
+                setPadding(0, dp(10), 0, dp(6))
+            }, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            onlineSummary = TextView(context).apply {
+                textSize = 14f
+                setTextColor(appPalette.secondaryText)
+                setLineSpacing(0f, 1.12f)
+                setPadding(0, 0, 0, dp(5))
+            }
+            addView(
+                onlineSummary,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
+            addView(navigationRow(
+                title = getString(R.string.online_ai_settings_title),
+                summary = getString(R.string.model_online_manage_summary),
+            ) {
+                startActivity(Intent(this@ModelManagerActivity, OnlineAiSettingsActivity::class.java))
+            })
+            addView(navigationRow(
+                title = getString(R.string.online_ai_add_profile),
+                summary = getString(R.string.online_ai_add_profile_summary),
+            ) {
+                startActivity(
+                    Intent(this@ModelManagerActivity, OnlineAiSettingsActivity::class.java)
+                        .putExtra(OnlineAiSettingsActivity.EXTRA_ADD_PROFILE, true),
+                )
+            })
+            addView(TextView(context).apply {
                 text = getString(R.string.screen_description)
                 textSize = 16f
-                setPadding(0, dp(20), 0, dp(20))
+                setTextColor(appPalette.secondaryText)
+                setPadding(0, dp(26), 0, dp(20))
             })
             addView(TextView(context).apply {
                 text = getString(R.string.download_section_title)
@@ -223,8 +305,9 @@ class ModelManagerActivity : ConfiguredActivity() {
             }
             addView(cancelDownloadButton)
             downloadButton = Button(context).apply {
-                text = getString(R.string.button_download_model)
+                text = getString(R.string.button_browse_litert_models)
                 setOnClickListener { chooseRecommendedModel() }
+                applySubtleButtonStyle(this)
             }
             addView(downloadButton)
             importDownloadedButton = Button(context).apply {
@@ -263,6 +346,7 @@ class ModelManagerActivity : ConfiguredActivity() {
             importButton = Button(context).apply {
                 text = getString(R.string.button_import_model)
                 setOnClickListener { openModelPicker() }
+                applySubtleButtonStyle(this)
             }
             addView(importButton)
             checkAfterImportOption = CheckBox(context).apply {
@@ -292,19 +376,19 @@ class ModelManagerActivity : ConfiguredActivity() {
                 setPadding(0, dp(24), 0, dp(8))
             }
             addView(catalogSummary, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            cleanupStorageButton = Button(context).apply {
-                text = getString(R.string.button_cleanup_storage)
-                isEnabled = false
-                setOnClickListener { cleanUnreferencedStorage() }
-            }
-            addView(cleanupStorageButton)
             catalogRows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
             addView(catalogRows, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
         applyThemeToControls(content)
+        applySubtleButtons(content)
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(appPalette.windowBackground)
+            val statusBarBackground = createStatusBarBackground()
+            addView(
+                statusBarBackground,
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
+            )
             addView(createAppToolbar(R.string.model_manager_title, showBack = true))
             addView(
                 ScrollView(context).apply {
@@ -317,26 +401,103 @@ class ModelManagerActivity : ConfiguredActivity() {
                     1f,
                 ),
             )
-            applySystemBarInsets(this)
+            applySystemBarInsets(this, statusBarBackground)
+        }
+    }
+
+    private fun navigationRow(
+        title: String,
+        summary: String,
+        onClick: () -> Unit,
+    ) = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        minimumHeight = dp(64)
+        isClickable = true
+        isFocusable = true
+        contentDescription = "$title, $summary"
+        setPaddingRelative(dp(12), dp(10), dp(12), dp(10))
+        val backgroundValue = TypedValue()
+        if (theme.resolveAttribute(android.R.attr.selectableItemBackground, backgroundValue, true)) {
+            setBackgroundResource(backgroundValue.resourceId)
+        }
+        addView(TextView(context).apply {
+            text = title
+            textSize = 15.5f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(appPalette.primaryText)
+        })
+        addView(TextView(context).apply {
+            text = summary
+            textSize = 12.5f
+            setTextColor(appPalette.secondaryText)
+            setPaddingRelative(0, dp(3), 0, 0)
+        })
+        setOnClickListener { onClick() }
+    }
+
+    private fun refreshOnlineSummary() {
+        if (!::onlineSummary.isInitialized) return
+        val snapshot = runCatching {
+            (application as ThreeStoneAiApplication).onlineProfileRegistry.snapshot()
+        }.getOrNull()
+        if (snapshot == null) {
+            onlineSummary.text = getString(R.string.model_online_unavailable)
+            return
+        }
+        val profileCount = snapshot.profiles.size
+        val modelCount = snapshot.profiles.sumOf { configured -> configured.profile.modelIds.size }
+        val configuredCount = snapshot.profiles.count { configured -> configured.configured }
+        onlineSummary.text = if (profileCount == 0) {
+            getString(R.string.model_online_empty)
+        } else {
+            getString(
+                R.string.model_online_summary,
+                profileCount,
+                modelCount,
+                configuredCount,
+            )
+        }
+    }
+
+    private fun applySubtleButtonStyle(button: Button) {
+        button.backgroundTintList = ColorStateList(
+            arrayOf(
+                intArrayOf(-android.R.attr.state_enabled),
+                intArrayOf(),
+            ),
+            intArrayOf(
+                appPalette.windowBackground,
+                appPalette.assistantSurface,
+            ),
+        )
+        button.setTextColor(ColorStateList(
+            arrayOf(
+                intArrayOf(-android.R.attr.state_enabled),
+                intArrayOf(),
+            ),
+            intArrayOf(
+                appPalette.secondaryText,
+                appPalette.accent,
+            ),
+        ))
+        button.minimumHeight = dp(42)
+        button.minimumWidth = 0
+        button.setPaddingRelative(dp(12), dp(6), dp(12), dp(6))
+    }
+
+    private fun applySubtleButtons(root: View) {
+        if (root is Button) applySubtleButtonStyle(root)
+        if (root is ViewGroup) {
+            for (index in 0 until root.childCount) applySubtleButtons(root.getChildAt(index))
         }
     }
 
     private fun chooseRecommendedModel() {
-        val models = RecommendedModelCatalog.models
-        val labels = models.map { model ->
-            getString(
-                R.string.download_catalog_item,
-                model.displayName,
-                Formatter.formatFileSize(this, model.expectedSizeBytes),
-                model.license,
-            )
-        }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(R.string.download_catalog_title)
-            .setNegativeButton(android.R.string.cancel, null)
-            .setItems(labels) { _, index -> confirmRecommendedModel(models[index]) }
-            .show()
-            .also(::tintDialogButtons)
+        @Suppress("DEPRECATION")
+        startActivityForResult(
+            Intent(this, LiteRtModelCatalogActivity::class.java),
+            REQUEST_CHOOSE_LITERT_MODEL,
+        )
     }
 
     private fun confirmRecommendedModel(model: RecommendedModel) {
@@ -731,14 +892,10 @@ class ModelManagerActivity : ConfiguredActivity() {
         catalogMutationBlocksPicker = view.catalogMutationBusy
         updateImportButtonEnabled()
         updateDownloadButtonEnabled()
-        cleanupStorageButton.isEnabled = view.cleanupEnabled
-        cleanupStorageButton.text = getString(
-            if (view.cleanupInProgress) {
-                R.string.model_cleanup_in_progress
-            } else {
-                R.string.button_cleanup_storage
-            },
-        )
+        if (cleanupEnabled != view.cleanupEnabled) {
+            cleanupEnabled = view.cleanupEnabled
+            invalidateOptionsMenu()
+        }
         if (view == renderedManagerView) return
         renderedManagerView = view
         refreshImportStoragePreflight()
@@ -853,6 +1010,7 @@ class ModelManagerActivity : ConfiguredActivity() {
             )
         }
         applyThemeToControls(catalogRows)
+        applySubtleButtons(catalogRows)
     }
 
     private fun checkModel(modelId: String) {
@@ -1116,9 +1274,13 @@ class ModelManagerActivity : ConfiguredActivity() {
         Toast.makeText(this, message, duration).show()
     }
 
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
         const val REQUEST_CREATE_MODEL_DOWNLOAD = 1002
+        const val REQUEST_CHOOSE_LITERT_MODEL = 1003
+        const val MENU_CLEANUP_STORAGE = 2001
         const val STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID = "lastNotifiedImportOperationId"
         const val STATE_LAST_NOTIFIED_DOWNLOAD_OPERATION_ID = "lastNotifiedDownloadOperationId"
         const val STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID = "lastNotifiedSelectionOperationId"

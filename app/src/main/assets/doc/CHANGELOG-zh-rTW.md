@@ -23,8 +23,8 @@
 * `新增` 新增字型大小, Enter 鍵行為, 無限制或自訂 output token, 以及模型預設或自訂 `temperature`, `topK`, `topP` 等會話設定
 * `新增` 支援在串流輸出中渲染內聯 `$\text{...}$` 內容, 並適配常用數學命令, 上標與下標樣式
 * `新增` 新增由外掛程式管理的 Android Keystore 憑證儲存庫, 採用 AES-256-GCM, 綁定 profile 的驗證密文, 跨程序原子私有檔案, 僅查詢 configured 狀態及即時清除明文
-* `新增` 新增嚴格且不含敏感資料的線上設定檔儲存庫, 僅接受 HTTPS OpenAI Compatible 端點, 使用 canonical UUID 與跨程序原子中繼資料, provider 或 origin 變更時必須明確取代或清除憑證
-* `新增` 新增外掛程式內部 OpenAI Compatible HTTPS 執行 backend, 支援自訂 baseUrl, 憑證及模型名稱, 有界 SSE 與 JSON fallback 串流回應, 精確取消, provider usage, 完成輪次多輪歷史, JSON Schema 請求映射及不含敏感資料的固定錯誤; 已設定的 `profile:*` 目標可透過 AI Provider V2 直接呼叫
+* `新增` 新增嚴格且不含敏感資料的線上設定檔儲存庫, 僅接受 HTTPS OpenAI-compatible 端點, 使用 canonical UUID 與跨程序原子中繼資料, provider 或 origin 變更時必須明確取代或清除憑證
+* `新增` 新增外掛程式內部 OpenAI-compatible HTTPS 執行 backend, 支援自訂 baseUrl, 憑證及模型名稱, 有界 SSE 與 JSON fallback 串流回應, 精確取消, provider usage, 完成輪次多輪歷史, JSON Schema 請求映射及不含敏感資料的固定錯誤; 已設定的 `profile:*` 目標可透過 AI Provider V2 直接呼叫
 * `新增` 新增與宿主目錄對齊的 OpenAI, Anthropic, Gemini, DeepSeek 與 OpenRouter 預設範本; 統一線上執行層重用 OpenAI-compatible 協定, 並分別適配 Anthropic Messages 與 Gemini GenerateContent 的原生驗證, 請求, SSE 終態, usage 與 JSON Schema, 不提供協定間或本機/線上自動 fallback
 * `新增` 新增 10 種語言線上服務設定 UI, 支援設定檔新增, 編輯, 刪除, 不回顯的 API Key 取代與清除, 預設目標選擇, 在讀取憑證前強制執行的計量網路開關, 以及可取消且最長 120 秒的明確連線測試; 設定與檔案共用跨處理程序原子文件並動態重新整理 V2 目標目錄
 * `新增` 啟動器聊天新增統一本機/雲端目標選擇器: 每個對話持久化一個目標快照, 有訊息的對話切換時預設建議新增對話, 攜帶既有上下文繼續目前對話必須明確確認並記錄變更

@@ -7,20 +7,26 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.LocaleList
+import android.util.TypedValue
+import android.view.Gravity
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsetsController
 import android.widget.Button
+import android.widget.CheckedTextView
 import android.widget.CompoundButton
 import android.widget.EditText
 import android.widget.ProgressBar
+import android.widget.Switch
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import java.util.Locale
 import kotlin.math.max
@@ -42,10 +48,10 @@ internal object ApplicationSettingsResolver {
         if (!followsHost) return ResolvedApplicationSettings(stored, null)
 
         val host = AutoJs6HostSettingsClient.query(context)
-        if (host.selectable) return ResolvedApplicationSettings(stored, host)
-        val fallback = AppSettingsPolicy.fallbackWithoutAutoJs6(stored)
-        if (host.definitiveAbsence && fallback != stored) store.save(fallback)
-        return ResolvedApplicationSettings(fallback, host)
+        // Keep the user's intent to follow AutoJs6 even while the host is absent. Resolution
+        // falls back at runtime, so installing or re-enabling AutoJs6 later resumes following it
+        // without silently rewriting the preference.
+        return ResolvedApplicationSettings(stored, host)
     }
 }
 
@@ -192,7 +198,7 @@ internal data class AppThemePalette(
             val primary = when (settings.themeSelection) {
                 AppThemeSelection.FOLLOW_AUTOJS6 -> resolved.hostResult?.snapshot
                     ?.themeColorPrimary
-                    ?: AppSettingsPolicy.AUTOJS6_DEFAULT_THEME_COLOR
+                    ?: AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR
                 AppThemeSelection.CUSTOM -> settings.customThemeColor
             }.let(AppSettingsPolicy::normalizeOpaqueColor)
             val background = context.getColor(R.color.window_background)
@@ -246,7 +252,15 @@ abstract class ConfiguredActivity : AppCompatActivity() {
     private var recreationRequested = false
 
     override fun attachBaseContext(newBase: Context) {
-        super.attachBaseContext(AppConfiguration.wrap(newBase))
+        val configuredBase = AppConfiguration.wrap(newBase)
+        val configuredNightMode = configuredBase.resources.configuration.uiMode and
+            Configuration.UI_MODE_NIGHT_MASK
+        delegate.localNightMode = if (configuredNightMode == Configuration.UI_MODE_NIGHT_YES) {
+            AppCompatDelegate.MODE_NIGHT_YES
+        } else {
+            AppCompatDelegate.MODE_NIGHT_NO
+        }
+        super.attachBaseContext(configuredBase)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -290,7 +304,11 @@ abstract class ConfiguredActivity : AppCompatActivity() {
         setBackgroundColor(appPalette.primary)
         setTitleTextColor(appPalette.onPrimary)
         setSubtitleTextColor(AppColorPolicy.withAlpha(appPalette.onPrimary, 0xB3))
-        minimumHeight = uiDp(56)
+        // AppCompat intentionally uses a taller action bar on large screens (normally 64 dp
+        // instead of 56 dp). Keeping a hard-coded phone minimum lets the Toolbar grow to the
+        // tablet height while still aligning its children against the shorter minimum, which
+        // shifts navigation and action icons vertically on some vendor builds.
+        minimumHeight = resolvedActionBarHeight()
         setContentInsetsRelative(uiDp(16), uiDp(8))
         this@ConfiguredActivity.setSupportActionBar(this)
         supportActionBar?.setDisplayHomeAsUpEnabled(showBack)
@@ -302,16 +320,61 @@ abstract class ConfiguredActivity : AppCompatActivity() {
         post { tintToolbarIcons(this) }
     }
 
+    private fun resolvedActionBarHeight(): Int {
+        val value = TypedValue()
+        val resolved = theme.resolveAttribute(
+            androidx.appcompat.R.attr.actionBarSize,
+            value,
+            true,
+        )
+        return if (resolved && value.type == TypedValue.TYPE_DIMENSION) {
+            TypedValue.complexToDimensionPixelSize(value.data, resources.displayMetrics)
+        } else {
+            uiDp(56)
+        }
+    }
+
+    internal fun createStatusBarBackground(): View = View(this).apply {
+        setBackgroundColor(appPalette.primary)
+    }
+
     internal fun tintToolbarIcons(toolbar: Toolbar) {
+        centerToolbarChildren(toolbar)
         toolbar.navigationIcon = toolbar.navigationIcon?.tinted(appPalette.onPrimary)
         toolbar.overflowIcon = toolbar.overflowIcon?.tinted(appPalette.onPrimary)
         toolbar.menu.tintIcons(appPalette.onPrimary)
         toolbar.collapseIcon = toolbar.collapseIcon?.tinted(appPalette.onPrimary)
     }
 
+    private fun centerToolbarChildren(toolbar: Toolbar) {
+        for (index in 0 until toolbar.childCount) {
+            val child = toolbar.getChildAt(index)
+            val params = child.layoutParams as? Toolbar.LayoutParams ?: continue
+            val horizontalGravity = if (params.gravity >= 0) {
+                params.gravity and Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK
+            } else {
+                Gravity.NO_GRAVITY
+            }
+            val centeredGravity = horizontalGravity or Gravity.CENTER_VERTICAL
+            if (params.gravity != centeredGravity) {
+                params.gravity = centeredGravity
+                child.layoutParams = params
+            }
+        }
+    }
+
     internal fun applyThemeToControls(root: View) {
         when (root) {
+            is SwitchCompat -> {
+                root.thumbTintList = switchThumbTintList()
+                root.trackTintList = switchTrackTintList()
+            }
+            is Switch -> {
+                root.thumbTintList = switchThumbTintList()
+                root.trackTintList = switchTrackTintList()
+            }
             is CompoundButton -> root.buttonTintList = controlTintList()
+            is CheckedTextView -> root.checkMarkTintList = controlTintList()
             is EditText -> tintEditText(root)
             is ProgressBar -> {
                 root.progressTintList = ColorStateList.valueOf(appPalette.accent)
@@ -328,6 +391,7 @@ abstract class ConfiguredActivity : AppCompatActivity() {
     }
 
     internal fun tintDialogButtons(dialog: AlertDialog) {
+        dialog.listView?.let(::applyThemeToControls)
         listOf(
             AlertDialog.BUTTON_POSITIVE,
             AlertDialog.BUTTON_NEGATIVE,
@@ -357,6 +421,32 @@ abstract class ConfiguredActivity : AppCompatActivity() {
             appPalette.accent,
             appPalette.accent,
             appPalette.secondaryText,
+        ),
+    )
+
+    internal fun switchThumbTintList(): ColorStateList = ColorStateList(
+        arrayOf(
+            intArrayOf(-android.R.attr.state_enabled),
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf(),
+        ),
+        intArrayOf(
+            AppColorPolicy.withAlpha(appPalette.secondaryText, 0x55),
+            appPalette.accent,
+            appPalette.secondaryText,
+        ),
+    )
+
+    internal fun switchTrackTintList(): ColorStateList = ColorStateList(
+        arrayOf(
+            intArrayOf(-android.R.attr.state_enabled),
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf(),
+        ),
+        intArrayOf(
+            AppColorPolicy.withAlpha(appPalette.secondaryText, 0x24),
+            AppColorPolicy.withAlpha(appPalette.accent, 0x66),
+            AppColorPolicy.withAlpha(appPalette.secondaryText, 0x4D),
         ),
     )
 

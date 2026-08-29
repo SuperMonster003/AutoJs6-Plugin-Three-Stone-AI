@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai.backend
 import org.autojs.plugin.ai.common.api.AiCommonLimits
 import org.autojs.plugin.ai.common.api.AiValidation
 import java.io.Closeable
+import java.security.MessageDigest
 
 internal enum class AiTargetLocality {
     LOCAL,
@@ -170,7 +171,9 @@ internal class AiTargetUnavailableException(targetId: String) :
 internal object AiTargetIds {
     private const val LOCAL_PREFIX = "local:"
     private const val PROFILE_PREFIX = "profile:"
+    private const val PROFILE_MODEL_SEPARATOR = ".model."
     private val SEGMENT = AiValidation.STABLE_ID
+    private val MODEL_KEY = Regex("^[0-9a-f]{24}$")
 
     fun local(modelId: String): String {
         require(SEGMENT.matches(modelId)) { "Local AI model ID is invalid" }
@@ -189,12 +192,30 @@ internal object AiTargetIds {
         return "$PROFILE_PREFIX$profileId"
     }
 
+    /** Keeps the profile's first model on the legacy ID and gives every alternative a stable ID. */
+    fun profileModel(profileId: String, legacyModelId: String, modelId: String): String {
+        val base = profile(profileId)
+        return if (modelId == legacyModelId) base else {
+            "$base$PROFILE_MODEL_SEPARATOR${modelKey(modelId)}"
+        }
+    }
+
     fun requireProfileId(targetId: String): String {
         require(targetId.startsWith(PROFILE_PREFIX)) { "AI target is not an online profile" }
-        return targetId.removePrefix(PROFILE_PREFIX).also { profileId ->
+        val payload = targetId.removePrefix(PROFILE_PREFIX)
+        val parts = payload.split(PROFILE_MODEL_SEPARATOR, limit = 2)
+        require(parts.size == 1 || MODEL_KEY.matches(parts[1])) {
+            "Online AI model target ID is invalid"
+        }
+        return parts[0].also { profileId ->
             require(SEGMENT.matches(profileId)) { "Online AI target ID is invalid" }
         }
     }
+
+    private fun modelKey(modelId: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(modelId.toByteArray(Charsets.UTF_8))
+        .joinToString("") { byte -> (byte.toInt() and 0xff).toString(16).padStart(2, '0') }
+        .take(24)
 }
 
 internal enum class GenerationRole {

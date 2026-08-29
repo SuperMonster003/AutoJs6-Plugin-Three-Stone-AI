@@ -68,6 +68,19 @@ class ConversationHistoryTest {
     }
 
     @Test
+    fun `history has no conversation count limit within its storage budget`() {
+        val conversations = (1..75).map { index ->
+            conversation("conversation-$index", updatedAt = 100L + index)
+        }
+
+        val normalized = ConversationHistoryPolicy.normalized(conversations)
+
+        assertEquals(75, normalized.size)
+        assertEquals("conversation-75", normalized.first().id)
+        assertEquals("conversation-1", normalized.last().id)
+    }
+
+    @Test
     fun `oversized conversations retain a recent bounded suffix instead of disappearing`() {
         val messages = (1..ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION + 2).map { id ->
             ChatMessage(id.toLong(), ChatMessageRole.USER, "message-$id")

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigation_open_drawer">فتح درج التنقل</string>
+    <string name="drawer_restart">إعادة التشغيل</string>
+    <string name="drawer_exit">خروج</string>
+</resources>

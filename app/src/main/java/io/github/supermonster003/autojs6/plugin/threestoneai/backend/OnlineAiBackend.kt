@@ -39,10 +39,20 @@ internal class OnlineAiBackend(
     override fun catalog(): AiTargetCatalog {
         val snapshot = registry.snapshot()
         val targets = snapshot.profiles
-            .map(::target)
+            .flatMap(::targets)
         return AiTargetCatalog(
             generation = generation(snapshot, targets),
-            defaultTargetId = snapshot.defaultProfileId?.let(AiTargetIds::profile),
+            defaultTargetId = snapshot.defaultProfileId?.let { profileId ->
+                snapshot.profiles.single { state -> state.profile.profileId == profileId }
+                    .profile
+                    .let { profile ->
+                        AiTargetIds.profileModel(
+                            profile.profileId,
+                            profile.modelIds.first(),
+                            profile.modelId,
+                        )
+                    }
+            },
             targets = targets,
         )
     }
@@ -55,36 +65,48 @@ internal class OnlineAiBackend(
         val configured = registry.snapshot().profiles.singleOrNull { state ->
             state.profile.profileId == profileId
         } ?: throw AiTargetUnavailableException(request.targetId)
+        val selectedTarget = targets(configured).singleOrNull { target ->
+            target.targetId == request.targetId
+        } ?: throw AiTargetUnavailableException(request.targetId)
+        val effectiveProfile = configured.profile.copy(modelId = selectedTarget.modelId)
         val executor = execution?.takeIf { candidate ->
-            candidate.available && candidate.supports(configured.profile)
+            candidate.available && candidate.supports(effectiveProfile)
         }
             ?: throw AiTargetUnavailableException(request.targetId)
         if (!configured.configured) throw AiTargetUnavailableException(request.targetId)
         return executor.createSession(
-            target = target(configured),
-            profile = configured.profile,
+            target = selectedTarget,
+            profile = effectiveProfile,
             credentialAccess = registry.bindCredential(configured.profile),
         )
     }
 
-    private fun target(configured: ConfiguredOnlineAiProfile): AiTarget {
+    private fun targets(configured: ConfiguredOnlineAiProfile): List<AiTarget> =
+        configured.profile.modelIds.map { modelId -> target(configured, modelId) }
+
+    private fun target(configured: ConfiguredOnlineAiProfile, modelId: String): AiTarget {
+        val effectiveProfile = configured.profile.copy(modelId = modelId)
         val executor = execution?.takeIf { candidate ->
-            candidate.available && candidate.supports(configured.profile)
+            candidate.available && candidate.supports(effectiveProfile)
         }
         return AiTarget(
-            targetId = AiTargetIds.profile(configured.profile.profileId),
+            targetId = AiTargetIds.profileModel(
+                configured.profile.profileId,
+                configured.profile.modelIds.first(),
+                modelId,
+            ),
             backendId = backendId,
             providerId = configured.profile.provider.providerId,
             profileId = configured.profile.profileId,
-            modelId = configured.profile.modelId,
+            modelId = modelId,
             displayName = configured.profile.displayName,
             locality = AiTargetLocality.REMOTE,
             credentialMode = AiTargetCredentialMode.PLUGIN_MANAGED,
             declaredHttpsOrigins = listOf(configured.profile.declaredHttpsOrigin),
             configured = configured.configured,
             available = configured.configured && executor != null,
-            capabilities = executor?.capabilities(configured.profile) ?: UNIMPLEMENTED_CAPABILITIES,
-            limits = executor?.limits(configured.profile) ?: UNKNOWN_LIMITS,
+            capabilities = executor?.capabilities(effectiveProfile) ?: UNIMPLEMENTED_CAPABILITIES,
+            limits = executor?.limits(effectiveProfile) ?: UNKNOWN_LIMITS,
             executionProfiles = emptyList(),
         )
     }

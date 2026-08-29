@@ -82,6 +82,6 @@ class ModelDownloadStateMachineTest {
     }
 
     private companion object {
-        val MODEL = RecommendedModelCatalog.models.last()
+        val MODEL = checkNotNull(RecommendedModelCatalog.find("gemma-4-e4b-it"))
     }
 }

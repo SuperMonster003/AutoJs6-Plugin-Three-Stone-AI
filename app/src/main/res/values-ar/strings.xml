@@ -2,14 +2,14 @@
 <resources>
     <string name="button_cancel_download">إلغاء التنزيل</string>
     <string name="button_choose_download_location">اختيار موقع الحفظ</string>
-    <string name="button_download_model">تنزيل نموذج موصى به</string>
+    <string name="button_download_model">استعراض نماذج LiteRT-LM</string>
     <string name="button_import_downloaded_model">استيراد النموذج المنزل</string>
     <string name="button_view_model_source">مصدر النموذج</string>
     <string name="download_already_running">يوجد تنزيل نموذج قيد التشغيل بالفعل</string>
     <string name="download_cancelled">ألغي تنزيل النموذج.</string>
     <string name="download_cancelling">جار إلغاء تنزيل %1$s...</string>
     <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">نماذج LiteRT-LM الموصى بها</string>
+    <string name="download_catalog_title">نماذج LiteRT-LM</string>
     <string name="download_cleanup_failed">تعذر مسح الوجهة غير المكتملة. احذفها يدويا.</string>
     <string name="download_cleanup_truncated">مسح المحتوى غير المكتمل, لكن قد يبقى مستند فارغ.</string>
     <string name="download_confirm_message">حجم التنزيل: %1$s\nSHA-256 المثبت: %2$s\nالترخيص: %3$s\n\nاختر أي موقع قابل للكتابة في منتقي ملفات النظام. استخدم Wi-Fi ما لم تكن تنوي استخدام بيانات الهاتف. لا يتاح الاستيراد إلا بعد التحقق من النموذج.</string>
@@ -103,7 +103,6 @@
     <string name="chat_target_locality_local">محلي</string>
     <string name="chat_target_locality_cloud">سحابي</string>
     <string name="chat_target_unavailable_suffix"> | غير متاح</string>
-    <string name="chat_target_cost_suffix"> | قد تترتب رسوم</string>
     <string name="chat_target_selector_title">اختيار هدف المحادثة</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">جار إعداد أهداف الذكاء الاصطناعي</string>
@@ -122,7 +121,7 @@
     <string name="chat_welcome_description">تم ربط %1$s بهذه المحادثة. اطرح سؤالا أدناه أو جرب اقتراحا.</string>
     <string name="chat_target_change_title">تغيير هدف المحادثة?</string>
     <string name="chat_target_change_message">يوصى ببدء محادثة جديدة. إذا تابعت هنا باستخدام %1$s فستقدم الرسائل المحتفظ بها إلى ذلك الهدف كسياق. %2$s</string>
-    <string name="chat_target_change_cloud_warning">تغادر الطلبات السحابية هذا الجهاز وقد تترتب عليها رسوم من المزود.</string>
+    <string name="chat_target_change_cloud_warning">يتم إرسال الطلبات السحابية إلى الخدمة المحددة عبر الإنترنت.</string>
     <string name="chat_target_change_local_warning">تبقى الطلبات المحلية على هذا الجهاز.</string>
     <string name="chat_target_continue_current">المتابعة هنا</string>
     <string name="chat_target_start_new">بدء محادثة جديدة</string>
@@ -169,12 +168,10 @@
     <string name="chat_editing_message">جارٍ تعديل رسالة سابقة</string>
     <string name="chat_cancel_editing">إلغاء</string>
     <string name="chat_save_and_send">حفظ وإرسال</string>
-    <string name="chat_search_menu">البحث في المحادثة</string>
+    <string name="chat_search_menu">بحث</string>
     <string name="chat_search_hint">البحث في الرسائل</string>
-    <string name="chat_search_previous">النتيجة السابقة</string>
-    <string name="chat_search_next">النتيجة التالية</string>
-    <string name="chat_search_close">إغلاق البحث</string>
-    <string name="chat_search_result_count">%1$d/%2$d</string>
+    <string name="chat_search_previous">السابق</string>
+    <string name="chat_search_next">التالي</string>
     <string name="chat_settings_title">إعدادات المحادثة</string>
     <string name="chat_font_size">حجم خط الرسائل</string>
     <string name="chat_font_size_small">صغير</string>
@@ -200,7 +197,7 @@
     <string name="chat_positive_integer_error">أدخل عددا صحيحا موجبا</string>
     <string name="chat_nonnegative_number_error">أدخل رقما محدودا يساوي 0 أو أكثر</string>
     <string name="chat_probability_error">أدخل رقما محدودا بين 0 و1</string>
-    <string name="model_manager_title">إعدادات النماذج والتخزين</string>
+    <string name="model_manager_title">النماذج</string>
     <string name="about_app_and_developer">حول التطبيق والمطور</string>
     <string name="about_app_summary">دردشة ذكاء اصطناعي خاصة على الجهاز وإدارة النماذج لـ AutoJs6</string>
     <string name="about_developer">المطور</string>
@@ -243,7 +240,7 @@
     <string name="app_settings_theme_three_stone_ai">برتقالي 3-Stone AI</string>
     <string name="app_settings_theme_purple">أرجواني</string>
     <string name="app_settings_theme_teal">فيروزي</string>
-    <string name="app_settings_title">إعدادات التطبيق</string>
+    <string name="app_settings_title">الإعدادات</string>
     <string name="release_history_load_failed">تعذر تحميل سجل الإصدارات المحلي</string>
     <string name="release_history_title">سجل الإصدارات</string>
     <string name="navigation_back">رجوع</string>
@@ -291,7 +288,7 @@
     <string name="online_ai_yes">نعم</string>
     <string name="online_ai_no">لا</string>
     <string name="online_ai_provider">المزود</string>
-    <string name="online_ai_provider_custom">متوافق مع OpenAI</string>
+    <string name="online_ai_provider_custom">OpenAI-compatible</string>
     <string name="online_ai_profile_name">اسم الملف الشخصي</string>
     <string name="online_ai_profile_name_hint">مثال, العمل</string>
     <string name="online_ai_base_url">عنوان HTTPS الأساسي</string>
@@ -328,7 +325,7 @@
     <string name="online_ai_profile_deleted">تم حذف الملف الشخصي عبر الإنترنت</string>
     <string name="online_ai_profile_delete_failed">تعذر حذف الملف الشخصي عبر الإنترنت</string>
     <string name="online_ai_test_title">اختبار الاتصال?</string>
-    <string name="online_ai_test_message">يرسل هذا مطالبة قصيرة إلى %1$s وقد يسبب رسوما من المزود. لا يتم حفظ نص الاستجابة. هل تريد المتابعة?</string>
+    <string name="online_ai_test_message">يرسل هذا مطالبة قصيرة إلى %1$s. لا يتم حفظ نص الاستجابة. هل تريد المتابعة?</string>
     <string name="online_ai_test_start">اختبار</string>
     <string name="online_ai_test_progress">جار اختبار %1$s...</string>
     <string name="online_ai_test_success">نجح اختبار الاتصال</string>

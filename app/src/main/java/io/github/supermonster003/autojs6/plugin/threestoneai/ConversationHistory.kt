@@ -24,7 +24,8 @@ internal data class StoredConversation(
 }
 
 internal object ConversationHistoryPolicy {
-    const val MAXIMUM_CONVERSATIONS = 50
+    /** Decoder guard only; persisted history is governed by its byte budget, not an item cap. */
+    const val MAXIMUM_SERIALIZED_CONVERSATIONS = 100_000
     const val MAXIMUM_MESSAGES_PER_CONVERSATION = 256
 
     fun titleFor(messages: List<ChatMessage>, fallback: String): String {
@@ -52,7 +53,6 @@ internal object ConversationHistoryPolicy {
         val retained = ArrayList<StoredConversation>()
         var retainedBytes = 0
         for (conversation in newestById.values) {
-            if (retained.size >= MAXIMUM_CONVERSATIONS) break
             val estimatedBytes = conversation.estimatedBytes()
             if (retained.isNotEmpty() && retainedBytes + estimatedBytes > MAXIMUM_HISTORY_BYTES) {
                 break
@@ -212,7 +212,9 @@ internal object ConversationHistoryCodec {
         return DataInputStream(ByteArrayInputStream(bytes)).use { input ->
             require(input.readInt() == MAGIC) { "Invalid conversation history magic" }
             require(input.readInt() == VERSION) { "Unsupported conversation history version" }
-            val count = input.readBoundedCount(ConversationHistoryPolicy.MAXIMUM_CONVERSATIONS)
+            val count = input.readBoundedCount(
+                ConversationHistoryPolicy.MAXIMUM_SERIALIZED_CONVERSATIONS,
+            )
             buildList(count) {
                 repeat(count) { add(readConversation(input)) }
             }.also {

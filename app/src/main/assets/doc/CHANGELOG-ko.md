@@ -23,8 +23,8 @@
 * `기능` 글꼴 크기, Enter 키 동작, 무제한 또는 사용자 지정 output token, 모델 기본값 또는 사용자 지정 `temperature`, `topK`, `topP`를 대화 설정에 추가
 * `기능` 스트리밍 중 인라인 `$\text{...}$` 콘텐츠를 렌더링하고 일반 수학 명령과 위 첨자 및 아래 첨자 스타일을 지원
 * `기능` 플러그인이 관리하는 Android Keystore 자격 증명 저장소를 추가하고 AES-256-GCM, profile에 바인딩된 인증 암호문, 프로세스 간 원자적 비공개 파일, configured 상태만 조회 및 평문 즉시 삭제를 지원
-* `기능` HTTPS 전용 OpenAI Compatible endpoint를 위한 엄격한 비밀정보 비포함 온라인 profile 저장소를 추가하고 canonical UUID, 프로세스 간 원자적 metadata, provider 또는 origin 변경 시 자격 증명의 명시적 교체 또는 삭제를 강제
-* `기능` 사용자 지정 baseUrl, 자격 증명, 모델 profile을 위한 플러그인 내부 OpenAI Compatible HTTPS 실행 backend를 추가하고 제한된 SSE 및 JSON fallback 스트리밍, 정확한 취소, provider usage, 완료된 턴만의 영구 기록, JSON Schema 요청 mapping, 민감 정보 없는 고정 오류를 지원; 구성된 `profile:*` target이 AI Provider V2를 통해 직접 호출
+* `기능` HTTPS 전용 OpenAI-compatible endpoint를 위한 엄격한 비밀정보 비포함 온라인 profile 저장소를 추가하고 canonical UUID, 프로세스 간 원자적 metadata, provider 또는 origin 변경 시 자격 증명의 명시적 교체 또는 삭제를 강제
+* `기능` 사용자 지정 baseUrl, 자격 증명, 모델 profile을 위한 플러그인 내부 OpenAI-compatible HTTPS 실행 backend를 추가하고 제한된 SSE 및 JSON fallback 스트리밍, 정확한 취소, provider usage, 완료된 턴만의 영구 기록, JSON Schema 요청 mapping, 민감 정보 없는 고정 오류를 지원; 구성된 `profile:*` target이 AI Provider V2를 통해 직접 호출
 * `기능` 호스트 카탈로그와 정렬된 OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter 프리셋을 추가; 통합 온라인 실행 계층은 OpenAI-compatible 프로토콜을 재사용하고 Anthropic Messages와 Gemini GenerateContent 고유의 인증, 요청, SSE 종료, usage, JSON Schema를 각각 어댑트하며 프로토콜 간 또는 로컬/온라인 자동 fallback은 제공하지 않음
 * `기능` 10개 언어 온라인 서비스 설정 UI를 추가하여 profile 추가, 편집, 삭제, API 키 비노출 교체 및 지우기, 기본 대상 선택, 자격 증명 접근 전 종량제 네트워크 허용 적용, 취소 가능한 최대 120초 명시 연결 테스트를 지원; 설정은 프로세스 간 원자 문서를 공유하고 V2 target catalog를 동적으로 갱신
 * `기능` 런처 채팅에 통합 로컬/클라우드 대상 선택기를 추가: 각 대화는 하나의 대상 스냅샷을 저장하고, 메시지가 있는 대화의 전환은 새 대화를 권장하며, 기존 문맥으로 계속하려면 명시적 확인과 변경 기록이 필요

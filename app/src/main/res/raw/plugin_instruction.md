@@ -6,7 +6,7 @@ The plugin requires AutoJs6 host build 5276 or later and Android API 24 or later
 
 ## Get a model
 
-Open the plugin model manager and tap **Download recommended model** to choose a pinned LiteRT Community model and any writable SAF save location. The plugin shows progress and verifies the LiteRT-LM header, exact byte count, and SHA-256 before enabling **Import downloaded model**. Inference never uses the network. The downloaded external file and its imported app-private copy occupy space separately; if Android terminates the process mid-download, delete any partial external document manually.
+Open the plugin model manager and tap **Browse LiteRT-LM models** to inspect the available catalog and useful runtime details. Entries marked **Verified download** can be saved to any writable SAF location. The plugin shows progress and verifies the LiteRT-LM header, exact byte count, and SHA-256 before enabling **Import downloaded model**. Inference never uses the network. The downloaded external file and its imported app-private copy occupy space separately; if Android terminates the process mid-download, delete any partial external document manually.
 
 ## Quick start (recommended)
 
@@ -499,6 +499,6 @@ Safety and operational limits:
 - CPU, GPU, and NPU backend profiles are explicit. GPU is available only when the plugin process can load system OpenCL; NPU is reported unavailable because its EAP runtime is not packaged. No unavailable profile falls back to CPU.
 - A response schema must be a JSON object no larger than 64 KiB; supported keywords follow the bundled LiteRT-LM/LLGuidance runtime. Completed structured output is parsed and validated strictly, so provide enough `maxTokens` for the entire JSON value.
 - Usage token counts come from LiteRT-LM Conversation KV-cache and decode counters without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, target catalog discovery, and dispatch time.
-- The plugin requests `INTERNET` only for explicit recommended-model downloads and no broad storage permission. Inference never uses the network; SAF grants access only to the user-selected source or destination.
+- The plugin requests `INTERNET` only for explicit verified-model downloads and no broad storage permission. Inference never uses the network; SAF grants access only to the user-selected source or destination.
 - Only the same-signature AutoJs6 host may bind the provider service.
 - Previous model generations named by SHA-256 hash are retained for cross-process safety and continue to occupy app-private storage.

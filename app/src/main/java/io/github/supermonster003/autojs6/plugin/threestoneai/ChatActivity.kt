@@ -21,10 +21,14 @@ import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.ArrayAdapter
+import android.widget.AbsListView
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.CheckedTextView
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -34,9 +38,11 @@ import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSession
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
@@ -47,12 +53,15 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationM
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRole
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationStatistics
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.AvailableLiteRtModelCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
+import java.text.DateFormat
+import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Executors
@@ -64,13 +73,13 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var historyStore: ConversationHistoryStore
     private lateinit var uiSettingsStore: ChatUiSettingsStore
+    private lateinit var updateController: AppUpdateController
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var drawerHistoryColumn: LinearLayout
     private lateinit var toolbar: Toolbar
+    private lateinit var targetLocalityStatus: TextView
     private lateinit var targetStatus: TextView
-    private lateinit var searchNavigationBar: LinearLayout
-    private lateinit var searchView: SearchView
-    private lateinit var searchResultCount: TextView
-    private lateinit var searchPrevious: SearchActionView
-    private lateinit var searchNext: SearchActionView
+    private lateinit var searchInput: EditText
     private lateinit var messagesScroll: ScrollView
     private lateinit var messagesColumn: LinearLayout
     private lateinit var emptyState: LinearLayout
@@ -144,6 +153,7 @@ class ChatActivity : ConfiguredActivity() {
         historyStore = ConversationHistoryStore(applicationContext)
         uiSettingsStore = ChatUiSettingsStore(applicationContext)
         uiSettings = uiSettingsStore.load()
+        updateController = AppUpdateController(this)
         if (!restoreTranscript(savedInstanceState)) {
             restoreStoredConversation(
                 intent.getStringExtra(ConversationNavigation.EXTRA_CONVERSATION_ID)
@@ -152,11 +162,13 @@ class ChatActivity : ConfiguredActivity() {
         }
         title = getString(R.string.chat_screen_title)
         setContentView(createContentView())
+        installBackNavigation()
         restoredComposerText?.let(input::setText)
         restoredSearchQuery?.takeIf(String::isNotBlank)?.let { query ->
             toolbar.post {
                 showSearch()
-                searchView.setQuery(query, false)
+                searchInput.setText(query)
+                searchInput.setSelection(searchInput.text.length)
             }
         }
         renderEditingState()
@@ -185,54 +197,88 @@ class ChatActivity : ConfiguredActivity() {
         }
         searchMenuItem = menu.add(0, MENU_SEARCH, 2, R.string.chat_search_menu).apply {
             icon = tintedDrawable(R.drawable.ic_search_24, appPalette.onPrimary)
+            actionView = createSearchActionView()
             setShowAsAction(
                 MenuItem.SHOW_AS_ACTION_IF_ROOM or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW,
             )
-            actionView = createSearchView()
             setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
                 override fun onMenuItemActionExpand(item: MenuItem): Boolean {
                     searchExpanded = true
-                    searchNavigationBar.visibility = View.VISIBLE
-                    toolbar.post { tintToolbarIcons(toolbar) }
+                    updateSearchControls()
+                    toolbar.post {
+                        tintToolbarIcons(toolbar)
+                        focusSearchInput()
+                    }
                     return true
                 }
 
                 override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
                     clearSearchState()
+                    toolbar.post { tintToolbarIcons(toolbar) }
                     return true
                 }
             })
         }
-        menu.add(0, MENU_CHAT_SETTINGS, 3, R.string.chat_settings_title)
+        menu.add(0, MENU_MODEL_SETTINGS, 3, R.string.model_manager_title)
         menu.add(0, MENU_APP_SETTINGS, 4, R.string.app_settings_title)
-        menu.add(0, MENU_MODEL_SETTINGS, 5, R.string.chat_model_settings)
         toolbar.post { tintToolbarIcons(toolbar) }
         return true
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        menu.findItem(MENU_NEW_CONVERSATION)?.isEnabled = messages.isNotEmpty()
-        menu.findItem(MENU_SEARCH)?.isEnabled = messages.any { message -> message.text.isNotBlank() }
+        renderOptionsMenuState(menu)
         toolbar.post { tintToolbarIcons(toolbar) }
         return super.onPrepareOptionsMenu(menu)
     }
 
+    private fun renderOptionsMenuState(menu: Menu) {
+        val hasSearchResults = searchMatches.isNotEmpty()
+        menu.findItem(MENU_NEW_CONVERSATION)?.apply {
+            title = getString(
+                if (searchExpanded) R.string.chat_search_previous else R.string.chat_new_conversation,
+            )
+            icon = tintedDrawable(
+                if (searchExpanded) R.drawable.ic_arrow_up_24 else R.drawable.ic_add_24,
+                appPalette.onPrimary,
+            )
+            isEnabled = if (searchExpanded) hasSearchResults else messages.isNotEmpty()
+        }
+        menu.findItem(MENU_CONVERSATION_HISTORY)?.apply {
+            title = getString(
+                if (searchExpanded) R.string.chat_search_next else R.string.chat_history_title,
+            )
+            icon = tintedDrawable(
+                if (searchExpanded) R.drawable.ic_arrow_down_24 else R.drawable.ic_history_24,
+                appPalette.onPrimary,
+            )
+            isEnabled = !searchExpanded || hasSearchResults
+        }
+        menu.findItem(MENU_SEARCH)?.apply {
+            isEnabled = searchExpanded || messages.any { message -> message.text.isNotBlank() }
+            icon = tintedDrawable(R.drawable.ic_search_24, appPalette.onPrimary)
+        }
+    }
+
+    private fun refreshOptionsMenuState() {
+        if (::toolbar.isInitialized) renderOptionsMenuState(toolbar.menu)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
         MENU_NEW_CONVERSATION -> {
-            startNewConversation()
+            if (searchExpanded) moveSearchResult(-1) else startNewConversation()
             true
         }
         MENU_CONVERSATION_HISTORY -> {
-            persistConversationNow()
-            startActivity(Intent(this, ConversationHistoryActivity::class.java))
+            if (searchExpanded) {
+                moveSearchResult(1)
+            } else {
+                persistConversationNow()
+                startActivity(Intent(this, ConversationHistoryActivity::class.java))
+            }
             true
         }
         MENU_SEARCH -> {
             showSearch()
-            true
-        }
-        MENU_CHAT_SETTINGS -> {
-            showChatSettings()
             true
         }
         MENU_APP_SETTINGS -> {
@@ -250,6 +296,18 @@ class ChatActivity : ConfiguredActivity() {
         super.onStart()
         managerAttached = true
         renderManagerState(importCoordinator.attachManager(managerObserver))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val latestSettings = uiSettingsStore.load()
+        if (latestSettings != uiSettings) {
+            uiSettings = latestSettings
+            applyUiSettings()
+        }
+        refreshTargetCatalog(importCoordinator.managerState())
+        refreshDrawerHistory()
+        updateController.checkAutomaticallyIfDue()
     }
 
     override fun onStop() {
@@ -317,7 +375,7 @@ class ChatActivity : ConfiguredActivity() {
         outState.putString(STATE_COMPOSER_TEXT, input.text.toString())
         outState.putString(
             STATE_SEARCH_QUERY,
-            if (::searchView.isInitialized) searchView.query.toString() else restoredSearchQuery,
+            if (::searchInput.isInitialized) searchInput.text.toString() else restoredSearchQuery,
         )
         editingMessageId?.let { id -> outState.putLong(STATE_EDITING_MESSAGE_ID, id) }
         outState.putString(STATE_DRAFT_BEFORE_EDITING, draftBeforeEditing)
@@ -326,6 +384,7 @@ class ChatActivity : ConfiguredActivity() {
 
     override fun onDestroy() {
         destroyed = true
+        updateController.cancel()
         if (managerAttached) {
             importCoordinator.detachManager(managerObserver)
             managerAttached = false
@@ -350,19 +409,31 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun createContentView(): View {
-        val root = LinearLayout(this).apply {
+        val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(getColor(R.color.window_background))
         }
 
+        val statusBarBackground = createStatusBarBackground()
+        content.addView(
+            statusBarBackground,
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
+        )
         toolbar = createAppToolbar(
             R.string.app_name,
             showBack = false,
         )
-        root.addView(toolbar)
-        root.addView(createTargetBar())
-        root.addView(createSearchNavigationBar())
-        root.addView(View(this).apply { setBackgroundColor(getColor(R.color.divider)) },
+        toolbar.navigationIcon = tintedDrawable(R.drawable.ic_menu_24, appPalette.onPrimary)
+        toolbar.setNavigationContentDescription(R.string.navigation_open_drawer)
+        toolbar.setNavigationOnClickListener {
+            persistConversationNow()
+            refreshDrawerHistory()
+            drawerLayout.openDrawer(GravityCompat.START)
+        }
+        installToolbarTitleLongPress()
+        content.addView(toolbar)
+        content.addView(createTargetBar())
+        content.addView(View(this).apply { setBackgroundColor(getColor(R.color.divider)) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
 
         val conversationFrame = FrameLayout(this)
@@ -401,7 +472,7 @@ class ChatActivity : ConfiguredActivity() {
                 marginEnd = dp(28)
             },
         )
-        root.addView(
+        content.addView(
             conversationFrame,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -409,9 +480,80 @@ class ChatActivity : ConfiguredActivity() {
                 1f,
             ),
         )
-        root.addView(createComposer())
-        applySystemBarInsets(root)
-        return root
+        val composer = createComposer()
+        content.addView(composer)
+
+        val navigationDrawer = createNavigationDrawer()
+
+        drawerLayout = DrawerLayout(this).apply {
+            setBackgroundColor(appPalette.windowBackground)
+            addView(
+                content,
+                DrawerLayout.LayoutParams(
+                    DrawerLayout.LayoutParams.MATCH_PARENT,
+                    DrawerLayout.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            addView(
+                navigationDrawer,
+                DrawerLayout.LayoutParams(
+                    navigationDrawerWidth(),
+                    DrawerLayout.LayoutParams.MATCH_PARENT,
+                ).apply { gravity = GravityCompat.START },
+            )
+        }
+        applyChatSystemBarInsets(content, composer, navigationDrawer, statusBarBackground)
+        return drawerLayout
+    }
+
+    private fun applyChatSystemBarInsets(
+        content: View,
+        composer: View,
+        navigationDrawer: View,
+        statusBarBackground: View,
+    ) {
+        val contentPadding = ViewPadding.from(content)
+        val composerPadding = ViewPadding.from(composer)
+        applySystemBarInsets(drawerLayout) { bars ->
+            content.setPadding(
+                contentPadding.left + bars.left,
+                contentPadding.top,
+                contentPadding.right + bars.right,
+                contentPadding.bottom,
+            )
+            updateStatusBarBackgroundHeight(statusBarBackground, bars.top)
+            composer.setPadding(
+                composerPadding.left,
+                composerPadding.top,
+                composerPadding.right,
+                composerPadding.bottom + bars.bottom,
+            )
+            applyDrawerSystemBarMargins(navigationDrawer, bars)
+        }
+    }
+
+    private fun updateStatusBarBackgroundHeight(statusBarBackground: View, height: Int) {
+        val params = statusBarBackground.layoutParams ?: return
+        if (params.height == height) return
+        params.height = height
+        statusBarBackground.layoutParams = params
+    }
+
+    private fun applyDrawerSystemBarMargins(
+        navigationDrawer: View,
+        bars: SystemBarPadding,
+    ) {
+        val params = navigationDrawer.layoutParams as? DrawerLayout.LayoutParams ?: return
+        if (
+            params.leftMargin == bars.left &&
+            params.topMargin == bars.top &&
+            params.rightMargin == bars.right &&
+            params.bottomMargin == bars.bottom
+        ) {
+            return
+        }
+        params.setMargins(bars.left, bars.top, bars.right, bars.bottom)
+        navigationDrawer.layoutParams = params
     }
 
     private fun createTargetBar(): View = LinearLayout(this).apply {
@@ -419,9 +561,9 @@ class ChatActivity : ConfiguredActivity() {
         gravity = Gravity.CENTER_VERTICAL
         isClickable = true
         isFocusable = true
-        contentDescription = getString(R.string.chat_open_target_selector)
-        minimumHeight = dp(36)
-        setPaddingRelative(dp(18), dp(3), dp(12), dp(3))
+        contentDescription = getString(R.string.chat_open_model_switcher)
+        minimumHeight = dp(42)
+        setPaddingRelative(dp(16), dp(4), dp(10), dp(4))
         background = roundedRipple(
             fillColor = R.color.window_background,
             rippleColor = R.color.chat_ripple,
@@ -429,11 +571,13 @@ class ChatActivity : ConfiguredActivity() {
         )
         setOnClickListener { showTargetSelector() }
 
-        addView(TextView(context).apply {
-            text = "\u25cf"
-            textSize = 10f
-            setTextColor(appPalette.accent)
-        }, LinearLayout.LayoutParams(dp(18), LinearLayout.LayoutParams.WRAP_CONTENT))
+        targetLocalityStatus = TextView(context).apply {
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(getColor(R.color.text_color_secondary))
+            setPaddingRelative(0, 0, dp(10), 0)
+        }
+        addView(targetLocalityStatus)
         targetStatus = TextView(context).apply {
             textSize = 12f
             maxLines = 1
@@ -449,70 +593,285 @@ class ChatActivity : ConfiguredActivity() {
         })
     }
 
-    private fun createSearchNavigationBar(): View = LinearLayout(this).apply {
-        searchNavigationBar = this
+    private fun createSearchActionView(): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        visibility = View.GONE
-        gravity = Gravity.END or Gravity.CENTER_VERTICAL
-        setPaddingRelative(dp(12), dp(2), dp(8), dp(3))
-        searchResultCount = TextView(context).apply {
-            textSize = 12f
-            gravity = Gravity.CENTER
-            setTextColor(getColor(R.color.text_color_secondary))
-            setPaddingRelative(dp(7), 0, dp(5), 0)
-        }
-        addView(searchResultCount, LinearLayout.LayoutParams(dp(64), dp(38)))
-        searchPrevious = searchAction(SearchActionIcon.PREVIOUS, R.string.chat_search_previous) {
-            moveSearchResult(-1)
-        }
-        addView(searchPrevious, LinearLayout.LayoutParams(dp(40), dp(38)))
-        searchNext = searchAction(SearchActionIcon.NEXT, R.string.chat_search_next) {
-            moveSearchResult(1)
-        }
-        addView(searchNext, LinearLayout.LayoutParams(dp(40), dp(38)))
-        updateSearchControls()
-    }
+        minimumWidth = (resources.displayMetrics.widthPixels - dp(208))
+            .coerceIn(dp(120), dp(240))
+        layoutParams = Toolbar.LayoutParams(
+            Toolbar.LayoutParams.MATCH_PARENT,
+            Toolbar.LayoutParams.MATCH_PARENT,
+        )
+        setPaddingRelative(dp(4), 0, dp(4), 0)
 
-    private fun searchAction(
-        icon: SearchActionIcon,
-        descriptionResource: Int,
-        action: () -> Unit,
-    ) = SearchActionView(this, icon, appPalette.accent).apply {
-        contentDescription = getString(descriptionResource)
-        applySelectableBackground(this)
-        setOnClickListener { action() }
-    }
-
-    private fun createSearchView() = SearchView(this).apply {
-        searchView = this
-        queryHint = getString(R.string.chat_search_hint)
-        maxWidth = Int.MAX_VALUE
-        isSubmitButtonEnabled = false
-        setIconifiedByDefault(false)
-        setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                hideKeyboard(this@apply)
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                refreshSearchResults(selectFirst = true, locate = true)
-                return true
-            }
-        })
-        findViewById<EditText?>(androidx.appcompat.R.id.search_src_text)?.apply {
+        searchInput = EditText(context).apply {
+            hint = getString(R.string.chat_search_hint)
+            textSize = 18f
+            maxLines = 1
+            inputType = InputType.TYPE_CLASS_TEXT
+            imeOptions = EditorInfo.IME_ACTION_SEARCH
+            gravity = Gravity.CENTER_VERTICAL
+            includeFontPadding = false
+            minimumHeight = 0
             setTextColor(appPalette.onPrimary)
             setHintTextColor(AppColorPolicy.withAlpha(appPalette.onPrimary, 0xB3))
+            setPaddingRelative(0, 0, 0, 0)
+            background = null
             tintEditText(this)
+            backgroundTintList = null
+            setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    hideKeyboard(this)
+                    true
+                } else {
+                    false
+                }
+            }
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(
+                    value: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int,
+                ) = Unit
+
+                override fun onTextChanged(
+                    value: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int,
+                ) {
+                    if (searchExpanded) {
+                        refreshSearchResults(selectFirst = true, locate = true)
+                    }
+                }
+
+                override fun afterTextChanged(value: Editable?) = Unit
+            })
         }
-        listOf(
-            androidx.appcompat.R.id.search_close_btn,
-            androidx.appcompat.R.id.search_mag_icon,
-            androidx.appcompat.R.id.search_go_btn,
-        ).forEach { identifier ->
-            findViewById<ImageView?>(identifier)?.setColorFilter(appPalette.onPrimary)
+        addView(
+            searchInput,
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                1f,
+            ),
+        )
+    }
+
+    private fun createNavigationDrawer(): View = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        elevation = dp(16).toFloat()
+        setBackgroundColor(appPalette.windowBackground)
+
+        addView(TextView(context).apply {
+            text = getString(R.string.chat_history_title)
+            textSize = 19f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(appPalette.primaryText)
+            setPaddingRelative(dp(20), dp(20), dp(20), dp(12))
+        })
+        addView(
+            ScrollView(context).apply {
+                isFillViewport = true
+                drawerHistoryColumn = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPaddingRelative(dp(10), 0, dp(10), dp(12))
+                }
+                addView(drawerHistoryColumn)
+            },
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f,
+            ),
+        )
+        addView(
+            View(context).apply { setBackgroundColor(appPalette.divider) },
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)),
+        )
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPaddingRelative(dp(4), dp(5), dp(4), dp(5))
+            addView(
+                drawerActionButton(R.drawable.ic_settings_24, R.string.app_settings_title) {
+                    startActivity(Intent(this@ChatActivity, AppSettingsActivity::class.java))
+                },
+                LinearLayout.LayoutParams(0, dp(70), 1f),
+            )
+            addView(
+                drawerActionButton(R.drawable.ic_model_24, R.string.model_manager_title) {
+                    openModelManager()
+                },
+                LinearLayout.LayoutParams(0, dp(70), 1f),
+            )
+            addView(
+                drawerActionButton(R.drawable.ic_restart_24, R.string.drawer_restart) {
+                    restartApplication()
+                },
+                LinearLayout.LayoutParams(0, dp(70), 1f),
+            )
+            addView(
+                drawerActionButton(R.drawable.ic_exit_24, R.string.drawer_exit) {
+                    exitApplication()
+                },
+                LinearLayout.LayoutParams(0, dp(70), 1f),
+            )
+        })
+        refreshDrawerHistory()
+    }
+
+    private fun drawerActionButton(
+        iconResource: Int,
+        titleResource: Int,
+        action: () -> Unit,
+    ) = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        isClickable = true
+        isFocusable = true
+        contentDescription = getString(titleResource)
+        applySelectableBackground(this)
+        addView(ImageView(context).apply {
+            setImageDrawable(tintedDrawable(iconResource, appPalette.secondaryText))
+            contentDescription = null
+        }, LinearLayout.LayoutParams(dp(22), dp(22)))
+        addView(TextView(context).apply {
+            text = getString(titleResource)
+            textSize = 11.5f
+            gravity = Gravity.CENTER
+            maxLines = 1
+            setTextColor(appPalette.secondaryText)
+            setPaddingRelative(0, dp(5), 0, 0)
+        })
+        setOnClickListener {
+            drawerLayout.closeDrawer(GravityCompat.START)
+            action()
         }
+    }
+
+    private fun navigationDrawerWidth(): Int {
+        val screenWidthDp = resources.configuration.screenWidthDp.toFloat()
+        val targetWidthDp = 288f.coerceIn(screenWidthDp * 0.4f, screenWidthDp * 0.9f)
+        return dp(targetWidthDp.toInt())
+    }
+
+    private fun refreshDrawerHistory() {
+        if (!::drawerHistoryColumn.isInitialized) return
+        val conversations = historyStore.loadAll()
+        drawerHistoryColumn.removeAllViews()
+        if (conversations.isEmpty()) {
+            drawerHistoryColumn.addView(TextView(this).apply {
+                text = getString(R.string.chat_history_empty_title)
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setTextColor(appPalette.secondaryText)
+                setPaddingRelative(dp(18), dp(42), dp(18), dp(28))
+            })
+            return
+        }
+        conversations.forEach { conversation ->
+            drawerHistoryColumn.addView(drawerHistoryRow(conversation))
+        }
+    }
+
+    private fun drawerHistoryRow(conversation: StoredConversation): View {
+        val messageCount = conversation.messages.count { message ->
+            message.role != ChatMessageRole.NOTICE
+        }
+        val updated = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+            .format(Date(conversation.updatedAtMillis))
+        val countAndTime = getString(R.string.chat_history_count_and_time, messageCount, updated)
+        val metadata = conversation.target?.let { snapshot ->
+            getString(R.string.chat_history_metadata, countAndTime, targetDisplayName(snapshot))
+        } ?: countAndTime
+        val current = conversation.id == currentConversationId
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            isClickable = true
+            isFocusable = true
+            contentDescription = conversation.title
+            setPaddingRelative(dp(12), dp(11), dp(12), dp(11))
+            background = roundedRippleColor(
+                fillColor = if (current) appPalette.assistantSurface else appPalette.windowBackground,
+                rippleColor = getColor(R.color.chat_ripple),
+                radiusDp = 11,
+            )
+            addView(TextView(context).apply {
+                text = conversation.title
+                textSize = 14.5f
+                typeface = if (current) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setTextColor(appPalette.primaryText)
+            })
+            addView(TextView(context).apply {
+                text = metadata
+                textSize = 11f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setTextColor(appPalette.secondaryText)
+                setPaddingRelative(0, dp(5), 0, 0)
+            })
+            setOnClickListener {
+                drawerLayout.closeDrawer(GravityCompat.START)
+                if (conversation.id != currentConversationId) switchConversation(conversation.id)
+            }
+        }.also { row ->
+            row.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = dp(4) }
+        }
+    }
+
+    private fun installToolbarTitleLongPress() {
+        toolbar.post {
+            val titleView = (0 until toolbar.childCount)
+                .asSequence()
+                .map(toolbar::getChildAt)
+                .filterIsInstance<TextView>()
+                .firstOrNull { candidate -> candidate.text?.toString() == toolbar.title?.toString() }
+                ?: return@post
+            titleView.isLongClickable = true
+            titleView.setOnLongClickListener {
+                startActivity(Intent(this, AppSettingsActivity::class.java))
+                true
+            }
+        }
+    }
+
+    private fun installBackNavigation() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when {
+                    drawerLayout.isDrawerOpen(GravityCompat.START) ->
+                        drawerLayout.closeDrawer(GravityCompat.START)
+                    searchExpanded -> closeSearch()
+                    else -> {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                        isEnabled = true
+                    }
+                }
+            }
+        })
+    }
+
+    private fun restartApplication() {
+        persistConversationNow()
+        val component = packageManager.getLaunchIntentForPackage(packageName)?.component
+        if (component == null) {
+            recreate()
+            return
+        }
+        startActivity(Intent.makeRestartActivityTask(component))
+    }
+
+    private fun exitApplication() {
+        persistConversationNow()
+        finishAndRemoveTask()
     }
 
     private fun createEmptyState(): LinearLayout {
@@ -630,17 +989,13 @@ class ChatActivity : ConfiguredActivity() {
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.BOTTOM
-            setPaddingRelative(dp(6), dp(4), dp(6), dp(4))
-            background = roundedDrawableColor(
-                fillColor = appPalette.inputSurface,
-                radiusDp = 18,
-                strokeColor = appPalette.chatBorder,
-            )
+            isBaselineAligned = false
 
             input = EditText(context).apply {
                 textSize = uiSettings.fontSize.inputSp
                 maxLines = 6
                 minLines = 1
+                minimumHeight = dp(COMPOSER_CONTROL_MIN_HEIGHT_DP)
                 inputType = InputType.TYPE_CLASS_TEXT or
                     InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
                     InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -649,8 +1004,7 @@ class ChatActivity : ConfiguredActivity() {
                     InputFilter.LengthFilter(ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS),
                 )
                 setTextColor(getColor(R.color.text_color_primary))
-                setHintTextColor(getColor(R.color.text_color_secondary))
-                setPaddingRelative(dp(12), dp(9), dp(8), dp(9))
+                setPaddingRelative(dp(12), dp(8), dp(12), dp(8))
                 background = null
                 tintEditText(this)
                 setOnEditorActionListener { _, actionId, _ ->
@@ -686,19 +1040,42 @@ class ChatActivity : ConfiguredActivity() {
                     override fun afterTextChanged(value: Editable?) = Unit
                 })
             }
-            addView(input, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(
+                FrameLayout(context).apply {
+                    background = roundedDrawableColor(
+                        fillColor = appPalette.inputSurface,
+                        radiusDp = COMPOSER_CORNER_RADIUS_DP,
+                        strokeColor = appPalette.chatBorder,
+                    )
+                    addView(
+                        input,
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                        ),
+                    )
+                },
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    gravity = Gravity.BOTTOM
+                },
+            )
 
             sendButton = Button(context).apply {
                 text = getString(R.string.chat_send)
-                textSize = 14f
+                textSize = 13.5f
                 isAllCaps = false
-                minWidth = dp(72)
-                minimumHeight = dp(46)
+                minWidth = dp(COMPOSER_SEND_MIN_WIDTH_DP)
+                minimumWidth = dp(COMPOSER_SEND_MIN_WIDTH_DP)
+                minimumHeight = composerSingleLineHeight()
+                stateListAnimator = null
+                elevation = 0f
+                translationZ = 0f
+                setPaddingRelative(dp(12), 0, dp(12), 0)
                 setTextColor(appPalette.onPrimary)
                 background = roundedRippleColor(
                     fillColor = appPalette.primary,
                     rippleColor = AppColorPolicy.withAlpha(appPalette.onPrimary, 0x40),
-                    radiusDp = 14,
+                    radiusDp = COMPOSER_CORNER_RADIUS_DP,
                 )
                 setOnClickListener {
                     if (isGenerating) stopGeneration() else sendCurrentMessage()
@@ -706,8 +1083,11 @@ class ChatActivity : ConfiguredActivity() {
             }
             addView(sendButton, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                dp(46),
-            ))
+                composerSingleLineHeight(),
+            ).apply {
+                gravity = Gravity.BOTTOM
+                marginStart = dp(8)
+            })
         }, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -720,7 +1100,27 @@ class ChatActivity : ConfiguredActivity() {
         setPaddingRelative(0, 0, 0, dp(8))
     }
 
+    private fun composerSingleLineHeight(): Int = (
+        input.lineHeight + input.compoundPaddingTop + input.compoundPaddingBottom
+        ).coerceAtLeast(dp(COMPOSER_CONTROL_MIN_HEIGHT_DP))
+
+    private fun syncComposerControlHeight() {
+        if (!::input.isInitialized || !::sendButton.isInitialized) return
+        input.minimumHeight = dp(COMPOSER_CONTROL_MIN_HEIGHT_DP)
+        val height = composerSingleLineHeight()
+        sendButton.minimumHeight = height
+        val params = sendButton.layoutParams ?: return
+        if (params.height != height) {
+            params.height = height
+            sendButton.layoutParams = params
+        }
+    }
+
     private fun renderManagerState(state: ModelManagerState) {
+        refreshTargetCatalog(state)
+    }
+
+    private fun refreshTargetCatalog(state: ModelManagerState) {
         if (destroyed) return
         val catalogResult = runCatching {
             (application as ThreeStoneAiApplication).aiBackend.catalog()
@@ -734,13 +1134,26 @@ class ChatActivity : ConfiguredActivity() {
         if (conversationTarget == null && messages.isEmpty()) {
             conversationTarget = targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot)
         }
+        val refreshedSnapshot = conversationTarget?.let { current ->
+            targetCatalog?.targets
+                ?.singleOrNull { target -> target.targetId == current.targetId }
+                ?.let(ConversationTargetSnapshot::from)
+        }
+        val targetMetadataChanged = refreshedSnapshot != null && refreshedSnapshot != conversationTarget
+        if (targetMetadataChanged) conversationTarget = refreshedSnapshot
         renderTargetUi()
+        if (targetMetadataChanged && messages.isNotEmpty()) {
+            persistConversationNow()
+            refreshDrawerHistory()
+        }
     }
 
     private fun renderTargetUi() {
         if (!::targetStatus.isInitialized) return
         val snapshot = conversationTarget
         val resolved = resolvedConversationTarget()
+        targetLocalityStatus.visibility = if (snapshot == null) View.GONE else View.VISIBLE
+        targetLocalityStatus.text = snapshot?.let { targetLocalityLabel(it.locality) }.orEmpty()
         targetStatus.text = when {
             targetCatalogAvailability == TargetCatalogAvailability.LOADING ->
                 getString(R.string.chat_target_loading)
@@ -750,9 +1163,9 @@ class ChatActivity : ConfiguredActivity() {
             resolved == null || !resolved.configured || !resolved.available ||
                 !resolved.capabilities.streaming -> getString(
                 R.string.chat_target_unavailable_format,
-                targetSummary(snapshot),
+                targetBarSummary(snapshot),
             )
-            else -> targetSummary(snapshot)
+            else -> targetBarSummary(snapshot)
         }
         renderEmptyState()
         renderComposerState()
@@ -780,14 +1193,14 @@ class ChatActivity : ConfiguredActivity() {
                 emptyTitle.text = getString(R.string.chat_target_unavailable_title)
                 emptyDescription.text = getString(
                     R.string.chat_target_unavailable_description,
-                    conversationTarget?.displayName.orEmpty(),
+                    conversationTarget?.let(::targetDisplayName).orEmpty(),
                 )
             }
             else -> {
                 emptyTitle.text = getString(R.string.chat_welcome_title)
                 emptyDescription.text = getString(
                     R.string.chat_welcome_description,
-                    conversationTarget?.displayName.orEmpty(),
+                    conversationTarget?.let(::targetDisplayName).orEmpty(),
                 )
             }
         }
@@ -802,11 +1215,7 @@ class ChatActivity : ConfiguredActivity() {
         if (!::input.isInitialized || !::sendButton.isInitialized) return
         val targetReady = isConversationTargetReady()
         input.isEnabled = targetReady && !isGenerating
-        input.hint = if (targetReady) {
-            getString(R.string.chat_input_hint)
-        } else {
-            getString(R.string.chat_input_no_target_hint)
-        }
+        input.hint = null
         sendButton.text = getString(
             when {
                 isGenerating -> R.string.chat_stop
@@ -827,7 +1236,7 @@ class ChatActivity : ConfiguredActivity() {
         messageViews.clear()
         markdownCache.keys.retainAll(messages.map(ChatMessage::id).toSet())
         messages.forEach(::addMessageView)
-        invalidateOptionsMenu()
+        refreshOptionsMenuState()
         renderEmptyState()
         if (messages.isNotEmpty()) scrollToBottom()
     }
@@ -838,7 +1247,7 @@ class ChatActivity : ConfiguredActivity() {
         markConversationChanged()
         renderEmptyState()
         refreshActiveSearchResults()
-        invalidateOptionsMenu()
+        refreshOptionsMenuState()
         scrollToBottom()
     }
 
@@ -1483,34 +1892,48 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun showSearch() {
         val item = searchMenuItem ?: return
-        if (!item.isActionViewExpanded) item.expandActionView()
-        searchView.requestFocus()
-        scheduleKeyboard(searchView.findViewById(androidx.appcompat.R.id.search_src_text))
+        if (!item.isActionViewExpanded) {
+            if (!item.expandActionView()) return
+        }
+        toolbar.post { focusSearchInput() }
+    }
+
+    private fun focusSearchInput() {
+        if (!::searchInput.isInitialized) return
+        searchInput.requestFocus()
+        searchInput.setSelection(searchInput.text.length)
+        scheduleKeyboard(searchInput)
     }
 
     private fun closeSearch() {
         val item = searchMenuItem
-        if (item?.isActionViewExpanded == true) item.collapseActionView() else clearSearchState()
+        if (item?.isActionViewExpanded == true) {
+            item.collapseActionView()
+        } else {
+            clearSearchState()
+        }
     }
 
     private fun clearSearchState() {
-        if (!::searchView.isInitialized) return
-        val ownedKeyboardFocus = searchView.hasFocus()
+        val shouldHideKeyboard = searchExpanded ||
+            (::searchInput.isInitialized && searchInput.hasFocus())
         searchExpanded = false
-        searchNavigationBar.visibility = View.GONE
-        searchView.setQuery("", false)
-        searchView.clearFocus()
+        if (::searchInput.isInitialized) {
+            searchInput.setText("")
+            searchInput.clearFocus()
+        }
         searchMatches = emptyList()
         currentSearchMatchIndex = -1
         updateSearchControls()
         messages.forEach(::updateMessageView)
-        if (ownedKeyboardFocus) hideKeyboard(searchView)
+        toolbar.subtitle = null
+        if (shouldHideKeyboard && ::searchInput.isInitialized) hideKeyboard(searchInput)
     }
 
     private fun refreshSearchResults(selectFirst: Boolean, locate: Boolean) {
-        if (!::searchView.isInitialized || !::messagesColumn.isInitialized) return
+        if (!::searchInput.isInitialized || !::messagesColumn.isInitialized) return
         val previous = searchMatches.getOrNull(currentSearchMatchIndex)
-        val refreshed = ConversationSearchPolicy.find(messages, searchView.query.toString())
+        val refreshed = ConversationSearchPolicy.find(messages, searchInput.text.toString())
         searchMatches = refreshed
         currentSearchMatchIndex = when {
             refreshed.isEmpty() -> -1
@@ -1525,25 +1948,15 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun refreshActiveSearchResults() {
         if (
-            ::searchView.isInitialized && searchExpanded && searchView.query.isNotBlank()
+            ::searchInput.isInitialized && searchExpanded && searchInput.text.isNotBlank()
         ) {
             refreshSearchResults(selectFirst = false, locate = false)
         }
     }
 
     private fun updateSearchControls() {
-        if (!::searchResultCount.isInitialized) return
-        val displayedIndex = if (currentSearchMatchIndex >= 0) currentSearchMatchIndex + 1 else 0
-        searchResultCount.text = getString(
-            R.string.chat_search_result_count,
-            displayedIndex,
-            searchMatches.size,
-        )
-        val hasResults = searchMatches.isNotEmpty()
-        searchPrevious.isEnabled = hasResults
-        searchNext.isEnabled = hasResults
-        searchPrevious.alpha = if (hasResults) 1f else DISABLED_ALPHA
-        searchNext.alpha = if (hasResults) 1f else DISABLED_ALPHA
+        toolbar.subtitle = null
+        refreshOptionsMenuState()
     }
 
     private fun moveSearchResult(offset: Int) {
@@ -1847,6 +2260,7 @@ class ChatActivity : ConfiguredActivity() {
         if (::input.isInitialized) {
             input.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiSettings.fontSize.inputSp)
             input.imeOptions = editorImeOptions()
+            syncComposerControlHeight()
             getSystemService(InputMethodManager::class.java).restartInput(input)
         }
         messageViews.values.forEach { holder ->
@@ -1894,7 +2308,15 @@ class ChatActivity : ConfiguredActivity() {
         }
             .onFailure { error -> Log.e(TAG, "Unable to persist launcher conversation", error) }
             .getOrDefault(false)
-        if (persisted) allowDeletedConversationRevival = false
+        if (persisted) {
+            allowDeletedConversationRevival = false
+            if (
+                ::drawerLayout.isInitialized &&
+                drawerLayout.isDrawerOpen(GravityCompat.START)
+            ) {
+                refreshDrawerHistory()
+            }
+        }
     }
 
     private fun restoreStoredConversation(conversationId: String?): Boolean {
@@ -1948,9 +2370,25 @@ class ChatActivity : ConfiguredActivity() {
         R.string.chat_target_status_format,
         targetLocalityLabel(snapshot.locality),
         targetProviderLabel(snapshot.providerId, snapshot.locality),
-        snapshot.displayName,
+        targetDisplayName(snapshot),
         snapshot.modelId,
     )
+
+    private fun targetBarSummary(snapshot: ConversationTargetSnapshot): String = getString(
+        R.string.chat_model_switch_summary,
+        targetDisplayName(snapshot),
+        snapshot.modelId,
+    )
+
+    private fun targetDisplayName(snapshot: ConversationTargetSnapshot): String =
+        if (snapshot.locality == AiTargetLocality.LOCAL) {
+            AvailableLiteRtModelCatalog.displayNameForImportedModel(
+                snapshot.displayName,
+                snapshot.modelId,
+            )
+        } else {
+            snapshot.displayName
+        }
 
     private fun targetLocalityLabel(locality: AiTargetLocality): String = getString(
         when (locality) {
@@ -1981,12 +2419,13 @@ class ChatActivity : ConfiguredActivity() {
         }
         val targets = catalog.targets
         val labels = targets.map(::targetSelectorLabel).toTypedArray()
+        val adapter = TargetChoiceAdapter(labels)
         val selectedIndex = targets.indexOfFirst { target ->
             target.targetId == conversationTarget?.targetId
         }
         AlertDialog.Builder(this)
-            .setTitle(R.string.chat_target_selector_title)
-            .setSingleChoiceItems(labels, selectedIndex) { dialog, index ->
+            .setTitle(R.string.chat_model_switch_title)
+            .setSingleChoiceItems(adapter, selectedIndex) { dialog, index ->
                 val target = targets[index]
                 dialog.dismiss()
                 if (!target.configured || !target.available || !target.capabilities.streaming) {
@@ -2006,15 +2445,12 @@ class ChatActivity : ConfiguredActivity() {
             if (!target.configured || !target.available || !target.capabilities.streaming) {
                 append(getString(R.string.chat_target_unavailable_suffix))
             }
-            if (target.locality == AiTargetLocality.REMOTE) {
-                append(getString(R.string.chat_target_cost_suffix))
-            }
         }
         return getString(
             R.string.chat_target_selector_item,
             targetLocalityLabel(target.locality),
             targetProviderLabel(target.providerId, target.locality),
-            snapshot.displayName,
+            targetDisplayName(snapshot),
             snapshot.modelId,
             suffix,
         )
@@ -2047,7 +2483,7 @@ class ChatActivity : ConfiguredActivity() {
             .setMessage(
                 getString(
                     R.string.chat_target_change_message,
-                    target.displayName,
+                    targetDisplayName(ConversationTargetSnapshot.from(target)),
                     destinationWarning,
                 ),
             )
@@ -2087,12 +2523,17 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun showUnavailableTargetDialog(target: AiTarget) {
         val settingsLabel = when (target.locality) {
-            AiTargetLocality.LOCAL -> R.string.chat_model_settings
+            AiTargetLocality.LOCAL -> R.string.model_manager_title
             AiTargetLocality.REMOTE -> R.string.online_ai_settings_title
         }
         AlertDialog.Builder(this)
             .setTitle(R.string.chat_target_unavailable_title)
-            .setMessage(getString(R.string.chat_target_unavailable_picker_message, target.displayName))
+            .setMessage(
+                getString(
+                    R.string.chat_target_unavailable_picker_message,
+                    targetDisplayName(ConversationTargetSnapshot.from(target)),
+                ),
+            )
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(settingsLabel) { _, _ -> openTargetSettings(target.locality) }
             .show()
@@ -2103,7 +2544,7 @@ class ChatActivity : ConfiguredActivity() {
         snapshot: ConversationTargetSnapshot,
     ) {
         val settingsLabel = when (snapshot.locality) {
-            AiTargetLocality.LOCAL -> R.string.chat_model_settings
+            AiTargetLocality.LOCAL -> R.string.model_manager_title
             AiTargetLocality.REMOTE -> R.string.online_ai_settings_title
         }
         AlertDialog.Builder(this)
@@ -2125,8 +2566,7 @@ class ChatActivity : ConfiguredActivity() {
             .setTitle(R.string.chat_target_selector_empty_title)
             .setMessage(R.string.chat_target_selector_empty_message)
             .setNegativeButton(android.R.string.cancel, null)
-            .setNeutralButton(R.string.chat_model_settings) { _, _ -> openModelManager() }
-            .setPositiveButton(R.string.online_ai_settings_title) { _, _ -> openOnlineAiSettings() }
+            .setPositiveButton(R.string.model_manager_title) { _, _ -> openModelManager() }
             .show()
             .also(::tintDialogButtons)
     }
@@ -2575,10 +3015,50 @@ class ChatActivity : ConfiguredActivity() {
         val document: MarkdownDocument,
     )
 
+    private data class ViewPadding(
+        val left: Int,
+        val top: Int,
+        val right: Int,
+        val bottom: Int,
+    ) {
+        companion object {
+            fun from(view: View) = ViewPadding(
+                left = view.paddingLeft,
+                top = view.paddingTop,
+                right = view.paddingRight,
+                bottom = view.paddingBottom,
+            )
+        }
+    }
+
     private enum class TargetCatalogAvailability {
         LOADING,
         UNAVAILABLE,
         READY,
+    }
+
+    private inner class TargetChoiceAdapter(labels: Array<String>) : ArrayAdapter<String>(
+        this,
+        android.R.layout.simple_list_item_single_choice,
+        labels,
+    ) {
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
+            super.getView(position, convertView, parent).apply {
+                (this as? CheckedTextView)?.apply {
+                    layoutParams = AbsListView.LayoutParams(
+                        AbsListView.LayoutParams.MATCH_PARENT,
+                        AbsListView.LayoutParams.WRAP_CONTENT,
+                    )
+                    minHeight = dp(64)
+                    isSingleLine = false
+                    maxLines = Int.MAX_VALUE
+                    ellipsize = null
+                    setLineSpacing(0f, 1.08f)
+                    setPaddingRelative(dp(16), dp(10), dp(16), dp(10))
+                    setTextColor(appPalette.primaryText)
+                    checkMarkTintList = controlTintList()
+                }
+            }
     }
 
     private companion object {
@@ -2587,7 +3067,6 @@ class ChatActivity : ConfiguredActivity() {
         const val MENU_MODEL_SETTINGS = 2
         const val MENU_CONVERSATION_HISTORY = 3
         const val MENU_SEARCH = 4
-        const val MENU_CHAT_SETTINGS = 5
         const val MENU_APP_SETTINGS = 6
         const val MESSAGES_PER_TURN = 2
         const val MILLIS_PER_SECOND = 1_000L
@@ -2597,6 +3076,9 @@ class ChatActivity : ConfiguredActivity() {
         const val NEAR_BOTTOM_DP = 96
         const val DISABLED_ALPHA = 0.42f
         const val PLACEHOLDER_ALPHA = 0.65f
+        const val COMPOSER_CONTROL_MIN_HEIGHT_DP = 40
+        const val COMPOSER_SEND_MIN_WIDTH_DP = 60
+        const val COMPOSER_CORNER_RADIUS_DP = 12
         const val GENERATION_FAILURE_SEPARATOR = "\n\n---\n\n"
         const val NO_USAGE = -1L
         const val MAXIMUM_SAVED_MESSAGES = 48

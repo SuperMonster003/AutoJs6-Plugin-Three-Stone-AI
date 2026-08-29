@@ -17,7 +17,14 @@ internal object OnlineAiProfileCodec {
         "allowMeteredNetwork",
         "profiles",
     )
-    private val PROFILE_KEYS = setOf("profileId", "displayName", "providerId", "baseUrl", "modelId")
+    private val LEGACY_PROFILE_KEYS = setOf(
+        "profileId",
+        "displayName",
+        "providerId",
+        "baseUrl",
+        "modelId",
+    )
+    private val PROFILE_KEYS = LEGACY_PROFILE_KEYS + "modelIds"
 
     fun encode(document: OnlineAiProfileDocument): ByteArray {
         val normalized = OnlineAiProfilePolicy.normalize(document)
@@ -27,7 +34,8 @@ internal object OnlineAiProfileCodec {
                 "\"displayName\":${quote(profile.displayName)}," +
                 "\"providerId\":${quote(profile.provider.providerId)}," +
                 "\"baseUrl\":${quote(profile.baseUrl)}," +
-                "\"modelId\":${quote(profile.modelId)}" +
+                "\"modelId\":${quote(profile.modelId)}," +
+                "\"modelIds\":${profile.modelIds.joinToString(",", "[", "]", transform = ::quote)}" +
                 "}"
         }
         return ("{" +
@@ -49,7 +57,7 @@ internal object OnlineAiProfileCodec {
         var defaultProfileId: String? = null
         var defaultProfileIdRead = false
         var allowMeteredNetwork: Boolean? = null
-        var profiles: List<OnlineAiProfile>? = null
+        var profiles: List<DecodedProfile>? = null
         val keys = linkedSetOf<String>()
         reader.use {
             require(reader.peek() == JsonToken.BEGIN_OBJECT) { "Online AI profile document must be an object" }
@@ -58,10 +66,7 @@ internal object OnlineAiProfileCodec {
                 val name = reader.nextName()
                 require(name in DOCUMENT_KEYS && keys.add(name)) { "Online AI profile document keys are invalid" }
                 when (name) {
-                    "schema" -> schema = reader.nextExactInt(
-                        OnlineAiProfilePolicy.SCHEMA,
-                        "Online AI profile schema",
-                    )
+                    "schema" -> schema = reader.nextSupportedSchema()
                     "revision" -> revision = reader.nextStrictLong("Online AI profile revision")
                     "defaultProfileId" -> {
                         defaultProfileIdRead = true
@@ -77,26 +82,32 @@ internal object OnlineAiProfileCodec {
             reader.endObject()
             require(reader.peek() == JsonToken.END_DOCUMENT) { "Online AI profile document has trailing data" }
         }
+        val decodedProfiles = requireNotNull(profiles)
         require(
             keys == DOCUMENT_KEYS &&
-                schema == OnlineAiProfilePolicy.SCHEMA &&
+                schema in setOf(OnlineAiProfilePolicy.LEGACY_SCHEMA, OnlineAiProfilePolicy.SCHEMA) &&
                 defaultProfileIdRead,
         ) {
             "Online AI profile document is incomplete"
         }
+        if (schema == OnlineAiProfilePolicy.SCHEMA) {
+            require(decodedProfiles.all(DecodedProfile::hasModelIds)) {
+                "Online AI profile model IDs are incomplete"
+            }
+        }
         return OnlineAiProfilePolicy.normalize(
             OnlineAiProfileDocument(
                 revision = requireNotNull(revision),
-                profiles = requireNotNull(profiles),
+                profiles = decodedProfiles.map(DecodedProfile::profile),
                 defaultProfileId = defaultProfileId,
                 allowMeteredNetwork = requireNotNull(allowMeteredNetwork),
             ),
         )
     }
 
-    private fun JsonReader.readProfiles(): List<OnlineAiProfile> {
+    private fun JsonReader.readProfiles(): List<DecodedProfile> {
         require(peek() == JsonToken.BEGIN_ARRAY) { "Online AI profiles must be an array" }
-        val result = ArrayList<OnlineAiProfile>()
+        val result = ArrayList<DecodedProfile>()
         beginArray()
         while (hasNext()) {
             require(result.size < OnlineAiProfilePolicy.MAXIMUM_PROFILES) {
@@ -108,13 +119,14 @@ internal object OnlineAiProfileCodec {
         return result
     }
 
-    private fun JsonReader.readProfile(): OnlineAiProfile {
+    private fun JsonReader.readProfile(): DecodedProfile {
         require(peek() == JsonToken.BEGIN_OBJECT) { "Online AI profile must be an object" }
         var profileId: String? = null
         var displayName: String? = null
         var providerId: String? = null
         var baseUrl: String? = null
         var modelId: String? = null
+        var modelIds: List<String>? = null
         val keys = linkedSetOf<String>()
         beginObject()
         while (hasNext()) {
@@ -126,17 +138,39 @@ internal object OnlineAiProfileCodec {
                 "providerId" -> providerId = nextStrictString("Online AI provider ID")
                 "baseUrl" -> baseUrl = nextStrictString("Online AI base URL")
                 "modelId" -> modelId = nextStrictString("Online AI model ID")
+                "modelIds" -> modelIds = readModelIds()
             }
         }
         endObject()
-        require(keys == PROFILE_KEYS) { "Online AI profile is incomplete" }
-        return OnlineAiProfile(
-            profileId = requireNotNull(profileId),
-            displayName = requireNotNull(displayName),
-            provider = OnlineAiProvider.fromProviderId(requireNotNull(providerId)),
-            baseUrl = requireNotNull(baseUrl),
-            modelId = requireNotNull(modelId),
+        require(keys == LEGACY_PROFILE_KEYS || keys == PROFILE_KEYS) {
+            "Online AI profile is incomplete"
+        }
+        val requiredModelId = requireNotNull(modelId)
+        return DecodedProfile(
+            profile = OnlineAiProfile(
+                profileId = requireNotNull(profileId),
+                displayName = requireNotNull(displayName),
+                provider = OnlineAiProvider.fromProviderId(requireNotNull(providerId)),
+                baseUrl = requireNotNull(baseUrl),
+                modelId = requiredModelId,
+                modelIds = modelIds ?: listOf(requiredModelId),
+            ),
+            hasModelIds = modelIds != null,
         )
+    }
+
+    private fun JsonReader.readModelIds(): List<String> {
+        require(peek() == JsonToken.BEGIN_ARRAY) { "Online AI model IDs must be an array" }
+        val result = ArrayList<String>()
+        beginArray()
+        while (hasNext()) {
+            require(result.size < OnlineAiProfilePolicy.MAXIMUM_MODELS_PER_PROFILE) {
+                "An online AI profile has too many model IDs"
+            }
+            result += nextStrictString("Online AI model ID")
+        }
+        endArray()
+        return result
     }
 
     private fun strictReader(bytes: ByteArray): JsonReader {
@@ -174,10 +208,13 @@ internal object OnlineAiProfileCodec {
         return nextBoolean()
     }
 
-    private fun JsonReader.nextExactInt(expected: Int, label: String): Int {
-        val value = nextStrictLong(label)
-        require(value == expected.toLong()) { "$label is unsupported" }
-        return expected
+    private fun JsonReader.nextSupportedSchema(): Int {
+        val schema = nextStrictLong("Online AI profile schema")
+        require(
+            schema == OnlineAiProfilePolicy.LEGACY_SCHEMA.toLong() ||
+                schema == OnlineAiProfilePolicy.SCHEMA.toLong(),
+        ) { "Online AI profile schema is unsupported" }
+        return schema.toInt()
     }
 
     private fun quote(value: String): String = buildString {
@@ -196,4 +233,9 @@ internal object OnlineAiProfileCodec {
         }
         append('"')
     }
+
+    private data class DecodedProfile(
+        val profile: OnlineAiProfile,
+        val hasModelIds: Boolean,
+    )
 }

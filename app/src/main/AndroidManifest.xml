@@ -71,7 +71,7 @@
             android:name=".OnlineAiSettingsActivity"
             android:exported="false"
             android:label="@string/online_ai_settings_title"
-            android:parentActivityName=".AppSettingsActivity" />
+            android:parentActivityName=".ModelManagerActivity" />
 
         <activity
             android:name=".AboutActivity"
@@ -90,6 +90,12 @@
             android:exported="true"
             android:label="@string/model_manager_title"
             android:parentActivityName=".ChatActivity" />
+
+        <activity
+            android:name=".LiteRtModelCatalogActivity"
+            android:exported="false"
+            android:label="@string/litert_catalog_title"
+            android:parentActivityName=".ModelManagerActivity" />
 
         <activity
             android:name=".WakeActivity"

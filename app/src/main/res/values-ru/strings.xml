@@ -2,14 +2,14 @@
 <resources>
     <string name="button_cancel_download">Отменить загрузку</string>
     <string name="button_choose_download_location">Выбрать место</string>
-    <string name="button_download_model">Скачать рекомендуемую модель</string>
+    <string name="button_download_model">Обзор моделей LiteRT-LM</string>
     <string name="button_import_downloaded_model">Импортировать скачанную модель</string>
     <string name="button_view_model_source">Источник модели</string>
     <string name="download_already_running">Загрузка модели уже выполняется</string>
     <string name="download_cancelled">Загрузка отменена.</string>
     <string name="download_cancelling">Отмена загрузки %1$s...</string>
     <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">Рекомендуемые модели LiteRT-LM</string>
+    <string name="download_catalog_title">Модели LiteRT-LM</string>
     <string name="download_cleanup_failed">Не удалось очистить неполный файл. Удалите его вручную.</string>
     <string name="download_cleanup_truncated">Неполное содержимое очищено, но пустой документ мог сохраниться.</string>
     <string name="download_confirm_message">Размер: %1$s\nЗакреплённый SHA-256: %2$s\nЛицензия: %3$s\n\nВыберите доступное для записи место в системном окне. Используйте Wi-Fi, если не хотите расходовать мобильный трафик. Перед импортом модель будет проверена.</string>
@@ -103,7 +103,6 @@
     <string name="chat_target_locality_local">Локально</string>
     <string name="chat_target_locality_cloud">Облако</string>
     <string name="chat_target_unavailable_suffix"> | Недоступно</string>
-    <string name="chat_target_cost_suffix"> | Возможны расходы</string>
     <string name="chat_target_selector_title">Выберите цель диалога</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">Подготовка целей ИИ</string>
@@ -122,7 +121,7 @@
     <string name="chat_welcome_description">%1$s закреплена за этим диалогом. Задайте вопрос ниже или выберите подсказку.</string>
     <string name="chat_target_change_title">Сменить цель диалога?</string>
     <string name="chat_target_change_message">Рекомендуется начать новый диалог. Если продолжить здесь с %1$s, сохранённые сообщения будут переданы этой цели как контекст. %2$s</string>
-    <string name="chat_target_change_cloud_warning">Облачные запросы покидают устройство и могут повлечь расходы у провайдера.</string>
+    <string name="chat_target_change_cloud_warning">Облачные запросы отправляются выбранному онлайн-сервису.</string>
     <string name="chat_target_change_local_warning">Локальные запросы остаются на этом устройстве.</string>
     <string name="chat_target_continue_current">Продолжить здесь</string>
     <string name="chat_target_start_new">Начать новый диалог</string>
@@ -169,12 +168,10 @@
     <string name="chat_editing_message">Изменение предыдущего сообщения</string>
     <string name="chat_cancel_editing">Отмена</string>
     <string name="chat_save_and_send">Сохранить и отправить</string>
-    <string name="chat_search_menu">Поиск в разговоре</string>
+    <string name="chat_search_menu">Поиск</string>
     <string name="chat_search_hint">Поиск сообщений</string>
-    <string name="chat_search_previous">Предыдущий результат</string>
-    <string name="chat_search_next">Следующий результат</string>
-    <string name="chat_search_close">Закрыть поиск</string>
-    <string name="chat_search_result_count">%1$d/%2$d</string>
+    <string name="chat_search_previous">Назад</string>
+    <string name="chat_search_next">Далее</string>
     <string name="chat_settings_title">Настройки разговора</string>
     <string name="chat_font_size">Размер текста сообщений</string>
     <string name="chat_font_size_small">Мелкий</string>
@@ -200,7 +197,7 @@
     <string name="chat_positive_integer_error">Введите положительное целое число</string>
     <string name="chat_nonnegative_number_error">Введите конечное число не меньше 0</string>
     <string name="chat_probability_error">Введите конечное число от 0 до 1</string>
-    <string name="model_manager_title">Настройки моделей и хранилища</string>
+    <string name="model_manager_title">Модели</string>
     <string name="about_app_and_developer">О приложении и разработчике</string>
     <string name="about_app_summary">Приватный локальный ИИ-чат и управление моделями для AutoJs6</string>
     <string name="about_developer">Разработчик</string>
@@ -243,7 +240,7 @@
     <string name="app_settings_theme_three_stone_ai">Оранжевый 3-Stone AI</string>
     <string name="app_settings_theme_purple">Фиолетовый</string>
     <string name="app_settings_theme_teal">Бирюзовый</string>
-    <string name="app_settings_title">Настройки приложения</string>
+    <string name="app_settings_title">Настройки</string>
     <string name="release_history_load_failed">Не удалось загрузить локальную историю версий</string>
     <string name="release_history_title">История версий</string>
     <string name="navigation_back">Назад</string>
@@ -291,7 +288,7 @@
     <string name="online_ai_yes">Да</string>
     <string name="online_ai_no">Нет</string>
     <string name="online_ai_provider">Поставщик</string>
-    <string name="online_ai_provider_custom">Совместимый с OpenAI</string>
+    <string name="online_ai_provider_custom">OpenAI-compatible</string>
     <string name="online_ai_profile_name">Имя профиля</string>
     <string name="online_ai_profile_name_hint">Например, Работа</string>
     <string name="online_ai_base_url">Базовый URL HTTPS</string>
@@ -328,7 +325,7 @@
     <string name="online_ai_profile_deleted">Онлайн-профиль удален</string>
     <string name="online_ai_profile_delete_failed">Не удалось удалить онлайн-профиль</string>
     <string name="online_ai_test_title">Проверить подключение?</string>
-    <string name="online_ai_test_message">Будет отправлен короткий запрос к %1$s, что может привести к оплате услуг поставщика. Текст ответа не сохраняется. Продолжить?</string>
+    <string name="online_ai_test_message">Будет отправлен короткий запрос к %1$s. Текст ответа не сохраняется. Продолжить?</string>
     <string name="online_ai_test_start">Проверить</string>
     <string name="online_ai_test_progress">Проверка %1$s...</string>
     <string name="online_ai_test_success">Проверка подключения выполнена</string>

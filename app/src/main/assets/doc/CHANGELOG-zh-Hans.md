@@ -23,8 +23,8 @@
 * `新增` 新增字体大小, Enter 键行为, 无限制或自定义 output token, 以及模型默认或自定义 `temperature`, `topK`, `topP` 等会话设置
 * `新增` 支持在流式输出中渲染内联 `$\text{...}$` 内容, 并适配常用数学命令, 上标与下标样式
 * `新增` 新增插件自管的 Android Keystore 凭据仓库, 使用 AES-256-GCM, 与 profile 绑定的认证密文, 跨进程原子私有文件, 仅 configured 状态查询及明文即时清零
-* `新增` 新增严格的非敏感在线配置档案仓库, 仅接受 HTTPS OpenAI Compatible 端点, 使用 canonical UUID 与跨进程原子元数据, 并在 provider 或 origin 变更时强制明确替换或清除凭据
-* `新增` 新增插件内部 OpenAI Compatible HTTPS 执行后端, 支持自定义 baseUrl, 凭据和模型名, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, 完成轮次多轮历史, JSON Schema 请求映射及不含敏感信息的固定错误; 已配置的 `profile:*` 目标可通过 AI Provider V2 直接调用
+* `新增` 新增严格的非敏感在线配置档案仓库, 仅接受 HTTPS OpenAI-compatible 端点, 使用 canonical UUID 与跨进程原子元数据, 并在 provider 或 origin 变更时强制明确替换或清除凭据
+* `新增` 新增插件内部 OpenAI-compatible HTTPS 执行后端, 支持自定义 baseUrl, 凭据和模型名, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, 完成轮次多轮历史, JSON Schema 请求映射及不含敏感信息的固定错误; 已配置的 `profile:*` 目标可通过 AI Provider V2 直接调用
 * `新增` 新增与宿主目录对齐的 OpenAI, Anthropic, Gemini, DeepSeek 与 OpenRouter 预置模板; 统一在线执行层复用 OpenAI-compatible 协议, 并分别适配 Anthropic Messages 与 Gemini GenerateContent 的原生认证, 请求, SSE 终态, usage 和 JSON Schema, 不提供协议间或本地/在线自动回退
 * `新增` 新增 10 语言在线服务设置 UI, 支持档案添加, 编辑, 删除, 不回显的 API Key 替换与清除, 默认目标选择, 在读取凭据前强制执行的计量网络开关, 以及可取消且最长 120 秒的显式连接测试; 设置与档案共用跨进程原子文档并动态刷新 V2 目标目录
 * `新增` 启动器聊天新增统一本地/云端目标选择器: 每个会话持久化一个目标快照, 有消息的会话切换时默认建议新建会话, 携带既有上下文继续当前会话必须明确确认并记录变更

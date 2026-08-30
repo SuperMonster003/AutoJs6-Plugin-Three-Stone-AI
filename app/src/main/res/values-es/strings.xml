@@ -139,7 +139,7 @@
     <string name="chat_message_copied">Mensaje copiado</string>
     <string name="chat_duration_milliseconds">%1$d ms</string>
     <string name="chat_duration_seconds">%1$s s</string>
-    <string name="chat_usage_format">Entrada %1$d | Salida %2$d | %3$s</string>
+    <string name="chat_usage_format">Entrada %1$d | Salida %2$d | %3$s | Entrada acumulada %4$d</string>
     <string name="chat_history_title">Historial de conversaciones</string>
     <string name="chat_history_empty_title">No hay conversaciones guardadas</string>
     <string name="chat_history_empty_description">Las conversaciones aparecerán aquí después de enviar el primer mensaje.</string>

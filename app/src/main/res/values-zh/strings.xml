@@ -142,7 +142,7 @@
     <string name="chat_message_copied">消息已复制</string>
     <string name="chat_duration_milliseconds">%1$d 毫秒</string>
     <string name="chat_duration_seconds">%1$s 秒</string>
-    <string name="chat_usage_format">输入 %1$d | 输出 %2$d | %3$s</string>
+    <string name="chat_usage_format">输入 %1$d | 输出 %2$d | %3$s | 会话累计输入 %4$d</string>
     <string name="chat_history_title">会话历史</string>
     <string name="chat_history_empty_title">暂无已保存的会话</string>
     <string name="chat_history_empty_description">发送第一条消息后, 会话将显示在这里.</string>

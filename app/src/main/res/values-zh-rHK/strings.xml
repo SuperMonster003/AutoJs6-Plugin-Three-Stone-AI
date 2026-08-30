@@ -139,7 +139,7 @@
     <string name="chat_message_copied">訊息已複製</string>
     <string name="chat_duration_milliseconds">%1$d 毫秒</string>
     <string name="chat_duration_seconds">%1$s 秒</string>
-    <string name="chat_usage_format">輸入 %1$d | 輸出 %2$d | %3$s</string>
+    <string name="chat_usage_format">輸入 %1$d | 輸出 %2$d | %3$s | 會話累計輸入 %4$d</string>
     <string name="chat_history_title">對話記錄</string>
     <string name="chat_history_empty_title">尚未儲存任何對話</string>
     <string name="chat_history_empty_description">傳送第一則訊息後, 對話便會顯示在此處.</string>

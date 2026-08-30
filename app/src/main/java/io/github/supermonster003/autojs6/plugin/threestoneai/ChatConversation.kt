@@ -86,6 +86,16 @@ internal object ChatConversationPolicy {
         return completedTurnsOnBackend >= MAXIMUM_BACKEND_TURNS
     }
 
+    /** Cumulative provider input through one visible message, saturated for hostile counters. */
+    fun cumulativeInputTokensThrough(messages: List<ChatMessage>, messageId: Long): Long {
+        var total = 0L
+        messages.forEach { message ->
+            message.usage?.let { usage -> total = saturatedAdd(total, usage.inputTokens) }
+            if (message.id == messageId) return total
+        }
+        return 0L
+    }
+
     /** A recreated Activity cannot retain a native generation callback, so make that state honest. */
     fun restore(messages: List<ChatMessage>): List<ChatMessage> = messages.map { message ->
         if (message.status == ChatMessageStatus.GENERATING) {

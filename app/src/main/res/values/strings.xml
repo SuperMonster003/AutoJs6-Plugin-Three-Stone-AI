@@ -151,7 +151,7 @@
     <string name="chat_regenerate_target_unavailable_message">%1$s no longer matches an available target with the recorded provider and model. Regeneration was not started, and the current conversation target was not used as a fallback.</string>
     <string name="chat_duration_milliseconds">%1$d ms</string>
     <string name="chat_duration_seconds">%1$s s</string>
-    <string name="chat_usage_format">%1$d input | %2$d output | %3$s</string>
+    <string name="chat_usage_format">%1$d input | %2$d output | %3$s | %4$d session input</string>
     <string name="chat_history_title">Conversation history</string>
     <string name="chat_history_empty_title">No saved conversations</string>
     <string name="chat_history_empty_description">Conversations appear here after you send the first message.</string>

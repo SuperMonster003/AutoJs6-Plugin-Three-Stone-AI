@@ -139,7 +139,7 @@
     <string name="chat_message_copied">메시지를 복사했습니다</string>
     <string name="chat_duration_milliseconds">%1$d ms</string>
     <string name="chat_duration_seconds">%1$s초</string>
-    <string name="chat_usage_format">입력 %1$d | 출력 %2$d | %3$s</string>
+    <string name="chat_usage_format">입력 %1$d | 출력 %2$d | %3$s | 세션 누적 입력 %4$d</string>
     <string name="chat_history_title">대화 기록</string>
     <string name="chat_history_empty_title">저장된 대화가 없습니다</string>
     <string name="chat_history_empty_description">첫 메시지를 보내면 대화가 여기에 표시됩니다.</string>

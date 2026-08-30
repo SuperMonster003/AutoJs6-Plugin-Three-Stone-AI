@@ -77,6 +77,7 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var historyStore: ConversationHistoryStore
     private lateinit var uiSettingsStore: ChatUiSettingsStore
+    private lateinit var contextTokenCalibrationStore: ContextTokenCalibrationStore
     private lateinit var updateController: AppUpdateController
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var drawerHistoryColumn: LinearLayout
@@ -132,6 +133,9 @@ class ChatActivity : ConfiguredActivity() {
     private var activeAssistantMessageId: Long? = null
     private var activeBackend: AiBackendSession? = null
     private var activeBackendTarget: ConversationTargetSnapshot? = null
+    private var activeBackendContextTelemetry: BackendContextTelemetry? = null
+    private var activeContextTurnObservation: ContextTurnObservation? = null
+    private var backendContextEpoch = 0L
     private var completedTurnsOnBackend = 0
     private var managerAttached = false
     private var destroyed = false
@@ -158,6 +162,7 @@ class ChatActivity : ConfiguredActivity() {
         importCoordinator = ModelImportCoordinator.get(applicationContext)
         historyStore = ConversationHistoryStore(applicationContext)
         uiSettingsStore = ChatUiSettingsStore(applicationContext)
+        contextTokenCalibrationStore = ContextTokenCalibrationStore(applicationContext)
         uiSettings = uiSettingsStore.load()
         updateController = AppUpdateController(this)
         if (!restoreTranscript(savedInstanceState)) {
@@ -1523,7 +1528,7 @@ class ChatActivity : ConfiguredActivity() {
                 ChatMessageStatus.FAILED ->
                     getString(R.string.chat_generation_failure_choose_target)
                 ChatMessageStatus.COMPLETE -> if (uiSettings.showGenerationUsage) {
-                    message.usage?.let(::formatUsage).orEmpty()
+                    message.usage?.let { usage -> formatUsage(message, usage) }.orEmpty()
                 } else {
                     ""
                 }
@@ -1666,26 +1671,40 @@ class ChatActivity : ConfiguredActivity() {
         val prompt = GenerationMessage(GenerationRole.USER, listOf(promptText))
         val requestedTarget = ConversationTargetSnapshot.from(target)
         var reusableBackend: AiBackendSession? = null
+        var reusableTelemetry: BackendContextTelemetry? = null
         var backendToReplace: AiBackendSession? = null
         synchronized(backendLock) {
             val reusable = target.capabilities.persistentSession &&
-                activeBackend != null && activeBackendTarget?.let { activeTarget ->
+                activeBackend != null && activeBackendContextTelemetry != null &&
+                activeBackendTarget?.let { activeTarget ->
                     activeTarget.matchesExecutionIdentity(target)
                 } == true &&
                 !ChatConversationPolicy.shouldRotateBackend(completedTurnsOnBackend)
             if (reusable) {
                 reusableBackend = activeBackend
+                reusableTelemetry = activeBackendContextTelemetry
             } else {
                 backendToReplace = activeBackend
                 activeBackend = null
                 activeBackendTarget = null
+                activeBackendContextTelemetry = null
+                activeContextTurnObservation = null
                 completedTurnsOnBackend = 0
             }
         }
 
         val continuation = reusableBackend
         if (continuation != null) {
+            val telemetry = checkNotNull(reusableTelemetry)
             val actualTarget = ConversationTargetSnapshot.from(continuation.target)
+            observeContextTurnStart(
+                generationId = generationId,
+                backend = continuation,
+                target = actualTarget,
+                prompt = prompt,
+                telemetry = telemetry,
+                rebuilt = false,
+            )
             recordAssistantTarget(generationId, assistantMessageId, actualTarget)
             val listener = generationListener(generationId, assistantMessageId, actualTarget)
             submitBackendWork(generationId, assistantMessageId) {
@@ -1709,20 +1728,39 @@ class ChatActivity : ConfiguredActivity() {
                 ),
             )
             val actualTarget = ConversationTargetSnapshot.from(created.target)
-            val installed = synchronized(backendLock) {
+            val installedTelemetry = synchronized(backendLock) {
                 if (!isGenerationCurrent(generationId) || activeBackend != null) {
-                    false
+                    null
                 } else {
+                    backendContextEpoch = if (backendContextEpoch == Long.MAX_VALUE) {
+                        Long.MAX_VALUE
+                    } else {
+                        backendContextEpoch + 1L
+                    }
+                    val telemetry = BackendContextTelemetry(
+                        epoch = backendContextEpoch,
+                        committedMessages = history.map { message -> message.contextSnapshot() },
+                    )
                     activeBackend = created
                     activeBackendTarget = actualTarget
+                    activeBackendContextTelemetry = telemetry
+                    activeContextTurnObservation = null
                     completedTurnsOnBackend = history.size / MESSAGES_PER_TURN
-                    true
+                    telemetry
                 }
             }
-            if (!installed) {
+            if (installedTelemetry == null) {
                 runCatching(created::close)
                 return@submitBackendWork
             }
+            observeContextTurnStart(
+                generationId = generationId,
+                backend = created,
+                target = actualTarget,
+                prompt = prompt,
+                telemetry = installedTelemetry,
+                rebuilt = true,
+            )
             mainHandler.post {
                 recordAssistantTarget(generationId, assistantMessageId, actualTarget)
             }
@@ -1741,6 +1779,124 @@ class ChatActivity : ConfiguredActivity() {
         samplingOptions = uiSettings.samplingOptions(),
         reportUsage = true,
     )
+
+    private fun observeContextTurnStart(
+        generationId: Long,
+        backend: AiBackendSession,
+        target: ConversationTargetSnapshot,
+        prompt: GenerationMessage,
+        telemetry: BackendContextTelemetry,
+        rebuilt: Boolean,
+    ) {
+        val calibration = contextTokenCalibrationStore.current(target.targetId)
+        val estimator = calibration.estimator()
+        val promptSnapshot = prompt.contextSnapshot()
+        val outbound = telemetry.committedMessages + promptSnapshot
+        val inputEstimate = estimator.estimateMessages(outbound)
+        // LiteRT reports only the newly processed prompt after its first turn. Online targets
+        // report the complete replayed request on every turn.
+        val calibrationInput = estimator.estimateMessages(
+            ContextTokenObservationPolicy.calibrationInputMessages(
+                locality = target.locality,
+                rebuilt = rebuilt,
+                committedMessages = telemetry.committedMessages,
+                prompt = promptSnapshot,
+            ),
+        )
+        val observation = ContextTurnObservation(
+            generationId = generationId,
+            backendEpoch = telemetry.epoch,
+            prompt = promptSnapshot,
+            rebuilt = rebuilt,
+            inputEstimate = inputEstimate,
+            calibrationInput = calibrationInput,
+            coefficientBefore = calibration.tokensPerUtf8Byte,
+        )
+        val installed = synchronized(backendLock) {
+            if (
+                activeBackend !== backend ||
+                activeBackendContextTelemetry?.epoch != telemetry.epoch ||
+                !isGenerationCurrent(generationId)
+            ) {
+                false
+            } else {
+                activeContextTurnObservation = observation
+                true
+            }
+        }
+        if (!installed) return
+        val accountingTokens = estimator.estimateMessages(telemetry.committedMessages).estimatedTokens
+        Log.d(
+            TAG,
+            "Context start target=${target.targetId} " +
+                "estimatedInputTokens=${inputEstimate.estimatedTokens} " +
+                "inputBytes=${inputEstimate.utf8Bytes} actualInputTokens=pending " +
+                "accountingTokens=$accountingTokens backendEpoch=${telemetry.epoch} " +
+                "rebuilt=$rebuilt coefficient=${calibration.tokensPerUtf8Byte}",
+        )
+    }
+
+    private fun completeContextTurnObservation(
+        generationId: Long,
+        actualTarget: ConversationTargetSnapshot,
+        assistantText: String,
+        statistics: GenerationStatistics?,
+        cumulativeInputTokens: Long,
+    ) {
+        var observation: ContextTurnObservation? = null
+        var committedMessages: List<GenerationMessage>? = null
+        synchronized(backendLock) {
+            val candidate = activeContextTurnObservation
+            val telemetry = activeBackendContextTelemetry
+            if (
+                candidate != null && candidate.generationId == generationId &&
+                telemetry != null && telemetry.epoch == candidate.backendEpoch
+            ) {
+                val committed = telemetry.committedMessages +
+                    candidate.prompt.contextSnapshot() +
+                    GenerationMessage(
+                        role = GenerationRole.ASSISTANT,
+                        textParts = listOf(assistantText),
+                    )
+                activeBackendContextTelemetry = telemetry.copy(committedMessages = committed)
+                observation = candidate
+                committedMessages = committed
+            }
+            activeContextTurnObservation = null
+        }
+        val completedObservation = observation ?: return
+        val completedMessages = committedMessages ?: return
+        val calibrationObservation = statistics?.let { usage ->
+            ContextTokenCalibrationObservation(
+                utf8Bytes = completedObservation.calibrationInput.utf8Bytes,
+                messageCount = completedObservation.calibrationInput.messageCount,
+                actualInputTokens = usage.inputTokens,
+            )
+        }
+        val calibration = contextTokenCalibrationStore.record(
+            actualTarget.targetId,
+            calibrationObservation,
+        )
+        val estimatedAfterTurn = calibration.estimator()
+            .estimateMessages(completedMessages)
+            .estimatedTokens
+        val accountingTokens = statistics?.contextTokensAfterTurn ?: estimatedAfterTurn
+        Log.d(
+            TAG,
+            "Context complete target=${actualTarget.targetId} " +
+                "estimatedInputTokens=${completedObservation.inputEstimate.estimatedTokens} " +
+                "actualInputTokens=${statistics?.inputTokens} " +
+                "actualOutputTokens=${statistics?.outputTokens} " +
+                "accountingTokens=$accountingTokens cumulativeInputTokens=$cumulativeInputTokens " +
+                "backendEpoch=${completedObservation.backendEpoch} " +
+                "rebuilt=${completedObservation.rebuilt} " +
+                "coefficientBefore=${completedObservation.coefficientBefore} " +
+                "coefficientAfter=${calibration.tokensPerUtf8Byte}",
+        )
+    }
+
+    private fun GenerationMessage.contextSnapshot(): GenerationMessage =
+        copy(textParts = textParts.toList())
 
     private fun generationListener(
         generationId: Long,
@@ -1863,6 +2019,17 @@ class ChatActivity : ConfiguredActivity() {
                 },
             ),
         )
+        val cumulativeInputTokens = ChatConversationPolicy.cumulativeInputTokensThrough(
+            messages,
+            assistantMessageId,
+        )
+        completeContextTurnObservation(
+            generationId = generationId,
+            actualTarget = actualTarget,
+            assistantText = current.text,
+            statistics = statistics,
+            cumulativeInputTokens = cumulativeInputTokens,
+        )
         synchronized(backendLock) {
             if (activeBackend != null) completedTurnsOnBackend++
         }
@@ -1974,6 +2141,8 @@ class ChatActivity : ConfiguredActivity() {
         activeBackend.also {
             activeBackend = null
             activeBackendTarget = null
+            activeBackendContextTelemetry = null
+            activeContextTurnObservation = null
             completedTurnsOnBackend = 0
         }
     }
@@ -2578,7 +2747,7 @@ class ChatActivity : ConfiguredActivity() {
         sendCurrentMessage(targetOverride = responseTarget)
     }
 
-    private fun formatUsage(usage: ChatMessageUsage): String {
+    private fun formatUsage(message: ChatMessage, usage: ChatMessageUsage): String {
         val duration = if (usage.durationMillis < MILLIS_PER_SECOND) {
             getString(R.string.chat_duration_milliseconds, usage.durationMillis)
         } else {
@@ -2592,6 +2761,7 @@ class ChatActivity : ConfiguredActivity() {
             usage.inputTokens,
             usage.outputTokens,
             duration,
+            ChatConversationPolicy.cumulativeInputTokensThrough(messages, message.id),
         )
     }
 
@@ -2828,6 +2998,21 @@ class ChatActivity : ConfiguredActivity() {
     private data class MessageViewHolder(
         val body: MarkdownMessageView,
         val meta: TextView?,
+    )
+
+    private data class BackendContextTelemetry(
+        val epoch: Long,
+        val committedMessages: List<GenerationMessage>,
+    )
+
+    private data class ContextTurnObservation(
+        val generationId: Long,
+        val backendEpoch: Long,
+        val prompt: GenerationMessage,
+        val rebuilt: Boolean,
+        val inputEstimate: ContextTokenEstimate,
+        val calibrationInput: ContextTokenEstimate,
+        val coefficientBefore: Double,
     )
 
     private data class CachedMarkdown(

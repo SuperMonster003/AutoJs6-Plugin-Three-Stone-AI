@@ -139,7 +139,7 @@
     <string name="chat_message_copied">تم نسخ الرسالة</string>
     <string name="chat_duration_milliseconds">%1$d مللي ثانية</string>
     <string name="chat_duration_seconds">%1$s ث</string>
-    <string name="chat_usage_format">إدخال %1$d | إخراج %2$d | %3$s</string>
+    <string name="chat_usage_format">إدخال %1$d | إخراج %2$d | %3$s | إدخال تراكمي %4$d</string>
     <string name="chat_history_title">سجل المحادثات</string>
     <string name="chat_history_empty_title">لا توجد محادثات محفوظة</string>
     <string name="chat_history_empty_description">ستظهر المحادثات هنا بعد إرسال الرسالة الأولى.</string>

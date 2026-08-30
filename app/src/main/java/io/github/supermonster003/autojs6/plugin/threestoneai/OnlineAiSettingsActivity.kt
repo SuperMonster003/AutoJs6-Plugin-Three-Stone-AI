@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -43,6 +44,8 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiCon
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureReason
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.ConfiguredOnlineAiProfile
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiBaseUrlHistoryPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiBaseUrlHistoryStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiCredentialUpdate
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelPresetCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfile
@@ -64,6 +67,7 @@ import java.util.concurrent.Future
 class OnlineAiSettingsActivity : ConfiguredActivity() {
     private lateinit var applicationState: ThreeStoneAiApplication
     private lateinit var registry: OnlineAiProfileRegistry
+    private lateinit var baseUrlHistoryStore: OnlineAiBaseUrlHistoryStore
     private lateinit var settingsContent: LinearLayout
     private lateinit var screenRoot: View
     private var snapshot: OnlineAiProfileRegistrySnapshot? = null
@@ -84,6 +88,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         super.onCreate(savedInstanceState)
         applicationState = application as ThreeStoneAiApplication
         registry = applicationState.onlineProfileRegistry
+        baseUrlHistoryStore = OnlineAiBaseUrlHistoryStore(applicationContext)
         setContentView(createContentView())
         reloadSnapshot()
         if (savedInstanceState == null && intent.getBooleanExtra(EXTRA_ADD_PROFILE, false)) {
@@ -379,12 +384,20 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         )
         nameField.placeholderText = getString(R.string.online_ai_profile_name_hint)
         val (baseUrlField, baseUrlInput) = formTextField(
-            initialValue = existing?.profile?.baseUrl ?: initialTemplate.defaultBaseUrl.orEmpty(),
+            initialValue = existing?.profile?.baseUrl
+                ?: initialTemplate.defaultBaseUrl
+                ?: OnlineAiBaseUrlHistoryPolicy.HTTPS_PREFIX,
             hint = getString(R.string.online_ai_base_url),
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI,
             maxLength = BASE_URL_MAXIMUM_CHARACTERS,
         )
         baseUrlField.helperText = getString(R.string.online_ai_base_url_hint)
+        baseUrlField.endIconMode = TextInputLayout.END_ICON_CUSTOM
+        baseUrlField.setEndIconDrawable(R.drawable.ic_history_24)
+        baseUrlField.endIconContentDescription =
+            getString(R.string.online_ai_base_url_history)
+        baseUrlField.setEndIconTintList(ColorStateList.valueOf(appPalette.accent))
+        baseUrlField.setEndIconOnClickListener { showBaseUrlHistory(baseUrlInput) }
         val (credentialField, credentialInput) = formTextField(
             initialValue = "",
             hint = getString(R.string.online_ai_credential),
@@ -427,7 +440,10 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         fun applyProvider(provider: OnlineAiProvider) {
             if (provider == selectedProvider) return
             selectedProvider = provider
-            baseUrlInput.setText(OnlineAiProviderCatalog.templateFor(provider).defaultBaseUrl.orEmpty())
+            baseUrlInput.setText(
+                OnlineAiProviderCatalog.templateFor(provider).defaultBaseUrl
+                    ?: OnlineAiBaseUrlHistoryPolicy.HTTPS_PREFIX,
+            )
             if (existing == null) {
                 selectedModelIds = OnlineAiModelPresetCatalog.forProvider(provider).take(1)
                 selectedDefaultModelId = selectedModelIds.first()
@@ -684,6 +700,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         }
         return saved.fold(
             onSuccess = {
+                baseUrlHistoryStore.record(candidate.baseUrl)
                 showSnackbar(screenRoot, getString(R.string.online_ai_profile_saved))
                 reloadSnapshot()
                 true
@@ -698,6 +715,51 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 false
             },
         )
+    }
+
+    private fun showBaseUrlHistory(target: android.widget.EditText) {
+        val values = baseUrlHistoryStore.load()
+        if (values.isEmpty()) {
+            materialDialog()
+                .setTitle(R.string.online_ai_base_url_history)
+                .setMessage(R.string.online_ai_base_url_history_empty)
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+                .also(::tintDialogButtons)
+            return
+        }
+        materialDialog()
+            .setTitle(R.string.online_ai_base_url_history)
+            .setItems(values.toTypedArray()) { _, index ->
+                target.setText(values[index])
+                target.setSelection(target.text.length)
+            }
+            .setNeutralButton(R.string.online_ai_base_url_history_manage) { _, _ ->
+                showBaseUrlHistoryManager(values)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun showBaseUrlHistoryManager(values: List<String>) {
+        val selected = BooleanArray(values.size)
+        materialDialog()
+            .setTitle(R.string.online_ai_base_url_history_manage)
+            .setMultiChoiceItems(values.toTypedArray(), selected) { _, index, checked ->
+                selected[index] = checked
+            }
+            .setNeutralButton(R.string.online_ai_base_url_history_clear) { _, _ ->
+                baseUrlHistoryStore.clear()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.online_ai_base_url_history_delete) { _, _ ->
+                baseUrlHistoryStore.remove(
+                    values.filterIndexed { index, _ -> selected[index] }.toSet(),
+                )
+            }
+            .show()
+            .also(::tintDialogButtons)
     }
 
     private fun uniqueSuggestedName(base: String): String {

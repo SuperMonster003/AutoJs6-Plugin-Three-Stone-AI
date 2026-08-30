@@ -44,6 +44,25 @@ class OnlineAiProfilePolicyTest {
     }
 
     @Test
+    fun baseUrlHistoryKeepsRecentUniqueValidHttpsUrlsWithinItsLimit() {
+        val values = buildList {
+            add(" HTTPS://API.Example.COM:443/v1/ ")
+            add("https://api.example.com/v1")
+            add("http://insecure.example.com")
+            repeat(OnlineAiBaseUrlHistoryPolicy.MAXIMUM_ENTRIES + 5) { index ->
+                add("https://$index.example.com/v1/")
+            }
+        }
+
+        val normalized = OnlineAiBaseUrlHistoryPolicy.normalized(values)
+
+        assertEquals(OnlineAiBaseUrlHistoryPolicy.MAXIMUM_ENTRIES, normalized.size)
+        assertEquals("https://api.example.com/v1", normalized.first())
+        assertEquals("https://0.example.com/v1", normalized[1])
+        assertFalse(normalized.any { it.startsWith("http://") })
+    }
+
+    @Test
     fun credentialDestinationDependsOnProviderAndOriginNotBasePath() {
         val first = OnlineAiProfilePolicy.normalizeProfile(
             profile(baseUrl = "https://api.example.com/v1"),

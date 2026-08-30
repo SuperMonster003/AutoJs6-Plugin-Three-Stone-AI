@@ -66,11 +66,17 @@ internal class ContextTokenEstimator(
                 )
             }
         }
+        return estimatePayload(utf8Bytes, messages.size)
+    }
+
+    fun estimatePayload(utf8Bytes: Long, messageCount: Int): ContextTokenEstimate {
+        require(utf8Bytes >= 0L)
+        require(messageCount >= 0)
         val textTokens = estimateUtf8Bytes(utf8Bytes)
-        val roleTokens = saturatedMultiply(messages.size.toLong(), messageRoleOverheadTokens.toLong())
+        val roleTokens = saturatedMultiply(messageCount.toLong(), messageRoleOverheadTokens.toLong())
         return ContextTokenEstimate(
             utf8Bytes = utf8Bytes,
-            messageCount = messages.size,
+            messageCount = messageCount,
             estimatedTokens = saturatedAdd(textTokens, roleTokens),
         )
     }

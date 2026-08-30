@@ -62,6 +62,15 @@ class ContextTokenEstimatorTest {
     }
 
     @Test
+    fun `premeasured payload uses the same text and role accounting`() {
+        val estimate = estimator.estimatePayload(15L, 3)
+
+        assertEquals(15L, estimate.utf8Bytes)
+        assertEquals(3, estimate.messageCount)
+        assertEquals(18L, estimate.estimatedTokens)
+    }
+
+    @Test
     fun `invalid estimator parameters are rejected`() {
         assertThrows(IllegalArgumentException::class.java) {
             ContextTokenEstimator(tokensPerUtf8Byte = 0.0)

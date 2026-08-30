@@ -50,12 +50,109 @@ internal data class ChatMessage(
     }
 }
 
+internal data class ContextCompilationPolicy(
+    val estimator: ContextTokenEstimator,
+    val maximumInputTokens: Long,
+    val minimumRecentTurns: Int = ContextPolicy.MINIMUM_RECENT_TURNS,
+    val maximumHistoryBytes: Long = ChatConversationPolicy.MAXIMUM_RETAINED_HISTORY_BYTES.toLong(),
+) {
+    init {
+        require(maximumInputTokens > 0L)
+        require(minimumRecentTurns >= 0)
+        require(maximumHistoryBytes > 0L)
+    }
+}
+
+internal data class CompiledContext(
+    /** Complete successful history only. The current prompt remains a separate request field. */
+    val messages: List<GenerationMessage>,
+    val estimatedInputTokens: Long,
+    val coveredMessageIds: List<Long>,
+    val requiresSessionRebuild: Boolean,
+    val inputTokenLimit: Long,
+) {
+    init {
+        require(estimatedInputTokens >= 0L)
+        require(coveredMessageIds.size == messages.size)
+        require(coveredMessageIds.distinct().size == coveredMessageIds.size)
+        require(inputTokenLimit > 0L)
+    }
+
+    val exceedsInputBudget: Boolean
+        get() = estimatedInputTokens > inputTokenLimit
+}
+
 /** Pure transcript rules shared by the launcher UI and its local unit tests. */
 internal object ChatConversationPolicy {
     const val MAXIMUM_INPUT_CHARACTERS = 16_384
     const val MAXIMUM_BACKEND_TURNS = 32
     const val MAXIMUM_RETAINED_TURNS = 24
     const val MAXIMUM_RETAINED_HISTORY_BYTES = 192 * 1_024
+
+    /**
+     * Packs a contiguous suffix of complete user/assistant turns without splitting a pair.
+     *
+     * The token limit is a context policy, while [ContextCompilationPolicy.maximumHistoryBytes]
+     * remains a transport guard. The current prompt is always counted in full and the newest
+     * minimum turn floor may deliberately exceed the token limit; callers surface that as a
+     * warning instead of truncating user text.
+     */
+    fun compileContext(
+        transcript: List<ChatMessage>,
+        prompt: GenerationMessage,
+        policy: ContextCompilationPolicy,
+    ): CompiledContext {
+        require(prompt.role == GenerationRole.USER) {
+            "The compiled context prompt must be a user message"
+        }
+        val completedTurns = completedTurns(transcript)
+        val promptEstimate = policy.estimator.estimateMessage(prompt)
+        val retainedReversed = ArrayList<CompletedTurn>()
+        var retainedUtf8Bytes = 0L
+        var retainedMessageCount = 0
+        for (turn in completedTurns.asReversed()) {
+            val turnBytes = saturatedAdd(
+                turn.user.text.toByteArray(Charsets.UTF_8).size.toLong(),
+                turn.assistant.text.toByteArray(Charsets.UTF_8).size.toLong(),
+            )
+            if (saturatedAdd(retainedUtf8Bytes, turnBytes) > policy.maximumHistoryBytes) break
+            val candidateBytes = saturatedAdd(
+                promptEstimate.utf8Bytes,
+                saturatedAdd(retainedUtf8Bytes, turnBytes),
+            )
+            val candidateMessages = promptEstimate.messageCount + retainedMessageCount + 2
+            val candidateTokens = policy.estimator
+                .estimatePayload(candidateBytes, candidateMessages)
+                .estimatedTokens
+            if (
+                retainedReversed.size >= policy.minimumRecentTurns &&
+                candidateTokens > policy.maximumInputTokens
+            ) {
+                break
+            }
+            retainedReversed += turn
+            retainedUtf8Bytes = saturatedAdd(retainedUtf8Bytes, turnBytes)
+            retainedMessageCount += 2
+        }
+        val retained = retainedReversed.asReversed()
+        val messages = retained.flatMap { turn ->
+            listOf(
+                GenerationMessage(GenerationRole.USER, listOf(turn.user.text)),
+                GenerationMessage(GenerationRole.ASSISTANT, listOf(turn.assistant.text)),
+            )
+        }
+        val coveredMessageIds = retained.flatMap { turn ->
+            listOf(turn.user.id, turn.assistant.id)
+        }
+        val estimate = policy.estimator.estimateMessages(messages + prompt)
+        return CompiledContext(
+            messages = messages,
+            estimatedInputTokens = estimate.estimatedTokens,
+            coveredMessageIds = coveredMessageIds,
+            requiresSessionRebuild = retained.size != completedTurns.size,
+            inputTokenLimit = policy.maximumInputTokens,
+        )
+    }
 
     /**
      * Builds a contiguous suffix of successful user/assistant turns for a new native Conversation.

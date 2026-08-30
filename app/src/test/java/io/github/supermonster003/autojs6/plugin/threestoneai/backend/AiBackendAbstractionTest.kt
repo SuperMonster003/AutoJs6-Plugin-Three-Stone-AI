@@ -52,6 +52,9 @@ class AiBackendAbstractionTest {
         assertThrows(IllegalArgumentException::class.java) { GenerationStatistics(0L, -1L, 0L) }
         assertThrows(IllegalArgumentException::class.java) { GenerationStatistics(0L, 0L, -1L) }
         assertThrows(IllegalArgumentException::class.java) {
+            GenerationStatistics(0L, 0L, 0L, contextTokensAfterTurn = -1L)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
             GenerationStatistics(Long.MAX_VALUE, 1L, 0L)
         }
     }

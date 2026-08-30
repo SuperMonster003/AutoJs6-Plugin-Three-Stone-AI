@@ -223,6 +223,7 @@ internal class LiteRtLocalSession(
                 durationMillis = TimeUnit.NANOSECONDS.toMillis(
                     (System.nanoTime() - generationStartedNanos).coerceAtLeast(0L),
                 ),
+                contextTokensAfterTurn = totalTokens,
             )
         }
     }

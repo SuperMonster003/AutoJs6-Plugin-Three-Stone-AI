@@ -255,6 +255,8 @@ internal data class GenerationStatistics(
     val inputTokens: Long,
     val outputTokens: Long,
     val durationMillis: Long,
+    /** Full retained context after this turn when the backend can report it exactly. */
+    val contextTokensAfterTurn: Long? = null,
 ) {
     val totalTokens: Long
 
@@ -262,6 +264,7 @@ internal data class GenerationStatistics(
         require(inputTokens >= 0L)
         require(outputTokens >= 0L)
         require(durationMillis >= 0L)
+        require(contextTokensAfterTurn == null || contextTokensAfterTurn >= 0L)
         require(inputTokens <= Long.MAX_VALUE - outputTokens)
         totalTokens = inputTokens + outputTokens
     }

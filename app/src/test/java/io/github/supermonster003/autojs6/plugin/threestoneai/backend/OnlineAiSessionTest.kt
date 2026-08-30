@@ -112,7 +112,15 @@ class OnlineAiSessionTest {
         session(calls).stream(request(reportUsage = true), listener)
 
         assertEquals(listOf("one result"), listener.deltas)
-        assertEquals(GenerationStatistics(3L, 2L, listener.completed!!.durationMillis), listener.completed)
+        assertEquals(
+            GenerationStatistics(
+                inputTokens = 3L,
+                outputTokens = 2L,
+                durationMillis = listener.completed!!.durationMillis,
+                contextTokensAfterTurn = 5L,
+            ),
+            listener.completed,
+        )
         assertNull(listener.failure)
     }
 

@@ -439,6 +439,7 @@ internal class OnlineAiSession(
                 durationMillis = TimeUnit.NANOSECONDS.toMillis(
                     (System.nanoTime() - startedNanos).coerceAtLeast(0L),
                 ),
+                contextTokensAfterTurn = Math.addExact(input, output),
             )
         }
     }

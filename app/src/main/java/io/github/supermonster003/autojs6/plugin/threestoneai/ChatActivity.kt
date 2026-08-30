@@ -446,6 +446,13 @@ class ChatActivity : ConfiguredActivity() {
             orientation = LinearLayout.VERTICAL
             clipToPadding = false
             setPaddingRelative(dp(16), dp(18), dp(16), dp(24))
+            // Fade new messages in; keep size changes instant so streaming stays calm.
+            layoutTransition = android.animation.LayoutTransition().apply {
+                disableTransitionType(android.animation.LayoutTransition.CHANGING)
+                disableTransitionType(android.animation.LayoutTransition.CHANGE_APPEARING)
+                disableTransitionType(android.animation.LayoutTransition.CHANGE_DISAPPEARING)
+                disableTransitionType(android.animation.LayoutTransition.DISAPPEARING)
+            }
         }
         messagesScroll = ScrollView(this).apply {
             isFillViewport = true
@@ -1223,7 +1230,14 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun renderEmptyState() {
         if (!::emptyState.isInitialized) return
-        emptyState.visibility = if (messages.isEmpty()) View.VISIBLE else View.GONE
+        val visible = messages.isEmpty()
+        if (visible && emptyState.visibility != View.VISIBLE) {
+            emptyState.alpha = 0f
+            emptyState.visibility = View.VISIBLE
+            emptyState.animate().alpha(1f).setDuration(180L).start()
+        } else if (!visible) {
+            emptyState.visibility = View.GONE
+        }
         if (messages.isNotEmpty()) return
         val targetReady = isConversationTargetReady()
         when {

@@ -1,136 +1,197 @@
-# 3-Stone AI 插件路线图
+# Roadmap: 多轮对话上下文治理
 
-3-Stone AI 是 AutoJs6 的官方 AI 插件. 长期目标: 从本地推理插件升级为 AutoJs6 的统一 AI Provider 与交互中心: 本地模型, 在线服务, 模型目录, 凭据, 会话历史与聊天 UI 均由插件管理; 宿主仅保留稳定的 `ai.*` API, 可信插件发现, 协议协商, 安全策略与路由.
+> 目标一句话: 把 "聊天记录" 与 "发给模型的上下文" 彻底解耦; 完整记录继续服务 UI, 真正发给模型的上下文由统一的 Context Compiler 按 token 预算编译, 并以水位驱动会话轮换, 使单轮输入恒定有界, 累计费用从近似 O(n²) 回落为 O(n).
+>
+> 制定日期: 2026-08-31.参考: 与 Codex 的方案讨论 (已逐项核实其现状描述), 结合本仓库实际结构调整.所有条目均可独立勾选,独立合入; 按 ID 引用 (如 "P1-3").
 
-路线图按可交付的功能组织. 每一项可独立勾选, 可独立验收; 勾选标准是 "功能在真机上可用" (更名与协议类条目以 "构建通过 + 全量扫描无产品级旧名残留" 为准).
-当前已交付基线以源码, 测试与 CHANGELOG 为准, 不在此重复.
+## 1. 背景与已核实现状
 
-## 命名决策 (P0 记录)
+膨胀机理: 启动器聊天在 24~32 轮之间锯齿式增长 (重建装入最近 24 轮, 至 32 轮再重建); 在线会话每轮全量重发内部 `conversation`; 本地会话 KV cache 持续增长; Binder 持久会话则完全没有轮换上限.
 
-| 场景 | 采用 | 示例 |
+| # | 现状事实 (已核实) | 位置 |
 |---|---|---|
-| 显示名 / 品牌 (全语言统一, 不翻译) | `3-Stone AI` | app_name, 聊天助手名, 文档标题 |
-| 仓库 / 目录 / rootProject / APK 产物 | `Three-Stone-AI` / `three-stone-ai` | `AutoJs6-Plugin-Three-Stone-AI`, `autojs6-plugin-three-stone-ai-v1.2.0-arm64-v8a.apk` |
-| applicationId / namespace / Kotlin 包 | `threestoneai` (Java 标识符不能以数字开头) | `io.github.supermonster003.autojs6.plugin.threestoneai` |
-| 类名前缀 | `ThreeStoneAi` | `ThreeStoneAiProviderService` |
-| provider id / engine id / INFO category | `three-stone-ai` 短横线系 | `autojs6.three-stone-ai`, `three-stone-ai` |
-| 常量 / 线程名 / User-Agent | `THREE_STONE_AI` / `three-stone-ai` / `AutoJs6-Three-Stone-AI` | `THREE_STONE_AI_THEME_COLOR`, `three-stone-ai-worker` |
+| S1 | 复用同一 backend 至 32 轮 (`MAXIMUM_BACKEND_TURNS`), 重建装最近 24 轮 / 192 KiB (`historyForFreshBackend`), 重建后轮计数从 24 起算, 形成 24→32 锯齿 | `app/src/main/java/.../threestoneai/ChatConversation.kt` |
+| S2 | 复用/重建判定仅依据轮数与 target 一致性 (`completedTurnsOnBackend`) | `.../threestoneai/ChatActivity.kt` (`startBackendTurn`) |
+| S3 | 在线会话内部持有完整 `conversation`, 每轮 `conversation + prompt` 全量重发; `streamNext` 禁止携带 history; 传输护栏 256 KiB (`ThreeStoneAiPlugin.MAXIMUM_CONTEXT_BYTES`) | `.../backend/OnlineAiHttpExecution.kt` (`OnlineAiSession.runTurn`) |
+| S4 | 本地会话 `Conversation` KV cache 随轮增长; `getTokenCount()` 可取全量真值; 后续轮 `inputTokens` 为增量口径, 与在线全量口径语义不一致 | `.../backend/LiteRtLocalSession.kt` (`collectStatistics` 注释) |
+| S5 | Binder 持久会话无轮换上限, 插件不留存会话文本; 续轮协议限定恰好 1 条 USER 消息且 `FixedConfiguration` 不变; 错误码定义在宿主 API 库 (`org.autojs.plugin.ai.*`), 插件无法自行新增 | `.../provider/RemoteThreeStoneAiSession.kt` |
+| S6 | 限额模型只有字节维度: `AiTargetLimits.maximumContextBytes`; 本地模型目录同样仅有 `maximumContextBytes` | `.../backend/AiBackend.kt`, `.../model/ModelCatalog.kt` |
+| S7 | 在线 usage 实报 input/output tokens 且随 assistant 消息持久化 (`ChatMessageUsage`) - token 估算的校准数据现成 | `.../threestoneai/ChatConversation.kt` |
+| S8 | 历史存储上限 256 条 / 1 MiB / 24 MiB, codec v3 fail-closed; `ConversationHistoryStore` 每次 upsert 全量读写整个历史文件 (写放大) | `.../threestoneai/ConversationHistory.kt`, `ConversationHistoryStore.kt` |
+| S9 | 启动器聊天当前不发送 SYSTEM 消息; Binder 调用方可在首轮携带 SYSTEM, 各协议适配器均已支持 | `.../provider/PromptPlanner.kt`, 各 `*Protocol.kt` |
 
-本轮按未发布项目处理, 不提供旧身份兼容层或迁移别名. 产品身份全部采用 3-Stone AI 命名; 跨进程协议直接采用中性 AI Provider 命名, 以免 P2 再进行一次破坏性改名. 当前源码, 资源, 文档, CHANGELOG 与构建产物均不得保留被替换身份的文字, 标识符, 路径或二进制依赖.
+字节上限 (S3, S6) 是传输安全护栏, 不是上下文治理: 192 KiB 中文场景约折合 4 万+ tokens, 且中英文/代码的字节-token 比差异巨大.
 
-## P0 最终身份 3-Stone AI
+## 2. 目标与非目标
 
-### 插件: 构建与工程
+目标:
 
-- [x] `rootProject.name` 改为 `autojs6-plugin-three-stone-ai`, APK 产物名随之变更.
-- [x] `applicationId` / `namespace` 改为 `io.github.supermonster003.autojs6.plugin.threestoneai` (不保留旧 package ID).
-- [x] main/test 源码包目录整体迁移至 `plugin/threestoneai`, 未保留旧包目录或桥接代码.
-- [x] 产品类与测试类改用 `ThreeStoneAi*`; 通用协议类改用 `AiProvider*` / `IAi*` 中性命名.
-- [x] AndroidManifest: Application/InfoService/ProviderService 组件名同步; INFO category 改为 `three-stone-ai`; 两处 `requiresHostVersion` 由 5270 对齐为 5276; 发现 action 改为 `org.autojs.plugin.AI_PROVIDER`.
-- [x] proguard keep 规则同步新包名与新类名.
-- [x] 运行时标识: `PROVIDER_ID` = `autojs6.three-stone-ai`, `ENGINE`/plugin id = `three-stone-ai`, User-Agent, 线程名, 日志 TAG, Intent extra key, `THREE_STONE_AI_THEME_COLOR` 全部换新.
+- G1: 单轮模型输入 token 恒定有界 (默认 16K 预算), 与会话总长无关.
+- G2: 启动器聊天与 Binder 持久会话共用同一套上下文编译与轮换机制, 不再有旁路.
+- G3: 本地会话 KV cache 与在线累计费用均受水位控制, 重建后明显回落.
+- G4: 旧对话信息通过结构化摘要检查点保留, 可验证,可重建,失败可退化, 不阻塞聊天.
+- G5: 每阶段独立可合入,可验证, 保持既有 "纯策略对象 + JVM 单测 + 真机冒烟记录" 的工程惯例.
 
-### 插件: 资源与文案
+非目标 (本 Roadmap 不做):
 
-- [x] `app_name` = `3-Stone AI` (translatable=false), 新启动图标落位, About 页与 README 徽标引用同步.
-- [x] `chat_role_assistant` 统一为品牌名 `3-Stone AI` (移除各语言旧译名覆盖).
-- [x] 主题设置资源 key 改为 `app_settings_theme_three_stone_ai`, 10 语言 value 同步为 "3-Stone AI 橙色" 系.
-- [x] `plugin_description` 统一使用私有本地模型与用户配置在线服务的最终产品能力描述, 不混入历史品牌词.
+- 向量数据库 / embedding 语义召回 (仅在 P4 末尾留评估位).
+- 跨会话全局用户记忆 (本方案的记忆均为会话内).
+- 宿主 API 库 (`org.autojs.plugin.ai.*`) 的协议变更 (含新错误码); 全部改造限定在插件进程内.
+- 依赖 provider prompt cache 或超长上下文模型来替代逻辑上下文治理.
 
-### 插件: 文档管线
+## 3. 已定决策
 
-- [x] `.readme/common.json`: repo_url/repo_slug 改 `Three-Stone-AI`, plugin_id/plugin_engine 改 `three-stone-ai`, protocol_provider_id 改 `autojs6.three-stone-ai`, plugin_action 改 `org.autojs.plugin.AI_PROVIDER`, 本地协议 AAR 改 `ai-provider-api.aar`.
-- [x] `.readme/lang_*.json` × 10: 品牌词统一为 `3-Stone AI`, 能力描述统一为 local AI 语义.
-- [x] `template_readme.md` 图标路径与 alt 文本更新.
-- [x] 运行 `.python/generate_markdown.py` 重新生成 README × 11 与 CHANGELOG × 11, 确认幂等; 未发布 CHANGELOG 直接按最终身份改写.
-- [x] `plugin_instruction.md` × 11: 标题, PLUGIN_PACKAGE, provider 组件名, provider id, 绑定失败文案与原始 Binder 示例协议 API 全部换新.
+| ID | 决策 | 说明 |
+|---|---|---|
+| D1 | 滚动摘要跟随当前会话 target 执行 | 本地会话离线可用; 无新增凭据/网络策略边界.摘要调用使用一次性 backend session, 不与聊天会话争用 |
+| D2 | Binder 持久会话采用插件内透明压缩 | 协议零改动, 脚本无感, `sessionId` 不变; 仅更新 `plugin_instruction` 行为说明.首版透明压缩只裁剪原文,不做隐藏 LLM 摘要调用 (避免用调用方额度做不可见请求), LLM 摘要仅用于启动器聊天 |
+| D3 | 默认输入 token 预算 16K, 按 target 可覆盖 | 见第 5 节参数基线 |
+| D4 | 持久化沿用现有二进制 codec, 直接升版本,fail-closed,不留迁移分支 | 项目未发布, 与会话历史 v3 的既有做法一致 |
+| D5 | 摘要生成必须后台化且失败可退化 | 当前网络环境 5xx/524 常见, 摘要失败保留旧检查点并退化为纯截断, 绝不阻塞或拖垮聊天主链路 |
 
-### 宿主 AutoJs6 同步
+## 4. 总体设计
 
-- [x] `ThreeStoneAiOfficialPlugin` 的 PACKAGE_NAME / CLASS_NAME / PROVIDER_ID 三项常量指向最终身份; `AiControlOptions` 与 `AiSettingsFragment` 引用同步.
-- [x] 插件中心将 engine `three-stone-ai` 映射到中性 `AI_PROVIDER` action, 与插件 PluginInfo.id/engine 及 INFO category 保持一致.
-- [x] 宿主 main/test/androidTest 的插件身份常量, 类型与测试文件名全部同步.
-- [x] `docs/dev` 协议设计与验收文档全部按最终产品及中性协议身份重写.
-- [x] 协议模块直接采用 `:plugin-api:ai-provider-api`: Kotlin/AIDL 包为 `org.autojs.plugin.ai.provider.api`, Binder 接口使用 `IAiProvider` / `IAiSession` / `IAiCallback`, TaggedWire schema 域使用 `AP` (`0x4150`), 宿主实现与一致性测试同步采用 `AiProvider*`.
-- [x] fake provider 验收应用改为 `:test-apps:ai-provider-conformance`, 包名改为 `org.autojs.plugin.ai.provider.fake`; 不保留旧 module alias, package bridge 或 action filter.
+分层上下文 (编译产物按此优先级装箱, 超预算按完整 turn 驱逐, 不拆散 user/assistant 配对):
 
-### 验证 (离线优先, 避免外网 5xx)
+| 层 | 内容 | 保留策略 |
+|---|---|---|
+| L0 固定指令 | Binder 首轮 SYSTEM 消息; 启动器聊天暂为空槽位 | 必须原样保留 |
+| L1 结构化工作记忆 | 目标 / 约束 / 已确认决定 / 待解决 / 偏好, 带来源消息 ID 与状态 | 固定 token 上限 (P2) |
+| L2 摘要检查点 | 已移出原文窗口的旧 turn 的分段摘要 | 固定 token 上限 (P2) |
+| L3 最近原文 | 最近若干完整成功 turn | 按剩余预算装箱, 至少保底 2 turn |
+| 当前消息 | 本轮用户输入 | 必须完整保留 |
 
-- [x] 插件 `gradlew --offline :app:testDebugUnitTest :app:assembleDebug` 通过.
-- [x] 宿主 `ai-provider-api` 与 `ai-provider-conformance` 单测/构建通过, App AI 路由及设置相关 213 个单测通过.
-- [x] 双仓全量扫描: 被替换身份的 CamelCase, kebab-case, package/action, 自然语言品牌词, 文件名, 目录名与 AAR 均为 0 残留, 不设白名单.
-- [x] 真机冒烟: G8441 / Android 9 已覆盖新包名 APK 覆盖安装, `plugin: true` 默认目标生成, 宿主 "AI 服务设置" 精确跳转插件, 以及宿主启用状态与官方信任识别; 插件设置与在线配置在覆盖安装后保持正常.
+统一入口 (新增组件均为无 Android 依赖的纯策略对象, 便于 JVM 单测):
 
-### 发布收尾 (发布时执行)
+```text
+ChatActivity / RemoteThreeStoneAiSession
+            │
+            ▼
+ConversationContextCoordinator
+    ├── ContextTokenEstimator    (P0: 估算 + 按 target 校准)
+    ├── ContextBudgetCalculator  (P1: 预算与水位)
+    ├── ContextAssembler         (P1: compileContext 分层装箱)
+    ├── ContextAccounting        (P1: 实际 usage 优先的会话 token 记账)
+    └── SummaryCheckpointer      (P2: 检查点生成/验证/失效)
+            │
+            ▼
+      AiBackendSession (stream / streamNext 不变)
+```
 
-- [x] 未发布 CHANGELOG 按最终产品与中性协议身份改写, 重新生成文档.
-- [ ] 首次发布前确认 GitHub 仓库名为 `AutoJs6-Plugin-Three-Stone-AI`, 按发布清单产出三个 ABI 签名 APK.
+关键机制:
 
-## P1 插件内统一 AI Backend (在线 + 本地, 不改宿主默认路由)
+- 轮换判定从 "轮数" 改为 "上下文水位": 记账值达到硬水位 → 下一轮前关闭旧 session, 用编译后的精简上下文重建.`MAXIMUM_BACKEND_TURNS` 保留为泄漏保护 (提高到 64), 不再是主策略.
+- 台阶式驱逐: 达到水位时一次驱逐一批最旧 turn (回落到压缩目标), 而不是每轮滑动 1 turn - 两次重建之间请求前缀保持稳定, 减少重建频率, 也利于 provider 侧 prompt cache.
+- 记账口径归一: 在线用实报 `inputTokens + outputTokens` 近似当前上下文全量; 本地经 `getTokenCount()` 取全量真值; 均不可得时用估算兜底.
+- 摘要是派生索引不是唯一真相: 原文在存储保留期内不因摘要而删除; 检查点带来源 ID 与哈希, 可随时从原文重建.
 
-先在插件内部形成统一的 "调用目标 (target)" 抽象与聊天产品体验, 最快验证合并价值.
+## 5. 默认参数基线 (全部集中在 `ContextPolicy`, 可调; 数值为初始值, P0 校准后可修订)
 
-- [x] 引入 `AiBackend` / `AiBackendSession` 通用抽象 (catalog / capabilities / createSession / stream / cancel), 现有 LiteRT 原生会话逻辑收敛到 `LiteRtLocalBackend`, 不重写; 启动器聊天与独立 `:provider` 进程的 Binder Service 共用同一 backend 实现及会话路径, 各进程实例由 Application 持有.
-- [x] 建立 `AiTarget` / `AiTargetCatalog` 值模型: 已导入本地模型统一映射为 `local:*` target, 含 targetId, backend/provider/model, locality, configured/available, capabilities, 执行 profile 与上下文/输出上限.
-- [x] 在线配置档案领域与目录层: 严格有界且不含凭据的 JSON, canonical UUID, HTTPS-only base URL, provider/origin 变更时强制明确替换或清除凭据, 跨进程锁 + fsync + 原子发布; 档案映射为 `profile:*` REMOTE/PLUGIN_MANAGED target 并与 `local:*` 合入 Application 级统一目录及会话分发. Binder V2 目标目录直接公开本地与在线目标的非敏感元数据.
-- [x] 插件自有凭据仓库: Android Keystore AES-256-GCM 主密钥, 与 profile 绑定的认证密文, 应用私有 hash 文件名, fsync + 原子 rename, 进程内互斥 + 跨进程文件锁; 对外仅查询 configured, 插件内部仅在同步回调中短暂解密并在成功或异常后立即清零, 固定错误消息不携带底层敏感原因.
-- [ ] 在线档案与凭据真机安全冒烟: 验证默认进程写入后 `:provider` 可读取一致的非敏感档案与凭据状态, 并覆盖跨进程替换/清除, provider/origin 变更时的凭据重录, 进程终止重启, 锁屏重启, 元数据/密文损坏及清除应用数据后的 fail-closed 行为. (需真机, 由维护者执行)
-- [x] OpenAI-compatible Backend (自定义 baseUrl + key + 模型名): Application 级执行器通过统一 `AiBackendSession` 提供完成轮次多轮历史, 有界 SSE 与 JSON 回退流式响应, 精确取消, provider usage, JSON Schema 请求映射及固定且不含敏感信息的错误; 仅访问 profile 声明的 HTTPS 来源, 禁止重定向, 自动重试, cookie, cache, authenticator 及请求观察器, 不提供本地/在线自动回退. AI Provider V2 按 `profile:*` target 精确路由在线执行.
-- [ ] OpenAI-compatible 真机互通与安全冒烟: 使用维护者控制的 HTTPS 测试 endpoint 验证自定义 baseUrl/key/model, SSE 与 JSON 回退, 长响应取消, 401/403/429/5xx, malformed/oversized response, profile/key 并发替换, 进程终止及网络切换. (需真机与测试凭据, 由维护者执行)
-- [x] 预置提供方模板: OpenAI / Anthropic / Gemini / DeepSeek / OpenRouter 与宿主现有在线目录顺序及默认 baseUrl 对齐; 模型 ID 仍由 profile 明确填写. OpenAI/DeepSeek/OpenRouter 复用 OpenAI-compatible 格式, Anthropic Messages 与 Gemini GenerateContent 各自使用原生请求, 认证, SSE 终态, usage 与 JSON Schema 映射; 通用在线执行层不提供协议间或本地/在线自动回退. [开发契约](docs/dev/online-provider-backend.md)
-- [x] 在线服务设置页实现与离线验收: 10 语言配置档案添加/编辑/删除, 不回显 Key 的替换与清除, 默认在线目标选择, 实际执行前生效的移动/计量网络开关, 用户确认且可取消的 120 秒有界连接测试; 非敏感设置与档案共用 schema 2 跨进程原子文档, 未发布项目不保留 schema 1 兼容读取. [开发契约](docs/dev/online-provider-backend.md)
-- [ ] 在线服务设置页真机冒烟: G8441 / Android 9 已验证空配置初始化, 并修复系统 `/data/user/0` 到 `/data/data` 的可信路径规范化误判; 同一设备已在插件端新增并配置 PoloAPI OpenAI-compatible profile, 连接测试成功且实测耗时不足 10 秒. 仍需覆盖其余提供方, 编辑/删除, provider/origin 变更强制重录 Key, 默认目标跨进程可见, Wi-Fi/移动及计量网络切换, 连接测试取消/超时/错误映射, 旋转与进程重启. (需维护者控制的测试凭据, 由维护者执行)
-- [x] 聊天 UI 目标选择器: 每个会话固定默认 target; 切换目标默认建议新会话, 继续当前会话需明确确认并记录目标快照. G8441 / Android 9 已验证统一目录中的 PoloAPI Cloud target 绑定, 当前项勾选与重复选择无副作用; 多 target 和已有消息会话的分支由策略测试覆盖.
-- [x] 会话历史逐条保存实际 target/provider/model/locality 快照; "重新生成" 默认沿用原响应目标. 历史格式直接升级为 version 3, assistant 消息强制保存 backend 实际目标, 精确重新生成允许显示名变更但拒绝 provider/model/locality 漂移, 且不回退到会话默认目标. G8441 / Android 9 已在同一 PoloAPI Cloud target 上完成首次生成与重新生成, 两次响应均成功且目标保持 `OpenAI-compatible / PoloAPI / claude-opus-4-8`.
-- [x] 会话界面常显目标徽标: Local/Cloud, 提供方, 模型名; 次要信息展示 usage 与耗时. G8441 / Android 9 已验证 Cloud 目标栏常显完整身份, 首次生成显示 `18788 input | 106 output | 8.0 s`, 重新生成显示 `18786 input | 212 output | 6.0 s`.
-- [x] 失败不静默跨界: 本地失败绝不自动转在线, 在线失败绝不自动转本地; 均给出明确错误与手动切换入口. Unified dispatcher 仅调用 targetId 的唯一 owner, 双向失败测试确认另一 backend 的会话创建次数保持为 0; 聊天按响应 target 的 Local/Cloud 边界追加有界且不含底层敏感详情的原因, 明示未自动跨界, 保留失败前的部分输出, 并在失败消息下提供可点击的手动目标选择入口. G8441 / Android 9 已在存在可用本地 Gemma target 时断网触发 PoloAPI Cloud 失败, 验证目标仍保持 Cloud, 明确显示无可用网络及未自动选择本地目标, 点击失败入口可打开仍以 PoloAPI 为当前项的手动选择器. 本地破坏性失败没有安全复现条件, 因此以双向确定性 owner-failure 测试覆盖, 不为勾选而损坏模型或私有配置.
-- [x] 统一流式管线: 在线与本地共用 Markdown 渲染, 取消, 重试, usage 与错误展示; 插件 UI 与 Binder Service 调用同一 `AiBackend` 层. 代码审计与离线回归确认 Application 级 `CompositeAiBackend` 是两个入口唯一的 backend 边界, 首轮/续轮统一使用 `GenerationListener` 与 `GenerationStatistics`, UI 统一进入 Markdown/完成/失败状态机, Binder V2 会话统一映射 text/reasoning/toolCall/usage/finishReason 及 completed/failed/cancelled 唯一终态; `cancelAndClose` 契约保证取消异常也不会跳过资源释放, 架构测试禁止两个入口重新直接构造本地或在线实现. G8441 / Android 9 已覆盖 PoloAPI Cloud 首次生成, 重新生成, usage/耗时与失败展示; 同一设备随后以 Local `gemma-4-E2B-it-litert-lm.litertlm` 流式生成 30 项 Markdown 内容, 中止后保留已到达的 1-4 项并显示 `Generation stopped`, 再从同一响应重新生成完成 30 项且显示 `42 input | 543 output | 242.7 s`. 本地和在线均未出现迟到终态或跨边界目标切换.
+| 参数 | 默认值 | 说明 |
+|---|---|---|
+| 输入预算 | 16,384 tokens | D3; 设置页可选 8K / 16K / 32K / 自定义, 按 target 覆盖 |
+| 输出预留 | `maximumOutputTokens` 设置值, 未设时 4,096 | 参与容量校验, 不参与预算扣减时置 0 的讨论见 P1-2 |
+| 安全余量 | 预算的 8% | 吸收估算误差 |
+| 软水位 | 预算的 65% | 触发后台摘要 (P2) |
+| 硬水位 | 预算的 80% | 下一轮前必须重建 |
+| 绝对保护 | 预算的 90% | 丢弃 L1/L2, 仅保最近原文 + 当前消息紧急重建 |
+| 压缩目标 | 重建后 ≤ 预算的 45% | 与硬水位形成高低水位差, 避免每轮重建 |
+| 最近原文保底 | 2 个完整 turn | 即使超水位也保留 |
+| 估算初始系数 | 0.40 token/byte + 每消息 4 tokens 角色开销 | 对中英文/代码均偏保守 (宁可高估) |
+| 校准系数带 | [0.15, 0.60] token/byte | 按 target EMA 校准, 夹在带内 |
+| 摘要层上限 | 2,048 tokens | P2 |
+| 工作记忆上限 | 1,024 tokens | P2 |
+| Binder 会话转写留存上限 | 512 KiB / 会话 | P3, 内存护栏 |
 
-## P2 通用 AI Provider 协议 V2 (宿主, 中性命名)
+## 6. 阶段任务
 
-- [x] 将中性 `plugin-api/ai-provider-api` 直接升级为 V2 统一目标语义, 复用 `ai-common-api` 的 locality/credential 定义; AIDL, codec, schema, host transport 与真实插件均只保留 V2 接口及名称, 未增加旧接口兼容层.
-- [x] 定义 `AiTargetInfo`: targetId, providerId, profileId, modelId, displayName, locality, capabilities, availability, configured, 上下文/输出上限, supportedControls, declaredOrigins; `local:*` / `profile:*` target 与实际服务 provider 身份彼此独立且分别校验.
-- [x] 统一 Catalog 接口: `listTargets` 及单次消费 continuation token 分页替代仅本地模型目录; 本地 backend profile 为可选目标扩展, 真实插件直接枚举 Application 级统一目录.
-- [x] 标准化流式事件: chunk 中分别承载 text/reasoning, toolCall 与 usage 独立事件, completion 强制携带 finishReason 及已校验的最终聚合输出; completed/failed/cancelled 由唯一终态 gate 管理, 无载荷完成兼容入口已移除.
-- [x] 放开 `REMOTE` / `HYBRID` provider: 宿主按目标 locality 与 credentialMode 规划, 远程来源必须属于固定插件描述符声明的 HTTPS origins 且凭据模式必须为 `PLUGIN_MANAGED`; 宿主请求, 计划, cache key, 日志及 Binder 对象均无凭据字节.
-- [x] 协议一致性测试: fake provider 覆盖 local/remote/hybrid/unconfigured target, 目标服务 provider 与 Binder 插件身份解耦, origin/capability/locality 越权, descriptor/UID/FD/终态 hostile 场景及信任校验 fail-closed; 宿主 API, fake conformance, 宿主调用链与真实插件 JVM 测试通过.
-- [x] V2 真机冒烟: G8441 / Android 9 的临时公开目录投影同时返回 Local Gemma 与 PoloAPI Cloud 目标, 在线目标不携带本地 `backendProfiles`; 省略 `backend` 并按 `claude-opus-4-8` 选择后准确返回 `V2 target route OK`, 从脚本启动到完成共 11.389 秒, 未发生本地 backend 注入或跨边界回退.
+### P0 - 观测与校准 (先能看见, 再动刀)
 
-## P3 宿主 `ai.*` 全量接通插件 (直接替换旧目录 API)
+- [x] **P0-1** 新增 `ContextTokenEstimator` 纯策略对象: 按初始系数估算 `GenerationMessage` 列表与单条文本的 token 数, 含每消息角色开销.
+  - 验收: JVM 单测覆盖中文 / 英文 / 代码 / 空消息 / 多 part; 对同一文本估算值 ≥ 实际值的场景在校准前可接受 (保守方向正确).
+- [x] **P0-2** 校准机制: 每次成功轮结束后, 用实报 usage (在线 `inputTokens`; 本地按 S4 的增量口径换算) 更新该 target 的 EMA 系数并持久化 (SharedPreferences, 跟随 `ChatUiSettingsStore` 模式); 系数夹在校准带内.
+  - 验收: 单测模拟连续 usage 序列, 系数收敛且不越带; 无 usage 时系数不变.
+- [ ] **P0-3** 观测日志: 每轮以 debug 级输出 估算输入 tokens / 实际 usage / 当前记账值 / backend epoch / 是否重建; 启动器聊天 usage 行 (`showGenerationUsage`) 增加会话累计输入展示 (可选开关).
+  - 验收: logcat 可直接观察锯齿曲线, 作为 P1 前后对比基线; 真机记录一段 24+ 轮会话的数据存入 `docs/dev/`.
+  - 状态: 代码, UI 与自动化验证已完成; 24+ 轮真机数据仍待执行, 采集步骤见 [`docs/dev/context-accounting-baseline.md`](docs/dev/context-accounting-baseline.md), 因此本条保持未勾选.
 
-- [x] `ai.ask/chat/stream/session` 支持统一 `target` 选择器 (`local:*` / `profile:*`); `plugin: true` 仅作为选择官方插件默认 target 的简写, 不再限定本地目标.
-- [x] 新增 `ai.catalog()`: 返回本地与在线全部目标, 包含身份, 配置/可用状态, 能力, 控制项, 限制, 来源, 默认标记与本地 backend profile.
-- [x] 直接移除未发布的旧公开目录, 配置探测入口及内部模型列表投影类型, 全部由 `ai.catalog()` 取代; 不保留别名, 兼容视图或旧名称源码.
-- [x] 插件路由响应补齐 reasoning, toolCalls, finishReason, target/plugin/profile 与完整 usage, 流式增量及持久会话同步公开精确目标元数据.
-- [x] 错误码统一: 插件缺失/禁用/协议不兼容/目标未知或未配置/目标或 backend 不可用/能力不匹配均返回稳定错误, 不静默改路由.
-- [x] 宿主 d.ts, Ace Editor 内置声明与 docs.autojs6.com/离线文档已更新, 覆盖目录, 精确 target, 默认 target, 本机/在线差异, 完整响应及禁止回退语义.
-- [x] P3 统一宿主公开 API 真机冒烟: G8441 / Android 9 已验证 `ai.catalog()` 返回稳定 generation, 远程默认 target 与本机/在线目录; 精确在线 target 和 `plugin: true` 默认目标均返回完整 target/provider/model/finishReason/usage 元数据 (分别耗时 6.127 s, 4.260 s); 不存在 target 稳定返回 `TARGET_NOT_FOUND` 且未回退; 精确本机 target 成功完成并返回完整元数据 (8.835 s); 全脚本 27.527 s. [维护者脚本](docs/dev/p3-host-public-api-smoke.md)
+### P1 - token 预算装配与水位轮换 (止血: 输入从锯齿增长变为恒定有界)
 
-## P4 设置入口与配置迁移
+- [ ] **P1-1** `AiTargetLimits` 增加 `maximumContextTokens: Int?` (插件内部字段, 不经 `TargetPager` 透出 Binder); `OnlineAiBackend` 目录 codec 版本 +1 (fail-closed); 本地 target 暂不填, 走全局默认预算.
+  - 验收: 既有 `OnlineAiBackendTest` / 目录编解码测试更新通过.
+- [ ] **P1-2** 新增 `ContextBudgetCalculator`: `有效输入预算 = min(target.maximumContextTokens - 输出预留 - 安全余量, 应用预算设置)`; 上下文窗口未知的在线 target 只受应用预算约束 (预算即成本上限, 不冒充容量推断).
+  - 验收: 单测覆盖 有/无 target 上限,有/无输出设置,极小预算钳制 (保底 2 turn + 当前消息).
+- [ ] **P1-3** `ChatConversationPolicy` 新增 `compileContext(transcript, target, prompt, policy): CompiledContext` - 复用现有成功 turn 提取, 按 token 从尾部装箱完整 turn; 返回 `messages / estimatedInputTokens / coveredMessageIds / requiresSessionRebuild`; 当前消息永远完整保留 (输入框 16K 字符硬限已存在, 单条消息可能占满预算属预期行为, 记录警告日志即可); 现有 24 轮 / 192 KiB 规则退役为传输护栏.
+  - 验收: 单测覆盖 长短混合 turn,单条超长消息,全部失败轮被排除,装箱不拆散配对,时序保持.
+- [ ] **P1-4** 新增 `ContextAccounting`: 会话内维护当前上下文 token 记账 - 在线每轮以实报 `inputTokens + outputTokens` 刷新, 本地以 `getTokenCount()` 全量真值刷新 (为此给 `GenerationStatistics` 增加内部可空字段 `contextTokensAfterTurn`, LiteRT 填真值, 在线填 input+output, 不透出 Binder), 均不可得时以估算累加兜底; `shouldRotateBackend` 改为 `记账值 ≥ 硬水位 || 轮数 ≥ 64 (泄漏保护)`.
+  - 验收: 单测覆盖三种口径的记账与轮换触发; S4 的口径差异有专门测试固定语义.
+- [ ] **P1-5** `ChatActivity` 集成: `startBackendTurn` 复用判定改为 (target 一致 && 记账未达硬水位 && 未发生编辑/重生成/target 切换); 重建路径改用 `compileContext` 且回落至压缩目标 (台阶式驱逐); `completedTurnsOnBackend` 让位于记账, 仅作泄漏保护计数.
+  - 验收: 现有编辑 / 重新生成 / 停止 / target 切换流程回归通过; 重建后记账值 ≤ 45% 预算.
+- [ ] **P1-6** 设置项: "上下文 token 预算" (8K / 16K / 32K / 自定义, 默认 16K), 存取跟随 `ChatUiSettings` / `ChatUiSettingsStore` 既有模式.
+  - 验收: `ChatUiSettingsTest` 扩展通过; 修改预算即刻影响下一轮编译.
+- [ ] **P1-7** 真机冒烟并记录 `docs/dev/context-budget-smoke.md`: 同一在线 target 连续 40+ 轮, usage 显示单轮输入 tokens 有界且重建后明显回落; 本地 target 长会话延迟不再单调上升.
+  - 验收: 文档含前后对比数据 (对照 P0-3 基线).
 
-- [x] 宿主 "AI 服务设置" 已改为插件统一设置入口: 可信且启用的已安装插件打开唯一受保护的无参数设置 Activity; 缺失, Android 停用, 插件中心停用或入口不可信分别进入确定的安装, 系统启用, 插件启用或更新引导. G8441 / Android 9 已从宿主偏好项精确跳转并打开插件在线服务页. [真机记录](docs/dev/p4-p5-host-plugin-settings-smoke.md)
-- [x] 在线 API Key 采用 "插件内重新输入" 方案; 新设置契约明确无 extras, URI, clip data, result payload 或配置字段, 不存在宿主到插件的凭据传输通道. G8441 已验证 shell UID 被签名权限拒绝, 携带额外参数的授权调用由插件立即拒绝.
-- [x] 宿主既有在线配置, profile 路由与读取路径已物理删除; 插件内已录入配置是唯一来源, 无只读迁移或脚本分支. G8441 覆盖安装后 PoloAPI 档案, 默认目标, 凭据配置状态和网络策略完整保留.
-- [x] 脚本公开选项只保留插件 `target` 及规范生成控制; 宿主不再接收裸在线连接或凭据参数, 未设置弃用周期或别名.
+> P1 完成后: 输入增长曲线由 O(n) 锯齿封顶为常数带, 累计费用 O(n); 代价是超出预算的旧原文暂时直接遗忘 (P2 补记忆).
 
-## P5 宿主瘦身 (直接替换)
+### P2 - 摘要检查点与结构化工作记忆 (把遗忘变成压缩)
 
-- [x] 宿主在线 HTTP 执行, 响应/SSE 解析和请求构造源码及测试已物理删除; `ai.*` 的本地与在线执行均由所选插件 `target` 承载.
-- [x] 宿主在线配置编辑 Activity/Fragment/layout, 凭据仓库及全部读写路径已物理删除, 无迁移提示或历史配置读取代码.
-- [x] 宿主最终只保留 `ai.*` API 外观, 插件发现与信任, 协议协商, Binder 生命周期, 设置入口与错误规范化; 专项单测, 全量源码扫描, Debug APK 和 AndroidTest 编译通过, 无旧执行分支.
-- [x] 插件与宿主已直接切换 V2 并移除旧协议接口, codec, 名称, 服务实现与测试夹具; 后续瘦身无需保留协议兼容分支.
+- [ ] **P2-1** 数据模型: `ConversationContextState { coveredThroughMessageId, summarySegments[], workingMemory, schemaVersion }`; `SummarySegment` 带 `firstMessageId / lastMessageId / sourceHash`; `MemoryItem` 带 `sourceMessageIds / status (PROPOSED | CONFIRMED | REJECTED | SUPERSEDED)`; 随 `StoredConversation` 持久化, 会话历史 codec 升 v4 (fail-closed, 无迁移分支, D4).
+  - 验收: codec 编解码单测; 旧 v3 文件按既有约定整体拒读.
+- [ ] **P2-2** 触发与范围: 软水位后台生成; 每次只摘要 "下次台阶驱逐将移出原文窗口的完整 turn 段" (上个检查点之后), 绝不重摘全会话, 也绝不摘要进行中/失败/停止轮.
+  - 验收: 单测验证检查点链连续覆盖,范围不重叠不跳跃.
+- [ ] **P2-3** 摘要调用 (D1/D5): 用当前会话 target 新建一次性 backend session, 要求严格 JSON 输出 (target 具 `structuredJson` 能力时用 schema, 否则 prompt 约束 + 严格解析); 输入输出均设硬上限; 后台执行,与聊天互不阻塞, 失败重试 1 次后放弃并保留旧检查点, 聊天退化为纯截断继续可用.
+  - 验收: 伪 backend 单测覆盖 成功 / 超限 / 解析失败 / 网络失败退化; 摘要调用不占用聊天的 backend session.
+- [ ] **P2-4** 本地验证器: 引用的 `sourceMessageIds` 必须落在覆盖范围内且真实存在; 字段长度 / 条数硬上限; 状态机规则 - 模型未经用户确认的建议只能是 PROPOSED, 不得直接产出 CONFIRMED 决定; 验证失败整段丢弃, 保留旧检查点.
+  - 验收: 单测逐条覆盖拒绝分支 (越界来源 / 超长 / 非法状态跃迁).
+- [ ] **P2-5** 装配整合: `compileContext` 增加 L1 (工作记忆) / L2 (摘要段) 层, 按第 4 节优先级与各层上限装箱; 绝对保护水位时丢弃 L1/L2.
+  - 验收: 单测覆盖各层上限,优先级,紧急降级路径.
+- [ ] **P2-6** 失效规则: 编辑 / 删除 / 重新生成使 "覆盖该消息及之后" 的检查点与相关记忆失效并异步重建; target 切换保留检查点 (纯文本, 跨 target 通用); 检查点变更即触发 backend 重建 (fingerprint 变化).
+  - 验收: 单测覆盖 编辑早于 / 晚于 检查点边界,连续编辑,重建期间再次编辑.
+- [ ] **P2-7** 存储配套: `ConversationHistoryPolicy.normalized()` 裁剪最旧消息前, 确保其已被检查点覆盖 (未覆盖则先保留); 缓解 S8 写放大 - 首选对 `persistConversationNow` 节流合并 (流式增量期已有 UI 侧缓冲, 落盘可去抖), 不足时再评估拆分文件, 单独立项.
+  - 验收: 单测验证 "未覆盖不裁剪"; 长会话下落盘频率可观测下降.
+- [ ] **P2-8** 真机冒烟并记录: 60+ 轮跨话题长会话, 验证 (a) 单轮输入仍有界; (b) 询问 30 轮前的已确认约束能被正确回忆 (命中工作记忆/摘要); (c) 断网时摘要失败聊天不受影响.
 
-## 设计边界 (不做的事)
+### P3 - Binder 持久会话透明压缩 (堵住旁路, D2)
 
-- 不做任何静默跨界回退: 本地与在线互不自动切换, 隐私边界与费用边界只能由用户跨越.
-- 凭据只存在插件进程内 (Keystore 加密); 宿主, 日志, 设置同步契约与协议对象均不得出现 API Key 或授权头.
-- 不因合并在线能力改变本地推理承诺: 本地目标推理不联网不上传; `INTERNET` 权限仅用于用户明确发起的模型下载与用户配置的在线目标请求.
-- 不做联网模型发现或任意 URL 模型下载; 在线目标仅访问用户配置且声明过的 HTTPS 来源.
-- capability 声明与实际行为保持一致, 未验证不声明.
+- [ ] **P3-1** 会话转写留存: `RemoteThreeStoneAiSession` 记录每轮 user prompt (来自 `PromptPlanner` 产物) 与完成输出 (来自 `StreamingOutputBuffer.snapshot()`), 仅成功轮入账; 首轮完整 history 与 SYSTEM 消息一并留存; 内存护栏 512 KiB, 超出即对最旧 turn 做台阶驱逐 (原文裁剪, 无 LLM 摘要, D2).
+  - 验收: 单测覆盖 成功/失败/取消轮的入账边界,护栏驱逐.
+- [ ] **P3-2** 记账与透明重建: 复用 `ContextAccounting` (usage 已随 `GenerationStatistics` 可得); 达到硬水位后, 在下一次 `generateNext` 前于插件内部关闭旧 backend session, 用 `compileContext` 产物 (SYSTEM 原样置顶 + 最近原文) 调用新 session 的 `stream()`; `sessionId`,`FixedConfiguration`,回调时序对脚本完全不变.
+  - 验收: 伪 backend 单测 - 40+ 轮连续 `generateNext`, 断言脚本视角流式/完成/usage 事件序列与不重建时一致, 且底层 session 发生过重建,重建后输入有界.
+- [ ] **P3-3** 硬保底: 极端情况下 (单轮 prompt 加保底原文仍超绝对保护水位) 沿用现有 fail-closed 路径与既有错误码关闭会话, 不引入新协议错误码.
+  - 验收: 单测覆盖该路径; 错误码不超出宿主 API 现有集合.
+- [ ] **P3-4** 文档: `plugin_instruction.md` 增补持久会话上下文行为说明 (透明压缩,护栏,硬保底), 按既有流程同步各语言资源; `docs/dev/` 增补设计要点.
+  - 验收: `PluginInstructionCompatibilityTest` 通过.
+- [ ] **P3-5** 真机冒烟并记录: AutoJs6 脚本经 provider 连续 100 轮对话 (本地与在线 target 各一轮次), 无溢出,无会话中断; usage 曲线有界.
 
-## 发布清单 (每个版本)
+### P4 - 可选优化 (按需立项, 非本 Roadmap 承诺)
 
-1. `.\gradlew.bat --offline :app:testDebugUnitTest :app:assembleDebug` 通过 (网络异常环境优先离线; 依赖变更时才允许在线同步).
-2. 更新 `.changelog/lang_*.json` 与 `.readme/lang_*.json`, 运行 `.python/generate_markdown.py`, 确认工作树幂等.
-3. `.\gradlew.bat :app:assembleRelease` 产出 arm64-v8a / x86_64 / universal 三个签名 APK.
-4. 真机安装, 用插件说明中的快速开始脚本冒烟一次; 涉及宿主协同的版本同时验证宿主设置页跳转与插件中心识别.
+- [ ] **P4-1** 前缀稳定性复核: 校验各协议适配器在台阶驱逐间隔内保持字节级稳定请求前缀 (L0/L1/L2 置前), 实测 provider prompt cache 命中率.
+- [ ] **P4-2** 上下文用量 UI: 会话页展示 `已用 / 预算` 与分层构成; 提供 "立即压缩" 手动动作.
+- [ ] **P4-3** FTS 历史召回 (L3 之外的按需片段召回): SQLite FTS 按 2~4 turn 分块索引, 关键词 + 时间权重选 2~4 片段计入预算; 涉及存储迁移, 需单独评估后立项.
+- [ ] **P4-4** embedding 语义召回: 仅当 P4-3 证实不足时评估.
+
+## 7. 阶段门槛
+
+每阶段合入前须满足: (a) 该阶段全部单测通过且新增策略对象无 Android 依赖; (b) 真机冒烟记录落入 `docs/dev/` (含数据, 惯例同 `p3-host-public-api-smoke.md`); (c) 不改变宿主 API 面; (d) 失败路径显式测试 (摘要失败,网络失败,估算缺失).P0→P1→P2→P3 顺序推进, P2 与 P3 可在 P1 合入后并行.
+
+## 8. 风险与回退
+
+| 风险 | 缓解 |
+|---|---|
+| token 估算偏差导致 provider 侧容量溢出 | 保守初始系数 + 校准带 + 8% 余量; 溢出错误按现有失败呈现, 用户下调预算即可; 不自动重试以免双倍计费 |
+| 摘要漂移 (建议被记成决定) | P2-4 状态机 + 来源验证; 摘要只处理增量段, 检查点可由原文随时重建 |
+| 摘要调用受 5xx/524 影响 | D5: 后台化 + 单次重试 + 退化为纯截断, 永不阻塞聊天 |
+| LiteRT 重建 prefill 变慢 (重建轮延迟尖峰) | 台阶驱逐拉大重建间隔; 压缩目标 45% 控制 prefill 规模; 冒烟记录尖峰数据 |
+| 记账口径混淆 (S4) | P1-4 以 `contextTokensAfterTurn` 归一并有专门测试固定语义 |
+| codec 升版风险 | D4 fail-closed 惯例, 升版条目均带编解码单测 |
+| 回退 | 各阶段独立提交, 逐阶段 revert 即可; P1 参数全部集中在 `ContextPolicy`, 极端情况下调回等效旧行为 (预算调大 + 水位 100%) |
+
+## 9. 相对 Codex 参考稿的主要调整
+
+1. 增加 P0 (观测与校准先行): 在线 usage 已随消息持久化 (S7), 校准几乎零成本, 且 P1 的收益需要基线数据来证明.
+2. 台阶式驱逐替代逐轮滑动窗口: 同时服务重建频率与 prompt cache 前缀稳定性.
+3. Binder 首版透明压缩不做隐藏 LLM 摘要 (D2): 避免用调用方额度发起不可见请求; 也因此完全不需要宿主 API 变更 (Codex 稿中 CONTEXT_EXHAUSTED 新错误码方案被放弃).
+4. 记账优先采用实际值 (在线实报 usage / 本地 `getTokenCount`), 估算仅兜底 - 比纯估算方案更稳.
+5. FTS/Room 召回降级为 P4 可选项: 现有 AtomicFile 体系近期够用, 先以 P2-7 缓解写放大, 避免过早引入存储迁移.
+6. 摘要失败退化路径按当前网络环境 (5xx/524 常见) 设计为常态而非异常 (D5).

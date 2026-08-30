@@ -117,22 +117,23 @@ ConversationContextCoordinator
 
 ### P1 - token 预算装配与水位轮换 (止血: 输入从锯齿增长变为恒定有界)
 
-- [ ] **P1-1** `AiTargetLimits` 增加 `maximumContextTokens: Int?` (插件内部字段, 不经 `TargetPager` 透出 Binder); `OnlineAiBackend` 目录 codec 版本 +1 (fail-closed); 本地 target 暂不填, 走全局默认预算.
+- [x] **P1-1** `AiTargetLimits` 增加 `maximumContextTokens: Int?` (插件内部字段, 不经 `TargetPager` 透出 Binder); `OnlineAiBackend` 目录 codec 版本 +1 (fail-closed); 本地 target 暂不填, 走全局默认预算.
   - 验收: 既有 `OnlineAiBackendTest` / 目录编解码测试更新通过.
-- [ ] **P1-2** 新增 `ContextBudgetCalculator`: `有效输入预算 = min(target.maximumContextTokens - 输出预留 - 安全余量, 应用预算设置)`; 上下文窗口未知的在线 target 只受应用预算约束 (预算即成本上限, 不冒充容量推断).
+- [x] **P1-2** 新增 `ContextBudgetCalculator`: `有效输入预算 = min(target.maximumContextTokens - 输出预留 - 安全余量, 应用预算设置)`; 上下文窗口未知的在线 target 只受应用预算约束 (预算即成本上限, 不冒充容量推断).
   - 验收: 单测覆盖 有/无 target 上限,有/无输出设置,极小预算钳制 (保底 2 turn + 当前消息).
-- [ ] **P1-3** `ChatConversationPolicy` 新增 `compileContext(transcript, target, prompt, policy): CompiledContext` - 复用现有成功 turn 提取, 按 token 从尾部装箱完整 turn; 返回 `messages / estimatedInputTokens / coveredMessageIds / requiresSessionRebuild`; 当前消息永远完整保留 (输入框 16K 字符硬限已存在, 单条消息可能占满预算属预期行为, 记录警告日志即可); 现有 24 轮 / 192 KiB 规则退役为传输护栏.
+- [x] **P1-3** `ChatConversationPolicy` 新增 `compileContext(transcript, target, prompt, policy): CompiledContext` - 复用现有成功 turn 提取, 按 token 从尾部装箱完整 turn; 返回 `messages / estimatedInputTokens / coveredMessageIds / requiresSessionRebuild`; 当前消息永远完整保留 (输入框 16K 字符硬限已存在, 单条消息可能占满预算属预期行为, 记录警告日志即可); 现有 24 轮 / 192 KiB 规则退役为传输护栏.
   - 验收: 单测覆盖 长短混合 turn,单条超长消息,全部失败轮被排除,装箱不拆散配对,时序保持.
-- [ ] **P1-4** 新增 `ContextAccounting`: 会话内维护当前上下文 token 记账 - 在线每轮以实报 `inputTokens + outputTokens` 刷新, 本地以 `getTokenCount()` 全量真值刷新 (为此给 `GenerationStatistics` 增加内部可空字段 `contextTokensAfterTurn`, LiteRT 填真值, 在线填 input+output, 不透出 Binder), 均不可得时以估算累加兜底; `shouldRotateBackend` 改为 `记账值 ≥ 硬水位 || 轮数 ≥ 64 (泄漏保护)`.
+- [x] **P1-4** 新增 `ContextAccounting`: 会话内维护当前上下文 token 记账 - 在线每轮以实报 `inputTokens + outputTokens` 刷新, 本地以 `getTokenCount()` 全量真值刷新 (为此给 `GenerationStatistics` 增加内部可空字段 `contextTokensAfterTurn`, LiteRT 填真值, 在线填 input+output, 不透出 Binder), 均不可得时以估算累加兜底; `shouldRotateBackend` 改为 `记账值 ≥ 硬水位 || 轮数 ≥ 64 (泄漏保护)`.
   - 验收: 单测覆盖三种口径的记账与轮换触发; S4 的口径差异有专门测试固定语义.
-- [ ] **P1-5** `ChatActivity` 集成: `startBackendTurn` 复用判定改为 (target 一致 && 记账未达硬水位 && 未发生编辑/重生成/target 切换); 重建路径改用 `compileContext` 且回落至压缩目标 (台阶式驱逐); `completedTurnsOnBackend` 让位于记账, 仅作泄漏保护计数.
+- [x] **P1-5** `ChatActivity` 集成: `startBackendTurn` 复用判定改为 (target 一致 && 记账未达硬水位 && 未发生编辑/重生成/target 切换); 重建路径改用 `compileContext` 且回落至压缩目标 (台阶式驱逐); `completedTurnsOnBackend` 让位于记账, 仅作泄漏保护计数.
   - 验收: 现有编辑 / 重新生成 / 停止 / target 切换流程回归通过; 重建后记账值 ≤ 45% 预算.
-- [ ] **P1-6** 设置项: "上下文 token 预算" (8K / 16K / 32K / 自定义, 默认 16K), 存取跟随 `ChatUiSettings` / `ChatUiSettingsStore` 既有模式.
+- [x] **P1-6** 设置项: "上下文 token 预算" (8K / 16K / 32K / 自定义, 默认 16K), 存取跟随 `ChatUiSettings` / `ChatUiSettingsStore` 既有模式.
   - 验收: `ChatUiSettingsTest` 扩展通过; 修改预算即刻影响下一轮编译.
-- [ ] **P1-7** 真机冒烟并记录 `docs/dev/context-budget-smoke.md`: 同一在线 target 连续 40+ 轮, usage 显示单轮输入 tokens 有界且重建后明显回落; 本地 target 长会话延迟不再单调上升.
+- [x] **P1-7** 真机冒烟并记录 `docs/dev/context-budget-smoke.md`: 同一在线 target 连续 40+ 轮, usage 显示单轮输入 tokens 有界且重建后明显回落; 本地 target 长会话延迟不再单调上升.
   - 验收: 文档含前后对比数据 (对照 P0-3 基线).
+  - 状态: 2026-08-31 已在 G8441 上分别完成 40 轮在线与 40 轮 LiteRT 长会话.两条通道均由精确记账触发水位轮换, 裁剪仅保留完整 turn, 重建后回落至 45% 目标以内; 设置已恢复为 16K / Unlimited.数据、provider usage 异常边界与 P0 对比见 [`docs/dev/context-budget-smoke.md`](docs/dev/context-budget-smoke.md).
 
-> P1 完成后: 输入增长曲线由 O(n) 锯齿封顶为常数带, 累计费用 O(n); 代价是超出预算的旧原文暂时直接遗忘 (P2 补记忆).
+> P1 已于 2026-08-31 完成: 由客户端历史增长造成的输入曲线从 O(n) 锯齿封顶为常数带, 累计费用回落为 O(n).已知边界是 provider 可在客户端请求之外注入或上报固定开销; 该开销只能在本轮 usage 返回后被发现, 但会在下一轮触发重建.超出预算的旧原文目前直接遗忘, 由 P2 补记忆.
 
 ### P2 - 摘要检查点与结构化工作记忆 (把遗忘变成压缩)
 

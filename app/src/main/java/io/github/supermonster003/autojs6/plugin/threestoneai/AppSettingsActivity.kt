@@ -1,25 +1,25 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.text.InputFilter
 import android.text.InputType
-import android.util.TypedValue
 import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.CheckBox
-import android.widget.CheckedTextView
-import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.SwitchCompat
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.textfield.TextInputLayout
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formBottomSheet
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formTextField
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.hairline
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.inputDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.singleChoiceDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
 import org.autojs.plugin.ai.provider.api.AiProviderSettingsContract
 
 class AppSettingsActivity : ConfiguredActivity() {
@@ -60,211 +60,112 @@ class AppSettingsActivity : ConfiguredActivity() {
             intent.extras == null
     }
 
-    private fun createContentView(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setBackgroundColor(appPalette.windowBackground)
-        val statusBarBackground = createStatusBarBackground()
-        addView(
-            statusBarBackground,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
-        )
-        addView(createAppToolbar(R.string.app_settings_title, showBack = true))
-        addView(ScrollView(context).apply {
-            isFillViewport = true
-            addView(createSettingsContent())
-        }, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            0,
-            1f,
-        ))
-        applySystemBarInsets(this, statusBarBackground)
+    private fun createContentView(): View {
+        val scaffold = buildScaffold(R.string.app_settings_title)
+        buildSettingsContent(scaffold.content)
+        applyThemeToControls(scaffold.content)
+        return scaffold.root
     }
 
-    private fun createSettingsContent(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPaddingRelative(0, dp(8), 0, dp(24))
-
-        addView(category(R.string.app_settings_appearance))
-        addView(settingRow(
+    private fun buildSettingsContent(content: LinearLayout) {
+        content.addView(sectionHeader(R.string.app_settings_appearance))
+        content.addView(settingRow(
             title = getString(R.string.app_settings_language),
             summary = followAwareLabel(settings.language == AppLanguage.FOLLOW_AUTOJS6) {
                 getString(settings.language.labelResource())
             },
+            iconResource = R.drawable.ic_language_24,
             onClick = ::showLanguageDialog,
-        ))
-        addView(divider())
-        addView(settingRow(
+        ).view)
+        content.addView(settingRow(
             title = getString(R.string.app_settings_dark_mode),
             summary = followAwareLabel(settings.darkMode == AppDarkMode.FOLLOW_AUTOJS6) {
                 getString(settings.darkMode.labelResource())
             },
+            iconResource = R.drawable.ic_dark_mode_24,
             onClick = ::showDarkModeDialog,
-        ))
-        addView(divider())
-        addView(settingRow(
+        ).view)
+        content.addView(settingRow(
             title = getString(R.string.app_settings_theme_color),
             summary = themeSummary(settings),
+            iconResource = R.drawable.ic_palette_24,
             onClick = ::showThemeColorDialog,
-        ))
-        // addView(TextView(context).apply {
-        //     text = getString(
-        //         if (hostResult.selectable) {
-        //             R.string.app_settings_follow_autojs6_explanation
-        //         } else {
-        //             R.string.app_settings_follow_autojs6_unavailable_explanation
-        //         },
-        //     )
-        //     textSize = 12.5f
-        //     setTextColor(appPalette.secondaryText)
-        //     setLineSpacing(0f, 1.12f)
-        //     setPaddingRelative(dp(20), dp(10), dp(20), dp(16))
-        // })
+        ).view)
+        content.addView(hairline())
 
-        addView(category(R.string.app_settings_conversation))
-        addView(settingRow(
+        content.addView(sectionHeader(R.string.app_settings_conversation))
+        content.addView(settingRow(
             title = getString(R.string.chat_font_size),
             summary = getString(chatSettings.fontSize.labelResource()),
+            iconResource = R.drawable.ic_edit_24,
             onClick = ::showFontSizeDialog,
-        ))
-        addView(divider())
-        addView(switchSettingRow(
+        ).view)
+        content.addView(switchRow(
             title = getString(R.string.chat_follow_streaming_output),
             summary = getString(R.string.app_settings_follow_streaming_summary),
+            iconResource = R.drawable.ic_arrow_down_24,
             checked = chatSettings.followStreamingOutput,
-        ) { checked -> saveChatSettings(chatSettings.copy(followStreamingOutput = checked)) })
-        addView(divider())
-        addView(switchSettingRow(
+        ) { checked -> saveChatSettings(chatSettings.copy(followStreamingOutput = checked)) }.view)
+        content.addView(switchRow(
             title = getString(R.string.chat_show_generation_usage),
             summary = getString(R.string.app_settings_show_usage_summary),
+            iconResource = R.drawable.ic_check_circle_24,
             checked = chatSettings.showGenerationUsage,
-        ) { checked -> saveChatSettings(chatSettings.copy(showGenerationUsage = checked)) })
-        addView(divider())
-        addView(settingRow(
+        ) { checked -> saveChatSettings(chatSettings.copy(showGenerationUsage = checked)) }.view)
+        content.addView(settingRow(
             title = getString(R.string.chat_enter_key_behavior),
             summary = getString(chatSettings.enterKeyBehavior.labelResource()),
+            iconResource = R.drawable.ic_send_24,
             onClick = ::showEnterKeyDialog,
-        ))
-        addView(divider())
-        addView(settingRow(
+        ).view)
+        content.addView(settingRow(
             title = getString(R.string.chat_settings_generation_section),
             summary = generationSettingsSummary(),
+            iconResource = R.drawable.ic_tune_24,
             onClick = ::showGenerationSettingsDialog,
-        ))
+        ).view)
+        content.addView(hairline())
 
-        addView(category(R.string.app_settings_updates))
-        addView(settingRow(
+        content.addView(sectionHeader(R.string.app_settings_updates))
+        content.addView(settingRow(
             title = getString(R.string.app_update_check),
             summary = currentVersionSummary(),
+            iconResource = R.drawable.ic_restart_24,
             onClick = updateController::checkManually,
-        ))
-        addView(divider())
-        addView(switchSettingRow(
+        ).view)
+        content.addView(switchRow(
             title = getString(R.string.app_update_automatic),
             summary = getString(R.string.app_update_automatic_summary),
+            iconResource = R.drawable.ic_download_24,
             checked = updateSettingsStore.automaticChecksEnabled,
-        ) { checked -> updateSettingsStore.automaticChecksEnabled = checked })
-        addView(divider())
-        addView(settingRow(
+        ) { checked -> updateSettingsStore.automaticChecksEnabled = checked }.view)
+        content.addView(settingRow(
             title = getString(R.string.app_update_manage_ignored),
             summary = resources.getQuantityString(
                 R.plurals.app_update_ignored_count,
                 updateSettingsStore.ignoredTags.size,
                 updateSettingsStore.ignoredTags.size,
             ),
+            iconResource = R.drawable.ic_history_24,
             onClick = ::showIgnoredUpdatesDialog,
-        ))
-        addView(divider())
-        addView(settingRow(
+        ).view)
+        content.addView(settingRow(
             title = getString(R.string.release_history_title),
             summary = getString(R.string.app_update_release_history_summary),
+            iconResource = R.drawable.ic_article_24,
             onClick = {
-                startActivity(Intent(this@AppSettingsActivity, ReleaseHistoryActivity::class.java))
+                startActivity(Intent(this, ReleaseHistoryActivity::class.java))
             },
-        ))
+        ).view)
+        content.addView(hairline())
 
-        addView(category(R.string.app_settings_information))
-        addView(settingRow(
+        content.addView(sectionHeader(R.string.app_settings_information))
+        content.addView(settingRow(
             title = getString(R.string.about_app_and_developer),
             summary = getString(R.string.about_app_summary),
-            onClick = { startActivity(Intent(this@AppSettingsActivity, AboutActivity::class.java)) },
-        ))
-    }.also(::applyThemeToControls)
-
-    private fun category(titleResource: Int) = TextView(this).apply {
-        text = getString(titleResource)
-        textSize = 13f
-        typeface = Typeface.DEFAULT_BOLD
-        setTextColor(appPalette.accent)
-        setPaddingRelative(dp(20), dp(14), dp(20), dp(7))
-    }
-
-    private fun settingRow(title: String, summary: String, onClick: () -> Unit) =
-        LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            minimumHeight = dp(68)
-            isClickable = true
-            isFocusable = true
-            contentDescription = "$title, $summary"
-            setPaddingRelative(dp(20), dp(12), dp(20), dp(12))
-            applySelectableBackground(this)
-            addView(TextView(context).apply {
-                text = title
-                textSize = 16f
-                setTextColor(appPalette.primaryText)
-            })
-            addView(TextView(context).apply {
-                text = summary
-                textSize = 13f
-                setTextColor(appPalette.secondaryText)
-                setPaddingRelative(0, dp(3), 0, 0)
-            })
-            setOnClickListener { onClick() }
-        }
-
-    private fun switchSettingRow(
-        title: String,
-        summary: String,
-        checked: Boolean,
-        onChanged: (Boolean) -> Unit,
-    ) = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = android.view.Gravity.CENTER_VERTICAL
-        minimumHeight = dp(72)
-        isClickable = true
-        isFocusable = true
-        contentDescription = "$title, $summary"
-        setPaddingRelative(dp(20), dp(10), dp(16), dp(10))
-        applySelectableBackground(this)
-        addView(LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(TextView(context).apply {
-                text = title
-                textSize = 16f
-                setTextColor(appPalette.primaryText)
-            })
-            addView(TextView(context).apply {
-                text = summary
-                textSize = 13f
-                setTextColor(appPalette.secondaryText)
-                setPaddingRelative(0, dp(3), dp(12), 0)
-            })
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        val toggle = SwitchCompat(context).apply {
-            isChecked = checked
-            thumbTintList = switchThumbTintList()
-            trackTintList = switchTrackTintList()
-            setOnCheckedChangeListener { _, value -> onChanged(value) }
-        }
-        addView(toggle)
-        setOnClickListener { toggle.toggle() }
-    }
-
-    private fun divider() = View(this).apply {
-        setBackgroundColor(appPalette.divider)
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            dp(1),
-        ).apply { marginStart = dp(20) }
+            iconResource = R.drawable.ic_info_24,
+            onClick = { startActivity(Intent(this, AboutActivity::class.java)) },
+        ).view)
     }
 
     private fun showThemeColorDialog() {
@@ -294,76 +195,53 @@ class AppSettingsActivity : ConfiguredActivity() {
                 choice.color != null -> "$title (${AppSettingsPolicy.colorHex(choice.color)})"
                 else -> title
             }
-        }.toTypedArray()
-        val adapter = ChoiceAdapter(labels, disabledIndex = 0.takeUnless { hostResult.selectable })
-        AlertDialog.Builder(this)
-            .setTitle(R.string.app_settings_theme_color)
-            .setSingleChoiceItems(adapter, selected) { dialog, index ->
-                if (!adapter.isEnabled(index)) return@setSingleChoiceItems
-                dialog.dismiss()
-                val choice = choices[index]
-                when {
-                    choice.followAutoJs6 -> saveSettings(
-                        settings.copy(themeSelection = AppThemeSelection.FOLLOW_AUTOJS6),
-                    )
-                    choice.color != null -> saveSettings(
-                        settings.copy(
-                            themeSelection = AppThemeSelection.CUSTOM,
-                            customThemeColor = choice.color,
-                        ),
-                    )
-                    else -> showCustomThemeColorDialog()
-                }
+        }
+        singleChoiceDialog(
+            title = getString(R.string.app_settings_theme_color),
+            labels = labels,
+            checkedIndex = selected,
+            enabledAt = { index -> index != 0 || hostResult.selectable },
+        ) { index ->
+            val choice = choices[index]
+            when {
+                choice.followAutoJs6 -> saveSettings(
+                    settings.copy(themeSelection = AppThemeSelection.FOLLOW_AUTOJS6),
+                )
+                choice.color != null -> saveSettings(
+                    settings.copy(
+                        themeSelection = AppThemeSelection.CUSTOM,
+                        customThemeColor = choice.color,
+                    ),
+                )
+                else -> showCustomThemeColorDialog()
             }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also(::tintDialogButtons)
+        }
     }
 
     private fun showCustomThemeColorDialog() {
-        val input = EditText(this).apply {
-            hint = getString(R.string.app_settings_custom_color_hint)
-            setText(AppSettingsPolicy.colorHex(settings.customThemeColor))
-            setSelection(text.length)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
-            filters = arrayOf(InputFilter.LengthFilter(7))
-            setTextColor(appPalette.primaryText)
-            setHintTextColor(appPalette.secondaryText)
-            backgroundTintList = ColorStateList.valueOf(appPalette.accent)
-            setPaddingRelative(dp(4), dp(8), dp(4), dp(8))
-        }
-        val container = LinearLayout(this).apply {
-            setPaddingRelative(dp(22), 0, dp(22), 0)
-            addView(input, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ))
-        }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.app_settings_custom_color_title)
-            .setView(container)
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.chat_settings_save, null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val color = AppSettingsPolicy.parseOpaqueColor(input.text.toString())
-                if (color == null) {
-                    input.error = getString(R.string.app_settings_custom_color_error)
+        inputDialog(
+            title = getString(R.string.app_settings_custom_color_title),
+            initialValue = AppSettingsPolicy.colorHex(settings.customThemeColor),
+            hint = getString(R.string.app_settings_custom_color_hint),
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS,
+            maxLength = 7,
+            positiveResource = R.string.chat_settings_save,
+            validate = { value ->
+                if (AppSettingsPolicy.parseOpaqueColor(value) == null) {
+                    getString(R.string.app_settings_custom_color_error)
                 } else {
-                    dialog.dismiss()
-                    saveSettings(
-                        settings.copy(
-                            themeSelection = AppThemeSelection.CUSTOM,
-                            customThemeColor = color,
-                        ),
-                    )
+                    null
                 }
-            }
+            },
+        ) { value ->
+            val color = AppSettingsPolicy.parseOpaqueColor(value) ?: return@inputDialog
+            saveSettings(
+                settings.copy(
+                    themeSelection = AppThemeSelection.CUSTOM,
+                    customThemeColor = color,
+                ),
+            )
         }
-        dialog.show()
-        tintDialogButtons(dialog)
-        input.requestFocus()
     }
 
     private fun showDarkModeDialog() {
@@ -374,18 +252,13 @@ class AppSettingsActivity : ConfiguredActivity() {
             } else {
                 getString(value.labelResource())
             }
-        }.toTypedArray()
-        val adapter = ChoiceAdapter(labels, disabledIndex = 0.takeUnless { hostResult.selectable })
-        AlertDialog.Builder(this)
-            .setTitle(R.string.app_settings_dark_mode)
-            .setSingleChoiceItems(adapter, values.indexOf(settings.darkMode)) { dialog, index ->
-                if (!adapter.isEnabled(index)) return@setSingleChoiceItems
-                dialog.dismiss()
-                saveSettings(settings.copy(darkMode = values[index]))
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also(::tintDialogButtons)
+        }
+        singleChoiceDialog(
+            title = getString(R.string.app_settings_dark_mode),
+            labels = labels,
+            checkedIndex = values.indexOf(settings.darkMode),
+            enabledAt = { index -> index != 0 || hostResult.selectable },
+        ) { index -> saveSettings(settings.copy(darkMode = values[index])) }
     }
 
     private fun showLanguageDialog() {
@@ -396,137 +269,114 @@ class AppSettingsActivity : ConfiguredActivity() {
             } else {
                 getString(value.labelResource())
             }
-        }.toTypedArray()
-        val adapter = ChoiceAdapter(labels, disabledIndex = 0.takeUnless { hostResult.selectable })
-        AlertDialog.Builder(this)
-            .setTitle(R.string.app_settings_language)
-            .setSingleChoiceItems(adapter, values.indexOf(settings.language)) { dialog, index ->
-                if (!adapter.isEnabled(index)) return@setSingleChoiceItems
-                dialog.dismiss()
-                saveSettings(settings.copy(language = values[index]))
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also(::tintDialogButtons)
+        }
+        singleChoiceDialog(
+            title = getString(R.string.app_settings_language),
+            labels = labels,
+            checkedIndex = values.indexOf(settings.language),
+            enabledAt = { index -> index != 0 || hostResult.selectable },
+        ) { index -> saveSettings(settings.copy(language = values[index])) }
     }
 
     private fun showFontSizeDialog() {
         val values = ChatFontSize.entries
-        AlertDialog.Builder(this)
-            .setTitle(R.string.chat_font_size)
-            .setSingleChoiceItems(
-                values.map { getString(it.labelResource()) }.toTypedArray(),
-                values.indexOf(chatSettings.fontSize),
-            ) { dialog, index ->
-                dialog.dismiss()
-                saveChatSettings(chatSettings.copy(fontSize = values[index]), recreate = true)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also(::tintDialogButtons)
+        singleChoiceDialog(
+            title = getString(R.string.chat_font_size),
+            labels = values.map { getString(it.labelResource()) },
+            checkedIndex = values.indexOf(chatSettings.fontSize),
+        ) { index -> saveChatSettings(chatSettings.copy(fontSize = values[index]), recreate = true) }
     }
 
     private fun showEnterKeyDialog() {
         val values = EnterKeyBehavior.entries
-        AlertDialog.Builder(this)
-            .setTitle(R.string.chat_enter_key_behavior)
-            .setSingleChoiceItems(
-                values.map { getString(it.labelResource()) }.toTypedArray(),
-                values.indexOf(chatSettings.enterKeyBehavior),
-            ) { dialog, index ->
-                dialog.dismiss()
-                saveChatSettings(chatSettings.copy(enterKeyBehavior = values[index]), recreate = true)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also(::tintDialogButtons)
+        singleChoiceDialog(
+            title = getString(R.string.chat_enter_key_behavior),
+            labels = values.map { getString(it.labelResource()) },
+            checkedIndex = values.indexOf(chatSettings.enterKeyBehavior),
+        ) { index ->
+            saveChatSettings(chatSettings.copy(enterKeyBehavior = values[index]), recreate = true)
+        }
     }
 
     private fun showGenerationSettingsDialog() {
         val working = chatSettings
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPaddingRelative(dp(22), dp(6), dp(22), dp(16))
+            setPaddingRelative(uiDp(Ui.SPACE_XXL), 0, uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM))
         }
-        val unlimitedTokens = themedCheckBox(
+        val unlimitedTokens = sheetCheckBox(
             R.string.chat_maximum_output_tokens_unlimited,
             working.maximumOutputTokens == null,
         )
         container.addView(unlimitedTokens)
-        container.addView(fieldLabel(R.string.chat_maximum_output_tokens))
-        val maximumTokensInput = settingsEditText(
-            working.maximumOutputTokensDraft.toString(),
-            InputType.TYPE_CLASS_NUMBER,
+        val (maximumTokensField, maximumTokensInput) = formTextField(
+            initialValue = working.maximumOutputTokensDraft.toString(),
+            hint = getString(R.string.chat_maximum_output_tokens),
+            inputType = InputType.TYPE_CLASS_NUMBER,
         )
-        container.addView(maximumTokensInput)
+        container.addView(sheetField(maximumTokensField))
         fun updateMaximumTokensState(unlimited: Boolean) {
-            maximumTokensInput.isEnabled = !unlimited
-            maximumTokensInput.alpha = if (unlimited) DISABLED_ALPHA else 1f
+            maximumTokensField.isEnabled = !unlimited
+            maximumTokensField.alpha = if (unlimited) Ui.DISABLED_ALPHA else 1f
         }
         updateMaximumTokensState(unlimitedTokens.isChecked)
         unlimitedTokens.setOnCheckedChangeListener { _, checked ->
             updateMaximumTokensState(checked)
         }
 
-        val useModelDefaults = themedCheckBox(
+        val useModelDefaults = sheetCheckBox(
             R.string.chat_use_model_sampling_defaults,
             working.useModelSamplingDefaults,
-        ).apply { setPaddingRelative(0, dp(12), 0, 0) }
+        ).apply { setPaddingRelative(0, uiDp(Ui.SPACE_MD), 0, 0) }
         container.addView(useModelDefaults)
-        container.addView(fieldLabel(R.string.chat_temperature))
-        val temperatureInput = settingsEditText(
-            working.temperature.toString(),
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
+        val (temperatureField, temperatureInput) = formTextField(
+            initialValue = working.temperature.toString(),
+            hint = getString(R.string.chat_temperature),
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
         )
-        container.addView(temperatureInput)
-        container.addView(fieldLabel(R.string.chat_top_k))
-        val topKInput = settingsEditText(working.topK.toString(), InputType.TYPE_CLASS_NUMBER)
-        container.addView(topKInput)
-        container.addView(fieldLabel(R.string.chat_top_p))
-        val topPInput = settingsEditText(
-            working.topP.toString(),
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
+        container.addView(sheetField(temperatureField))
+        val (topKField, topKInput) = formTextField(
+            initialValue = working.topK.toString(),
+            hint = getString(R.string.chat_top_k),
+            inputType = InputType.TYPE_CLASS_NUMBER,
         )
-        container.addView(topPInput)
+        container.addView(sheetField(topKField))
+        val (topPField, topPInput) = formTextField(
+            initialValue = working.topP.toString(),
+            hint = getString(R.string.chat_top_p),
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
+        )
+        container.addView(sheetField(topPField))
         container.addView(TextView(this).apply {
             text = getString(R.string.chat_generation_settings_help)
-            textSize = 12f
+            textSize = Ui.TEXT_CAPTION
             setTextColor(appPalette.secondaryText)
-            setPaddingRelative(0, dp(8), 0, dp(4))
+            setLineSpacing(0f, 1.15f)
+            setPaddingRelative(0, uiDp(Ui.SPACE_MD), 0, uiDp(Ui.SPACE_XS))
         })
-        val samplingInputs = listOf(temperatureInput, topKInput, topPInput)
+        val samplingFields = listOf(temperatureField, topKField, topPField)
         fun updateSamplingState(useDefaults: Boolean) {
-            samplingInputs.forEach { input ->
-                input.isEnabled = !useDefaults
-                input.alpha = if (useDefaults) DISABLED_ALPHA else 1f
+            samplingFields.forEach { field ->
+                field.isEnabled = !useDefaults
+                field.alpha = if (useDefaults) Ui.DISABLED_ALPHA else 1f
             }
         }
         updateSamplingState(useModelDefaults.isChecked)
         useModelDefaults.setOnCheckedChangeListener { _, checked -> updateSamplingState(checked) }
 
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.chat_settings_generation_section)
-            .setView(ScrollView(this).apply {
-                setBackgroundColor(appPalette.windowBackground)
-                addView(container)
-            })
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.chat_settings_save, null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.window?.setLayout(
-                minOf((resources.displayMetrics.widthPixels * 0.94f).toInt(), dp(720)),
-                android.view.WindowManager.LayoutParams.WRAP_CONTENT,
-            )
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+        formBottomSheet(
+            title = getString(R.string.chat_settings_generation_section),
+            content = container,
+            positiveResource = R.string.chat_settings_save,
+            onPositive = onPositive@{
                 val maximumTokens = if (unlimitedTokens.isChecked) {
                     null
                 } else {
                     maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
-                        ?: return@setOnClickListener showSettingError(
-                            maximumTokensInput,
-                            R.string.chat_positive_integer_error,
-                        )
+                        ?: run {
+                            maximumTokensField.error = getString(R.string.chat_positive_integer_error)
+                            return@onPositive false
+                        }
                 }
                 val maximumTokensDraft = maximumTokens
                     ?: maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
@@ -537,31 +387,30 @@ class AppSettingsActivity : ConfiguredActivity() {
                 } else {
                     temperatureInput.text.toString().toDoubleOrNull()
                         ?.takeIf { it.isFinite() && it >= 0.0 }
-                        ?: return@setOnClickListener showSettingError(
-                            temperatureInput,
-                            R.string.chat_nonnegative_number_error,
-                        )
+                        ?: run {
+                            temperatureField.error = getString(R.string.chat_nonnegative_number_error)
+                            return@onPositive false
+                        }
                 }
                 val topK = if (useDefaults) {
                     working.topK
                 } else {
                     topKInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
-                        ?: return@setOnClickListener showSettingError(
-                            topKInput,
-                            R.string.chat_positive_integer_error,
-                        )
+                        ?: run {
+                            topKField.error = getString(R.string.chat_positive_integer_error)
+                            return@onPositive false
+                        }
                 }
                 val topP = if (useDefaults) {
                     working.topP
                 } else {
                     topPInput.text.toString().toDoubleOrNull()
                         ?.takeIf { it.isFinite() && it in 0.0..1.0 }
-                        ?: return@setOnClickListener showSettingError(
-                            topPInput,
-                            R.string.chat_probability_error,
-                        )
+                        ?: run {
+                            topPField.error = getString(R.string.chat_probability_error)
+                            return@onPositive false
+                        }
                 }
-                dialog.dismiss()
                 saveChatSettings(
                     working.copy(
                         maximumOutputTokens = maximumTokens,
@@ -573,17 +422,15 @@ class AppSettingsActivity : ConfiguredActivity() {
                     ),
                     recreate = true,
                 )
-            }
-            applyThemeToControls(container)
-        }
-        dialog.show()
-        tintDialogButtons(dialog)
+                true
+            },
+        )
     }
 
     private fun showIgnoredUpdatesDialog() {
         val ignored = updateSettingsStore.ignoredTags.sorted()
         if (ignored.isEmpty()) {
-            AlertDialog.Builder(this)
+            materialDialog()
                 .setTitle(R.string.app_update_manage_ignored)
                 .setMessage(R.string.app_update_no_ignored)
                 .setPositiveButton(android.R.string.ok, null)
@@ -592,7 +439,7 @@ class AppSettingsActivity : ConfiguredActivity() {
             return
         }
         val selected = BooleanArray(ignored.size)
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(R.string.app_update_manage_ignored)
             .setMultiChoiceItems(ignored.toTypedArray(), selected) { _, index, checked ->
                 selected[index] = checked
@@ -608,37 +455,19 @@ class AppSettingsActivity : ConfiguredActivity() {
             .also(::tintDialogButtons)
     }
 
-    private fun themedCheckBox(textResource: Int, checked: Boolean) = CheckBox(this).apply {
+    private fun sheetCheckBox(textResource: Int, checked: Boolean) = MaterialCheckBox(this).apply {
         text = getString(textResource)
         isChecked = checked
         setTextColor(appPalette.primaryText)
         buttonTintList = controlTintList()
-        minimumHeight = dp(48)
+        minimumHeight = uiDp(Ui.TOUCH_TARGET)
     }
 
-    private fun fieldLabel(textResource: Int) = TextView(this).apply {
-        text = getString(textResource)
-        textSize = 12.5f
-        typeface = Typeface.DEFAULT_BOLD
-        setTextColor(appPalette.secondaryText)
-        setPaddingRelative(0, dp(8), 0, dp(3))
-    }
-
-    private fun settingsEditText(value: String, fieldInputType: Int) = EditText(this).apply {
-        setText(value)
-        setSelection(text.length)
-        inputType = fieldInputType
-        maxLines = 1
-        setSingleLine(true)
-        textSize = 14f
-        setTextColor(appPalette.primaryText)
-        setHintTextColor(appPalette.secondaryText)
-        backgroundTintList = ColorStateList.valueOf(appPalette.accent)
-    }
-
-    private fun showSettingError(input: EditText, messageResource: Int) {
-        input.error = getString(messageResource)
-        input.requestFocus()
+    private fun sheetField(field: TextInputLayout): TextInputLayout = field.apply {
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply { topMargin = uiDp(Ui.SPACE_MD) }
     }
 
     private fun saveSettings(updated: ApplicationSettings) {
@@ -732,39 +561,9 @@ class AppSettingsActivity : ConfiguredActivity() {
         EnterKeyBehavior.NEW_LINE -> R.string.chat_enter_key_new_line
     }
 
-    private fun applySelectableBackground(view: View) {
-        val value = TypedValue()
-        if (theme.resolveAttribute(android.R.attr.selectableItemBackground, value, true)) {
-            view.setBackgroundResource(value.resourceId)
-        }
-    }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-
     private data class ThemeChoice(
         val labelResource: Int,
         val color: Int?,
         val followAutoJs6: Boolean = false,
     )
-
-    private inner class ChoiceAdapter(
-        labels: Array<String>,
-        private val disabledIndex: Int?,
-    ) : ArrayAdapter<String>(this, android.R.layout.simple_list_item_single_choice, labels) {
-        override fun isEnabled(position: Int): Boolean = position != disabledIndex
-
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
-            super.getView(position, convertView, parent).apply {
-                alpha = if (isEnabled(position)) 1f else DISABLED_ALPHA
-                isEnabled = isEnabled(position)
-                (this as? CheckedTextView)?.apply {
-                    setTextColor(if (isEnabled(position)) appPalette.primaryText else appPalette.secondaryText)
-                    checkMarkTintList = controlTintList()
-                }
-            }
-    }
-
-    private companion object {
-        const val DISABLED_ALPHA = 0.42f
-    }
 }

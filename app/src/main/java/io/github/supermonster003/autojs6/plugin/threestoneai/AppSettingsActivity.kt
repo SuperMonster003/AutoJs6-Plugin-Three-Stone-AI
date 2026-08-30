@@ -2,7 +2,13 @@ package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.InputType
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.TypefaceSpan
+import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -71,17 +77,13 @@ class AppSettingsActivity : ConfiguredActivity() {
         content.addView(sectionHeader(R.string.app_settings_appearance))
         content.addView(settingRow(
             title = getString(R.string.app_settings_language),
-            summary = followAwareLabel(settings.language == AppLanguage.FOLLOW_AUTOJS6) {
-                getString(settings.language.labelResource())
-            },
+            summary = getString(settings.language.labelResource()),
             iconResource = R.drawable.ic_language_24,
             onClick = ::showLanguageDialog,
         ).view)
         content.addView(settingRow(
             title = getString(R.string.app_settings_dark_mode),
-            summary = followAwareLabel(settings.darkMode == AppDarkMode.FOLLOW_AUTOJS6) {
-                getString(settings.darkMode.labelResource())
-            },
+            summary = getString(settings.darkMode.labelResource()),
             iconResource = R.drawable.ic_dark_mode_24,
             onClick = ::showDarkModeDialog,
         ).view)
@@ -99,6 +101,18 @@ class AppSettingsActivity : ConfiguredActivity() {
             summary = getString(chatSettings.fontSize.labelResource()),
             iconResource = R.drawable.ic_edit_24,
             onClick = ::showFontSizeDialog,
+        ).view)
+        content.addView(settingRow(
+            title = getString(R.string.chat_user_bubble_style),
+            summary = getString(chatSettings.userBubbleStyle.labelResource()),
+            iconResource = R.drawable.ic_person_24,
+            onClick = { showBubbleStyleDialog(userMessage = true) },
+        ).view)
+        content.addView(settingRow(
+            title = getString(R.string.chat_assistant_bubble_style),
+            summary = getString(chatSettings.assistantBubbleStyle.labelResource()),
+            iconResource = R.drawable.ic_article_24,
+            onClick = { showBubbleStyleDialog(userMessage = false) },
         ).view)
         content.addView(switchRow(
             title = getString(R.string.chat_follow_streaming_output),
@@ -179,12 +193,12 @@ class AppSettingsActivity : ConfiguredActivity() {
             ThemeChoice(R.string.app_settings_follow_autojs6, null, true),
             ThemeChoice(
                 R.string.app_settings_theme_three_stone_ai,
-                AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR,
+                AppSettingsPolicy.ORANGE_THEME_COLOR,
             ),
-            ThemeChoice(R.string.app_settings_theme_teal, 0xFF007C8A.toInt()),
-            ThemeChoice(R.string.app_settings_theme_blue, 0xFF3F51B5.toInt()),
-            ThemeChoice(R.string.app_settings_theme_green, 0xFF2E7D32.toInt()),
-            ThemeChoice(R.string.app_settings_theme_purple, 0xFF7E57C2.toInt()),
+            ThemeChoice(R.string.app_settings_theme_teal, AppSettingsPolicy.TEAL_THEME_COLOR),
+            ThemeChoice(R.string.app_settings_theme_blue, AppSettingsPolicy.BLUE_THEME_COLOR),
+            ThemeChoice(R.string.app_settings_theme_green, AppSettingsPolicy.GREEN_THEME_COLOR),
+            ThemeChoice(R.string.app_settings_theme_purple, AppSettingsPolicy.PURPLE_THEME_COLOR),
             ThemeChoice(R.string.app_settings_theme_custom, null),
         )
         val selected = when (settings.themeSelection) {
@@ -195,9 +209,7 @@ class AppSettingsActivity : ConfiguredActivity() {
         val labels = choices.mapIndexed { index, choice ->
             val title = getString(choice.labelResource)
             when {
-                index == 0 && !hostResult.selectable -> getString(
-                    R.string.app_settings_follow_autojs6_unavailable,
-                )
+                index == 0 -> followAutoJs6ChoiceLabel(title)
                 choice.color != null -> "$title (${AppSettingsPolicy.colorHex(choice.color)})"
                 else -> title
             }
@@ -206,7 +218,6 @@ class AppSettingsActivity : ConfiguredActivity() {
             title = getString(R.string.app_settings_theme_color),
             labels = labels,
             checkedIndex = selected,
-            enabledAt = { index -> index != 0 || hostResult.selectable },
         ) { index ->
             val choice = choices[index]
             when {
@@ -253,34 +264,28 @@ class AppSettingsActivity : ConfiguredActivity() {
     private fun showDarkModeDialog() {
         val values = AppDarkMode.entries
         val labels = values.mapIndexed { index, value ->
-            if (index == 0 && !hostResult.selectable) {
-                getString(R.string.app_settings_follow_autojs6_unavailable)
-            } else {
-                getString(value.labelResource())
+            getString(value.labelResource()).let { label ->
+                if (index == 0) followAutoJs6ChoiceLabel(label) else label
             }
         }
         singleChoiceDialog(
             title = getString(R.string.app_settings_dark_mode),
             labels = labels,
             checkedIndex = values.indexOf(settings.darkMode),
-            enabledAt = { index -> index != 0 || hostResult.selectable },
         ) { index -> saveSettings(settings.copy(darkMode = values[index])) }
     }
 
     private fun showLanguageDialog() {
         val values = AppLanguage.entries
         val labels = values.mapIndexed { index, value ->
-            if (index == 0 && !hostResult.selectable) {
-                getString(R.string.app_settings_follow_autojs6_unavailable)
-            } else {
-                getString(value.labelResource())
+            getString(value.labelResource()).let { label ->
+                if (index == 0) followAutoJs6ChoiceLabel(label) else label
             }
         }
         singleChoiceDialog(
             title = getString(R.string.app_settings_language),
             labels = labels,
             checkedIndex = values.indexOf(settings.language),
-            enabledAt = { index -> index != 0 || hostResult.selectable },
         ) { index -> saveSettings(settings.copy(language = values[index])) }
     }
 
@@ -301,6 +306,33 @@ class AppSettingsActivity : ConfiguredActivity() {
             checkedIndex = values.indexOf(chatSettings.enterKeyBehavior),
         ) { index ->
             saveChatSettings(chatSettings.copy(enterKeyBehavior = values[index]), recreate = true)
+        }
+    }
+
+    private fun showBubbleStyleDialog(userMessage: Boolean) {
+        val values = ChatBubbleStyle.entries
+        val current = if (userMessage) {
+            chatSettings.userBubbleStyle
+        } else {
+            chatSettings.assistantBubbleStyle
+        }
+        singleChoiceDialog(
+            title = getString(
+                if (userMessage) R.string.chat_user_bubble_style
+                else R.string.chat_assistant_bubble_style,
+            ),
+            labels = values.map { value -> getString(value.labelResource()) },
+            checkedIndex = values.indexOf(current),
+        ) { index ->
+            val selected = values[index]
+            saveChatSettings(
+                if (userMessage) {
+                    chatSettings.copy(userBubbleStyle = selected)
+                } else {
+                    chatSettings.copy(assistantBubbleStyle = selected)
+                },
+                recreate = true,
+            )
         }
     }
 
@@ -510,6 +542,7 @@ class AppSettingsActivity : ConfiguredActivity() {
     private fun sheetCheckBox(textResource: Int, checked: Boolean) = MaterialCheckBox(this).apply {
         text = getString(textResource)
         isChecked = checked
+        gravity = Gravity.CENTER_VERTICAL
         setTextColor(appPalette.primaryText)
         buttonTintList = controlTintList()
         minimumHeight = uiDp(Ui.TOUCH_TARGET)
@@ -545,20 +578,26 @@ class AppSettingsActivity : ConfiguredActivity() {
                 ),
             )
         } else {
-            getString(
-                R.string.app_settings_theme_follow_unavailable_summary,
-                AppSettingsPolicy.colorHex(AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR),
-            )
+            getString(R.string.app_settings_follow_autojs6)
         }
         AppThemeSelection.CUSTOM -> AppSettingsPolicy.colorHex(value.customThemeColor)
     }
 
-    private fun followAwareLabel(followsHost: Boolean, fallback: () -> String): String =
-        if (followsHost && !hostResult.selectable) {
-            getString(R.string.app_settings_follow_autojs6_unavailable)
-        } else {
-            fallback()
+    private fun followAutoJs6ChoiceLabel(title: String): CharSequence {
+        if (hostResult.selectable) return title
+        val subtitle = getString(R.string.app_settings_follow_autojs6_fallback_subtitle)
+        return SpannableString("$title\n$subtitle").apply {
+            val start = title.length + 1
+            setSpan(
+                ForegroundColorSpan(appPalette.secondaryText),
+                start,
+                length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+            setSpan(RelativeSizeSpan(0.82f), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(TypefaceSpan("sans-serif-light"), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
+    }
 
     private fun currentVersionSummary(): String {
         val packageInfo = packageManager.getPackageInfo(packageName, 0)
@@ -620,6 +659,12 @@ class AppSettingsActivity : ConfiguredActivity() {
     private fun EnterKeyBehavior.labelResource(): Int = when (this) {
         EnterKeyBehavior.SEND -> R.string.chat_enter_key_send
         EnterKeyBehavior.NEW_LINE -> R.string.chat_enter_key_new_line
+    }
+
+    private fun ChatBubbleStyle.labelResource(): Int = when (this) {
+        ChatBubbleStyle.NONE -> R.string.chat_bubble_style_none
+        ChatBubbleStyle.BACKGROUND -> R.string.chat_bubble_style_background
+        ChatBubbleStyle.BORDER -> R.string.chat_bubble_style_border
     }
 
     private data class ThemeChoice(

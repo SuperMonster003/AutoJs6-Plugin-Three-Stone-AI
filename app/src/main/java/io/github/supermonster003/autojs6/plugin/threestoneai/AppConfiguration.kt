@@ -128,6 +128,46 @@ internal object AppColorPolicy {
         return blend(themeColor, target, high)
     }
 
+    /**
+     * Builds a stable, chromatic control color from an arbitrary seed. Very pale custom colors
+     * gain enough chroma before contrast correction, avoiding the muddy gray-brown result of
+     * simply mixing a light seed with black.
+     */
+    fun dynamicAccent(themeColor: Int, backgroundColor: Int): Int {
+        val hsv = FloatArray(3).also { Color.colorToHSV(themeColor, it) }
+        if (hsv[1] in 0.06f..0.45f) hsv[1] = 0.45f
+        val chromatic = Color.HSVToColor(hsv)
+        return readableAccent(chromatic, backgroundColor)
+    }
+
+    /** Tints a neutral surface while retaining WCAG text contrast against its foreground. */
+    fun harmonizeSurface(
+        referenceColor: Int,
+        accentColor: Int,
+        foregroundColor: Int,
+        ratio: Double,
+    ): Int {
+        val requested = ratio.coerceIn(0.0, 1.0)
+        val candidate = blend(referenceColor, accentColor, requested)
+        if (contrastRatio(candidate, foregroundColor) >= MINIMUM_TEXT_CONTRAST) return candidate
+        var low = 0.0
+        var high = requested
+        repeat(18) {
+            val middle = (low + high) / 2.0
+            if (
+                contrastRatio(
+                    blend(referenceColor, accentColor, middle),
+                    foregroundColor,
+                ) >= MINIMUM_TEXT_CONTRAST
+            ) {
+                low = middle
+            } else {
+                high = middle
+            }
+        }
+        return blend(referenceColor, accentColor, low)
+    }
+
     fun withAlpha(color: Int, alpha: Int): Int = color and 0xFFFFFF or (alpha.coerceIn(0, 255) shl 24)
 
     /** Reuses a surface's brightness and saturation while associating it with the theme hue. */
@@ -200,12 +240,13 @@ internal data class AppThemePalette(
         fun resolve(context: Context): AppThemePalette {
             val resolved = ApplicationSettingsResolver.resolve(context)
             val settings = resolved.settings
-            val primary = when (settings.themeSelection) {
+            val themeSeed = when (settings.themeSelection) {
                 AppThemeSelection.FOLLOW_AUTOJS6 -> resolved.hostResult?.snapshot
                     ?.themeColorPrimary
                     ?: AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR
                 AppThemeSelection.CUSTOM -> settings.customThemeColor
-            }.let(AppSettingsPolicy::normalizeOpaqueColor).let { normalized ->
+            }.let(AppSettingsPolicy::normalizeOpaqueColor)
+            val primary = themeSeed.let { normalized ->
                 // The brand color adapts to the active mode; arbitrary host or custom
                 // colors keep their single value and rely on the contrast machinery.
                 if (normalized == AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR) {
@@ -217,30 +258,67 @@ internal data class AppThemePalette(
             val background = context.getColor(R.color.window_background)
             val isDark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
                 Configuration.UI_MODE_NIGHT_YES
+            val curated = AppSettingsPolicy.isCuratedThemeColor(themeSeed)
+            val accent = if (curated) {
+                AppColorPolicy.readableAccent(primary, background)
+            } else {
+                AppColorPolicy.dynamicAccent(primary, background)
+            }
+            val primaryText = context.getColor(R.color.text_color_primary)
+            val secondaryText = context.getColor(R.color.text_color_secondary)
+            val surface = context.getColor(R.color.surface)
+            val surfaceVariant = context.getColor(R.color.surface_variant)
+            val outline = context.getColor(R.color.outline)
+            val divider = context.getColor(R.color.divider)
+            val userSurface = context.getColor(R.color.chat_user_surface)
+            val assistantSurface = context.getColor(R.color.chat_assistant_surface)
+            val noticeSurface = context.getColor(R.color.chat_notice_surface)
+            val inputSurface = context.getColor(R.color.chat_input_surface)
+            val chatBorder = context.getColor(R.color.chat_border)
             return AppThemePalette(
-                primary = primary,
-                onPrimary = AppColorPolicy.onThemeColor(primary, isDark),
-                accent = AppColorPolicy.readableAccent(primary, background),
-                windowBackground = background,
-                surface = context.getColor(R.color.surface),
-                surfaceVariant = context.getColor(R.color.surface_variant),
-                outline = context.getColor(R.color.outline),
-                primaryText = context.getColor(R.color.text_color_primary),
-                secondaryText = context.getColor(R.color.text_color_secondary),
-                divider = context.getColor(R.color.divider),
-                userSurface = AppColorPolicy.retoneSurface(
-                    context.getColor(R.color.chat_user_surface),
-                    primary,
-                    context.getColor(R.color.text_color_primary),
+                primary = if (curated) primary else accent,
+                onPrimary = AppColorPolicy.onThemeColor(if (curated) primary else accent, isDark),
+                accent = accent,
+                windowBackground = if (curated) background else AppColorPolicy.harmonizeSurface(
+                    background, accent, primaryText, if (isDark) 0.035 else 0.02,
                 ),
-                assistantSurface = context.getColor(R.color.chat_assistant_surface),
-                noticeSurface = AppColorPolicy.retoneSurface(
-                    context.getColor(R.color.chat_notice_surface),
-                    primary,
-                    context.getColor(R.color.text_color_secondary),
+                surface = if (curated) surface else AppColorPolicy.harmonizeSurface(
+                    surface, accent, primaryText, if (isDark) 0.055 else 0.025,
                 ),
-                inputSurface = context.getColor(R.color.chat_input_surface),
-                chatBorder = context.getColor(R.color.chat_border),
+                surfaceVariant = if (curated) surfaceVariant else AppColorPolicy.harmonizeSurface(
+                    surfaceVariant, accent, primaryText, if (isDark) 0.11 else 0.07,
+                ),
+                outline = if (curated) outline else AppColorPolicy.harmonizeSurface(
+                    outline, accent, primaryText, if (isDark) 0.18 else 0.13,
+                ),
+                primaryText = primaryText,
+                secondaryText = secondaryText,
+                divider = if (curated) divider else AppColorPolicy.harmonizeSurface(
+                    divider, accent, primaryText, if (isDark) 0.10 else 0.06,
+                ),
+                userSurface = if (curated) {
+                    AppColorPolicy.retoneSurface(userSurface, primary, primaryText)
+                } else {
+                    AppColorPolicy.harmonizeSurface(
+                        userSurface, accent, primaryText, if (isDark) 0.24 else 0.20,
+                    )
+                },
+                assistantSurface = if (curated) assistantSurface else AppColorPolicy.harmonizeSurface(
+                    assistantSurface, accent, primaryText, if (isDark) 0.09 else 0.065,
+                ),
+                noticeSurface = if (curated) {
+                    AppColorPolicy.retoneSurface(noticeSurface, primary, secondaryText)
+                } else {
+                    AppColorPolicy.harmonizeSurface(
+                        noticeSurface, accent, secondaryText, if (isDark) 0.14 else 0.10,
+                    )
+                },
+                inputSurface = if (curated) inputSurface else AppColorPolicy.harmonizeSurface(
+                    inputSurface, accent, primaryText, if (isDark) 0.05 else 0.025,
+                ),
+                chatBorder = if (curated) chatBorder else AppColorPolicy.harmonizeSurface(
+                    chatBorder, accent, primaryText, if (isDark) 0.20 else 0.14,
+                ),
                 isDark = isDark,
             )
         }

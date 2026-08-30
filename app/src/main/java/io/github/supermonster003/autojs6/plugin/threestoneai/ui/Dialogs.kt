@@ -63,6 +63,13 @@ internal fun ConfiguredActivity.inputDialog(
     val editText = TextInputEditText(this).apply {
         setText(initialValue)
         this.inputType = inputType
+        minimumHeight = uiDp(56)
+        setPaddingRelative(
+            uiDp(Ui.SPACE_LG),
+            uiDp(Ui.SPACE_MD),
+            uiDp(Ui.SPACE_LG),
+            uiDp(Ui.SPACE_MD),
+        )
         maxLength?.let { filters = arrayOf(InputFilter.LengthFilter(it)) }
         setTextColor(appPalette.primaryText)
         tintEditText(this)
@@ -147,6 +154,12 @@ internal class PaletteChoiceAdapter(
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
         val view = super.getView(position, convertView, parent)
         (view as? CheckedTextView)?.apply {
+            // The framework single-choice row has a fixed one-line height. Release that
+            // constraint so labels with a lightweight subtitle are never clipped.
+            layoutParams = (layoutParams ?: android.widget.AbsListView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            )).apply { height = ViewGroup.LayoutParams.WRAP_CONTENT }
             minHeight = activity.uiDp(52)
             isSingleLine = false
             maxLines = Int.MAX_VALUE
@@ -268,7 +281,7 @@ internal fun ConfiguredActivity.formLabel(@StringRes textResource: Int): TextVie
         textSize = Ui.TEXT_SECTION
         typeface = Ui.mediumTypeface
         setTextColor(appPalette.secondaryText)
-        setPaddingRelative(0, uiDp(Ui.SPACE_LG), 0, uiDp(Ui.SPACE_XS))
+        setPaddingRelative(0, uiDp(Ui.SPACE_XL), 0, uiDp(Ui.SPACE_SM))
     }
 
 /** Outlined text field pair for sheet forms. */
@@ -284,6 +297,13 @@ internal fun ConfiguredActivity.formTextField(
         this.inputType = inputType
         isSingleLine = singleLine
         textSize = Ui.TEXT_BODY
+        minimumHeight = uiDp(56)
+        setPaddingRelative(
+            uiDp(Ui.SPACE_LG),
+            uiDp(Ui.SPACE_MD),
+            uiDp(Ui.SPACE_LG),
+            uiDp(Ui.SPACE_MD),
+        )
         maxLength?.let { filters = arrayOf(InputFilter.LengthFilter(it)) }
         setTextColor(appPalette.primaryText)
         tintEditText(this)

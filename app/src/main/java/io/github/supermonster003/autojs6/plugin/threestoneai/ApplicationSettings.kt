@@ -39,6 +39,20 @@ internal data class ApplicationSettings(
 internal object AppSettingsPolicy {
     const val AUTOJS6_DEFAULT_THEME_COLOR = -8_531 // #FFDEAD
     const val THREE_STONE_AI_THEME_COLOR = -12_952_376 // #FF3A5CC8 (lapis; rendered per-mode via R.color.brand_primary)
+    const val ORANGE_THEME_COLOR = -1_533_440 // #FFE89A00
+    const val TEAL_THEME_COLOR = -16_745_334 // #FF007C8A
+    const val BLUE_THEME_COLOR = -12_627_531 // #FF3F51B5
+    const val GREEN_THEME_COLOR = -13_730_510 // #FF2E7D32
+    const val PURPLE_THEME_COLOR = -8_497_214 // #FF7E57C2
+
+    fun isCuratedThemeColor(color: Int): Boolean = normalizeOpaqueColor(color) in setOf(
+        THREE_STONE_AI_THEME_COLOR,
+        ORANGE_THEME_COLOR,
+        TEAL_THEME_COLOR,
+        BLUE_THEME_COLOR,
+        GREEN_THEME_COLOR,
+        PURPLE_THEME_COLOR,
+    )
 
     fun normalizeOpaqueColor(color: Int): Int = color or -0x1000000
 
@@ -66,25 +80,6 @@ internal object AppSettingsPolicy {
         AppLanguage.FOLLOW_SYSTEM -> null
         else -> language.languageTag
     }
-
-    fun fallbackWithoutAutoJs6(settings: ApplicationSettings): ApplicationSettings = settings.copy(
-        themeSelection = when (settings.themeSelection) {
-            AppThemeSelection.FOLLOW_AUTOJS6 -> AppThemeSelection.CUSTOM
-            AppThemeSelection.CUSTOM -> settings.themeSelection
-        },
-        customThemeColor = when (settings.themeSelection) {
-            AppThemeSelection.FOLLOW_AUTOJS6 -> THREE_STONE_AI_THEME_COLOR
-            AppThemeSelection.CUSTOM -> settings.customThemeColor
-        },
-        darkMode = when (settings.darkMode) {
-            AppDarkMode.FOLLOW_AUTOJS6 -> AppDarkMode.FOLLOW_SYSTEM
-            else -> settings.darkMode
-        },
-        language = when (settings.language) {
-            AppLanguage.FOLLOW_AUTOJS6 -> AppLanguage.FOLLOW_SYSTEM
-            else -> settings.language
-        },
-    )
 
     fun storedEnum(value: String?, fallback: AppThemeSelection): AppThemeSelection =
         value?.let { runCatching { AppThemeSelection.valueOf(it) }.getOrNull() } ?: fallback

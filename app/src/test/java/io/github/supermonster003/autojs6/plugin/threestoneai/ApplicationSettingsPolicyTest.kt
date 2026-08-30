@@ -61,21 +61,28 @@ class ApplicationSettingsPolicyTest {
     }
 
     @Test
-    fun `missing or disabled host migrates only follow selections to app defaults`() {
-        val fallback = AppSettingsPolicy.fallbackWithoutAutoJs6(ApplicationSettings())
+    fun `follow AutoJs6 choices remain stored while runtime fallbacks follow the system`() {
+        val settings = ApplicationSettings()
 
-        assertEquals(AppThemeSelection.CUSTOM, fallback.themeSelection)
-        assertEquals(AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR, fallback.customThemeColor)
-        assertEquals(AppDarkMode.FOLLOW_SYSTEM, fallback.darkMode)
-        assertEquals(AppLanguage.FOLLOW_SYSTEM, fallback.language)
-
-        val explicit = ApplicationSettings(
-            themeSelection = AppThemeSelection.CUSTOM,
-            customThemeColor = 0xFF123456.toInt(),
-            darkMode = AppDarkMode.DARK,
-            language = AppLanguage.JAPANESE,
+        assertEquals(AppThemeSelection.FOLLOW_AUTOJS6, settings.themeSelection)
+        assertEquals(AppDarkMode.FOLLOW_AUTOJS6, settings.darkMode)
+        assertEquals(AppLanguage.FOLLOW_AUTOJS6, settings.language)
+        assertTrue(AppSettingsPolicy.resolveDarkMode(settings.darkMode, systemDark = true))
+        assertEquals(false, AppSettingsPolicy.resolveDarkMode(settings.darkMode, systemDark = false))
+        assertNull(
+            AppSettingsPolicy.resolveLanguageTag(
+                settings.language,
+                autoJs6ResolvedLanguageTag = null,
+            ),
         )
-        assertEquals(explicit, AppSettingsPolicy.fallbackWithoutAutoJs6(explicit))
+    }
+
+    @Test
+    fun `orange preset is distinct and included in the curated palette`() {
+        assertEquals("#E89A00", AppSettingsPolicy.colorHex(AppSettingsPolicy.ORANGE_THEME_COLOR))
+        assertTrue(AppSettingsPolicy.isCuratedThemeColor(AppSettingsPolicy.ORANGE_THEME_COLOR))
+        assertTrue(AppSettingsPolicy.isCuratedThemeColor(AppSettingsPolicy.TEAL_THEME_COLOR))
+        assertEquals(false, AppSettingsPolicy.isCuratedThemeColor(0xFFFFDEAD.toInt()))
     }
 
     @Test

@@ -1670,19 +1670,29 @@ class ChatActivity : ConfiguredActivity() {
     ) {
         val prompt = GenerationMessage(GenerationRole.USER, listOf(promptText))
         val requestedTarget = ConversationTargetSnapshot.from(target)
+        val budget = ContextBudgetCalculator.calculate(
+            targetLimits = target.limits,
+            applicationInputTokenBudget = uiSettings.contextTokenBudget,
+            maximumOutputTokens = uiSettings.maximumOutputTokens,
+        )
         var reusableBackend: AiBackendSession? = null
         var reusableTelemetry: BackendContextTelemetry? = null
         var backendToReplace: AiBackendSession? = null
         synchronized(backendLock) {
+            val telemetry = activeBackendContextTelemetry
             val reusable = target.capabilities.persistentSession &&
-                activeBackend != null && activeBackendContextTelemetry != null &&
+                activeBackend != null && telemetry != null &&
                 activeBackendTarget?.let { activeTarget ->
                     activeTarget.matchesExecutionIdentity(target)
                 } == true &&
-                !ChatConversationPolicy.shouldRotateBackend(completedTurnsOnBackend)
+                !ContextAccountingPolicy.shouldRotateBackend(
+                    accounting = telemetry.accounting,
+                    budget = budget,
+                    completedTurnsOnBackend = completedTurnsOnBackend,
+                )
             if (reusable) {
                 reusableBackend = activeBackend
-                reusableTelemetry = activeBackendContextTelemetry
+                reusableTelemetry = telemetry
             } else {
                 backendToReplace = activeBackend
                 activeBackend = null
@@ -1703,6 +1713,7 @@ class ChatActivity : ConfiguredActivity() {
                 target = actualTarget,
                 prompt = prompt,
                 telemetry = telemetry,
+                budget = budget,
                 rebuilt = false,
             )
             recordAssistantTarget(generationId, assistantMessageId, actualTarget)
@@ -1717,7 +1728,39 @@ class ChatActivity : ConfiguredActivity() {
             return
         }
 
-        val history = ChatConversationPolicy.historyForFreshBackend(messages)
+        val calibration = contextTokenCalibrationStore.current(requestedTarget.targetId)
+        val estimator = calibration.estimator()
+        val compiled = ChatConversationPolicy.compileContext(
+            transcript = messages,
+            prompt = prompt,
+            policy = ContextCompilationPolicy(
+                estimator = estimator,
+                maximumInputTokens = budget.compactionTargetTokens,
+            ),
+        )
+        if (compiled.exceedsInputBudget) {
+            Log.w(
+                TAG,
+                "Compiled context exceeds target after minimum-turn retention " +
+                    "target=${requestedTarget.targetId} " +
+                    "estimatedInputTokens=${compiled.estimatedInputTokens} " +
+                    "compactionTargetTokens=${budget.compactionTargetTokens} " +
+                    "coveredMessages=${compiled.coveredMessageIds.size}",
+            )
+        }
+        val history = compiled.messages
+        val historyEstimate = estimator.estimateMessages(history)
+        Log.d(
+            TAG,
+            "Context compile target=${requestedTarget.targetId} " +
+                "estimatedInputTokens=${compiled.estimatedInputTokens} " +
+                "historyTokens=${historyEstimate.estimatedTokens} " +
+                "historyBytes=${historyEstimate.utf8Bytes} " +
+                "coveredMessages=${compiled.coveredMessageIds.size} " +
+                "trimmed=${compiled.requiresSessionRebuild} " +
+                "hardWatermarkTokens=${budget.hardWatermarkTokens} " +
+                "compactionTargetTokens=${budget.compactionTargetTokens}",
+        )
         submitBackendWork(generationId, assistantMessageId) {
             runCatching { backendToReplace?.close() }
             if (!isGenerationCurrent(generationId)) return@submitBackendWork
@@ -1740,12 +1783,13 @@ class ChatActivity : ConfiguredActivity() {
                     val telemetry = BackendContextTelemetry(
                         epoch = backendContextEpoch,
                         committedMessages = history.map { message -> message.contextSnapshot() },
+                        accounting = ContextAccounting.initial(historyEstimate.estimatedTokens),
                     )
                     activeBackend = created
                     activeBackendTarget = actualTarget
                     activeBackendContextTelemetry = telemetry
                     activeContextTurnObservation = null
-                    completedTurnsOnBackend = history.size / MESSAGES_PER_TURN
+                    completedTurnsOnBackend = 0
                     telemetry
                 }
             }
@@ -1759,6 +1803,7 @@ class ChatActivity : ConfiguredActivity() {
                 target = actualTarget,
                 prompt = prompt,
                 telemetry = installedTelemetry,
+                budget = budget,
                 rebuilt = true,
             )
             mainHandler.post {
@@ -1786,6 +1831,7 @@ class ChatActivity : ConfiguredActivity() {
         target: ConversationTargetSnapshot,
         prompt: GenerationMessage,
         telemetry: BackendContextTelemetry,
+        budget: ContextBudget,
         rebuilt: Boolean,
     ) {
         val calibration = contextTokenCalibrationStore.current(target.targetId)
@@ -1811,6 +1857,7 @@ class ChatActivity : ConfiguredActivity() {
             inputEstimate = inputEstimate,
             calibrationInput = calibrationInput,
             coefficientBefore = calibration.tokensPerUtf8Byte,
+            hardWatermarkTokens = budget.hardWatermarkTokens,
         )
         val installed = synchronized(backendLock) {
             if (
@@ -1825,14 +1872,17 @@ class ChatActivity : ConfiguredActivity() {
             }
         }
         if (!installed) return
-        val accountingTokens = estimator.estimateMessages(telemetry.committedMessages).estimatedTokens
         Log.d(
             TAG,
             "Context start target=${target.targetId} " +
                 "estimatedInputTokens=${inputEstimate.estimatedTokens} " +
                 "inputBytes=${inputEstimate.utf8Bytes} actualInputTokens=pending " +
-                "accountingTokens=$accountingTokens backendEpoch=${telemetry.epoch} " +
-                "rebuilt=$rebuilt coefficient=${calibration.tokensPerUtf8Byte}",
+                "accountingTokens=${telemetry.accounting.tokens} " +
+                "accountingSource=${telemetry.accounting.source} " +
+                "hardWatermarkTokens=${budget.hardWatermarkTokens} " +
+                "compactionTargetTokens=${budget.compactionTargetTokens} " +
+                "backendEpoch=${telemetry.epoch} rebuilt=$rebuilt " +
+                "coefficient=${calibration.tokensPerUtf8Byte}",
         )
     }
 
@@ -1845,6 +1895,7 @@ class ChatActivity : ConfiguredActivity() {
     ) {
         var observation: ContextTurnObservation? = null
         var committedMessages: List<GenerationMessage>? = null
+        var previousAccounting: ContextAccounting? = null
         synchronized(backendLock) {
             val candidate = activeContextTurnObservation
             val telemetry = activeBackendContextTelemetry
@@ -1861,6 +1912,7 @@ class ChatActivity : ConfiguredActivity() {
                 activeBackendContextTelemetry = telemetry.copy(committedMessages = committed)
                 observation = candidate
                 committedMessages = committed
+                previousAccounting = telemetry.accounting
             }
             activeContextTurnObservation = null
         }
@@ -1880,14 +1932,31 @@ class ChatActivity : ConfiguredActivity() {
         val estimatedAfterTurn = calibration.estimator()
             .estimateMessages(completedMessages)
             .estimatedTokens
-        val accountingTokens = statistics?.contextTokensAfterTurn ?: estimatedAfterTurn
+        val assistant = completedMessages.last()
+        val estimatedTurnTokens = calibration.estimator()
+            .estimateMessages(listOf(completedObservation.prompt, assistant))
+            .estimatedTokens
+        val accounting = ContextAccountingPolicy.afterSuccessfulTurn(
+            current = previousAccounting ?: ContextAccounting.initial(),
+            statistics = statistics,
+            estimatedContextTokensAfterTurn = estimatedAfterTurn,
+            estimatedTurnTokens = estimatedTurnTokens,
+        )
+        synchronized(backendLock) {
+            val telemetry = activeBackendContextTelemetry
+            if (telemetry?.epoch == completedObservation.backendEpoch) {
+                activeBackendContextTelemetry = telemetry.copy(accounting = accounting)
+            }
+        }
         Log.d(
             TAG,
             "Context complete target=${actualTarget.targetId} " +
                 "estimatedInputTokens=${completedObservation.inputEstimate.estimatedTokens} " +
                 "actualInputTokens=${statistics?.inputTokens} " +
                 "actualOutputTokens=${statistics?.outputTokens} " +
-                "accountingTokens=$accountingTokens cumulativeInputTokens=$cumulativeInputTokens " +
+                "accountingTokens=${accounting.tokens} accountingSource=${accounting.source} " +
+                "hardWatermarkTokens=${completedObservation.hardWatermarkTokens} " +
+                "cumulativeInputTokens=$cumulativeInputTokens " +
                 "backendEpoch=${completedObservation.backendEpoch} " +
                 "rebuilt=${completedObservation.rebuilt} " +
                 "coefficientBefore=${completedObservation.coefficientBefore} " +
@@ -3003,6 +3072,7 @@ class ChatActivity : ConfiguredActivity() {
     private data class BackendContextTelemetry(
         val epoch: Long,
         val committedMessages: List<GenerationMessage>,
+        val accounting: ContextAccounting,
     )
 
     private data class ContextTurnObservation(
@@ -3013,6 +3083,7 @@ class ChatActivity : ConfiguredActivity() {
         val inputEstimate: ContextTokenEstimate,
         val calibrationInput: ContextTokenEstimate,
         val coefficientBefore: Double,
+        val hardWatermarkTokens: Long,
     )
 
     private data class CachedMarkdown(
@@ -3073,7 +3144,6 @@ class ChatActivity : ConfiguredActivity() {
         const val MENU_CONVERSATION_HISTORY = 3
         const val MENU_SEARCH = 4
         const val MENU_APP_SETTINGS = 6
-        const val MESSAGES_PER_TURN = 2
         const val MILLIS_PER_SECOND = 1_000L
         const val DELTA_FLUSH_INTERVAL_MILLIS = 32L
         const val PERSISTENCE_DELAY_MILLIS = 750L

@@ -85,8 +85,6 @@ internal data class CompiledContext(
 /** Pure transcript rules shared by the launcher UI and its local unit tests. */
 internal object ChatConversationPolicy {
     const val MAXIMUM_INPUT_CHARACTERS = 16_384
-    const val MAXIMUM_BACKEND_TURNS = 32
-    const val MAXIMUM_RETAINED_TURNS = 24
     const val MAXIMUM_RETAINED_HISTORY_BYTES = 192 * 1_024
 
     /**
@@ -152,35 +150,6 @@ internal object ChatConversationPolicy {
             requiresSessionRebuild = retained.size != completedTurns.size,
             inputTokenLimit = policy.maximumInputTokens,
         )
-    }
-
-    /**
-     * Builds a contiguous suffix of successful user/assistant turns for a new native Conversation.
-     * Interrupted and failed turns stay visible in the UI but never contaminate later model context.
-     */
-    fun historyForFreshBackend(messages: List<ChatMessage>): List<GenerationMessage> {
-        val completedTurns = completedTurns(messages)
-        val retainedReversed = ArrayList<CompletedTurn>(MAXIMUM_RETAINED_TURNS)
-        var retainedBytes = 0
-        for (turn in completedTurns.asReversed()) {
-            if (retainedReversed.size >= MAXIMUM_RETAINED_TURNS) break
-            val turnBytes = turn.user.text.toByteArray(Charsets.UTF_8).size +
-                turn.assistant.text.toByteArray(Charsets.UTF_8).size
-            if (retainedBytes + turnBytes > MAXIMUM_RETAINED_HISTORY_BYTES) break
-            retainedReversed += turn
-            retainedBytes += turnBytes
-        }
-        return retainedReversed.asReversed().flatMap { turn ->
-            listOf(
-                GenerationMessage(GenerationRole.USER, listOf(turn.user.text)),
-                GenerationMessage(GenerationRole.ASSISTANT, listOf(turn.assistant.text)),
-            )
-        }
-    }
-
-    fun shouldRotateBackend(completedTurnsOnBackend: Int): Boolean {
-        require(completedTurnsOnBackend >= 0)
-        return completedTurnsOnBackend >= MAXIMUM_BACKEND_TURNS
     }
 
     /** Cumulative provider input through one visible message, saturated for hostile counters. */

@@ -128,6 +128,26 @@ class ContextBudgetTest {
     }
 
     @Test
+    fun `lowering the application budget affects an existing backend on the next decision`() {
+        val accounting = ContextAccounting.initial(1_000L)
+        val oldBudget = ContextBudgetCalculator.calculate(
+            limits(),
+            applicationInputTokenBudget = 2_000,
+        )
+        val loweredBudget = ContextBudgetCalculator.calculate(
+            limits(),
+            applicationInputTokenBudget = 1_000,
+        )
+
+        assertFalse(
+            ContextAccountingPolicy.shouldRotateBackend(accounting, oldBudget, 1),
+        )
+        assertTrue(
+            ContextAccountingPolicy.shouldRotateBackend(accounting, loweredBudget, 1),
+        )
+    }
+
+    @Test
     fun `invalid inputs and token limits are rejected`() {
         assertThrows(IllegalArgumentException::class.java) {
             ContextBudgetCalculator.calculate(limits(), applicationInputTokenBudget = 0)

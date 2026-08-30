@@ -52,6 +52,7 @@ internal fun ConfiguredActivity.confirmDialog(
 internal fun ConfiguredActivity.inputDialog(
     title: CharSequence,
     initialValue: CharSequence?,
+    message: CharSequence? = null,
     hint: CharSequence? = null,
     inputType: Int = InputType.TYPE_CLASS_TEXT,
     maxLength: Int? = null,
@@ -100,6 +101,7 @@ internal fun ConfiguredActivity.inputDialog(
     }
     val dialog = materialDialog()
         .setTitle(title)
+        .setMessage(message)
         .setView(container)
         .setNegativeButton(android.R.string.cancel, null)
         .setPositiveButton(positiveResource, null)

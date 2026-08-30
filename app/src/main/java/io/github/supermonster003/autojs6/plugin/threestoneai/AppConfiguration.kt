@@ -28,6 +28,7 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.BaseProgressIndicator
 import java.util.Locale
 import kotlin.math.max
@@ -392,6 +393,8 @@ abstract class ConfiguredActivity : AppCompatActivity() {
                 root.progressTintList = ColorStateList.valueOf(appPalette.accent)
                 root.indeterminateTintList = ColorStateList.valueOf(appPalette.accent)
             }
+            // Kit-built Material buttons manage their own palette tints.
+            is MaterialButton -> Unit
             is Button -> {
                 root.backgroundTintList = ColorStateList.valueOf(appPalette.primary)
                 root.setTextColor(appPalette.onPrimary)

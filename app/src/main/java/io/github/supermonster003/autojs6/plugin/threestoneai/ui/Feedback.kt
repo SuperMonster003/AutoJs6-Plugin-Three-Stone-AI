@@ -137,6 +137,11 @@ internal class ProgressPanel(private val activity: ConfiguredActivity) {
         return this
     }
 
+    fun setCancelEnabled(enabled: Boolean) {
+        cancelButton?.isEnabled = enabled
+        cancelButton?.alpha = if (enabled) 1f else Ui.DISABLED_ALPHA
+    }
+
     fun showIndeterminate(label: CharSequence, meta: CharSequence? = null) {
         titleView.text = label
         applyMeta(meta)
@@ -175,8 +180,12 @@ internal class ProgressPanel(private val activity: ConfiguredActivity) {
 }
 
 /** Inverse-surface snackbar that stays legible in both modes and any theme color. */
-internal fun ConfiguredActivity.showSnackbar(anchor: View, message: CharSequence) {
-    Snackbar.make(anchor, message, Snackbar.LENGTH_SHORT)
+internal fun ConfiguredActivity.showSnackbar(
+    anchor: View,
+    message: CharSequence,
+    duration: Int = Snackbar.LENGTH_SHORT,
+) {
+    Snackbar.make(anchor, message, duration)
         .setBackgroundTint(appPalette.primaryText)
         .setTextColor(appPalette.windowBackground)
         .show()

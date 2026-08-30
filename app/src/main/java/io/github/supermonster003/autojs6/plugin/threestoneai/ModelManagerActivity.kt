@@ -4,28 +4,39 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
-import android.text.InputFilter
 import android.text.InputType
 import android.text.format.Formatter
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.RadioButton
-import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.PopupMenu
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.snackbar.Snackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.ProgressPanel
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardContainer
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardListParams
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.filledButton
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.hairline
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.iconButton
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.inputDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.textButton
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.tonalButton
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadCleanupResult
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadCoordinator
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadFailureReason
@@ -53,18 +64,18 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelStorageC
 class ModelManagerActivity : ConfiguredActivity() {
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var downloadCoordinator: ModelDownloadCoordinator
+    private lateinit var screenRoot: View
     private lateinit var downloadStatus: TextView
-    private lateinit var downloadButton: Button
-    private lateinit var cancelDownloadButton: Button
-    private lateinit var importDownloadedButton: Button
-    private lateinit var downloadProgress: ProgressBar
+    private lateinit var downloadButton: MaterialButton
+    private lateinit var importDownloadedButton: MaterialButton
+    private lateinit var downloadPanel: ProgressPanel
     private lateinit var status: TextView
-    private lateinit var copyModelIdButton: Button
-    private lateinit var importButton: Button
-    private lateinit var checkAfterImportOption: CheckBox
+    private lateinit var copyModelIdButton: MaterialButton
+    private lateinit var importButton: MaterialButton
+    private lateinit var checkAfterImportOption: MaterialSwitch
+    private lateinit var checkAfterImportRow: SettingRow
     private lateinit var importStoragePreflight: TextView
-    private lateinit var cancelImportButton: Button
-    private lateinit var progress: ProgressBar
+    private lateinit var importPanel: ProgressPanel
     private lateinit var catalogSummary: TextView
     private lateinit var onlineSummary: TextView
     private lateinit var catalogRows: LinearLayout
@@ -225,214 +236,140 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun createContentView(): View {
-        val density = resources.displayMetrics.density
-        fun dp(value: Int) = (value * density).toInt()
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setBackgroundColor(appPalette.windowBackground)
-            setPadding(dp(24), dp(12), dp(24), dp(32))
-            addView(TextView(context).apply {
-                text = getString(R.string.model_online_section_title)
-                textSize = 18f
-                setTextColor(appPalette.primaryText)
-                setPadding(0, dp(10), 0, dp(6))
-            }, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            onlineSummary = TextView(context).apply {
-                textSize = 14f
-                setTextColor(appPalette.secondaryText)
-                setLineSpacing(0f, 1.12f)
-                setPadding(0, 0, 0, dp(5))
-            }
-            addView(
-                onlineSummary,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-            addView(navigationRow(
+        val scaffold = buildScaffold(R.string.model_manager_title)
+        val content = scaffold.content
+
+        content.addView(sectionHeader(R.string.model_online_section_title))
+        onlineSummary = paragraph()
+        content.addView(onlineSummary)
+        content.addView(
+            settingRow(
                 title = getString(R.string.online_ai_settings_title),
                 summary = getString(R.string.model_online_manage_summary),
+                iconResource = R.drawable.ic_cloud_24,
             ) {
-                startActivity(Intent(this@ModelManagerActivity, OnlineAiSettingsActivity::class.java))
-            })
-            addView(navigationRow(
+                startActivity(Intent(this, OnlineAiSettingsActivity::class.java))
+            }.view,
+        )
+        content.addView(
+            settingRow(
                 title = getString(R.string.online_ai_add_profile),
                 summary = getString(R.string.online_ai_add_profile_summary),
+                iconResource = R.drawable.ic_add_24,
             ) {
                 startActivity(
-                    Intent(this@ModelManagerActivity, OnlineAiSettingsActivity::class.java)
+                    Intent(this, OnlineAiSettingsActivity::class.java)
                         .putExtra(OnlineAiSettingsActivity.EXTRA_ADD_PROFILE, true),
                 )
-            })
-            addView(TextView(context).apply {
-                text = getString(R.string.screen_description)
-                textSize = 16f
-                setTextColor(appPalette.secondaryText)
-                setPadding(0, dp(26), 0, dp(20))
-            })
-            addView(TextView(context).apply {
-                text = getString(R.string.download_section_title)
-                textSize = 18f
-                setPadding(0, 0, 0, dp(8))
-            }, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            downloadStatus = TextView(context).apply {
-                text = getString(R.string.download_description)
-                textSize = 14f
-                setTextIsSelectable(true)
-            }
-            addView(
-                downloadStatus,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-            downloadProgress = ProgressBar(
-                context,
-                null,
-                android.R.attr.progressBarStyleHorizontal,
-            ).apply {
-                max = PROGRESS_MAX
-                visibility = View.GONE
-            }
-            addView(
-                downloadProgress,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-            cancelDownloadButton = Button(context).apply {
-                text = getString(R.string.button_cancel_download)
-                visibility = View.GONE
-                setOnClickListener { cancelDownload() }
-            }
-            addView(cancelDownloadButton)
-            downloadButton = Button(context).apply {
-                text = getString(R.string.button_browse_litert_models)
-                setOnClickListener { chooseRecommendedModel() }
-                applySubtleButtonStyle(this)
-            }
-            addView(downloadButton)
-            importDownloadedButton = Button(context).apply {
-                text = getString(R.string.button_import_downloaded_model)
-                visibility = View.GONE
-                setOnClickListener { importDownloadedModel() }
-            }
-            addView(importDownloadedButton)
-            addView(TextView(context).apply {
-                text = getString(R.string.import_section_title)
-                textSize = 18f
-                setPadding(0, dp(24), 0, dp(8))
-            }, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            status = TextView(context).apply {
-                textSize = 15f
-                setTextIsSelectable(true)
-            }
-            addView(status, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            copyModelIdButton = Button(context).apply {
-                text = getString(R.string.button_copy_model_id)
-                visibility = View.GONE
-                setOnClickListener { copyModelId() }
-            }
-            addView(copyModelIdButton)
-            progress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-                max = PROGRESS_MAX
-                visibility = View.GONE
-            }
-            addView(progress, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            cancelImportButton = Button(context).apply {
-                text = getString(R.string.button_cancel_import)
-                visibility = View.GONE
-                setOnClickListener { cancelImport() }
-            }
-            addView(cancelImportButton)
-            importButton = Button(context).apply {
-                text = getString(R.string.button_import_model)
-                setOnClickListener { openModelPicker() }
-                applySubtleButtonStyle(this)
-            }
-            addView(importButton)
-            checkAfterImportOption = CheckBox(context).apply {
-                text = getString(R.string.option_check_after_import)
-                isChecked = checkAfterImport
-                setOnCheckedChangeListener { _, checked ->
-                    checkAfterImport = checked
-                    getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE)
-                        .edit()
-                        .putBoolean(PREFERENCE_CHECK_AFTER_IMPORT, checked)
-                        .apply()
-                }
-            }
-            addView(checkAfterImportOption)
-            importStoragePreflight = TextView(context).apply {
-                textSize = 14f
-                setPadding(0, dp(8), 0, 0)
-            }
-            addView(
-                importStoragePreflight,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
+            }.view,
+        )
+        content.addView(hairline())
 
-            catalogSummary = TextView(context).apply {
-                textSize = 15f
-                setPadding(0, dp(24), 0, dp(8))
-            }
-            addView(catalogSummary, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            catalogRows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-            addView(catalogRows, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        content.addView(sectionHeader(R.string.download_section_title))
+        content.addView(paragraph(getString(R.string.screen_description)))
+        downloadStatus = paragraph().apply {
+            text = getString(R.string.download_description)
+            setTextIsSelectable(true)
         }
+        content.addView(downloadStatus)
+        downloadPanel = ProgressPanel(this)
+            .withCancelAction(R.string.button_cancel_download) { cancelDownload() }
+        content.addView(downloadPanel.view, blockParams(topDp = Ui.SPACE_SM))
+        downloadButton = tonalButton(R.string.button_browse_litert_models) { chooseRecommendedModel() }
+        importDownloadedButton = filledButton(R.string.button_import_downloaded_model) {
+            importDownloadedModel()
+        }.apply { visibility = View.GONE }
+        content.addView(
+            actionRow(downloadButton, importDownloadedButton),
+            blockParams(topDp = Ui.SPACE_MD),
+        )
+        content.addView(hairline())
+
+        content.addView(sectionHeader(R.string.import_section_title))
+        status = paragraph().apply { setTextIsSelectable(true) }
+        content.addView(status)
+        copyModelIdButton = textButton(R.string.button_copy_model_id) { copyModelId() }
+            .apply { visibility = View.GONE }
+        content.addView(
+            actionRow(copyModelIdButton),
+            blockParams(horizontalDp = Ui.SPACE_SM),
+        )
+        importPanel = ProgressPanel(this)
+            .withCancelAction(R.string.button_cancel_import) { cancelImport() }
+        content.addView(importPanel.view, blockParams(topDp = Ui.SPACE_SM))
+        importButton = tonalButton(R.string.button_import_model) { openModelPicker() }
+        content.addView(actionRow(importButton), blockParams(topDp = Ui.SPACE_MD))
+        checkAfterImportRow = switchRow(
+            title = getString(R.string.option_check_after_import),
+            checked = checkAfterImport,
+        ) { checked ->
+            checkAfterImport = checked
+            getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE)
+                .edit()
+                .putBoolean(PREFERENCE_CHECK_AFTER_IMPORT, checked)
+                .apply()
+        }
+        checkAfterImportOption = checkAfterImportRow.switchView
+            ?: error("switchRow must provide a switch")
+        content.addView(checkAfterImportRow.view)
+        importStoragePreflight = paragraph().apply { textSize = Ui.TEXT_CAPTION }
+        content.addView(importStoragePreflight)
+        content.addView(hairline())
+
+        catalogSummary = TextView(this).apply {
+            textSize = Ui.TEXT_SECTION
+            typeface = Ui.mediumTypeface
+            setTextColor(appPalette.accent)
+            setPaddingRelative(
+                uiDp(Ui.SCREEN_MARGIN),
+                uiDp(Ui.SECTION_GAP),
+                uiDp(Ui.SCREEN_MARGIN),
+                uiDp(Ui.SPACE_SM),
+            )
+        }
+        content.addView(catalogSummary)
+        catalogRows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        content.addView(catalogRows, blockParams())
+
         applyThemeToControls(content)
-        applySubtleButtons(content)
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(appPalette.windowBackground)
-            val statusBarBackground = createStatusBarBackground()
-            addView(
-                statusBarBackground,
-                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
-            )
-            addView(createAppToolbar(R.string.model_manager_title, showBack = true))
-            addView(
-                ScrollView(context).apply {
-                    isFillViewport = true
-                    addView(content)
-                },
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    0,
-                    1f,
-                ),
-            )
-            applySystemBarInsets(this, statusBarBackground)
-        }
+        screenRoot = scaffold.root
+        return scaffold.root
     }
 
-    private fun navigationRow(
-        title: String,
-        summary: String,
-        onClick: () -> Unit,
-    ) = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        minimumHeight = dp(64)
-        isClickable = true
-        isFocusable = true
-        contentDescription = "$title, $summary"
-        setPaddingRelative(dp(12), dp(10), dp(12), dp(10))
-        val backgroundValue = TypedValue()
-        if (theme.resolveAttribute(android.R.attr.selectableItemBackground, backgroundValue, true)) {
-            setBackgroundResource(backgroundValue.resourceId)
+    private fun paragraph(text: CharSequence? = null): TextView = TextView(this).apply {
+        this.text = text
+        textSize = Ui.TEXT_SECONDARY
+        setTextColor(appPalette.secondaryText)
+        setLineSpacing(0f, Ui.LINE_SPACING_BODY)
+        setPaddingRelative(uiDp(Ui.SCREEN_MARGIN), 0, uiDp(Ui.SCREEN_MARGIN), uiDp(Ui.SPACE_XS))
+    }
+
+    private fun blockParams(
+        topDp: Int = 0,
+        bottomDp: Int = 0,
+        horizontalDp: Int = Ui.SCREEN_MARGIN,
+    ): LinearLayout.LayoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT,
+    ).apply {
+        marginStart = uiDp(horizontalDp)
+        marginEnd = uiDp(horizontalDp)
+        topMargin = uiDp(topDp)
+        bottomMargin = uiDp(bottomDp)
+    }
+
+    private fun actionRow(vararg buttons: View): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        buttons.forEachIndexed { index, button ->
+            addView(
+                button,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { if (index > 0) marginStart = uiDp(Ui.SPACE_MD) },
+            )
         }
-        addView(TextView(context).apply {
-            text = title
-            textSize = 15.5f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setTextColor(appPalette.primaryText)
-        })
-        addView(TextView(context).apply {
-            text = summary
-            textSize = 12.5f
-            setTextColor(appPalette.secondaryText)
-            setPaddingRelative(0, dp(3), 0, 0)
-        })
-        setOnClickListener { onClick() }
     }
 
     private fun refreshOnlineSummary() {
@@ -459,39 +396,6 @@ class ModelManagerActivity : ConfiguredActivity() {
         }
     }
 
-    private fun applySubtleButtonStyle(button: Button) {
-        button.backgroundTintList = ColorStateList(
-            arrayOf(
-                intArrayOf(-android.R.attr.state_enabled),
-                intArrayOf(),
-            ),
-            intArrayOf(
-                appPalette.windowBackground,
-                appPalette.assistantSurface,
-            ),
-        )
-        button.setTextColor(ColorStateList(
-            arrayOf(
-                intArrayOf(-android.R.attr.state_enabled),
-                intArrayOf(),
-            ),
-            intArrayOf(
-                appPalette.secondaryText,
-                appPalette.accent,
-            ),
-        ))
-        button.minimumHeight = dp(42)
-        button.minimumWidth = 0
-        button.setPaddingRelative(dp(12), dp(6), dp(12), dp(6))
-    }
-
-    private fun applySubtleButtons(root: View) {
-        if (root is Button) applySubtleButtonStyle(root)
-        if (root is ViewGroup) {
-            for (index in 0 until root.childCount) applySubtleButtons(root.getChildAt(index))
-        }
-    }
-
     private fun chooseRecommendedModel() {
         @Suppress("DEPRECATION")
         startActivityForResult(
@@ -501,7 +405,7 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun confirmRecommendedModel(model: RecommendedModel) {
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(model.displayName)
             .setMessage(
                 getString(
@@ -526,7 +430,7 @@ class ModelManagerActivity : ConfiguredActivity() {
         runCatching {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(model.sourceUrl)))
         }.onFailure {
-            Toast.makeText(this, R.string.download_source_unavailable, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.download_source_unavailable), Snackbar.LENGTH_LONG)
         }
     }
 
@@ -548,11 +452,11 @@ class ModelManagerActivity : ConfiguredActivity() {
             .onFailure {
                 pendingDownloadModelId = null
                 updateDownloadButtonEnabled()
-                Toast.makeText(
-                    this,
-                    R.string.download_destination_unavailable,
-                    Toast.LENGTH_LONG,
-                ).show()
+                showSnackbar(
+                    screenRoot,
+                    getString(R.string.download_destination_unavailable),
+                    Snackbar.LENGTH_LONG,
+                )
             }
     }
 
@@ -560,13 +464,13 @@ class ModelManagerActivity : ConfiguredActivity() {
         val accepted = downloadCoordinator.beginDownload(model, destination, grantedFlags)
         renderDownloadState(downloadCoordinator.state())
         if (!accepted) {
-            Toast.makeText(this, R.string.download_already_running, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.download_already_running), Snackbar.LENGTH_LONG)
         }
     }
 
     private fun cancelDownload() {
         val operationId = cancellableDownloadOperationId ?: return
-        cancelDownloadButton.isEnabled = false
+        downloadPanel.setCancelEnabled(false)
         if (downloadCoordinator.cancelDownload(operationId)) return
         renderDownloadState(downloadCoordinator.state())
     }
@@ -575,15 +479,15 @@ class ModelManagerActivity : ConfiguredActivity() {
         val completed = downloadedDestination ?: return
         val preflight = refreshImportStoragePreflight()
         if (completed.model.expectedSizeBytes > preflight.maximumAdditionalModelBytes) {
-            Toast.makeText(
-                this,
+            showSnackbar(
+                screenRoot,
                 getString(
                     R.string.download_import_insufficient_storage,
                     Formatter.formatFileSize(this, completed.model.expectedSizeBytes),
                     Formatter.formatFileSize(this, preflight.maximumAdditionalModelBytes),
                 ),
-                Toast.LENGTH_LONG,
-            ).show()
+                Snackbar.LENGTH_LONG,
+            )
             return
         }
         val accepted = importCoordinator.beginImport(
@@ -593,7 +497,7 @@ class ModelManagerActivity : ConfiguredActivity() {
         )
         renderManagerState(importCoordinator.managerState())
         if (!accepted) {
-            Toast.makeText(this, R.string.download_import_unavailable, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.download_import_unavailable), Snackbar.LENGTH_LONG)
         }
     }
 
@@ -613,10 +517,10 @@ class ModelManagerActivity : ConfiguredActivity() {
             }
             is ModelDownloadState.Cancelling -> {
                 setDownloadUi(inProgress = true, startEnabled = false)
-                showDownloadProgress(state.model, state.progress)
-                downloadStatus.text = getString(
-                    R.string.download_cancelling,
-                    state.model.displayName,
+                showDownloadProgress(
+                    state.model,
+                    state.progress,
+                    labelOverride = getString(R.string.download_cancelling, state.model.displayName),
                 )
             }
             is ModelDownloadState.Succeeded -> {
@@ -629,7 +533,7 @@ class ModelManagerActivity : ConfiguredActivity() {
                 notifyDownloadOnce(
                     state.operationId,
                     getString(R.string.download_succeeded_toast),
-                    Toast.LENGTH_SHORT,
+                    Snackbar.LENGTH_SHORT,
                 )
             }
             is ModelDownloadState.Cancelled -> {
@@ -639,7 +543,7 @@ class ModelManagerActivity : ConfiguredActivity() {
                     state.cleanup,
                 )
                 downloadStatus.text = message
-                notifyDownloadOnce(state.operationId, message, Toast.LENGTH_LONG)
+                notifyDownloadOnce(state.operationId, message, Snackbar.LENGTH_LONG)
             }
             is ModelDownloadState.Failed -> {
                 setDownloadUi(inProgress = false, startEnabled = true)
@@ -648,30 +552,37 @@ class ModelManagerActivity : ConfiguredActivity() {
                     state.cleanup,
                 )
                 downloadStatus.text = message
-                notifyDownloadOnce(state.operationId, message, Toast.LENGTH_LONG)
+                notifyDownloadOnce(state.operationId, message, Snackbar.LENGTH_LONG)
             }
         }
     }
 
-    private fun showDownloadProgress(model: RecommendedModel, value: ModelDownloadProgress) {
-        downloadProgress.isIndeterminate = value.processedBytes == 0L
-        downloadProgress.progress = if (value.processedBytes >= value.totalBytes) {
+    private fun showDownloadProgress(
+        model: RecommendedModel,
+        value: ModelDownloadProgress,
+        labelOverride: CharSequence? = null,
+    ) {
+        if (value.processedBytes == 0L) {
+            downloadPanel.showIndeterminate(
+                labelOverride ?: getString(R.string.download_connecting, model.displayName),
+            )
+            return
+        }
+        val progress = if (value.processedBytes >= value.totalBytes) {
             PROGRESS_MAX
         } else {
             (value.processedBytes * PROGRESS_MAX / value.totalBytes).toInt()
         }
-        downloadStatus.text = if (value.processedBytes == 0L) {
-            getString(R.string.download_connecting, model.displayName)
-        } else {
-            getString(
-                R.string.download_progress_known,
-                model.displayName,
-                Formatter.formatFileSize(this, value.processedBytes),
-                Formatter.formatFileSize(this, value.totalBytes),
-                downloadProgress.progress / (PROGRESS_MAX / 100),
-            )
-        }
+        downloadPanel.showProgress(
+            labelOverride ?: model.displayName,
+            progress,
+            transferMeta(value.processedBytes, value.totalBytes, progress / (PROGRESS_MAX / 100)),
+        )
     }
+
+    private fun transferMeta(processedBytes: Long, totalBytes: Long, percent: Int): String =
+        "${Formatter.formatFileSize(this, processedBytes)} / " +
+            "${Formatter.formatFileSize(this, totalBytes)} ($percent%)"
 
     private fun setDownloadUi(
         inProgress: Boolean,
@@ -681,9 +592,9 @@ class ModelManagerActivity : ConfiguredActivity() {
     ) {
         cancellableDownloadOperationId = cancelOperationId
         downloadedDestination = completed
-        downloadProgress.visibility = if (inProgress) View.VISIBLE else View.GONE
-        cancelDownloadButton.visibility = if (cancelOperationId == null) View.GONE else View.VISIBLE
-        cancelDownloadButton.isEnabled = cancelOperationId != null
+        if (!inProgress) downloadPanel.hide()
+        downloadPanel.setCancelEnabled(cancelOperationId != null)
+        downloadStatus.visibility = if (inProgress) View.GONE else View.VISIBLE
         importDownloadedButton.visibility = if (completed == null) View.GONE else View.VISIBLE
         downloadStateAllowsStart = startEnabled
         downloadBlocksImport = inProgress
@@ -719,14 +630,14 @@ class ModelManagerActivity : ConfiguredActivity() {
     private fun openModelPicker() {
         val preflight = refreshImportStoragePreflight()
         if (!preflight.canOpenPicker) {
-            Toast.makeText(
-                this,
+            showSnackbar(
+                screenRoot,
                 getString(
                     R.string.import_picker_blocked_insufficient_storage,
                     Formatter.formatFileSize(this, preflight.reservedFreeBytes),
                 ),
-                Toast.LENGTH_LONG,
-            ).show()
+                Snackbar.LENGTH_LONG,
+            )
             return
         }
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -747,8 +658,7 @@ class ModelManagerActivity : ConfiguredActivity() {
         when (state) {
             ModelImportState.Preparing -> {
                 setImportUi(inProgress = true, importEnabled = false)
-                progress.isIndeterminate = true
-                status.text = getString(R.string.import_in_progress)
+                importPanel.showIndeterminate(getString(R.string.import_in_progress))
             }
             ModelImportState.Unavailable -> {
                 setImportUi(inProgress = false, importEnabled = false)
@@ -768,24 +678,26 @@ class ModelManagerActivity : ConfiguredActivity() {
             }
             is ModelImportState.Cancelling -> {
                 setImportUi(inProgress = true, importEnabled = false)
-                showImportProgress(state.progress)
-                status.text = getString(R.string.import_cancelling)
+                showImportProgress(
+                    state.progress,
+                    labelOverride = getString(R.string.import_cancelling),
+                )
             }
             is ModelImportState.Succeeded -> {
                 setImportUi(inProgress = false, importEnabled = true)
                 showModel(state.model)
-                notifyImportOnce(state.operationId, R.string.import_succeeded, Toast.LENGTH_SHORT)
+                notifyImportOnce(state.operationId, R.string.import_succeeded, Snackbar.LENGTH_SHORT)
             }
             is ModelImportState.Cancelled -> {
                 setImportUi(inProgress = false, importEnabled = true)
                 state.current?.let(::showModel) ?: run { status.text = getString(R.string.model_none) }
-                notifyImportOnce(state.operationId, R.string.import_cancelled, Toast.LENGTH_SHORT)
+                notifyImportOnce(state.operationId, R.string.import_cancelled, Snackbar.LENGTH_SHORT)
             }
             is ModelImportState.Failed -> {
                 setImportUi(inProgress = false, importEnabled = state.retryAllowed)
                 val message = importFailureMessage(state.reason)
                 state.current?.let(::showModel) ?: run { status.text = getString(message) }
-                notifyImportOnce(state.operationId, message, Toast.LENGTH_LONG)
+                notifyImportOnce(state.operationId, message, Snackbar.LENGTH_LONG)
             }
         }
     }
@@ -797,12 +709,12 @@ class ModelManagerActivity : ConfiguredActivity() {
             is ModelSelectionState.Succeeded -> notifySelectionOnce(
                 selection.operationId,
                 R.string.model_selection_succeeded,
-                Toast.LENGTH_SHORT,
+                Snackbar.LENGTH_SHORT,
             )
             is ModelSelectionState.Failed -> notifySelectionOnce(
                 selection.operationId,
                 R.string.model_selection_failed,
-                Toast.LENGTH_LONG,
+                Snackbar.LENGTH_LONG,
             )
             ModelSelectionState.Idle,
             is ModelSelectionState.Selecting,
@@ -812,12 +724,12 @@ class ModelManagerActivity : ConfiguredActivity() {
             is ModelDeletionState.Succeeded -> notifyDeletionOnce(
                 deletion.operationId,
                 R.string.model_deletion_succeeded,
-                Toast.LENGTH_SHORT,
+                Snackbar.LENGTH_SHORT,
             )
             is ModelDeletionState.Failed -> notifyDeletionOnce(
                 deletion.operationId,
                 R.string.model_deletion_failed,
-                Toast.LENGTH_LONG,
+                Snackbar.LENGTH_LONG,
             )
             ModelDeletionState.Idle,
             is ModelDeletionState.Deleting,
@@ -827,12 +739,12 @@ class ModelManagerActivity : ConfiguredActivity() {
             is ModelRenameState.Succeeded -> notifyRenameOnce(
                 rename.operationId,
                 R.string.model_rename_succeeded,
-                Toast.LENGTH_SHORT,
+                Snackbar.LENGTH_SHORT,
             )
             is ModelRenameState.Failed -> notifyRenameOnce(
                 rename.operationId,
                 R.string.model_rename_failed,
-                Toast.LENGTH_LONG,
+                Snackbar.LENGTH_LONG,
             )
             ModelRenameState.Idle,
             is ModelRenameState.Renaming,
@@ -850,12 +762,12 @@ class ModelManagerActivity : ConfiguredActivity() {
                         Formatter.formatFileSize(this, cleanup.releasedBytes),
                     )
                 },
-                duration = Toast.LENGTH_SHORT,
+                duration = Snackbar.LENGTH_SHORT,
             )
             is ModelStorageCleanupState.Failed -> notifyStorageCleanupOnce(
                 operationId = cleanup.operationId,
                 message = getString(R.string.model_cleanup_failed),
-                duration = Toast.LENGTH_LONG,
+                duration = Snackbar.LENGTH_LONG,
             )
             ModelStorageCleanupState.Idle,
             is ModelStorageCleanupState.Cleaning,
@@ -870,15 +782,15 @@ class ModelManagerActivity : ConfiguredActivity() {
                     ModelHealthStatus.NOT_CHECKED -> error("A completed health check must be terminal")
                 },
                 duration = if (healthCheck.status == ModelHealthStatus.AVAILABLE) {
-                    Toast.LENGTH_SHORT
+                    Snackbar.LENGTH_SHORT
                 } else {
-                    Toast.LENGTH_LONG
+                    Snackbar.LENGTH_LONG
                 },
             )
             is ModelHealthCheckState.Failed -> notifyHealthCheckOnce(
                 operationId = healthCheck.operationId,
                 message = R.string.model_health_check_failed,
-                duration = Toast.LENGTH_LONG,
+                duration = Snackbar.LENGTH_LONG,
             )
             ModelHealthCheckState.Idle,
             is ModelHealthCheckState.Checking,
@@ -914,173 +826,160 @@ class ModelManagerActivity : ConfiguredActivity() {
         }
         catalogRows.removeAllViews()
         view.rows.forEach { row ->
-            val catalogRow = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-            }
-            val selectionButton = RadioButton(this).apply {
-                text = getString(
-                    R.string.model_catalog_item,
-                    row.displayName,
-                    Formatter.formatFileSize(this@ModelManagerActivity, row.sizeBytes),
-                    row.modelId,
-                    getString(
-                        if (row.healthCheckInProgress) {
-                            R.string.model_health_checking
-                        } else {
-                            healthStatusText(row.healthStatus)
-                        },
-                    ),
-                )
-                isChecked = row.selected
-                isEnabled = row.selectionEnabled
-                tag = row.modelId
-                setOnClickListener {
-                    if (row.selected) return@setOnClickListener
-                    renderedManagerView = null
-                    importCoordinator.beginSelection(row.modelId)
-                    renderManagerState(importCoordinator.managerState())
-                }
-            }
-            val actionRow = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.END or Gravity.CENTER_VERTICAL
-            }
-            val healthCheckButton = Button(this).apply {
-                text = getString(
-                    if (row.healthCheckInProgress) {
-                        R.string.model_health_checking
-                    } else {
-                        R.string.button_check_model
-                    },
-                )
-                isEnabled = row.healthCheckEnabled
-                setOnClickListener { checkModel(row.modelId) }
-            }
-            val deleteButton = Button(this).apply {
-                text = getString(R.string.button_delete_model)
-                isEnabled = row.deletionEnabled
-                setOnClickListener { confirmModelDeletion(row) }
-            }
-            val renameButton = Button(this).apply {
-                text = getString(R.string.button_rename_model)
-                isEnabled = row.renameEnabled
-                setOnClickListener { confirmModelRename(row) }
-            }
-            catalogRow.addView(
-                selectionButton,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-            actionRow.addView(
-                healthCheckButton,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-            actionRow.addView(
-                renameButton,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-            actionRow.addView(
-                deleteButton,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-            catalogRow.addView(
-                actionRow,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-            catalogRows.addView(
-                catalogRow,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ),
+            catalogRows.addView(modelCard(row), cardListParams())
+        }
+    }
+
+    private fun modelCard(row: ModelManagerRow): View {
+        val card = cardContainer(interactive = row.selectionEnabled, selected = row.selected)
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        if (row.selected) {
+            header.addView(
+                ImageView(this).apply {
+                    setImageDrawable(tintedDrawable(R.drawable.ic_check_circle_24, appPalette.accent))
+                },
+                LinearLayout.LayoutParams(uiDp(20), uiDp(20)).apply { marginEnd = uiDp(Ui.SPACE_SM) },
             )
         }
-        applyThemeToControls(catalogRows)
-        applySubtleButtons(catalogRows)
+        header.addView(
+            TextView(this).apply {
+                text = row.displayName
+                textSize = Ui.TEXT_ITEM
+                typeface = Ui.mediumTypeface
+                setTextColor(appPalette.primaryText)
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        header.addView(
+            iconButton(R.drawable.ic_more_vert_24, R.string.model_item_actions) { }.also { button ->
+                button.setOnClickListener { showModelActionsMenu(button, row) }
+            },
+        )
+        card.addView(header)
+        val healthText = getString(
+            if (row.healthCheckInProgress) {
+                R.string.model_health_checking
+            } else {
+                healthStatusText(row.healthStatus)
+            },
+        )
+        card.addView(
+            TextView(this).apply {
+                text = "${Formatter.formatFileSize(this@ModelManagerActivity, row.sizeBytes)} | $healthText"
+                textSize = Ui.TEXT_SECONDARY
+                setTextColor(appPalette.secondaryText)
+                setPaddingRelative(0, uiDp(Ui.SPACE_XS), 0, 0)
+            },
+        )
+        card.addView(
+            TextView(this).apply {
+                text = row.modelId
+                textSize = Ui.TEXT_CAPTION
+                setTextColor(appPalette.secondaryText)
+                alpha = 0.8f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+                setPaddingRelative(0, uiDp(2), 0, 0)
+            },
+        )
+        if (row.selectionEnabled) {
+            card.setOnClickListener {
+                if (row.selected) return@setOnClickListener
+                renderedManagerView = null
+                importCoordinator.beginSelection(row.modelId)
+                renderManagerState(importCoordinator.managerState())
+            }
+        } else if (!row.selected) {
+            card.alpha = 0.72f
+        }
+        return card
+    }
+
+    private fun showModelActionsMenu(anchor: View, row: ModelManagerRow) {
+        PopupMenu(this, anchor).apply {
+            menu.add(0, ACTION_CHECK, 0, R.string.button_check_model).isEnabled =
+                row.healthCheckEnabled && !row.healthCheckInProgress
+            menu.add(0, ACTION_RENAME, 1, R.string.button_rename_model).isEnabled = row.renameEnabled
+            menu.add(0, ACTION_DELETE, 2, R.string.button_delete_model).isEnabled = row.deletionEnabled
+            setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    ACTION_CHECK -> checkModel(row.modelId)
+                    ACTION_RENAME -> confirmModelRename(row)
+                    ACTION_DELETE -> confirmModelDeletion(row)
+                }
+                true
+            }
+            show()
+        }
     }
 
     private fun checkModel(modelId: String) {
         val accepted = importCoordinator.beginHealthCheck(modelId)
         renderManagerState(importCoordinator.managerState())
         if (!accepted) {
-            Toast.makeText(this, R.string.model_health_check_failed, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.model_health_check_failed), Snackbar.LENGTH_LONG)
         }
     }
 
     private fun confirmModelRename(row: ModelManagerRow) {
-        val input = EditText(this).apply {
-            setText(row.displayName)
-            selectAll()
-            isSingleLine = true
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            filters = arrayOf(InputFilter.LengthFilter(ModelDisplayNamePolicy.MAXIMUM_UTF8_BYTES))
-        }
-        AlertDialog.Builder(this)
-            .setTitle(R.string.model_rename_title)
-            .setMessage(R.string.model_rename_message)
-            .setView(input)
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.button_rename_model) { _, _ ->
-                renameModel(row.modelId, input.text.toString())
-            }
-            .show()
-            .also(::tintDialogButtons)
+        inputDialog(
+            title = getString(R.string.model_rename_title),
+            initialValue = row.displayName,
+            message = getString(R.string.model_rename_message),
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES,
+            maxLength = ModelDisplayNamePolicy.MAXIMUM_UTF8_BYTES,
+            positiveResource = R.string.button_rename_model,
+            validate = { value ->
+                runCatching { ModelDisplayNamePolicy.normalizeUserInput(value) }
+                    .fold(onSuccess = { null }, onFailure = { getString(R.string.model_rename_invalid) })
+            },
+        ) { value -> renameModel(row.modelId, value) }
     }
 
     private fun renameModel(modelId: String, requestedName: String) {
         val displayName = runCatching {
             ModelDisplayNamePolicy.normalizeUserInput(requestedName)
         }.getOrElse {
-            Toast.makeText(this, R.string.model_rename_invalid, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.model_rename_invalid), Snackbar.LENGTH_LONG)
             return
         }
         val accepted = importCoordinator.beginRename(modelId, displayName)
         renderManagerState(importCoordinator.managerState())
         if (!accepted) {
-            Toast.makeText(this, R.string.model_rename_failed, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.model_rename_failed), Snackbar.LENGTH_LONG)
         }
     }
 
     private fun confirmModelDeletion(row: ModelManagerRow) {
         if (row.selected) {
-            Toast.makeText(this, R.string.model_delete_selected_blocked, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.model_delete_selected_blocked), Snackbar.LENGTH_LONG)
             return
         }
-        AlertDialog.Builder(this)
-            .setTitle(R.string.model_delete_confirm_title)
-            .setMessage(getString(R.string.model_delete_confirm_message, row.displayName))
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.button_delete_model) { _, _ -> deleteModel(row.modelId) }
-            .show()
-            .also(::tintDialogButtons)
+        confirmDialog(
+            title = getString(R.string.model_delete_confirm_title),
+            message = getString(R.string.model_delete_confirm_message, row.displayName),
+            positiveResource = R.string.button_delete_model,
+            destructive = true,
+        ) { deleteModel(row.modelId) }
     }
 
     private fun deleteModel(modelId: String) {
         val before = importCoordinator.managerState()
         if (before.snapshot?.selectedModelId == modelId) {
             renderManagerState(before)
-            Toast.makeText(this, R.string.model_delete_selected_blocked, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.model_delete_selected_blocked), Snackbar.LENGTH_LONG)
             return
         }
         val accepted = importCoordinator.beginDeletion(modelId)
         val after = importCoordinator.managerState()
         renderManagerState(after)
         if (!accepted && after.snapshot?.selectedModelId == modelId) {
-            Toast.makeText(this, R.string.model_delete_selected_blocked, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.model_delete_selected_blocked), Snackbar.LENGTH_LONG)
         }
     }
 
@@ -1120,23 +1019,26 @@ class ModelManagerActivity : ConfiguredActivity() {
         getSystemService(ClipboardManager::class.java).setPrimaryClip(
             ClipData.newPlainText(getString(R.string.model_id_clipboard_label), modelId),
         )
-        Toast.makeText(this, R.string.model_id_copied, Toast.LENGTH_SHORT).show()
+        showSnackbar(screenRoot, getString(R.string.model_id_copied))
     }
 
     private fun cancelImport() {
         val operationId = cancellableOperationId ?: return
-        cancelImportButton.isEnabled = false
+        importPanel.setCancelEnabled(false)
         if (importCoordinator.cancelImport(operationId)) return
         val latest = importCoordinator.managerState()
         renderManagerState(latest)
         val importState = latest.importState
         if (importState is ModelImportState.Running && importState.operationId == operationId) {
             cancellableOperationId = null
-            cancelImportButton.isEnabled = false
+            importPanel.setCancelEnabled(false)
         }
     }
 
-    private fun showImportProgress(value: ModelImportProgress) {
+    private fun showImportProgress(
+        value: ModelImportProgress,
+        labelOverride: CharSequence? = null,
+    ) {
         val stage = getString(
             when (value.stage) {
                 ModelImportStage.VALIDATING -> R.string.import_stage_validating
@@ -1147,26 +1049,21 @@ class ModelManagerActivity : ConfiguredActivity() {
         )
         val totalBytes = value.totalBytes?.takeIf { value.processedBytes <= it }
         if (totalBytes == null) {
-            progress.isIndeterminate = true
-            status.text = getString(
-                R.string.import_progress_unknown,
-                stage,
+            importPanel.showIndeterminate(
+                labelOverride ?: stage,
                 Formatter.formatFileSize(this, value.processedBytes),
             )
             return
         }
-        progress.isIndeterminate = false
-        progress.progress = if (value.processedBytes >= totalBytes) {
+        val progress = if (value.processedBytes >= totalBytes) {
             PROGRESS_MAX
         } else {
             (value.processedBytes * PROGRESS_MAX / totalBytes).toInt()
         }
-        status.text = getString(
-            R.string.import_progress_known,
-            stage,
-            Formatter.formatFileSize(this, value.processedBytes),
-            Formatter.formatFileSize(this, totalBytes),
-            progress.progress / (PROGRESS_MAX / 100),
+        importPanel.showProgress(
+            labelOverride ?: stage,
+            progress,
+            transferMeta(value.processedBytes, totalBytes, progress / (PROGRESS_MAX / 100)),
         )
     }
 
@@ -1176,10 +1073,12 @@ class ModelManagerActivity : ConfiguredActivity() {
         cancelOperationId: Long? = null,
     ) {
         cancellableOperationId = cancelOperationId
-        progress.visibility = if (inProgress) View.VISIBLE else View.GONE
-        cancelImportButton.visibility = if (cancelOperationId == null) View.GONE else View.VISIBLE
-        cancelImportButton.isEnabled = cancelOperationId != null
+        if (!inProgress) importPanel.hide()
+        importPanel.setCancelEnabled(cancelOperationId != null)
+        status.visibility = if (inProgress) View.GONE else View.VISIBLE
+        checkAfterImportRow.view.isEnabled = !inProgress
         checkAfterImportOption.isEnabled = !inProgress
+        checkAfterImportRow.view.alpha = if (inProgress) Ui.DISABLED_ALPHA else 1f
         importStateAllowsPicker = importEnabled
         updateImportButtonEnabled()
         updateDownloadButtonEnabled()
@@ -1235,52 +1134,53 @@ class ModelManagerActivity : ConfiguredActivity() {
     private fun notifyImportOnce(operationId: Long, message: Int, duration: Int) {
         if (operationId <= lastNotifiedImportOperationId) return
         lastNotifiedImportOperationId = operationId
-        Toast.makeText(this, message, duration).show()
+        showSnackbar(screenRoot, getString(message), duration)
     }
 
     private fun notifySelectionOnce(operationId: Long, message: Int, duration: Int) {
         if (operationId <= lastNotifiedSelectionOperationId) return
         lastNotifiedSelectionOperationId = operationId
-        Toast.makeText(this, message, duration).show()
+        showSnackbar(screenRoot, getString(message), duration)
     }
 
     private fun notifyDownloadOnce(operationId: Long, message: CharSequence, duration: Int) {
         if (operationId <= lastNotifiedDownloadOperationId) return
         lastNotifiedDownloadOperationId = operationId
-        Toast.makeText(this, message, duration).show()
+        showSnackbar(screenRoot, message, duration)
     }
 
     private fun notifyDeletionOnce(operationId: Long, message: Int, duration: Int) {
         if (operationId <= lastNotifiedDeletionOperationId) return
         lastNotifiedDeletionOperationId = operationId
-        Toast.makeText(this, message, duration).show()
+        showSnackbar(screenRoot, getString(message), duration)
     }
 
     private fun notifyRenameOnce(operationId: Long, message: Int, duration: Int) {
         if (operationId <= lastNotifiedRenameOperationId) return
         lastNotifiedRenameOperationId = operationId
-        Toast.makeText(this, message, duration).show()
+        showSnackbar(screenRoot, getString(message), duration)
     }
 
     private fun notifyStorageCleanupOnce(operationId: Long, message: CharSequence, duration: Int) {
         if (operationId <= lastNotifiedStorageCleanupOperationId) return
         lastNotifiedStorageCleanupOperationId = operationId
-        Toast.makeText(this, message, duration).show()
+        showSnackbar(screenRoot, message, duration)
     }
 
     private fun notifyHealthCheckOnce(operationId: Long, message: Int, duration: Int) {
         if (operationId <= lastNotifiedHealthCheckOperationId) return
         lastNotifiedHealthCheckOperationId = operationId
-        Toast.makeText(this, message, duration).show()
+        showSnackbar(screenRoot, getString(message), duration)
     }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
         const val REQUEST_CREATE_MODEL_DOWNLOAD = 1002
         const val REQUEST_CHOOSE_LITERT_MODEL = 1003
         const val MENU_CLEANUP_STORAGE = 2001
+        const val ACTION_CHECK = 3001
+        const val ACTION_RENAME = 3002
+        const val ACTION_DELETE = 3003
         const val STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID = "lastNotifiedImportOperationId"
         const val STATE_LAST_NOTIFIED_DOWNLOAD_OPERATION_ID = "lastNotifiedDownloadOperationId"
         const val STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID = "lastNotifiedSelectionOperationId"

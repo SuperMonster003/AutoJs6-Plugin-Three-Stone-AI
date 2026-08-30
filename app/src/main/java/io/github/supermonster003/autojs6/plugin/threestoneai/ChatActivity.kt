@@ -5,8 +5,6 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.RippleDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -27,22 +25,28 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AbsListView
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.CheckedTextView
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.RadioButton
-import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import com.google.android.material.button.MaterialButton
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.accentRipple
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.accentTone
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.boundedRipple
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.filledButton
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.roundedFill
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.roundedRippleFill
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSession
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
@@ -85,12 +89,14 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var emptyState: LinearLayout
     private lateinit var emptyTitle: TextView
     private lateinit var emptyDescription: TextView
-    private lateinit var emptyActionButton: Button
+    private lateinit var emptyActionButton: View
     private lateinit var suggestionButtons: List<Button>
     private lateinit var input: EditText
-    private lateinit var sendButton: Button
+    private lateinit var sendButton: android.widget.ImageButton
+    private lateinit var scrollToBottomButton: android.widget.ImageButton
     private lateinit var editingBar: LinearLayout
     private lateinit var editingLabel: TextView
+    private var pendingSearchRefresh: Runnable? = null
 
     private val messages = ArrayList<ChatMessage>()
     private val messageViews = HashMap<Long, MessageViewHolder>()
@@ -411,7 +417,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun createContentView(): View {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(getColor(R.color.window_background))
+            setBackgroundColor(appPalette.windowBackground)
         }
 
         val statusBarBackground = createStatusBarBackground()
@@ -430,10 +436,9 @@ class ChatActivity : ConfiguredActivity() {
             refreshDrawerHistory()
             drawerLayout.openDrawer(GravityCompat.START)
         }
-        installToolbarTitleLongPress()
         content.addView(toolbar)
         content.addView(createTargetBar())
-        content.addView(View(this).apply { setBackgroundColor(getColor(R.color.divider)) },
+        content.addView(View(this).apply { setBackgroundColor(appPalette.divider) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
 
         val conversationFrame = FrameLayout(this)
@@ -472,6 +477,32 @@ class ChatActivity : ConfiguredActivity() {
                 marginEnd = dp(28)
             },
         )
+        scrollToBottomButton = android.widget.ImageButton(this).apply {
+            background = roundedRippleFill(
+                appPalette.surface,
+                accentRipple(appPalette.accent),
+                Ui.RADIUS_SHEET,
+                appPalette.outline,
+            )
+            setImageDrawable(tintedDrawable(R.drawable.ic_arrow_down_24, appPalette.primaryText))
+            scaleType = ImageView.ScaleType.CENTER
+            contentDescription = getString(R.string.chat_scroll_to_bottom)
+            visibility = View.GONE
+            elevation = dp(2).toFloat()
+            setOnClickListener { scrollToBottom() }
+        }
+        conversationFrame.addView(
+            scrollToBottomButton,
+            FrameLayout.LayoutParams(dp(44), dp(44), Gravity.BOTTOM or Gravity.END).apply {
+                marginEnd = dp(16)
+                bottomMargin = dp(16)
+            },
+        )
+        messagesScroll.setOnScrollChangeListener { _, _, _, _, _ -> updateScrollToBottomButton() }
+        messagesColumn.addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
+            if (right - left != oldRight - oldLeft) refreshBubbleWidths()
+            updateScrollToBottomButton()
+        }
         content.addView(
             conversationFrame,
             LinearLayout.LayoutParams(
@@ -559,38 +590,62 @@ class ChatActivity : ConfiguredActivity() {
     private fun createTargetBar(): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        isClickable = true
-        isFocusable = true
-        contentDescription = getString(R.string.chat_open_model_switcher)
-        minimumHeight = dp(42)
-        setPaddingRelative(dp(16), dp(4), dp(10), dp(4))
-        background = roundedRipple(
-            fillColor = R.color.window_background,
-            rippleColor = R.color.chat_ripple,
-            radiusDp = 0,
-        )
-        setOnClickListener { showTargetSelector() }
+        setPaddingRelative(dp(16), dp(2), dp(16), dp(8))
 
-        targetLocalityStatus = TextView(context).apply {
-            textSize = 12f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(getColor(R.color.text_color_secondary))
-            setPaddingRelative(0, 0, dp(10), 0)
+        val capsule = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            isClickable = true
+            isFocusable = true
+            contentDescription = getString(R.string.chat_open_model_switcher)
+            minimumHeight = dp(36)
+            background = roundedRippleFill(
+                appPalette.surfaceVariant,
+                accentRipple(appPalette.accent),
+                Ui.RADIUS_BUBBLE,
+            )
+            setPaddingRelative(dp(12), dp(4), dp(10), dp(4))
+            setOnClickListener { showTargetSelector() }
+
+            // The explicit Local/Cloud badge is a product invariant; keep it prominent.
+            targetLocalityStatus = TextView(context).apply {
+                textSize = 10.5f
+                typeface = Ui.mediumTypeface
+                setTextColor(appPalette.accent)
+                background = roundedFill(accentTone(appPalette.accent), Ui.RADIUS_BUBBLE)
+                setPaddingRelative(dp(8), dp(2), dp(8), dp(2))
+            }
+            addView(
+                targetLocalityStatus,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { marginEnd = dp(8) },
+            )
+            targetStatus = TextView(context).apply {
+                textSize = 12.5f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setTextColor(appPalette.primaryText)
+            }
+            addView(
+                targetStatus,
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+            )
+            addView(
+                ImageView(context).apply {
+                    setImageDrawable(
+                        tintedDrawable(R.drawable.ic_chevron_right_24, appPalette.secondaryText),
+                    )
+                    alpha = 0.7f
+                },
+                LinearLayout.LayoutParams(dp(16), dp(16)).apply { marginStart = dp(6) },
+            )
         }
-        addView(targetLocalityStatus)
-        targetStatus = TextView(context).apply {
-            textSize = 12f
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            setTextColor(getColor(R.color.text_color_secondary))
-        }
-        addView(targetStatus, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        addView(TextView(context).apply {
-            text = "\u203a"
-            textSize = 24f
-            gravity = Gravity.CENTER
-            setTextColor(getColor(R.color.text_color_secondary))
-        })
+        addView(
+            capsule,
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT),
+        )
     }
 
     private fun createSearchActionView(): View = LinearLayout(this).apply {
@@ -641,9 +696,14 @@ class ChatActivity : ConfiguredActivity() {
                     before: Int,
                     count: Int,
                 ) {
-                    if (searchExpanded) {
-                        refreshSearchResults(selectFirst = true, locate = true)
+                    pendingSearchRefresh?.let(::removeCallbacks)
+                    val refresh = Runnable {
+                        if (searchExpanded) {
+                            refreshSearchResults(selectFirst = true, locate = true)
+                        }
                     }
+                    pendingSearchRefresh = refresh
+                    postDelayed(refresh, SEARCH_DEBOUNCE_MILLIS)
                 }
 
                 override fun afterTextChanged(value: Editable?) = Unit
@@ -666,8 +726,8 @@ class ChatActivity : ConfiguredActivity() {
 
         addView(TextView(context).apply {
             text = getString(R.string.chat_history_title)
-            textSize = 19f
-            typeface = Typeface.DEFAULT_BOLD
+            textSize = 16f
+            typeface = Ui.mediumTypeface
             setTextColor(appPalette.primaryText)
             setPaddingRelative(dp(20), dp(20), dp(20), dp(12))
         })
@@ -698,25 +758,25 @@ class ChatActivity : ConfiguredActivity() {
                 drawerActionButton(R.drawable.ic_settings_24, R.string.app_settings_title) {
                     startActivity(Intent(this@ChatActivity, AppSettingsActivity::class.java))
                 },
-                LinearLayout.LayoutParams(0, dp(70), 1f),
+                LinearLayout.LayoutParams(0, dp(60), 1f),
             )
             addView(
                 drawerActionButton(R.drawable.ic_model_24, R.string.model_manager_title) {
                     openModelManager()
                 },
-                LinearLayout.LayoutParams(0, dp(70), 1f),
+                LinearLayout.LayoutParams(0, dp(60), 1f),
             )
             addView(
                 drawerActionButton(R.drawable.ic_restart_24, R.string.drawer_restart) {
                     restartApplication()
                 },
-                LinearLayout.LayoutParams(0, dp(70), 1f),
+                LinearLayout.LayoutParams(0, dp(60), 1f),
             )
             addView(
                 drawerActionButton(R.drawable.ic_exit_24, R.string.drawer_exit) {
                     exitApplication()
                 },
-                LinearLayout.LayoutParams(0, dp(70), 1f),
+                LinearLayout.LayoutParams(0, dp(60), 1f),
             )
         })
         refreshDrawerHistory()
@@ -732,14 +792,14 @@ class ChatActivity : ConfiguredActivity() {
         isClickable = true
         isFocusable = true
         contentDescription = getString(titleResource)
-        applySelectableBackground(this)
+        background = boundedRipple(accentRipple(appPalette.accent), Ui.RADIUS_CONTROL)
         addView(ImageView(context).apply {
             setImageDrawable(tintedDrawable(iconResource, appPalette.secondaryText))
             contentDescription = null
         }, LinearLayout.LayoutParams(dp(22), dp(22)))
         addView(TextView(context).apply {
             text = getString(titleResource)
-            textSize = 11.5f
+            textSize = 11f
             gravity = Gravity.CENTER
             maxLines = 1
             setTextColor(appPalette.secondaryText)
@@ -753,7 +813,7 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun navigationDrawerWidth(): Int {
         val screenWidthDp = resources.configuration.screenWidthDp.toFloat()
-        val targetWidthDp = 288f.coerceIn(screenWidthDp * 0.4f, screenWidthDp * 0.9f)
+        val targetWidthDp = 300f.coerceAtMost(screenWidthDp * 0.85f)
         return dp(targetWidthDp.toInt())
     }
 
@@ -793,15 +853,19 @@ class ChatActivity : ConfiguredActivity() {
             isFocusable = true
             contentDescription = conversation.title
             setPaddingRelative(dp(12), dp(11), dp(12), dp(11))
-            background = roundedRippleColor(
-                fillColor = if (current) appPalette.assistantSurface else appPalette.windowBackground,
-                rippleColor = getColor(R.color.chat_ripple),
-                radiusDp = 11,
-            )
+            background = if (current) {
+                roundedRippleFill(
+                    accentTone(appPalette.accent),
+                    accentRipple(appPalette.accent),
+                    Ui.RADIUS_CONTROL,
+                )
+            } else {
+                boundedRipple(accentRipple(appPalette.accent), Ui.RADIUS_CONTROL)
+            }
             addView(TextView(context).apply {
                 text = conversation.title
                 textSize = 14.5f
-                typeface = if (current) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                typeface = if (current) Ui.mediumTypeface else Typeface.DEFAULT
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
                 setTextColor(appPalette.primaryText)
@@ -823,22 +887,6 @@ class ChatActivity : ConfiguredActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
             ).apply { bottomMargin = dp(4) }
-        }
-    }
-
-    private fun installToolbarTitleLongPress() {
-        toolbar.post {
-            val titleView = (0 until toolbar.childCount)
-                .asSequence()
-                .map(toolbar::getChildAt)
-                .filterIsInstance<TextView>()
-                .firstOrNull { candidate -> candidate.text?.toString() == toolbar.title?.toString() }
-                ?: return@post
-            titleView.isLongClickable = true
-            titleView.setOnLongClickListener {
-                startActivity(Intent(this, AppSettingsActivity::class.java))
-                true
-            }
         }
     }
 
@@ -884,25 +932,26 @@ class ChatActivity : ConfiguredActivity() {
             gravity = Gravity.CENTER_HORIZONTAL
             setPaddingRelative(dp(8), dp(24), dp(8), dp(24))
 
-            addView(TextView(context).apply {
-                text = "\u2726"
-                textSize = 32f
-                gravity = Gravity.CENTER
-                setTextColor(appPalette.accent)
-            })
+            addView(
+                ImageView(context).apply {
+                    setImageResource(R.mipmap.ic_launcher_foreground)
+                    contentDescription = null
+                },
+                LinearLayout.LayoutParams(dp(96), dp(96)),
+            )
             emptyTitle = TextView(context).apply {
-                textSize = 22f
+                textSize = Ui.TEXT_PAGE_TITLE
                 gravity = Gravity.CENTER
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(getColor(R.color.text_color_primary))
-                setPaddingRelative(0, dp(10), 0, dp(8))
+                typeface = Ui.mediumTypeface
+                setTextColor(appPalette.primaryText)
+                setPaddingRelative(0, dp(4), 0, dp(8))
             }
             addView(emptyTitle)
             emptyDescription = TextView(context).apply {
-                textSize = 14f
+                textSize = Ui.TEXT_BODY
                 gravity = Gravity.CENTER
-                setTextColor(getColor(R.color.text_color_secondary))
-                setLineSpacing(0f, 1.15f)
+                setTextColor(appPalette.secondaryText)
+                setLineSpacing(0f, Ui.LINE_SPACING_BODY)
             }
             addView(
                 emptyDescription,
@@ -911,15 +960,13 @@ class ChatActivity : ConfiguredActivity() {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                 ),
             )
-            emptyActionButton = Button(context).apply {
-                text = getString(R.string.chat_choose_target)
-                isAllCaps = false
-                setOnClickListener { showTargetSelector() }
+            emptyActionButton = this@ChatActivity.filledButton(R.string.chat_choose_target) {
+                showTargetSelector()
             }
             addView(emptyActionButton, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(12) })
+            ).apply { topMargin = dp(16) })
             suggestionButtons.forEach { suggestion ->
                 addView(
                     suggestion,
@@ -932,58 +979,73 @@ class ChatActivity : ConfiguredActivity() {
         }
     }
 
-    private fun suggestionButton(textResource: Int) = Button(this).apply {
-        text = getString(textResource)
-        isAllCaps = false
-        gravity = Gravity.START or Gravity.CENTER_VERTICAL
-        setTextColor(getColor(R.color.text_color_primary))
-        background = roundedRipple(
-            fillColor = R.color.chat_assistant_surface,
-            rippleColor = R.color.chat_ripple,
-            radiusDp = 14,
-            strokeColor = R.color.chat_border,
-        )
-        setPaddingRelative(dp(16), dp(4), dp(16), dp(4))
-        setOnClickListener { sendSuggestedPrompt(text.toString()) }
-    }
+    private fun suggestionButton(textResource: Int): Button =
+        MaterialButton(this, null, androidx.appcompat.R.attr.borderlessButtonStyle).apply {
+            text = getString(textResource)
+            isAllCaps = false
+            textSize = Ui.TEXT_BODY
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            insetTop = 0
+            insetBottom = 0
+            minHeight = dp(52)
+            minimumHeight = dp(52)
+            setTextColor(appPalette.primaryText)
+            rippleColor = ColorStateList.valueOf(accentRipple(appPalette.accent))
+            background = roundedFill(appPalette.surface, Ui.RADIUS_CARD, appPalette.outline)
+            backgroundTintList = null
+            setPaddingRelative(dp(16), dp(12), dp(16), dp(12))
+            setOnClickListener { sendSuggestedPrompt(text.toString()) }
+        }
 
     private fun createComposer(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setBackgroundColor(getColor(R.color.window_background))
-        addView(View(context).apply { setBackgroundColor(getColor(R.color.divider)) },
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
+        setBackgroundColor(appPalette.windowBackground)
 
         editingBar = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             visibility = View.GONE
-            setPaddingRelative(dp(16), dp(7), dp(8), 0)
+            background = roundedFill(accentTone(appPalette.accent), Ui.RADIUS_CONTROL)
+            setPaddingRelative(dp(12), dp(2), dp(4), dp(2))
+            addView(
+                ImageView(context).apply {
+                    setImageDrawable(tintedDrawable(R.drawable.ic_edit_24, appPalette.accent))
+                },
+                LinearLayout.LayoutParams(dp(14), dp(14)).apply { marginEnd = dp(8) },
+            )
             editingLabel = TextView(context).apply {
                 text = getString(R.string.chat_editing_message)
                 textSize = 12.5f
-                typeface = Typeface.DEFAULT_BOLD
+                typeface = Ui.mediumTypeface
                 setTextColor(appPalette.accent)
             }
             addView(
                 editingLabel,
                 LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
             )
-            addView(TextView(context).apply {
-                text = getString(R.string.chat_cancel_editing)
-                textSize = 12.5f
-                gravity = Gravity.CENTER
-                setTextColor(appPalette.accent)
-                setPaddingRelative(dp(10), dp(5), dp(10), dp(5))
-                applySelectableBackground(this)
-                setOnClickListener { cancelEditing() }
-            })
+            addView(
+                ImageView(context).apply {
+                    setImageDrawable(tintedDrawable(R.drawable.ic_close_24, appPalette.accent))
+                    isClickable = true
+                    isFocusable = true
+                    contentDescription = getString(R.string.chat_cancel_editing)
+                    scaleType = ImageView.ScaleType.CENTER
+                    applySelectableBackground(this)
+                    setOnClickListener { cancelEditing() }
+                },
+                LinearLayout.LayoutParams(dp(36), dp(36)),
+            )
         }
         addView(
             editingBar,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-            ),
+            ).apply {
+                marginStart = dp(12)
+                marginEnd = dp(12)
+                topMargin = dp(8)
+            },
         )
 
         addView(LinearLayout(context).apply {
@@ -1003,8 +1065,9 @@ class ChatActivity : ConfiguredActivity() {
                 filters = arrayOf(
                     InputFilter.LengthFilter(ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS),
                 )
-                setTextColor(getColor(R.color.text_color_primary))
-                setPaddingRelative(dp(12), dp(8), dp(12), dp(8))
+                setTextColor(appPalette.primaryText)
+                setHintTextColor(appPalette.secondaryText)
+                setPaddingRelative(dp(16), dp(10), dp(16), dp(10))
                 background = null
                 tintEditText(this)
                 setOnEditorActionListener { _, actionId, _ ->
@@ -1042,10 +1105,10 @@ class ChatActivity : ConfiguredActivity() {
             }
             addView(
                 FrameLayout(context).apply {
-                    background = roundedDrawableColor(
-                        fillColor = appPalette.inputSurface,
-                        radiusDp = COMPOSER_CORNER_RADIUS_DP,
-                        strokeColor = appPalette.chatBorder,
+                    background = roundedFill(
+                        appPalette.surface,
+                        COMPOSER_CORNER_RADIUS_DP,
+                        appPalette.outline,
                     )
                     addView(
                         input,
@@ -1060,31 +1123,29 @@ class ChatActivity : ConfiguredActivity() {
                 },
             )
 
-            sendButton = Button(context).apply {
-                text = getString(R.string.chat_send)
-                textSize = 13.5f
-                isAllCaps = false
-                minWidth = dp(COMPOSER_SEND_MIN_WIDTH_DP)
-                minimumWidth = dp(COMPOSER_SEND_MIN_WIDTH_DP)
-                minimumHeight = composerSingleLineHeight()
-                stateListAnimator = null
-                elevation = 0f
-                translationZ = 0f
-                setPaddingRelative(dp(12), 0, dp(12), 0)
-                setTextColor(appPalette.onPrimary)
-                background = roundedRippleColor(
-                    fillColor = appPalette.primary,
-                    rippleColor = AppColorPolicy.withAlpha(appPalette.onPrimary, 0x40),
-                    radiusDp = COMPOSER_CORNER_RADIUS_DP,
+            val onAccent = AppColorPolicy.onThemeColor(appPalette.accent, appPalette.isDark)
+            sendButton = android.widget.ImageButton(context).apply {
+                scaleType = ImageView.ScaleType.CENTER
+                background = roundedRippleFill(
+                    android.graphics.Color.WHITE,
+                    AppColorPolicy.withAlpha(onAccent, 0x33),
+                    COMPOSER_CORNER_RADIUS_DP,
                 )
+                backgroundTintList = ColorStateList(
+                    arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
+                    intArrayOf(appPalette.surfaceVariant, appPalette.accent),
+                )
+                imageTintList = ColorStateList(
+                    arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
+                    intArrayOf(AppColorPolicy.withAlpha(appPalette.secondaryText, 0x99), onAccent),
+                )
+                setImageResource(R.drawable.ic_send_24)
+                contentDescription = getString(R.string.chat_send)
                 setOnClickListener {
                     if (isGenerating) stopGeneration() else sendCurrentMessage()
                 }
             }
-            addView(sendButton, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                composerSingleLineHeight(),
-            ).apply {
+            addView(sendButton, LinearLayout.LayoutParams(dp(46), dp(46)).apply {
                 gravity = Gravity.BOTTOM
                 marginStart = dp(8)
             })
@@ -1094,26 +1155,15 @@ class ChatActivity : ConfiguredActivity() {
         ).apply {
             marginStart = dp(12)
             marginEnd = dp(12)
-            topMargin = dp(10)
+            topMargin = dp(6)
         })
 
-        setPaddingRelative(0, 0, 0, dp(8))
+        setPaddingRelative(0, 0, 0, dp(10))
     }
 
-    private fun composerSingleLineHeight(): Int = (
-        input.lineHeight + input.compoundPaddingTop + input.compoundPaddingBottom
-        ).coerceAtLeast(dp(COMPOSER_CONTROL_MIN_HEIGHT_DP))
-
     private fun syncComposerControlHeight() {
-        if (!::input.isInitialized || !::sendButton.isInitialized) return
+        if (!::input.isInitialized) return
         input.minimumHeight = dp(COMPOSER_CONTROL_MIN_HEIGHT_DP)
-        val height = composerSingleLineHeight()
-        sendButton.minimumHeight = height
-        val params = sendButton.layoutParams ?: return
-        if (params.height != height) {
-            params.height = height
-            sendButton.layoutParams = params
-        }
     }
 
     private fun renderManagerState(state: ModelManagerState) {
@@ -1214,9 +1264,15 @@ class ChatActivity : ConfiguredActivity() {
     private fun renderComposerState() {
         if (!::input.isInitialized || !::sendButton.isInitialized) return
         val targetReady = isConversationTargetReady()
-        input.isEnabled = targetReady && !isGenerating
-        input.hint = null
-        sendButton.text = getString(
+        // Typing stays available while a reply streams; only sending is deferred.
+        input.isEnabled = targetReady
+        input.hint = getString(
+            if (targetReady) R.string.chat_input_hint else R.string.chat_input_no_target_hint,
+        )
+        sendButton.setImageResource(
+            if (isGenerating) R.drawable.ic_stop_24 else R.drawable.ic_send_24,
+        )
+        sendButton.contentDescription = getString(
             when {
                 isGenerating -> R.string.chat_stop
                 editingMessageId != null -> R.string.chat_save_and_send
@@ -1224,9 +1280,11 @@ class ChatActivity : ConfiguredActivity() {
             },
         )
         sendButton.isEnabled = isGenerating || (targetReady && input.text.toString().isNotBlank())
-        sendButton.alpha = if (sendButton.isEnabled) 1f else DISABLED_ALPHA
         if (::suggestionButtons.isInitialized) {
-            suggestionButtons.forEach { it.isEnabled = targetReady && !isGenerating }
+            suggestionButtons.forEach { suggestion ->
+                suggestion.isEnabled = targetReady && !isGenerating
+                suggestion.alpha = if (suggestion.isEnabled) 1f else Ui.DISABLED_ALPHA
+            }
         }
         refreshEditableMessageActions()
     }
@@ -1280,9 +1338,9 @@ class ChatActivity : ConfiguredActivity() {
         if (message.role == ChatMessageRole.NOTICE) {
             val notice = MarkdownMessageView(this, appPalette).apply {
                 gravity = Gravity.CENTER
-                setPaddingRelative(dp(12), dp(7), dp(12), dp(7))
-                background = roundedDrawableColor(appPalette.noticeSurface, 12)
-                showPlainText(message.text, 12f)
+                setPaddingRelative(dp(14), dp(6), dp(14), dp(6))
+                background = roundedFill(appPalette.noticeSurface, Ui.RADIUS_BUBBLE)
+                showPlainText(message.text, noticeTextSizeSp())
             }
             messagesColumn.addView(
                 notice,
@@ -1304,28 +1362,26 @@ class ChatActivity : ConfiguredActivity() {
             orientation = LinearLayout.VERTICAL
             gravity = if (userMessage) Gravity.END else Gravity.START
         }
-        val label = TextView(this).apply {
-            text = getString(if (userMessage) R.string.chat_role_user else R.string.chat_role_assistant)
-            textSize = 11f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(getColor(R.color.text_color_secondary))
-            setPaddingRelative(dp(4), 0, dp(4), dp(4))
-        }
-        row.addView(label)
         val body = MarkdownMessageView(this, appPalette).apply {
-            maximumWidth = resources.displayMetrics.widthPixels - dp(56)
-            setPaddingRelative(dp(14), dp(11), dp(14), dp(11))
-            background = roundedDrawableColor(
-                if (userMessage) appPalette.userSurface else appPalette.assistantSurface,
-                16,
-                appPalette.chatBorder,
-            )
+            if (userMessage) {
+                maximumWidth = bubbleMaxWidth()
+                setPaddingRelative(dp(16), dp(10), dp(16), dp(10))
+                background = roundedRippleFill(
+                    appPalette.userSurface,
+                    accentRipple(appPalette.accent),
+                    Ui.RADIUS_BUBBLE,
+                )
+            } else {
+                // Assistant replies read as content, not as bubbles.
+                setPaddingRelative(dp(2), dp(2), dp(2), dp(2))
+                background = boundedRipple(accentRipple(appPalette.accent), Ui.RADIUS_CONTROL)
+            }
             setMessageLongClickListener { showMessageActions(message.id) }
         }
         row.addView(body)
         val meta = TextView(this).apply {
             textSize = 11f
-            setTextColor(getColor(R.color.text_color_secondary))
+            setTextColor(appPalette.secondaryText)
             setPaddingRelative(dp(4), dp(4), dp(4), 0)
             if (userMessage) gravity = Gravity.END
         }
@@ -1336,18 +1392,59 @@ class ChatActivity : ConfiguredActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
             ).apply {
-                topMargin = dp(5)
-                bottomMargin = dp(13)
+                topMargin = if (userMessage) dp(8) else dp(4)
+                bottomMargin = if (userMessage) dp(4) else dp(14)
             },
         )
         messageViews[message.id] = MessageViewHolder(body, meta)
         updateMessageView(message)
     }
 
+    private fun noticeTextSizeSp(): Float = uiSettings.fontSize.messageSp * 0.8f
+
+    private fun bubbleMaxWidth(): Int {
+        val contentWidth = messagesColumn.width -
+            messagesColumn.paddingStart - messagesColumn.paddingEnd
+        return if (contentWidth > 0) {
+            (contentWidth * 0.78f).toInt()
+        } else {
+            (resources.displayMetrics.widthPixels * 0.7f).toInt()
+        }
+    }
+
+    private fun refreshBubbleWidths() {
+        val width = bubbleMaxWidth()
+        messages.forEach { message ->
+            if (message.role == ChatMessageRole.USER) {
+                messageViews[message.id]?.body?.let { body ->
+                    if (body.maximumWidth != width) {
+                        body.maximumWidth = width
+                        body.requestLayout()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateScrollToBottomButton() {
+        if (!::scrollToBottomButton.isInitialized) return
+        val visible = messages.isNotEmpty() && !isNearBottom()
+        if (visible == (scrollToBottomButton.visibility == View.VISIBLE)) return
+        if (visible) {
+            scrollToBottomButton.alpha = 0f
+            scrollToBottomButton.visibility = View.VISIBLE
+            scrollToBottomButton.animate().alpha(1f).setDuration(150L).start()
+        } else {
+            scrollToBottomButton.animate().alpha(0f).setDuration(150L)
+                .withEndAction { scrollToBottomButton.visibility = View.GONE }
+                .start()
+        }
+    }
+
     private fun updateMessageView(message: ChatMessage) {
         val holder = messageViews[message.id] ?: return
         if (message.role == ChatMessageRole.NOTICE) {
-            holder.body.showPlainText(message.text, 12f)
+            holder.body.showPlainText(message.text, noticeTextSizeSp())
             return
         }
         val visibleText = message.text.ifEmpty {
@@ -1430,9 +1527,39 @@ class ChatActivity : ConfiguredActivity() {
         meta.setOnClickListener(if (failed) View.OnClickListener { showTargetSelector() } else null)
         meta.contentDescription = value
         meta.background = null
-        if (failed) applySelectableBackground(meta)
-        meta.setTextColor(if (failed) appPalette.accent else appPalette.secondaryText)
+        if (failed) {
+            applySelectableBackground(meta)
+            val errorColor = getColor(R.color.validation_error)
+            meta.setTextColor(errorColor)
+            val warning = tintedDrawable(R.drawable.ic_warning_24, errorColor)
+                ?.apply { setBounds(0, 0, dp(14), dp(14)) }
+            meta.setCompoundDrawablesRelative(warning, null, null, null)
+            meta.compoundDrawablePadding = dp(5)
+        } else {
+            meta.setTextColor(appPalette.secondaryText)
+            meta.setCompoundDrawablesRelative(null, null, null, null)
+        }
+        setMetaPulsing(meta, message.status == ChatMessageStatus.GENERATING)
         meta.visibility = if (value.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun setMetaPulsing(meta: TextView, active: Boolean) {
+        val running = meta.getTag(R.id.tag_meta_pulse_animator) as? android.animation.ValueAnimator
+        if (active) {
+            if (running != null) return
+            val animator = android.animation.ValueAnimator.ofFloat(1f, 0.35f).apply {
+                duration = 750L
+                repeatMode = android.animation.ValueAnimator.REVERSE
+                repeatCount = android.animation.ValueAnimator.INFINITE
+                addUpdateListener { animation -> meta.alpha = animation.animatedValue as Float }
+                start()
+            }
+            meta.setTag(R.id.tag_meta_pulse_animator, animator)
+        } else if (running != null) {
+            running.cancel()
+            meta.setTag(R.id.tag_meta_pulse_animator, null)
+            meta.alpha = 1f
+        }
     }
 
     private fun sendSuggestedPrompt(prompt: String) {
@@ -1753,7 +1880,7 @@ class ChatActivity : ConfiguredActivity() {
         closeCurrentBackend()
         finishGenerationUi(generationId)
         persistConversationNow()
-        Toast.makeText(this, R.string.chat_generation_failed_short, Toast.LENGTH_LONG).show()
+        showSnackbar(drawerLayout, getString(R.string.chat_generation_failed_short), com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
     }
 
     private fun finishGenerationUi(generationId: Long) {
@@ -1793,7 +1920,7 @@ class ChatActivity : ConfiguredActivity() {
         if (followOutput) scrollToBottom()
         persistConversationNow()
         if (showToast) {
-            Toast.makeText(this, R.string.chat_generation_stopped, Toast.LENGTH_SHORT).show()
+            showSnackbar(drawerLayout, getString(R.string.chat_generation_stopped))
         }
     }
 
@@ -1850,7 +1977,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun requestEditMessage(messageId: Long) {
         if (isGenerating || editingMessageId != null) return
         val impact = ConversationEditPolicy.impact(messages, messageId) ?: return
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(R.string.chat_edit_warning_title)
             .setMessage(getString(R.string.chat_edit_warning_message, impact.laterMessageCount))
             .setNegativeButton(android.R.string.cancel, null)
@@ -1955,7 +2082,15 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun updateSearchControls() {
-        toolbar.subtitle = null
+        toolbar.subtitle = if (searchExpanded && searchMatches.isNotEmpty()) {
+            getString(
+                R.string.chat_search_match_count,
+                currentSearchMatchIndex + 1,
+                searchMatches.size,
+            )
+        } else {
+            null
+        }
         refreshOptionsMenuState()
     }
 
@@ -1972,288 +2107,6 @@ class ChatActivity : ConfiguredActivity() {
     private fun locateCurrentSearchResult() {
         val match = searchMatches.getOrNull(currentSearchMatchIndex) ?: return
         messageViews[match.messageId]?.body?.locate(match.start)
-    }
-
-    private fun showChatSettings() {
-        val workingSettings = uiSettings
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPaddingRelative(dp(12), dp(4), dp(12), dp(12))
-        }
-        val displaySection = settingsSection(R.string.chat_settings_display_section)
-        container.addView(displaySection)
-        displaySection.addView(settingsFieldLabel(R.string.chat_font_size))
-        val fontGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        ChatFontSize.entries.forEach { fontSize ->
-            fontGroup.addView(RadioButton(this).apply {
-                id = View.generateViewId()
-                tag = fontSize
-                text = getString(fontSize.labelResource())
-                isChecked = fontSize == workingSettings.fontSize
-                setTextColor(appPalette.primaryText)
-                buttonTintList = controlTintList()
-                minimumHeight = dp(52)
-            })
-        }
-        displaySection.addView(fontGroup)
-        val followOutput = CheckBox(this).apply {
-            text = getString(R.string.chat_follow_streaming_output)
-            isChecked = workingSettings.followStreamingOutput
-            setTextColor(appPalette.primaryText)
-            buttonTintList = controlTintList()
-            minimumHeight = dp(52)
-        }
-        displaySection.addView(followOutput)
-        val showUsage = CheckBox(this).apply {
-            text = getString(R.string.chat_show_generation_usage)
-            isChecked = workingSettings.showGenerationUsage
-            setTextColor(appPalette.primaryText)
-            buttonTintList = controlTintList()
-            minimumHeight = dp(52)
-        }
-        displaySection.addView(showUsage)
-
-        val inputSection = settingsSection(R.string.chat_settings_input_section)
-        container.addView(inputSection)
-        inputSection.addView(settingsFieldLabel(R.string.chat_enter_key_behavior))
-        val enterKeyGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        EnterKeyBehavior.entries.forEach { behavior ->
-            enterKeyGroup.addView(RadioButton(this).apply {
-                id = View.generateViewId()
-                tag = behavior
-                text = getString(
-                    when (behavior) {
-                        EnterKeyBehavior.SEND -> R.string.chat_enter_key_send
-                        EnterKeyBehavior.NEW_LINE -> R.string.chat_enter_key_new_line
-                    },
-                )
-                isChecked = behavior == workingSettings.enterKeyBehavior
-                setTextColor(appPalette.primaryText)
-                buttonTintList = controlTintList()
-                minimumHeight = dp(52)
-            })
-        }
-        inputSection.addView(enterKeyGroup)
-
-        val generationSection = settingsSection(R.string.chat_settings_generation_section)
-        container.addView(generationSection)
-        val unlimitedTokens = CheckBox(this).apply {
-            text = getString(R.string.chat_maximum_output_tokens_unlimited)
-            isChecked = workingSettings.maximumOutputTokens == null
-            setTextColor(appPalette.primaryText)
-            buttonTintList = controlTintList()
-            minimumHeight = dp(52)
-        }
-        generationSection.addView(unlimitedTokens)
-        generationSection.addView(settingsFieldLabel(R.string.chat_maximum_output_tokens))
-        val maximumTokensInput = settingsEditText(
-            workingSettings.maximumOutputTokensDraft.toString(),
-            InputType.TYPE_CLASS_NUMBER,
-        )
-        generationSection.addView(maximumTokensInput)
-        maximumTokensInput.isEnabled = !unlimitedTokens.isChecked
-        maximumTokensInput.alpha = if (maximumTokensInput.isEnabled) 1f else DISABLED_ALPHA
-        unlimitedTokens.setOnCheckedChangeListener { _, checked ->
-            maximumTokensInput.isEnabled = !checked
-            maximumTokensInput.alpha = if (checked) DISABLED_ALPHA else 1f
-        }
-
-        val useModelSamplingDefaults = CheckBox(this).apply {
-            text = getString(R.string.chat_use_model_sampling_defaults)
-            isChecked = workingSettings.useModelSamplingDefaults
-            setTextColor(appPalette.primaryText)
-            buttonTintList = controlTintList()
-            minimumHeight = dp(52)
-            setPaddingRelative(0, dp(8), 0, 0)
-        }
-        generationSection.addView(useModelSamplingDefaults)
-        generationSection.addView(settingsFieldLabel(R.string.chat_temperature))
-        val temperatureInput = settingsEditText(
-            workingSettings.temperature.toString(),
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
-        )
-        generationSection.addView(temperatureInput)
-        generationSection.addView(settingsFieldLabel(R.string.chat_top_k))
-        val topKInput = settingsEditText(
-            workingSettings.topK.toString(),
-            InputType.TYPE_CLASS_NUMBER,
-        )
-        generationSection.addView(topKInput)
-        generationSection.addView(settingsFieldLabel(R.string.chat_top_p))
-        val topPInput = settingsEditText(
-            workingSettings.topP.toString(),
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
-        )
-        generationSection.addView(topPInput)
-        generationSection.addView(TextView(this).apply {
-            text = getString(R.string.chat_generation_settings_help)
-            textSize = 12f
-            setTextColor(appPalette.secondaryText)
-            setPaddingRelative(0, dp(7), 0, dp(8))
-            setLineSpacing(0f, 1.1f)
-        })
-        val samplingInputs = listOf(temperatureInput, topKInput, topPInput)
-        fun updateSamplingInputState(useDefaults: Boolean) {
-            samplingInputs.forEach { field ->
-                field.isEnabled = !useDefaults
-                field.alpha = if (useDefaults) DISABLED_ALPHA else 1f
-            }
-        }
-        updateSamplingInputState(useModelSamplingDefaults.isChecked)
-        useModelSamplingDefaults.setOnCheckedChangeListener { _, checked ->
-            updateSamplingInputState(checked)
-        }
-
-        val settingsScroll = ScrollView(this).apply {
-            setBackgroundColor(appPalette.windowBackground)
-            addView(
-                container,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                minOf((resources.displayMetrics.heightPixels * 0.68f).toInt(), dp(560)),
-            )
-        }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.chat_settings_title)
-            .setView(settingsScroll)
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.chat_settings_save, null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.window?.setLayout(
-                minOf((resources.displayMetrics.widthPixels * 0.94f).toInt(), dp(720)),
-                android.view.WindowManager.LayoutParams.WRAP_CONTENT,
-            )
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(appPalette.accent)
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(appPalette.accent)
-            applyThemeToControls(container)
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val selectedFont = fontGroup.findViewById<RadioButton>(fontGroup.checkedRadioButtonId)
-                    ?.tag as? ChatFontSize ?: workingSettings.fontSize
-                val selectedEnterBehavior = enterKeyGroup.findViewById<RadioButton>(
-                    enterKeyGroup.checkedRadioButtonId,
-                )?.tag as? EnterKeyBehavior ?: workingSettings.enterKeyBehavior
-                val maximumTokens = if (unlimitedTokens.isChecked) {
-                    null
-                } else {
-                    maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
-                        ?: return@setOnClickListener showSettingError(
-                            maximumTokensInput,
-                            R.string.chat_positive_integer_error,
-                        )
-                }
-                val maximumTokensDraft = maximumTokens
-                    ?: maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
-                    ?: workingSettings.maximumOutputTokensDraft
-                val useDefaults = useModelSamplingDefaults.isChecked
-                val temperature = if (useDefaults) {
-                    workingSettings.temperature
-                } else {
-                    temperatureInput.text.toString().toDoubleOrNull()
-                        ?.takeIf { it.isFinite() && it >= 0.0 }
-                        ?: return@setOnClickListener showSettingError(
-                            temperatureInput,
-                            R.string.chat_nonnegative_number_error,
-                        )
-                }
-                val topK = if (useDefaults) {
-                    workingSettings.topK
-                } else {
-                    topKInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
-                        ?: return@setOnClickListener showSettingError(
-                            topKInput,
-                            R.string.chat_positive_integer_error,
-                        )
-                }
-                val topP = if (useDefaults) {
-                    workingSettings.topP
-                } else {
-                    topPInput.text.toString().toDoubleOrNull()
-                        ?.takeIf { it.isFinite() && it in 0.0..1.0 }
-                        ?: return@setOnClickListener showSettingError(
-                            topPInput,
-                            R.string.chat_probability_error,
-                        )
-                }
-                uiSettings = ChatUiSettings(
-                    fontSize = selectedFont,
-                    followStreamingOutput = followOutput.isChecked,
-                    showGenerationUsage = showUsage.isChecked,
-                    enterKeyBehavior = selectedEnterBehavior,
-                    maximumOutputTokens = maximumTokens,
-                    maximumOutputTokensDraft = maximumTokensDraft,
-                    useModelSamplingDefaults = useDefaults,
-                    temperature = temperature,
-                    topK = topK,
-                    topP = topP,
-                )
-                uiSettingsStore.save(uiSettings)
-                applyUiSettings()
-                dialog.dismiss()
-            }
-        }
-        dialog.show()
-        tintDialogButtons(dialog)
-    }
-
-    private fun settingsSection(textResource: Int) = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        background = roundedDrawableColor(
-            fillColor = appPalette.assistantSurface,
-            radiusDp = 14,
-            strokeColor = appPalette.chatBorder,
-        )
-        setPaddingRelative(dp(16), dp(6), dp(16), dp(12))
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply {
-            setMargins(0, dp(8), 0, dp(4))
-        }
-        addView(TextView(this@ChatActivity).apply {
-            text = getString(textResource)
-            textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(appPalette.accent)
-            setPaddingRelative(0, dp(6), 0, dp(7))
-        })
-    }
-
-    private fun settingsFieldLabel(textResource: Int) = TextView(this).apply {
-        text = getString(textResource)
-        textSize = 12.5f
-        typeface = Typeface.DEFAULT_BOLD
-        setTextColor(appPalette.secondaryText)
-        setPaddingRelative(0, dp(9), 0, dp(3))
-    }
-
-    private fun settingsEditText(value: String, fieldInputType: Int) = EditText(this).apply {
-        setText(value)
-        setSelection(text.length)
-        inputType = fieldInputType
-        maxLines = 1
-        setSingleLine(true)
-        setTextColor(appPalette.primaryText)
-        setHintTextColor(appPalette.secondaryText)
-        backgroundTintList = ColorStateList.valueOf(appPalette.accent)
-        setPaddingRelative(dp(4), dp(5), dp(4), dp(5))
-    }
-
-    private fun showSettingError(field: EditText, messageResource: Int) {
-        field.error = getString(messageResource)
-        field.requestFocus()
-    }
-
-    private fun ChatFontSize.labelResource(): Int = when (this) {
-        ChatFontSize.SMALL -> R.string.chat_font_size_small
-        ChatFontSize.DEFAULT -> R.string.chat_font_size_default
-        ChatFontSize.LARGE -> R.string.chat_font_size_large
-        ChatFontSize.EXTRA_LARGE -> R.string.chat_font_size_extra_large
     }
 
     private fun applyUiSettings() {
@@ -2341,7 +2194,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun switchConversation(conversationId: String) {
         val target = historyStore.find(conversationId)
         if (target == null) {
-            Toast.makeText(this, R.string.chat_history_not_found, Toast.LENGTH_SHORT).show()
+            showSnackbar(drawerLayout, getString(R.string.chat_history_not_found))
             return
         }
         if (isGenerating) stopGeneration(showToast = false) else persistConversationNow()
@@ -2423,7 +2276,7 @@ class ChatActivity : ConfiguredActivity() {
         val selectedIndex = targets.indexOfFirst { target ->
             target.targetId == conversationTarget?.targetId
         }
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(R.string.chat_model_switch_title)
             .setSingleChoiceItems(adapter, selectedIndex) { dialog, index ->
                 val target = targets[index]
@@ -2478,7 +2331,7 @@ class ChatActivity : ConfiguredActivity() {
         } else {
             getString(R.string.chat_target_change_local_warning)
         }
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(R.string.chat_target_change_title)
             .setMessage(
                 getString(
@@ -2526,7 +2379,7 @@ class ChatActivity : ConfiguredActivity() {
             AiTargetLocality.LOCAL -> R.string.model_manager_title
             AiTargetLocality.REMOTE -> R.string.online_ai_settings_title
         }
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(R.string.chat_target_unavailable_title)
             .setMessage(
                 getString(
@@ -2547,7 +2400,7 @@ class ChatActivity : ConfiguredActivity() {
             AiTargetLocality.LOCAL -> R.string.model_manager_title
             AiTargetLocality.REMOTE -> R.string.online_ai_settings_title
         }
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(R.string.chat_regenerate_target_unavailable_title)
             .setMessage(
                 getString(
@@ -2562,7 +2415,7 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun showTargetConfigurationDialog() {
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(R.string.chat_target_selector_empty_title)
             .setMessage(R.string.chat_target_selector_empty_message)
             .setNegativeButton(android.R.string.cancel, null)
@@ -2618,7 +2471,7 @@ class ChatActivity : ConfiguredActivity() {
         getSystemService(ClipboardManager::class.java).setPrimaryClip(
             ClipData.newPlainText(getString(R.string.chat_clipboard_label), message.text),
         )
-        Toast.makeText(this, R.string.chat_message_copied, Toast.LENGTH_SHORT).show()
+        showSnackbar(drawerLayout, getString(R.string.chat_message_copied))
         return true
     }
 
@@ -2636,7 +2489,7 @@ class ChatActivity : ConfiguredActivity() {
             )
             ChatMessageRole.NOTICE -> return
         }
-        AlertDialog.Builder(this)
+        materialDialog()
             .setItems(actions.map(::getString).toTypedArray()) { _, index ->
                 when (index) {
                     0 -> copyMessage(messageId)
@@ -2685,7 +2538,7 @@ class ChatActivity : ConfiguredActivity() {
             regenerateMessage(impact.userMessageId, impact.responseTarget)
             return
         }
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(R.string.chat_regenerate_warning_title)
             .setMessage(warnings.joinToString("\n\n"))
             .setNegativeButton(android.R.string.cancel, null)
@@ -2949,53 +2802,6 @@ class ChatActivity : ConfiguredActivity() {
         target.clearFocus()
     }
 
-    private fun roundedDrawable(
-        fillColor: Int,
-        radiusDp: Int,
-        strokeColor: Int? = null,
-    ) = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        setColor(getColor(fillColor))
-        cornerRadius = dp(radiusDp).toFloat()
-        strokeColor?.let { color -> setStroke(dp(1), getColor(color)) }
-    }
-
-    private fun roundedDrawableColor(
-        fillColor: Int,
-        radiusDp: Int,
-        strokeColor: Int? = null,
-    ) = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        setColor(fillColor)
-        cornerRadius = dp(radiusDp).toFloat()
-        strokeColor?.let { color -> setStroke(dp(1), color) }
-    }
-
-    private fun roundedRipple(
-        fillColor: Int,
-        rippleColor: Int,
-        radiusDp: Int,
-        strokeColor: Int? = null,
-    ) = RippleDrawable(
-        ColorStateList.valueOf(getColor(rippleColor)),
-        roundedDrawable(fillColor, radiusDp, strokeColor),
-        null,
-    )
-
-    private fun roundedRippleColor(
-        fillColor: Int,
-        rippleColor: Int,
-        radiusDp: Int,
-    ) = RippleDrawable(
-        ColorStateList.valueOf(rippleColor),
-        GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            setColor(fillColor)
-            cornerRadius = dp(radiusDp).toFloat()
-        },
-        null,
-    )
-
     private fun applySelectableBackground(view: View) {
         val value = TypedValue()
         if (theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, value, true)) {
@@ -3077,8 +2883,8 @@ class ChatActivity : ConfiguredActivity() {
         const val DISABLED_ALPHA = 0.42f
         const val PLACEHOLDER_ALPHA = 0.65f
         const val COMPOSER_CONTROL_MIN_HEIGHT_DP = 40
-        const val COMPOSER_SEND_MIN_WIDTH_DP = 60
-        const val COMPOSER_CORNER_RADIUS_DP = 12
+        const val COMPOSER_CORNER_RADIUS_DP = 22
+        const val SEARCH_DEBOUNCE_MILLIS = 150L
         const val GENERATION_FAILURE_SEPARATOR = "\n\n---\n\n"
         const val NO_USAGE = -1L
         const val MAXIMUM_SAVED_MESSAGES = 48

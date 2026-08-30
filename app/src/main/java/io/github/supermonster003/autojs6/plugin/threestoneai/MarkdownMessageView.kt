@@ -44,7 +44,7 @@ internal class MarkdownMessageView(
     private val rangedTextViews = ArrayList<RangedTextView>()
     private var renderedDocument = MarkdownDocument("", emptyList())
     private var renderedHighlights: List<MarkdownSearchHighlight> = emptyList()
-    private var messageTextSizeSp = 15.5f
+    private var messageTextSizeSp = ChatFontSize.DEFAULT.messageSp
     private var messageLongClick: (() -> Unit)? = null
 
     var maximumWidth: Int = Int.MAX_VALUE

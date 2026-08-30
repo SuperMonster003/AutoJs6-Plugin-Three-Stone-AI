@@ -132,6 +132,7 @@ class OnlineAiBackendTest {
         assertTrue(target.capabilities.streaming)
         assertTrue(target.capabilities.usage)
         assertEquals(8192, target.limits.maximumOutputTokens)
+        assertEquals(32_768, target.limits.maximumContextTokens)
         val session = backend.createSession(AiBackendSessionRequest(target.targetId))
 
         assertEquals(target, session.target)
@@ -165,6 +166,7 @@ class OnlineAiBackendTest {
             OnlineAiTransportLimits.MAXIMUM_OUTPUT_BYTES,
             target.limits.maximumOutputBytes,
         )
+        assertNull(target.limits.maximumContextTokens)
         backend.createSession(AiBackendSessionRequest(target.targetId)).close()
 
         execution.close()
@@ -288,6 +290,7 @@ class OnlineAiBackendTest {
             maximumContextBytes = null,
             maximumOutputBytes = null,
             maximumOutputTokens = 8192,
+            maximumContextTokens = 32_768,
         )
         override val available = true
         var credential: String? = null

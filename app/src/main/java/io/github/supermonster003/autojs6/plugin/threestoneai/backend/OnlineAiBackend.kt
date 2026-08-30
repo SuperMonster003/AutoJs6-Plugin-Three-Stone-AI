@@ -117,6 +117,7 @@ internal class OnlineAiBackend(
     ): String {
         val input = ByteArrayOutputStream()
         DataOutputStream(input).use { output ->
+            output.writeInt(CATALOG_GENERATION_SCHEMA)
             output.writeLong(snapshot.revision)
             output.writeInt(targets.size)
             targets.forEach { target ->
@@ -132,6 +133,7 @@ internal class OnlineAiBackend(
                 output.writeNullableLong(target.limits.maximumContextBytes)
                 output.writeNullableLong(target.limits.maximumOutputBytes)
                 output.writeNullableInt(target.limits.maximumOutputTokens)
+                output.writeNullableInt(target.limits.maximumContextTokens)
             }
         }
         val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
@@ -158,6 +160,7 @@ internal class OnlineAiBackend(
 
     companion object {
         const val BACKEND_ID = "online"
+        private const val CATALOG_GENERATION_SCHEMA = 2
 
         private val UNIMPLEMENTED_CAPABILITIES = AiTargetCapabilities(
             streaming = false,
@@ -171,6 +174,7 @@ internal class OnlineAiBackend(
             maximumContextBytes = null,
             maximumOutputBytes = null,
             maximumOutputTokens = null,
+            maximumContextTokens = null,
         )
     }
 }

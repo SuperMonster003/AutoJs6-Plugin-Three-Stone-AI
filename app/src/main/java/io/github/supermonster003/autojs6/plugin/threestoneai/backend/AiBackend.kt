@@ -28,11 +28,14 @@ internal data class AiTargetLimits(
     val maximumContextBytes: Long?,
     val maximumOutputBytes: Long?,
     val maximumOutputTokens: Int? = null,
+    /** Plugin-internal model/provider capacity. Binder target pages intentionally omit this. */
+    val maximumContextTokens: Int? = null,
 ) {
     init {
         require(maximumContextBytes == null || maximumContextBytes > 0L)
         require(maximumOutputBytes == null || maximumOutputBytes > 0L)
         require(maximumOutputTokens == null || maximumOutputTokens > 0)
+        require(maximumContextTokens == null || maximumContextTokens > 0)
     }
 }
 

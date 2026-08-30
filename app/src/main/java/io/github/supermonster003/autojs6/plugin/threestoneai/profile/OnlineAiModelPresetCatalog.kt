@@ -18,7 +18,7 @@ internal object OnlineAiModelPresetCatalog {
     private val anthropic = listOf(
         "claude-opus-4-8",
         "claude-opus-5",
-        "claude-fabel-5",
+        "claude-fable-5",
         "claude-sonnet-4-6",
         "claude-haiku-4-5",
     )

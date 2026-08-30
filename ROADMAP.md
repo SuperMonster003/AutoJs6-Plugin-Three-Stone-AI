@@ -111,9 +111,9 @@ ConversationContextCoordinator
   - 验收: JVM 单测覆盖中文 / 英文 / 代码 / 空消息 / 多 part; 对同一文本估算值 ≥ 实际值的场景在校准前可接受 (保守方向正确).
 - [x] **P0-2** 校准机制: 每次成功轮结束后, 用实报 usage (在线 `inputTokens`; 本地按 S4 的增量口径换算) 更新该 target 的 EMA 系数并持久化 (SharedPreferences, 跟随 `ChatUiSettingsStore` 模式); 系数夹在校准带内.
   - 验收: 单测模拟连续 usage 序列, 系数收敛且不越带; 无 usage 时系数不变.
-- [ ] **P0-3** 观测日志: 每轮以 debug 级输出 估算输入 tokens / 实际 usage / 当前记账值 / backend epoch / 是否重建; 启动器聊天 usage 行 (`showGenerationUsage`) 增加会话累计输入展示 (可选开关).
+- [x] **P0-3** 观测日志: 每轮以 debug 级输出 估算输入 tokens / 实际 usage / 当前记账值 / backend epoch / 是否重建; 启动器聊天 usage 行 (`showGenerationUsage`) 增加会话累计输入展示 (可选开关).
   - 验收: logcat 可直接观察锯齿曲线, 作为 P1 前后对比基线; 真机记录一段 24+ 轮会话的数据存入 `docs/dev/`.
-  - 状态: 代码, UI 与自动化验证已完成; 24+ 轮真机数据仍待执行, 采集步骤见 [`docs/dev/context-accounting-baseline.md`](docs/dev/context-accounting-baseline.md), 因此本条保持未勾选.
+  - 状态: 2026-08-31 已在 G8441 / Android 9 / PoloAPI `claude-opus-4-8` 完成 40 轮在线基线, 捕获第 33 轮 epoch 重建锯齿及第 38 轮 provider usage 断层; 数据与结论见 [`docs/dev/context-accounting-baseline.md`](docs/dev/context-accounting-baseline.md).
 
 ### P1 - token 预算装配与水位轮换 (止血: 输入从锯齿增长变为恒定有界)
 

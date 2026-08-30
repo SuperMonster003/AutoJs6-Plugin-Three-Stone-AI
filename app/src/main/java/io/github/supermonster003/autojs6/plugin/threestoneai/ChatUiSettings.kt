@@ -24,6 +24,7 @@ internal data class ChatUiSettings(
     val followStreamingOutput: Boolean = true,
     val showGenerationUsage: Boolean = true,
     val enterKeyBehavior: EnterKeyBehavior = EnterKeyBehavior.SEND,
+    val contextTokenBudget: Int = ContextPolicy.DEFAULT_INPUT_TOKEN_BUDGET,
     val maximumOutputTokens: Int? = null,
     val maximumOutputTokensDraft: Int = DEFAULT_MAXIMUM_OUTPUT_TOKENS_DRAFT,
     val useModelSamplingDefaults: Boolean = true,
@@ -32,6 +33,7 @@ internal data class ChatUiSettings(
     val topP: Double = AiProviderSamplingDefaults.TOP_P,
 ) {
     init {
+        require(contextTokenBudget > 0)
         require(maximumOutputTokens == null || maximumOutputTokens > 0)
         require(maximumOutputTokensDraft > 0)
         require(temperature.isFinite() && temperature >= 0.0)
@@ -69,6 +71,10 @@ internal class ChatUiSettingsStore(context: Context) {
                 preferences.getString(KEY_ENTER_KEY_BEHAVIOR, EnterKeyBehavior.SEND.name).orEmpty(),
             )
         }.getOrDefault(EnterKeyBehavior.SEND),
+        contextTokenBudget = preferences.getInt(
+            KEY_CONTEXT_TOKEN_BUDGET,
+            ContextPolicy.DEFAULT_INPUT_TOKEN_BUDGET,
+        ).takeIf { it > 0 } ?: ContextPolicy.DEFAULT_INPUT_TOKEN_BUDGET,
         maximumOutputTokens = if (preferences.getBoolean(KEY_MAXIMUM_OUTPUT_TOKENS_LIMITED, false)) {
             preferences.getInt(
                 KEY_MAXIMUM_OUTPUT_TOKENS,
@@ -99,6 +105,7 @@ internal class ChatUiSettingsStore(context: Context) {
             .putBoolean(KEY_FOLLOW_OUTPUT, settings.followStreamingOutput)
             .putBoolean(KEY_SHOW_USAGE, settings.showGenerationUsage)
             .putString(KEY_ENTER_KEY_BEHAVIOR, settings.enterKeyBehavior.name)
+            .putInt(KEY_CONTEXT_TOKEN_BUDGET, settings.contextTokenBudget)
             .putBoolean(KEY_MAXIMUM_OUTPUT_TOKENS_LIMITED, settings.maximumOutputTokens != null)
             .putInt(
                 KEY_MAXIMUM_OUTPUT_TOKENS,
@@ -118,6 +125,7 @@ internal class ChatUiSettingsStore(context: Context) {
         const val KEY_FOLLOW_OUTPUT = "follow-streaming-output"
         const val KEY_SHOW_USAGE = "show-generation-usage"
         const val KEY_ENTER_KEY_BEHAVIOR = "enter-key-behavior"
+        const val KEY_CONTEXT_TOKEN_BUDGET = "context-token-budget"
         const val KEY_MAXIMUM_OUTPUT_TOKENS_LIMITED = "maximum-output-tokens-limited"
         const val KEY_MAXIMUM_OUTPUT_TOKENS = "maximum-output-tokens"
         const val KEY_MAXIMUM_OUTPUT_TOKENS_DRAFT = "maximum-output-tokens-draft"

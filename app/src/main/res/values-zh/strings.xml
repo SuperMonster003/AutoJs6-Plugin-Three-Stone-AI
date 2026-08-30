@@ -169,6 +169,11 @@
     <string name="chat_show_generation_usage">显示令牌和耗时详情</string>
     <string name="chat_settings_save">保存</string>
     <string name="chat_settings_generation_section">生成</string>
+    <string name="chat_context_token_budget">上下文 Token 预算</string>
+    <string name="chat_context_token_budget_value">%1$s 个 Token</string>
+    <string name="chat_context_token_budget_custom">自定义</string>
+    <string name="chat_context_token_budget_custom_title">自定义上下文 Token 预算</string>
+    <string name="chat_context_token_budget_custom_hint">Token 预算</string>
     <string name="chat_enter_key_behavior">回车键</string>
     <string name="chat_enter_key_send">发送 (Shift+Enter 换行)</string>
     <string name="chat_enter_key_new_line">换行 (Ctrl+Enter 发送)</string>

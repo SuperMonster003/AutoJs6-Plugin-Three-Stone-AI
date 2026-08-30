@@ -166,6 +166,11 @@
     <string name="chat_show_generation_usage">トークン数と処理時間を表示</string>
     <string name="chat_settings_save">保存</string>
     <string name="chat_settings_generation_section">生成</string>
+    <string name="chat_context_token_budget">コンテキスト Token 予算</string>
+    <string name="chat_context_token_budget_value">%1$s Token</string>
+    <string name="chat_context_token_budget_custom">カスタム</string>
+    <string name="chat_context_token_budget_custom_title">カスタムコンテキスト Token 予算</string>
+    <string name="chat_context_token_budget_custom_hint">Token 予算</string>
     <string name="chat_enter_key_behavior">Enter キー</string>
     <string name="chat_enter_key_send">送信 (Shift+Enter で改行)</string>
     <string name="chat_enter_key_new_line">改行 (Ctrl+Enter で送信)</string>

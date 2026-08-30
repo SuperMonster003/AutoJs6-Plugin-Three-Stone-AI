@@ -166,6 +166,11 @@
     <string name="chat_show_generation_usage">Afficher les jetons et la durée</string>
     <string name="chat_settings_save">Enregistrer</string>
     <string name="chat_settings_generation_section">Génération</string>
+    <string name="chat_context_token_budget">Budget de tokens de contexte</string>
+    <string name="chat_context_token_budget_value">%1$s tokens</string>
+    <string name="chat_context_token_budget_custom">Personnalisé</string>
+    <string name="chat_context_token_budget_custom_title">Budget personnalisé de tokens de contexte</string>
+    <string name="chat_context_token_budget_custom_hint">Budget de tokens</string>
     <string name="chat_enter_key_behavior">Touche Entrée</string>
     <string name="chat_enter_key_send">Envoyer (Maj+Entrée insère une ligne)</string>
     <string name="chat_enter_key_new_line">Nouvelle ligne (Ctrl+Entrée envoie)</string>

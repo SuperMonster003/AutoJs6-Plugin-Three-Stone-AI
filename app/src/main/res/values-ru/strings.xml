@@ -166,6 +166,11 @@
     <string name="chat_show_generation_usage">Показывать токены и время</string>
     <string name="chat_settings_save">Сохранить</string>
     <string name="chat_settings_generation_section">Генерация</string>
+    <string name="chat_context_token_budget">Бюджет токенов контекста</string>
+    <string name="chat_context_token_budget_value">%1$s токенов</string>
+    <string name="chat_context_token_budget_custom">Пользовательский</string>
+    <string name="chat_context_token_budget_custom_title">Пользовательский бюджет токенов контекста</string>
+    <string name="chat_context_token_budget_custom_hint">Бюджет токенов</string>
     <string name="chat_enter_key_behavior">Клавиша Enter</string>
     <string name="chat_enter_key_send">Отправка (Shift+Enter добавляет строку)</string>
     <string name="chat_enter_key_new_line">Новая строка (Ctrl+Enter отправляет)</string>

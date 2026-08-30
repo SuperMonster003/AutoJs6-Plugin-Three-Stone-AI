@@ -119,6 +119,12 @@ class AppSettingsActivity : ConfiguredActivity() {
             onClick = ::showEnterKeyDialog,
         ).view)
         content.addView(settingRow(
+            title = getString(R.string.chat_context_token_budget),
+            summary = contextTokenBudgetLabel(chatSettings.contextTokenBudget),
+            iconResource = R.drawable.ic_history_24,
+            onClick = ::showContextTokenBudgetDialog,
+        ).view)
+        content.addView(settingRow(
             title = getString(R.string.chat_settings_generation_section),
             summary = generationSettingsSummary(),
             iconResource = R.drawable.ic_tune_24,
@@ -295,6 +301,52 @@ class AppSettingsActivity : ConfiguredActivity() {
             checkedIndex = values.indexOf(chatSettings.enterKeyBehavior),
         ) { index ->
             saveChatSettings(chatSettings.copy(enterKeyBehavior = values[index]), recreate = true)
+        }
+    }
+
+    private fun showContextTokenBudgetDialog() {
+        val presets = CONTEXT_TOKEN_BUDGET_PRESETS
+        val customIndex = presets.size
+        val selected = presets.indexOf(chatSettings.contextTokenBudget).takeIf { it >= 0 }
+            ?: customIndex
+        singleChoiceDialog(
+            title = getString(R.string.chat_context_token_budget),
+            labels = presets.map(::contextTokenBudgetLabel) +
+                getString(R.string.chat_context_token_budget_custom),
+            checkedIndex = selected,
+        ) { index ->
+            if (index == customIndex) {
+                showCustomContextTokenBudgetDialog()
+            } else {
+                saveChatSettings(
+                    chatSettings.copy(contextTokenBudget = presets[index]),
+                    recreate = true,
+                )
+            }
+        }
+    }
+
+    private fun showCustomContextTokenBudgetDialog() {
+        inputDialog(
+            title = getString(R.string.chat_context_token_budget_custom_title),
+            initialValue = chatSettings.contextTokenBudget.toString(),
+            hint = getString(R.string.chat_context_token_budget_custom_hint),
+            inputType = InputType.TYPE_CLASS_NUMBER,
+            maxLength = 10,
+            positiveResource = R.string.chat_settings_save,
+            validate = { value ->
+                if (value.toIntOrNull()?.takeIf { it > 0 } == null) {
+                    getString(R.string.chat_positive_integer_error)
+                } else {
+                    null
+                }
+            },
+        ) { value ->
+            val budget = value.toIntOrNull()?.takeIf { it > 0 } ?: return@inputDialog
+            saveChatSettings(
+                chatSettings.copy(contextTokenBudget = budget),
+                recreate = true,
+            )
         }
     }
 
@@ -527,6 +579,15 @@ class AppSettingsActivity : ConfiguredActivity() {
         return "$output | $sampling"
     }
 
+    private fun contextTokenBudgetLabel(value: Int): String {
+        val display = if (value % TOKENS_PER_K == 0) {
+            "${value / TOKENS_PER_K}K"
+        } else {
+            value.toString()
+        }
+        return getString(R.string.chat_context_token_budget_value, display)
+    }
+
     private fun AppDarkMode.labelResource(): Int = when (this) {
         AppDarkMode.FOLLOW_AUTOJS6 -> R.string.app_settings_follow_autojs6
         AppDarkMode.FOLLOW_SYSTEM -> R.string.app_settings_follow_system
@@ -566,4 +627,9 @@ class AppSettingsActivity : ConfiguredActivity() {
         val color: Int?,
         val followAutoJs6: Boolean = false,
     )
+
+    private companion object {
+        const val TOKENS_PER_K = 1_024
+        val CONTEXT_TOKEN_BUDGET_PRESETS = listOf(8_192, 16_384, 32_768)
+    }
 }

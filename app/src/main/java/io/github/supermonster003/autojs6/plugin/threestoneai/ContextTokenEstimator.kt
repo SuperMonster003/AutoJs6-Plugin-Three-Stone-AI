@@ -7,6 +7,13 @@ import kotlin.math.ceil
 /** Central defaults for context accounting. Later phases add budgets and watermarks here. */
 internal object ContextPolicy {
     const val DEFAULT_INPUT_TOKEN_BUDGET = 16_384
+    const val DEFAULT_OUTPUT_TOKEN_RESERVE = 4_096
+    const val SAFETY_MARGIN_PERCENT = 8
+    const val SOFT_WATERMARK_PERCENT = 65
+    const val HARD_WATERMARK_PERCENT = 80
+    const val ABSOLUTE_PROTECTION_PERCENT = 90
+    const val COMPACTION_TARGET_PERCENT = 45
+    const val MINIMUM_RECENT_TURNS = 2
     const val INITIAL_TOKENS_PER_UTF8_BYTE = 0.40
     const val MINIMUM_TOKENS_PER_UTF8_BYTE = 0.15
     const val MAXIMUM_TOKENS_PER_UTF8_BYTE = 0.60

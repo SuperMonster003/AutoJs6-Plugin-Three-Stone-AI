@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.io.InputStream
 
 internal data class StoredConversation(
     val id: String,
@@ -150,6 +151,32 @@ internal object ConversationSearchPolicy {
     }
 }
 
+internal object ConversationTranscriptFormatter {
+    fun format(
+        conversations: List<StoredConversation>,
+        userLabel: String,
+        assistantLabel: String,
+        noticeLabel: String,
+    ): String = conversations.joinToString("\n\n") { conversation ->
+        buildString {
+            append(conversation.title)
+            conversation.messages.filter { message -> message.text.isNotBlank() }
+                .forEach { message ->
+                    append("\n\n")
+                    append(
+                        when (message.role) {
+                            ChatMessageRole.USER -> userLabel
+                            ChatMessageRole.ASSISTANT -> assistantLabel
+                            ChatMessageRole.NOTICE -> noticeLabel
+                        },
+                    )
+                    append(":\n")
+                    append(message.text)
+                }
+        }
+    }
+}
+
 internal data class MessageEditImpact(
     val messageIndex: Int,
     val laterMessageCount: Int,
@@ -160,6 +187,24 @@ internal object ConversationEditPolicy {
         val index = messages.indexOfFirst { message -> message.id == userMessageId }
         if (index < 0 || messages[index].role != ChatMessageRole.USER) return null
         return MessageEditImpact(index, messages.lastIndex - index)
+    }
+
+    fun prefixBefore(messages: List<ChatMessage>, userMessageId: Long): List<ChatMessage>? {
+        val impact = impact(messages, userMessageId) ?: return null
+        return messages.take(impact.messageIndex)
+    }
+}
+
+internal data class MessageDeletionImpact(
+    val messageIndex: Int,
+    val laterMessageCount: Int,
+)
+
+internal object ConversationDeletionPolicy {
+    fun impact(messages: List<ChatMessage>, userMessageId: Long): MessageDeletionImpact? {
+        val index = messages.indexOfFirst { message -> message.id == userMessageId }
+        if (index < 0 || messages[index].role != ChatMessageRole.USER) return null
+        return MessageDeletionImpact(index, messages.lastIndex - index)
     }
 
     fun prefixBefore(messages: List<ChatMessage>, userMessageId: Long): List<ChatMessage>? {
@@ -221,6 +266,21 @@ internal object ConversationHistoryCodec {
                 require(input.available() == 0) { "Unexpected trailing conversation history data" }
             }
         }.let(ConversationHistoryPolicy::normalized)
+    }
+
+    fun readBounded(input: InputStream): ByteArray {
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(8 * 1_024)
+        var total = 0
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            if (count == 0) continue
+            total = Math.addExact(total, count)
+            require(total <= MAXIMUM_FILE_BYTES) { "Conversation history is too large" }
+            output.write(buffer, 0, count)
+        }
+        return output.toByteArray()
     }
 
     private fun writeConversation(output: DataOutputStream, conversation: StoredConversation) {

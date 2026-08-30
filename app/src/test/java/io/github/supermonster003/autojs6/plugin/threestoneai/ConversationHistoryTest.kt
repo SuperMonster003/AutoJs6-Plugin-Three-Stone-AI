@@ -141,6 +141,48 @@ class ConversationHistoryTest {
     }
 
     @Test
+    fun `delete impact removes the selected sent message and every later message`() {
+        val messages = listOf(
+            ChatMessage(1, ChatMessageRole.USER, "keep"),
+            assistant(2, "keep answer"),
+            ChatMessage(3, ChatMessageRole.USER, "delete"),
+            assistant(4, "old branch"),
+            ChatMessage(5, ChatMessageRole.USER, "later"),
+        )
+
+        val impact = ConversationDeletionPolicy.impact(messages, 3)
+
+        assertEquals(MessageDeletionImpact(messageIndex = 2, laterMessageCount = 2), impact)
+        assertEquals(messages.take(2), ConversationDeletionPolicy.prefixBefore(messages, 3))
+        assertNull(ConversationDeletionPolicy.impact(messages, 2))
+    }
+
+    @Test
+    fun `plain text export includes titles roles and every nonblank message`() {
+        val transcript = ConversationTranscriptFormatter.format(
+            conversations = listOf(
+                conversation("one", updatedAt = 20).copy(
+                    title = "First chat",
+                    messages = listOf(
+                        ChatMessage(1, ChatMessageRole.USER, "Question"),
+                        assistant(2, "Answer"),
+                        ChatMessage(3, ChatMessageRole.NOTICE, "Model changed"),
+                        ChatMessage(4, ChatMessageRole.USER, "   "),
+                    ),
+                ),
+            ),
+            userLabel = "You",
+            assistantLabel = "Assistant",
+            noticeLabel = "Notice",
+        )
+
+        assertEquals(
+            "First chat\n\nYou:\nQuestion\n\nAssistant:\nAnswer\n\nNotice:\nModel changed",
+            transcript,
+        )
+    }
+
+    @Test
     fun `regeneration locates the paired user and reports later branch size`() {
         val messages = listOf(
             ChatMessage(1, ChatMessageRole.USER, "first"),

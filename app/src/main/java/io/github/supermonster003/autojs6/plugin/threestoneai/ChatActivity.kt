@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -33,6 +34,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
@@ -65,6 +67,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiPro
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -77,6 +80,7 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var historyStore: ConversationHistoryStore
     private lateinit var uiSettingsStore: ChatUiSettingsStore
+    private lateinit var draftStore: ChatComposerDraftStore
     private lateinit var contextTokenCalibrationStore: ContextTokenCalibrationStore
     private lateinit var updateController: AppUpdateController
     private lateinit var drawerLayout: DrawerLayout
@@ -87,6 +91,7 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var searchInput: EditText
     private lateinit var messagesScroll: ScrollView
     private lateinit var messagesColumn: LinearLayout
+    private lateinit var emptyStateScroll: ScrollView
     private lateinit var emptyState: LinearLayout
     private lateinit var emptyTitle: TextView
     private lateinit var emptyDescription: TextView
@@ -120,6 +125,7 @@ class ChatActivity : ConfiguredActivity() {
     private var draftBeforeEditing: String? = null
     private var restoredComposerText: String? = null
     private var restoredSearchQuery: String? = null
+    private var pendingDrawerExportId: String? = null
     private var searchMenuItem: MenuItem? = null
     private var searchExpanded = false
     private var searchMatches: List<ConversationSearchMatch> = emptyList()
@@ -143,6 +149,12 @@ class ChatActivity : ConfiguredActivity() {
     private var pendingDeltaAssistantId = 0L
     private val pendingDelta = StringBuilder()
     private var deltaFlushScheduled = false
+    private val drawerExportPicker = registerForActivityResult(
+        ActivityResultContracts.CreateDocument(MIME_CONVERSATIONS),
+    ) { uri ->
+        if (uri != null) exportDrawerConversation(uri)
+        pendingDrawerExportId = null
+    }
 
     private val persistConversationRunnable = Runnable {
         persistenceScheduled = false
@@ -162,8 +174,10 @@ class ChatActivity : ConfiguredActivity() {
         importCoordinator = ModelImportCoordinator.get(applicationContext)
         historyStore = ConversationHistoryStore(applicationContext)
         uiSettingsStore = ChatUiSettingsStore(applicationContext)
+        draftStore = ChatComposerDraftStore(applicationContext)
         contextTokenCalibrationStore = ContextTokenCalibrationStore(applicationContext)
         uiSettings = uiSettingsStore.load()
+        pendingDrawerExportId = savedInstanceState?.getString(STATE_PENDING_DRAWER_EXPORT_ID)
         updateController = AppUpdateController(this)
         if (!restoreTranscript(savedInstanceState)) {
             restoreStoredConversation(
@@ -171,6 +185,7 @@ class ChatActivity : ConfiguredActivity() {
                     ?: historyStore.lastConversationId(),
             )
         }
+        if (savedInstanceState == null) restoredComposerText = draftStore.load()
         title = getString(R.string.chat_screen_title)
         setContentView(createContentView())
         installBackNavigation()
@@ -313,7 +328,11 @@ class ChatActivity : ConfiguredActivity() {
         super.onResume()
         val latestSettings = uiSettingsStore.load()
         if (latestSettings != uiSettings) {
+            val bubbleStylesChanged =
+                latestSettings.userBubbleStyle != uiSettings.userBubbleStyle ||
+                    latestSettings.assistantBubbleStyle != uiSettings.assistantBubbleStyle
             uiSettings = latestSettings
+            if (bubbleStylesChanged && ::messagesColumn.isInitialized) renderTranscript()
             applyUiSettings()
         }
         refreshTargetCatalog(importCoordinator.managerState())
@@ -322,6 +341,7 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     override fun onStop() {
+        persistComposerDraft()
         persistConversationNow()
         if (managerAttached) {
             importCoordinator.detachManager(managerObserver)
@@ -390,10 +410,13 @@ class ChatActivity : ConfiguredActivity() {
         )
         editingMessageId?.let { id -> outState.putLong(STATE_EDITING_MESSAGE_ID, id) }
         outState.putString(STATE_DRAFT_BEFORE_EDITING, draftBeforeEditing)
+        outState.putString(STATE_PENDING_DRAWER_EXPORT_ID, pendingDrawerExportId)
+        persistComposerDraft()
         super.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
+        persistComposerDraft()
         destroyed = true
         updateController.cancel()
         if (managerAttached) {
@@ -478,16 +501,24 @@ class ChatActivity : ConfiguredActivity() {
             ),
         )
         emptyState = createEmptyState()
+        emptyStateScroll = ScrollView(this).apply {
+            isFillViewport = true
+            clipToPadding = false
+            isVerticalScrollBarEnabled = false
+            addView(
+                emptyState,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
         conversationFrame.addView(
-            emptyState,
+            emptyStateScroll,
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER,
-            ).apply {
-                marginStart = dp(28)
-                marginEnd = dp(28)
-            },
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
         )
         scrollToBottomButton = android.widget.ImageButton(this).apply {
             background = roundedRippleFill(
@@ -894,12 +925,103 @@ class ChatActivity : ConfiguredActivity() {
                 drawerLayout.closeDrawer(GravityCompat.START)
                 if (conversation.id != currentConversationId) switchConversation(conversation.id)
             }
+            setOnLongClickListener {
+                drawerLayout.closeDrawer(GravityCompat.START)
+                showDrawerHistoryActions(conversation)
+                true
+            }
         }.also { row ->
             row.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
             ).apply { bottomMargin = dp(4) }
         }
+    }
+
+    private fun showDrawerHistoryActions(conversation: StoredConversation) {
+        val actions = listOf(
+            DrawerConversationAction.COPY_ALL,
+            DrawerConversationAction.EXPORT,
+            DrawerConversationAction.DELETE,
+        )
+        materialDialog()
+            .setTitle(conversation.title)
+            .setItems(actions.map { action -> getString(action.labelResource) }.toTypedArray()) { _, index ->
+                when (actions[index]) {
+                    DrawerConversationAction.COPY_ALL -> copyDrawerConversation(conversation)
+                    DrawerConversationAction.EXPORT -> beginDrawerConversationExport(conversation)
+                    DrawerConversationAction.DELETE -> confirmDrawerConversationDeletion(conversation)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    private fun copyDrawerConversation(conversation: StoredConversation) {
+        val transcript = ConversationTranscriptFormatter.format(
+            conversations = listOf(conversation),
+            userLabel = getString(R.string.chat_history_role_user),
+            assistantLabel = getString(R.string.chat_history_role_assistant),
+            noticeLabel = getString(R.string.chat_history_role_notice),
+        )
+        getSystemService(ClipboardManager::class.java).setPrimaryClip(
+            ClipData.newPlainText(getString(R.string.chat_history_clipboard_label), transcript),
+        )
+        showSnackbar(drawerLayout, getString(R.string.chat_history_copied, 1))
+    }
+
+    private fun beginDrawerConversationExport(conversation: StoredConversation) {
+        pendingDrawerExportId = conversation.id
+        val timestamp = SimpleDateFormat(EXPORT_TIMESTAMP_PATTERN, Locale.US).format(Date())
+        drawerExportPicker.launch("3-stone-ai-conversation-$timestamp.3sac")
+    }
+
+    private fun exportDrawerConversation(uri: Uri) {
+        val conversation = historyStore.find(pendingDrawerExportId)
+        val result = runCatching {
+            requireNotNull(conversation) { "The conversation is no longer available" }
+            val bytes = ConversationHistoryCodec.encode(listOf(conversation))
+            contentResolver.openOutputStream(uri, "w")?.use { output -> output.write(bytes) }
+                ?: error("The selected export document could not be opened")
+        }
+        showSnackbar(
+            drawerLayout,
+            getString(
+                if (result.isSuccess) R.string.chat_history_export_succeeded
+                else R.string.chat_history_export_failed,
+            ),
+            com.google.android.material.snackbar.Snackbar.LENGTH_LONG,
+        )
+    }
+
+    private fun confirmDrawerConversationDeletion(conversation: StoredConversation) {
+        materialDialog()
+            .setTitle(R.string.chat_history_delete_single_title)
+            .setMessage(getString(R.string.chat_history_delete_single_message, conversation.title))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.chat_history_delete_selected) { _, _ ->
+                val deletingCurrent = conversation.id == currentConversationId
+                if (deletingCurrent) {
+                    // Stop first because stopping a streamed response persists its final state.
+                    // Clearing the in-memory branch after deletion then prevents the regular
+                    // new-conversation path from reviving the just-deleted history entry.
+                    if (isGenerating) stopGeneration(showToast = false) else persistConversationNow()
+                    historyStore.delete(setOf(conversation.id))
+                    messages.clear()
+                    allowDeletedConversationRevival = false
+                    startNewConversation()
+                } else {
+                    historyStore.delete(setOf(conversation.id))
+                    refreshDrawerHistory()
+                }
+            }
+            .show()
+            .also { dialog ->
+                tintDialogButtons(dialog)
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    ?.setTextColor(getColor(R.color.validation_error))
+            }
     }
 
     private fun installBackNavigation() {
@@ -941,8 +1063,8 @@ class ChatActivity : ConfiguredActivity() {
         suggestionButtons = listOf(firstSuggestion, secondSuggestion, thirdSuggestion)
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPaddingRelative(dp(8), dp(24), dp(8), dp(24))
+            gravity = Gravity.CENTER
+            setPaddingRelative(dp(36), dp(24), dp(36), dp(24))
 
             addView(
                 ImageView(context).apply {
@@ -1070,6 +1192,7 @@ class ChatActivity : ConfiguredActivity() {
                 maxLines = 6
                 minLines = 1
                 minimumHeight = dp(COMPOSER_CONTROL_MIN_HEIGHT_DP)
+                minHeight = dp(COMPOSER_CONTROL_MIN_HEIGHT_DP)
                 inputType = InputType.TYPE_CLASS_TEXT or
                     InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
                     InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -1110,13 +1233,16 @@ class ChatActivity : ConfiguredActivity() {
                 }
                 addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(value: CharSequence?, start: Int, count: Int, after: Int) = Unit
-                    override fun onTextChanged(value: CharSequence?, start: Int, before: Int, count: Int) =
+                    override fun onTextChanged(value: CharSequence?, start: Int, before: Int, count: Int) {
                         renderComposerState()
+                        persistComposerDraft()
+                    }
                     override fun afterTextChanged(value: Editable?) = Unit
                 })
             }
             addView(
                 FrameLayout(context).apply {
+                    minimumHeight = dp(COMPOSER_CONTROL_MIN_HEIGHT_DP)
                     background = roundedFill(
                         appPalette.surface,
                         COMPOSER_CORNER_RADIUS_DP,
@@ -1176,6 +1302,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun syncComposerControlHeight() {
         if (!::input.isInitialized) return
         input.minimumHeight = dp(COMPOSER_CONTROL_MIN_HEIGHT_DP)
+        input.minHeight = dp(COMPOSER_CONTROL_MIN_HEIGHT_DP)
     }
 
     private fun renderManagerState(state: ModelManagerState) {
@@ -1236,12 +1363,12 @@ class ChatActivity : ConfiguredActivity() {
     private fun renderEmptyState() {
         if (!::emptyState.isInitialized) return
         val visible = messages.isEmpty()
-        if (visible && emptyState.visibility != View.VISIBLE) {
+        if (visible && emptyStateScroll.visibility != View.VISIBLE) {
             emptyState.alpha = 0f
-            emptyState.visibility = View.VISIBLE
+            emptyStateScroll.visibility = View.VISIBLE
             emptyState.animate().alpha(1f).setDuration(180L).start()
         } else if (!visible) {
-            emptyState.visibility = View.GONE
+            emptyStateScroll.visibility = View.GONE
         }
         if (messages.isNotEmpty()) return
         val targetReady = isConversationTargetReady()
@@ -1377,27 +1504,26 @@ class ChatActivity : ConfiguredActivity() {
         }
 
         val userMessage = message.role == ChatMessageRole.USER
+        val bubbleStyle = bubbleStyleFor(message.role)
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = if (userMessage) Gravity.END else Gravity.START
         }
         val body = MarkdownMessageView(this, appPalette).apply {
-            if (userMessage) {
-                maximumWidth = bubbleMaxWidth()
-                setPaddingRelative(dp(16), dp(10), dp(16), dp(10))
-                background = roundedRippleFill(
-                    appPalette.userSurface,
-                    accentRipple(appPalette.accent),
-                    Ui.RADIUS_BUBBLE,
-                )
-            } else {
-                // Assistant replies read as content, not as bubbles.
-                setPaddingRelative(dp(2), dp(2), dp(2), dp(2))
-                background = boundedRipple(accentRipple(appPalette.accent), Ui.RADIUS_CONTROL)
-            }
+            applyBubbleStyle(message.role, bubbleStyle)
             setMessageLongClickListener { showMessageActions(message.id) }
         }
-        row.addView(body)
+        row.addView(
+            body,
+            LinearLayout.LayoutParams(
+                if (bubbleStyle == ChatBubbleStyle.NONE) {
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                } else {
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                },
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ),
+        )
         val meta = TextView(this).apply {
             textSize = 11f
             setTextColor(appPalette.secondaryText)
@@ -1431,10 +1557,48 @@ class ChatActivity : ConfiguredActivity() {
         }
     }
 
+    private fun bubbleStyleFor(role: ChatMessageRole): ChatBubbleStyle = when (role) {
+        ChatMessageRole.USER -> uiSettings.userBubbleStyle
+        ChatMessageRole.ASSISTANT -> uiSettings.assistantBubbleStyle
+        ChatMessageRole.NOTICE -> ChatBubbleStyle.BACKGROUND
+    }
+
+    private fun MarkdownMessageView.applyBubbleStyle(
+        role: ChatMessageRole,
+        style: ChatBubbleStyle,
+    ) {
+        if (style == ChatBubbleStyle.NONE) {
+            maximumWidth = Int.MAX_VALUE
+            setPaddingRelative(dp(2), dp(2), dp(2), dp(2))
+            background = boundedRipple(accentRipple(appPalette.accent), Ui.RADIUS_CONTROL)
+            return
+        }
+        maximumWidth = bubbleMaxWidth()
+        setPaddingRelative(dp(16), dp(10), dp(16), dp(10))
+        background = when (style) {
+            ChatBubbleStyle.NONE -> error("Handled above")
+            ChatBubbleStyle.BACKGROUND -> roundedRippleFill(
+                if (role == ChatMessageRole.USER) appPalette.userSurface
+                else appPalette.assistantSurface,
+                accentRipple(appPalette.accent),
+                Ui.RADIUS_BUBBLE,
+            )
+            ChatBubbleStyle.BORDER -> roundedRippleFill(
+                android.graphics.Color.TRANSPARENT,
+                accentRipple(appPalette.accent),
+                Ui.RADIUS_BUBBLE,
+                if (role == ChatMessageRole.USER) appPalette.accent else appPalette.chatBorder,
+            )
+        }
+    }
+
     private fun refreshBubbleWidths() {
         val width = bubbleMaxWidth()
         messages.forEach { message ->
-            if (message.role == ChatMessageRole.USER) {
+            if (
+                message.role != ChatMessageRole.NOTICE &&
+                bubbleStyleFor(message.role) != ChatBubbleStyle.NONE
+            ) {
                 messageViews[message.id]?.body?.let { body ->
                     if (body.maximumWidth != width) {
                         body.maximumWidth = width
@@ -1616,6 +1780,7 @@ class ChatActivity : ConfiguredActivity() {
         }
         allowDeletedConversationRevival = true
         input.text.clear()
+        draftStore.clear()
         hideKeyboard()
 
         val userMessage = ChatMessage(
@@ -2193,6 +2358,7 @@ class ChatActivity : ConfiguredActivity() {
         cancelEditing(restoreDraft = false)
         closeSearch()
         input.text.clear()
+        draftStore.clear()
         historyStore.rememberLastConversation(currentConversationId)
         renderTargetUi()
     }
@@ -2243,6 +2409,7 @@ class ChatActivity : ConfiguredActivity() {
         if (message.role != ChatMessageRole.USER || isGenerating) return
         closeSearch()
         draftBeforeEditing = input.text.toString()
+        draftStore.save(draftBeforeEditing)
         editingMessageId = messageId
         input.setText(message.text)
         input.setSelection(input.text.length)
@@ -2259,6 +2426,8 @@ class ChatActivity : ConfiguredActivity() {
         if (restoreDraft && previousDraft != null && ::input.isInitialized) {
             input.setText(previousDraft)
             input.setSelection(input.text.length)
+        } else if (!restoreDraft) {
+            draftStore.clear()
         }
         renderEditingState()
         renderComposerState()
@@ -2375,6 +2544,12 @@ class ChatActivity : ConfiguredActivity() {
         if (currentSearchMatchIndex >= 0) locateCurrentSearchResult()
     }
 
+    private fun persistComposerDraft() {
+        if (!::draftStore.isInitialized || !::input.isInitialized) return
+        val draft = if (editingMessageId == null) input.text else draftBeforeEditing
+        draftStore.save(draft)
+    }
+
     private fun editorImeOptions(): Int = when (uiSettings.enterKeyBehavior) {
         EnterKeyBehavior.SEND -> EditorInfo.IME_ACTION_SEND
         EnterKeyBehavior.NEW_LINE -> EditorInfo.IME_ACTION_NONE
@@ -2454,6 +2629,7 @@ class ChatActivity : ConfiguredActivity() {
         cancelEditing(restoreDraft = false)
         closeSearch()
         input.text.clear()
+        draftStore.clear()
         applyStoredConversation(target)
         renderTranscript()
         renderTargetUi()
@@ -2731,29 +2907,67 @@ class ChatActivity : ConfiguredActivity() {
         val message = messages.singleOrNull { candidate -> candidate.id == messageId } ?: return
         if (message.text.isEmpty()) return
         val actions = when (message.role) {
-            ChatMessageRole.USER -> intArrayOf(
-                R.string.chat_message_copy,
-                R.string.chat_message_edit,
+            ChatMessageRole.USER -> listOf(
+                MessageAction.COPY,
+                MessageAction.EDIT,
+                MessageAction.DELETE,
             )
-            ChatMessageRole.ASSISTANT -> intArrayOf(
-                R.string.chat_message_copy,
-                R.string.chat_message_regenerate,
+            ChatMessageRole.ASSISTANT -> listOf(
+                MessageAction.COPY,
+                MessageAction.REGENERATE,
             )
             ChatMessageRole.NOTICE -> return
         }
         materialDialog()
-            .setItems(actions.map(::getString).toTypedArray()) { _, index ->
-                when (index) {
-                    0 -> copyMessage(messageId)
-                    1 -> when (message.role) {
-                        ChatMessageRole.USER -> requestEditMessage(messageId)
-                        ChatMessageRole.ASSISTANT -> requestRegenerateMessage(messageId)
-                        ChatMessageRole.NOTICE -> Unit
-                    }
+            .setItems(actions.map { action -> getString(action.labelResource) }.toTypedArray()) { _, index ->
+                when (actions[index]) {
+                    MessageAction.COPY -> copyMessage(messageId)
+                    MessageAction.EDIT -> requestEditMessage(messageId)
+                    MessageAction.DELETE -> requestDeleteMessage(messageId)
+                    MessageAction.REGENERATE -> requestRegenerateMessage(messageId)
                 }
             }
             .show()
             .also(::tintDialogButtons)
+    }
+
+    private fun requestDeleteMessage(messageId: Long) {
+        val impact = ConversationDeletionPolicy.impact(messages, messageId) ?: return
+        materialDialog()
+            .setTitle(R.string.chat_delete_warning_title)
+            .setMessage(getString(R.string.chat_delete_warning_message, impact.laterMessageCount))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.chat_message_delete) { _, _ ->
+                deleteMessageAndFollowing(messageId)
+            }
+            .show()
+            .also { dialog ->
+                tintDialogButtons(dialog)
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    ?.setTextColor(getColor(R.color.validation_error))
+            }
+    }
+
+    private fun deleteMessageAndFollowing(messageId: Long) {
+        val retained = ConversationDeletionPolicy.prefixBefore(messages, messageId) ?: return
+        if (isGenerating) stopGeneration(showToast = false)
+        closeCurrentBackend()
+        closeSearch()
+        cancelEditing(restoreDraft = true)
+        messages.clear()
+        messages.addAll(retained)
+        markdownCache.clear()
+        markConversationChanged(schedulePersistence = false)
+        if (messages.isEmpty()) {
+            historyStore.delete(setOf(currentConversationId))
+            allowDeletedConversationRevival = false
+        } else {
+            allowDeletedConversationRevival = true
+            persistConversationNow()
+        }
+        renderTranscript()
+        renderTargetUi()
+        refreshDrawerHistory()
     }
 
     private fun requestRegenerateMessage(messageId: Long) {
@@ -3113,6 +3327,19 @@ class ChatActivity : ConfiguredActivity() {
         READY,
     }
 
+    private enum class MessageAction(val labelResource: Int) {
+        COPY(R.string.chat_message_copy),
+        EDIT(R.string.chat_message_edit),
+        DELETE(R.string.chat_message_delete),
+        REGENERATE(R.string.chat_message_regenerate),
+    }
+
+    private enum class DrawerConversationAction(val labelResource: Int) {
+        COPY_ALL(R.string.chat_history_copy_all),
+        EXPORT(R.string.chat_history_export),
+        DELETE(R.string.chat_history_delete_selected),
+    }
+
     private inner class TargetChoiceAdapter(labels: Array<String>) : ArrayAdapter<String>(
         this,
         android.R.layout.simple_list_item_single_choice,
@@ -3151,7 +3378,7 @@ class ChatActivity : ConfiguredActivity() {
         const val NEAR_BOTTOM_DP = 96
         const val DISABLED_ALPHA = 0.42f
         const val PLACEHOLDER_ALPHA = 0.65f
-        const val COMPOSER_CONTROL_MIN_HEIGHT_DP = 40
+        const val COMPOSER_CONTROL_MIN_HEIGHT_DP = 46
         const val COMPOSER_CORNER_RADIUS_DP = 22
         const val SEARCH_DEBOUNCE_MILLIS = 150L
         const val GENERATION_FAILURE_SEPARATOR = "\n\n---\n\n"
@@ -3183,6 +3410,9 @@ class ChatActivity : ConfiguredActivity() {
         const val STATE_SEARCH_QUERY = "chatSearchQuery"
         const val STATE_EDITING_MESSAGE_ID = "chatEditingMessageId"
         const val STATE_DRAFT_BEFORE_EDITING = "chatDraftBeforeEditing"
+        const val STATE_PENDING_DRAWER_EXPORT_ID = "pendingDrawerConversationExportId"
+        const val MIME_CONVERSATIONS = "application/vnd.three-stone-ai.conversations"
+        const val EXPORT_TIMESTAMP_PATTERN = "yyyyMMdd-HHmmss"
 
         fun newConversationId(): String = UUID.randomUUID().toString()
     }

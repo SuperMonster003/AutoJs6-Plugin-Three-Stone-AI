@@ -5,6 +5,15 @@ import android.util.AtomicFile
 import android.util.Log
 import java.io.File
 
+internal data class ConversationImportResult(
+    val added: Int,
+    val updated: Int,
+    val skipped: Int,
+) {
+    val imported: Int
+        get() = added + updated
+}
+
 internal class ConversationHistoryStore(context: Context) {
     private val applicationContext = context.applicationContext
     private val historyFile = AtomicFile(File(applicationContext.filesDir, HISTORY_FILE_NAME))
@@ -61,6 +70,36 @@ internal class ConversationHistoryStore(context: Context) {
         preferences.edit().remove(KEY_LAST_CONVERSATION_ID).apply()
         existing.size
     }
+
+    fun importConversations(imported: List<StoredConversation>): ConversationImportResult =
+        synchronized(PROCESS_LOCK) {
+            val incoming = ConversationHistoryPolicy.normalized(imported)
+            val merged = readUnlocked().associateByTo(LinkedHashMap(), StoredConversation::id)
+            var added = 0
+            var updated = 0
+            var skipped = 0
+            incoming.forEach { conversation ->
+                val current = merged[conversation.id]
+                when {
+                    current == null -> {
+                        merged[conversation.id] = conversation
+                        added += 1
+                    }
+                    conversation.updatedAtMillis > current.updatedAtMillis -> {
+                        merged[conversation.id] = conversation
+                        updated += 1
+                    }
+                    else -> skipped += 1
+                }
+            }
+            if (added > 0 || updated > 0) {
+                val normalized = ConversationHistoryPolicy.normalized(merged.values.toList())
+                check(writeUnlocked(normalized)) { "Unable to save imported conversation history" }
+                DELETED_CONVERSATION_IDS.removeAll(incoming.map(StoredConversation::id).toSet())
+                updateLastConversationAfterMutation(normalized)
+            }
+            ConversationImportResult(added, updated, skipped)
+        }
 
     fun rememberLastConversation(id: String) {
         preferences.edit().putString(KEY_LAST_CONVERSATION_ID, id).apply()

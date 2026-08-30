@@ -14,6 +14,8 @@ class ChatUiSettingsTest {
         assertNull(settings.samplingOptions())
         assertEquals(EnterKeyBehavior.SEND, settings.enterKeyBehavior)
         assertEquals(ContextPolicy.DEFAULT_INPUT_TOKEN_BUDGET, settings.contextTokenBudget)
+        assertEquals(ChatBubbleStyle.BACKGROUND, settings.userBubbleStyle)
+        assertEquals(ChatBubbleStyle.NONE, settings.assistantBubbleStyle)
     }
 
     @Test

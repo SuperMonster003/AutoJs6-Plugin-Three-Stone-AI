@@ -115,6 +115,72 @@ internal object RecommendedModelCatalog {
                 "69b35f01759eed765641ab4af589bbe98131fd2825662a086d9037409b8c1295",
             license = "MIT",
         ),
+        RecommendedModel(
+            id = "qwen2-5-3b-instruct",
+            displayName = "Qwen2.5 3B Instruct",
+            fileName = "Qwen2.5-3B-Instruct-LiteRT.litertlm",
+            sourceUrl =
+                "https://huggingface.co/mlboydaisuke/Qwen2.5-3B-Instruct-LiteRT/" +
+                    "blob/be6cf1d794dca07856d2d61988dcbdf49085849c/model.litertlm",
+            downloadUrl =
+                "https://huggingface.co/mlboydaisuke/Qwen2.5-3B-Instruct-LiteRT/" +
+                    "resolve/be6cf1d794dca07856d2d61988dcbdf49085849c/" +
+                    "model.litertlm?download=true",
+            expectedSizeBytes = 1_751_794_176L,
+            expectedSha256 =
+                "2e49db88da7c26bcb7ea7abf12d21b4a0215ad0f37468d58b32db5de42078e09",
+            license = "Qwen Research License",
+        ),
+        RecommendedModel(
+            id = "qwen2-5-coder-3b-instruct",
+            displayName = "Qwen2.5 Coder 3B Instruct",
+            fileName = "Qwen2.5_Coder_3B_It.litertlm",
+            sourceUrl =
+                "https://huggingface.co/litert-community/Qwen2.5-Coder-3B-Instruct/" +
+                    "blob/a32e9f082c3fee8adcbe71990eae1eaca3eb0eb9/" +
+                    "Qwen2.5_Coder_3B_It.litertlm",
+            downloadUrl =
+                "https://huggingface.co/litert-community/Qwen2.5-Coder-3B-Instruct/" +
+                    "resolve/a32e9f082c3fee8adcbe71990eae1eaca3eb0eb9/" +
+                    "Qwen2.5_Coder_3B_It.litertlm?download=true",
+            expectedSizeBytes = 3_433_083_824L,
+            expectedSha256 =
+                "78d23da074383f52f852b945b8090870e6c9dded02a842f535ee3ccb9e2874f3",
+            license = "Apache-2.0",
+        ),
+        RecommendedModel(
+            id = "qwen2-vl-2b-instruct",
+            displayName = "Qwen2-VL 2B Instruct",
+            fileName = "Qwen2-VL-2B.litertlm",
+            sourceUrl =
+                "https://huggingface.co/litert-community/Qwen2-VL-2B/" +
+                    "blob/f9f241a2ed5a10ed3b759076fd9ffbd2e3d2fe4d/" +
+                    "Qwen2-VL-2B.litertlm",
+            downloadUrl =
+                "https://huggingface.co/litert-community/Qwen2-VL-2B/" +
+                    "resolve/f9f241a2ed5a10ed3b759076fd9ffbd2e3d2fe4d/" +
+                    "Qwen2-VL-2B.litertlm?download=true",
+            expectedSizeBytes = 1_784_096_288L,
+            expectedSha256 =
+                "62db3d9f6ce18a8df56a0b45638518306c4799f025dd7e1c54b35cce8f965d13",
+            license = "Apache-2.0",
+        ),
+        RecommendedModel(
+            id = "phi-4-mini-reasoning",
+            displayName = "Phi-4 Mini Reasoning",
+            fileName = "Phi-4-mini-reasoning.litertlm",
+            sourceUrl =
+                "https://huggingface.co/litert-community/Phi-4-mini-reasoning/" +
+                    "blob/43118d31dfaeaa8d8df12c55983e00ba41cb633e/model.litertlm",
+            downloadUrl =
+                "https://huggingface.co/litert-community/Phi-4-mini-reasoning/" +
+                    "resolve/43118d31dfaeaa8d8df12c55983e00ba41cb633e/" +
+                    "model.litertlm?download=true",
+            expectedSizeBytes = 2_783_974_384L,
+            expectedSha256 =
+                "d3938899f3b2d7ad3e86bb1f9c361cf4a9a61f3b79c609b4cd2b6981d00e40fa",
+            license = "MIT",
+        ),
     ).onEach(ModelDownloadPolicy::requireValidCatalogEntry)
 
     fun find(id: String): RecommendedModel? = models.singleOrNull { it.id == id }

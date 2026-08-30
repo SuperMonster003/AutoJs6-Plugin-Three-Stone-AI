@@ -12,7 +12,7 @@ class RecommendedModelCatalogTest {
     fun catalogEntriesAreUniquePinnedHttpsDownloadsWithinTheImportLimit() {
         val models = RecommendedModelCatalog.models
 
-        assertEquals(4, models.size)
+        assertEquals(8, models.size)
         assertEquals(models.size, models.map { it.id }.toSet().size)
         assertEquals(models.size, models.map { it.fileName.lowercase() }.toSet().size)
         models.forEach { model ->
@@ -55,6 +55,34 @@ class RecommendedModelCatalogTest {
             "69b35f01759eed765641ab4af589bbe98131fd2825662a086d9037409b8c1295",
             deepSeek.expectedSha256,
         )
+
+        val qwen3b = checkNotNull(RecommendedModelCatalog.find("qwen2-5-3b-instruct"))
+        assertEquals(1_751_794_176L, qwen3b.expectedSizeBytes)
+        assertEquals(
+            "2e49db88da7c26bcb7ea7abf12d21b4a0215ad0f37468d58b32db5de42078e09",
+            qwen3b.expectedSha256,
+        )
+
+        val coder = checkNotNull(RecommendedModelCatalog.find("qwen2-5-coder-3b-instruct"))
+        assertEquals(3_433_083_824L, coder.expectedSizeBytes)
+        assertEquals(
+            "78d23da074383f52f852b945b8090870e6c9dded02a842f535ee3ccb9e2874f3",
+            coder.expectedSha256,
+        )
+
+        val vision = checkNotNull(RecommendedModelCatalog.find("qwen2-vl-2b-instruct"))
+        assertEquals(1_784_096_288L, vision.expectedSizeBytes)
+        assertEquals(
+            "62db3d9f6ce18a8df56a0b45638518306c4799f025dd7e1c54b35cce8f965d13",
+            vision.expectedSha256,
+        )
+
+        val phi = checkNotNull(RecommendedModelCatalog.find("phi-4-mini-reasoning"))
+        assertEquals(2_783_974_384L, phi.expectedSizeBytes)
+        assertEquals(
+            "d3938899f3b2d7ad3e86bb1f9c361cf4a9a61f3b79c609b4cd2b6981d00e40fa",
+            phi.expectedSha256,
+        )
     }
 
     @Test
@@ -63,7 +91,7 @@ class RecommendedModelCatalogTest {
 
         assertEquals(15, available.size)
         assertEquals(available.size, available.map { it.id }.toSet().size)
-        assertEquals(4, available.count { it.verifiedDownload != null })
+        assertEquals(8, available.count { it.verifiedDownload != null })
         assertTrue(available.all { it.commitHash.matches(Regex("^[0-9a-f]{40}$")) })
         assertTrue(available.all { it.sourceUrl.startsWith("https://huggingface.co/") })
         RecommendedModelCatalog.models.forEach { downloadable ->

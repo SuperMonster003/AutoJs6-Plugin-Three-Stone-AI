@@ -398,7 +398,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         return true
     }
 
-    fun beginImport(uri: Uri, grantedFlags: Int, checkAfterImport: Boolean): Boolean {
+    fun beginImport(uri: Uri, grantedFlags: Int): Boolean {
         val active = synchronized(lifecycleLock) {
             if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
             val operationId = stateMachine.begin() ?: return false
@@ -416,7 +416,6 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 previous = running.previous,
                 persistedReadPermission = persistedReadPermission,
                 control = control,
-                checkAfterImport = checkAfterImport,
             )
             activeImport = operation
             selectionState = ModelSelectionState.Idle
@@ -479,30 +478,28 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         try {
             active.control.ensureActive()
             imported = repository.importFrom(active.uri, active.control)
-            if (active.checkAfterImport) {
-                val publishedModel = checkNotNull(imported)
-                active.control.reportProgress(
-                    ModelImportProgress(
-                        stage = ModelImportStage.CHECKING_COMPATIBILITY,
-                        processedBytes = publishedModel.sizeBytes,
-                        totalBytes = publishedModel.sizeBytes,
-                    ),
-                )
-                val healthStatus = probeModelHealth(
+            val publishedModel = checkNotNull(imported)
+            active.control.reportProgress(
+                ModelImportProgress(
+                    stage = ModelImportStage.CHECKING_COMPATIBILITY,
+                    processedBytes = publishedModel.sizeBytes,
+                    totalBytes = publishedModel.sizeBytes,
+                ),
+            )
+            val healthStatus = probeModelHealth(
+                operationId = active.operationId,
+                model = publishedModel,
+            )
+            runCatching {
+                repository.recordHealthStatus(publishedModel.modelId, healthStatus)
+            }.onSuccess { checkedSnapshot ->
+                imported = checkedSnapshot.models.single { it.modelId == publishedModel.modelId }
+            }.onFailure { error ->
+                logHealthStatusPersistenceFailure(
                     operationId = active.operationId,
-                    model = publishedModel,
+                    modelId = publishedModel.modelId,
+                    error = error,
                 )
-                runCatching {
-                    repository.recordHealthStatus(publishedModel.modelId, healthStatus)
-                }.onSuccess { checkedSnapshot ->
-                    imported = checkedSnapshot.models.single { it.modelId == publishedModel.modelId }
-                }.onFailure { error ->
-                    logHealthStatusPersistenceFailure(
-                        operationId = active.operationId,
-                        modelId = publishedModel.modelId,
-                        error = error,
-                    )
-                }
             }
         } catch (error: Throwable) {
             importFailure = error
@@ -990,7 +987,6 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         val previous: ImportedModel?,
         private val persistedReadPermission: Boolean,
         val control: ModelImportOperationControl,
-        val checkAfterImport: Boolean,
     ) {
         private val worker = AtomicReference<Thread?>()
         private val finalized = AtomicBoolean(false)

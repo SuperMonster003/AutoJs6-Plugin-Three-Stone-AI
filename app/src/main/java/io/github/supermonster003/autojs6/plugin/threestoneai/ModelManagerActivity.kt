@@ -17,10 +17,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.PopupMenu
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.snackbar.Snackbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.ProgressPanel
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRow
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardContainer
@@ -34,7 +32,6 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.textButton
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.tonalButton
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadCleanupResult
@@ -72,9 +69,6 @@ class ModelManagerActivity : ConfiguredActivity() {
     private lateinit var status: TextView
     private lateinit var copyModelIdButton: MaterialButton
     private lateinit var importButton: MaterialButton
-    private lateinit var checkAfterImportOption: MaterialSwitch
-    private lateinit var checkAfterImportRow: SettingRow
-    private lateinit var importStoragePreflight: TextView
     private lateinit var importPanel: ProgressPanel
     private lateinit var catalogSummary: TextView
     private lateinit var onlineSummary: TextView
@@ -92,7 +86,6 @@ class ModelManagerActivity : ConfiguredActivity() {
     private var lastNotifiedRenameOperationId = 0L
     private var lastNotifiedStorageCleanupOperationId = 0L
     private var lastNotifiedHealthCheckOperationId = 0L
-    private var checkAfterImport = true
     private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
     private val downloadObserver = ModelDownloadCoordinator.Observer(::renderDownloadState)
     private var renderedManagerView: ModelManagerViewState? = null
@@ -107,11 +100,6 @@ class ModelManagerActivity : ConfiguredActivity() {
         importCoordinator = ModelImportCoordinator.get(applicationContext)
         downloadCoordinator = ModelDownloadCoordinator.get(applicationContext)
         pendingDownloadModelId = savedInstanceState?.getString(STATE_PENDING_DOWNLOAD_MODEL_ID)
-        checkAfterImport = savedInstanceState?.getBoolean(STATE_CHECK_AFTER_IMPORT)
-            ?: getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE).getBoolean(
-                PREFERENCE_CHECK_AFTER_IMPORT,
-                true,
-            )
         val restoredManagerNotifications = savedInstanceState?.takeIf { restored ->
             restored.getString(STATE_PROCESS_SESSION_TOKEN) == importCoordinator.processSessionToken
         }
@@ -202,7 +190,6 @@ class ModelManagerActivity : ConfiguredActivity() {
             STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID,
             lastNotifiedHealthCheckOperationId,
         )
-        outState.putBoolean(STATE_CHECK_AFTER_IMPORT, checkAfterImportOption.isChecked)
         outState.putString(STATE_PENDING_DOWNLOAD_MODEL_ID, pendingDownloadModelId)
         outState.putString(STATE_PROCESS_SESSION_TOKEN, importCoordinator.processSessionToken)
         outState.putString(
@@ -299,21 +286,6 @@ class ModelManagerActivity : ConfiguredActivity() {
         content.addView(importPanel.view, blockParams(topDp = Ui.SPACE_SM))
         importButton = tonalButton(R.string.button_import_model) { openModelPicker() }
         content.addView(actionRow(importButton), blockParams(topDp = Ui.SPACE_MD))
-        checkAfterImportRow = switchRow(
-            title = getString(R.string.option_check_after_import),
-            checked = checkAfterImport,
-        ) { checked ->
-            checkAfterImport = checked
-            getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE)
-                .edit()
-                .putBoolean(PREFERENCE_CHECK_AFTER_IMPORT, checked)
-                .apply()
-        }
-        checkAfterImportOption = checkAfterImportRow.switchView
-            ?: error("switchRow must provide a switch")
-        content.addView(checkAfterImportRow.view)
-        importStoragePreflight = paragraph().apply { textSize = Ui.TEXT_CAPTION }
-        content.addView(importStoragePreflight)
         content.addView(hairline())
 
         catalogSummary = TextView(this).apply {
@@ -490,11 +462,7 @@ class ModelManagerActivity : ConfiguredActivity() {
             )
             return
         }
-        val accepted = importCoordinator.beginImport(
-            completed.destination,
-            completed.grantedFlags,
-            checkAfterImportOption.isChecked,
-        )
+        val accepted = importCoordinator.beginImport(completed.destination, completed.grantedFlags)
         renderManagerState(importCoordinator.managerState())
         if (!accepted) {
             showSnackbar(screenRoot, getString(R.string.download_import_unavailable), Snackbar.LENGTH_LONG)
@@ -649,7 +617,7 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun importModel(uri: Uri, grantedFlags: Int) {
-        importCoordinator.beginImport(uri, grantedFlags, checkAfterImportOption.isChecked)
+        importCoordinator.beginImport(uri, grantedFlags)
         renderManagerState(importCoordinator.managerState())
     }
 
@@ -808,22 +776,19 @@ class ModelManagerActivity : ConfiguredActivity() {
             cleanupEnabled = view.cleanupEnabled
             invalidateOptionsMenu()
         }
-        if (view == renderedManagerView) return
-        renderedManagerView = view
-        refreshImportStoragePreflight()
+        val storage = refreshImportStoragePreflight()
         catalogSummary.text = when (view.availability) {
             ModelCatalogAvailability.LOADING -> getString(R.string.model_catalog_loading)
             ModelCatalogAvailability.UNAVAILABLE -> getString(R.string.model_catalog_unavailable)
-            ModelCatalogAvailability.READY -> if (view.rows.isEmpty()) {
-                getString(R.string.model_catalog_empty)
-            } else {
-                getString(
-                    R.string.model_catalog_summary,
-                    view.rows.size,
-                    Formatter.formatFileSize(this, view.totalSizeBytes),
-                )
-            }
+            ModelCatalogAvailability.READY -> getString(
+                R.string.model_catalog_summary_with_available,
+                view.rows.size,
+                Formatter.formatFileSize(this, view.totalSizeBytes),
+                Formatter.formatFileSize(this, storage.usableBytes),
+            )
         }
+        if (view == renderedManagerView) return
+        renderedManagerView = view
         catalogRows.removeAllViews()
         view.rows.forEach { row ->
             catalogRows.addView(modelCard(row), cardListParams())
@@ -1076,9 +1041,6 @@ class ModelManagerActivity : ConfiguredActivity() {
         if (!inProgress) importPanel.hide()
         importPanel.setCancelEnabled(cancelOperationId != null)
         status.visibility = if (inProgress) View.GONE else View.VISIBLE
-        checkAfterImportRow.view.isEnabled = !inProgress
-        checkAfterImportOption.isEnabled = !inProgress
-        checkAfterImportRow.view.alpha = if (inProgress) Ui.DISABLED_ALPHA else 1f
         importStateAllowsPicker = importEnabled
         updateImportButtonEnabled()
         updateDownloadButtonEnabled()
@@ -1089,20 +1051,6 @@ class ModelManagerActivity : ConfiguredActivity() {
         val usableBytes = runCatching { filesDir.usableSpace }.getOrDefault(0L)
         val preflight = ModelImportPolicy.storagePreflight(usableBytes)
         storageAllowsPicker = preflight.canOpenPicker
-        importStoragePreflight.text = if (preflight.canOpenPicker) {
-            getString(
-                R.string.import_storage_preflight_ready,
-                Formatter.formatFileSize(this, preflight.usableBytes),
-                Formatter.formatFileSize(this, preflight.maximumAdditionalModelBytes),
-                Formatter.formatFileSize(this, preflight.reservedFreeBytes),
-            )
-        } else {
-            getString(
-                R.string.import_storage_preflight_unavailable,
-                Formatter.formatFileSize(this, preflight.usableBytes),
-                Formatter.formatFileSize(this, preflight.reservedFreeBytes),
-            )
-        }
         updateImportButtonEnabled()
         return preflight
     }
@@ -1190,10 +1138,7 @@ class ModelManagerActivity : ConfiguredActivity() {
             "lastNotifiedStorageCleanupOperationId"
         const val STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID =
             "lastNotifiedHealthCheckOperationId"
-        const val STATE_CHECK_AFTER_IMPORT = "checkAfterImport"
         const val STATE_PENDING_DOWNLOAD_MODEL_ID = "pendingDownloadModelId"
-        const val PREFERENCES_NAME = "model-manager"
-        const val PREFERENCE_CHECK_AFTER_IMPORT = "checkAfterImport"
         const val STATE_PROCESS_SESSION_TOKEN = "processSessionToken"
         const val STATE_DOWNLOAD_PROCESS_SESSION_TOKEN = "downloadProcessSessionToken"
         const val PROGRESS_MAX = 10_000

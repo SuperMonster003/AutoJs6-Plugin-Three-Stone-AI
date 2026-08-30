@@ -1,7 +1,5 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -14,19 +12,32 @@ import android.view.View
 import android.view.Menu
 import android.view.MenuItem
 import android.view.WindowManager
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.CheckBox
-import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.ScrollView
-import android.widget.Spinner
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.SwitchCompat
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.textfield.TextInputLayout
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardContainer
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardListParams
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.emptyStateView
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formBottomSheet
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formLabel
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formTextField
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.hairline
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.iconButton
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.singleChoiceDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.uiDpF
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetUnavailableException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiConnectionTest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureException
@@ -54,6 +65,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
     private lateinit var applicationState: ThreeStoneAiApplication
     private lateinit var registry: OnlineAiProfileRegistry
     private lateinit var settingsContent: LinearLayout
+    private lateinit var screenRoot: View
     private var snapshot: OnlineAiProfileRegistrySnapshot? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val testExecutor: ExecutorService = Executors.newSingleThreadExecutor { action ->
@@ -111,31 +123,11 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         super.onDestroy()
     }
 
-    private fun createContentView(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setBackgroundColor(appPalette.windowBackground)
-        val statusBarBackground = createStatusBarBackground()
-        addView(
-            statusBarBackground,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
-        )
-        addView(createAppToolbar(R.string.online_ai_settings_title, showBack = true))
-        settingsContent = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPaddingRelative(0, uiDp(8), 0, uiDp(28))
-        }
-        addView(
-            ScrollView(context).apply {
-                isFillViewport = true
-                addView(settingsContent)
-            },
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f,
-            ),
-        )
-        applySystemBarInsets(this, statusBarBackground)
+    private fun createContentView(): View {
+        val scaffold = buildScaffold(R.string.online_ai_settings_title)
+        settingsContent = scaffold.content
+        screenRoot = scaffold.root
+        return scaffold.root
     }
 
     private fun reloadSnapshot() {
@@ -152,110 +144,57 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             return
         }
 
-        settingsContent.addView(category(R.string.online_ai_general_section))
+        settingsContent.addView(sectionHeader(R.string.online_ai_general_section))
         settingsContent.addView(
             settingRow(
                 title = getString(R.string.online_ai_default_target),
                 summary = defaultTargetSummary(current),
+                iconResource = R.drawable.ic_tune_24,
                 onClick = ::showDefaultTargetDialog,
-            ),
+            ).view,
         )
-        settingsContent.addView(divider())
-        settingsContent.addView(meteredNetworkRow(current.allowMeteredNetwork))
+        settingsContent.addView(
+            switchRow(
+                title = getString(R.string.online_ai_allow_metered_network),
+                summary = getString(R.string.online_ai_allow_metered_network_summary),
+                iconResource = R.drawable.ic_cloud_24,
+                checked = current.allowMeteredNetwork,
+            ) { checked -> updateMeteredNetworkPolicy(checked) }.view,
+        )
+        settingsContent.addView(hairline())
 
-        settingsContent.addView(category(R.string.online_ai_profiles_section))
+        settingsContent.addView(sectionHeader(R.string.online_ai_profiles_section))
         settingsContent.addView(
             settingRow(
                 title = getString(R.string.online_ai_add_profile),
                 summary = getString(R.string.online_ai_add_profile_summary),
+                iconResource = R.drawable.ic_add_24,
                 onClick = { showProfileEditor(null) },
-            ),
+            ).view,
         )
 
         val profiles = current.profiles.sortedBy { state ->
             state.profile.displayName.lowercase(Locale.ROOT)
         }
         if (profiles.isEmpty()) {
-            settingsContent.addView(emptyProfiles())
+            settingsContent.addView(
+                emptyStateView(
+                    title = getString(R.string.online_ai_empty_title),
+                    description = getString(R.string.online_ai_empty_description),
+                    iconResource = R.drawable.ic_cloud_24,
+                ),
+            )
         } else {
-            profiles.forEach { state -> settingsContent.addView(profileRow(state, current)) }
+            profiles.forEach { state -> settingsContent.addView(profileCard(state, current)) }
         }
         applyThemeToControls(settingsContent)
     }
 
-    private fun category(resource: Int) = TextView(this).apply {
-        text = getString(resource)
-        textSize = 13f
-        typeface = Typeface.DEFAULT_BOLD
-        setTextColor(appPalette.accent)
-        setPaddingRelative(uiDp(20), uiDp(16), uiDp(20), uiDp(8))
-    }
-
-    private fun settingRow(title: String, summary: String, onClick: () -> Unit) =
-        LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            minimumHeight = uiDp(68)
-            isClickable = true
-            isFocusable = true
-            contentDescription = "$title, $summary"
-            setPaddingRelative(uiDp(20), uiDp(12), uiDp(20), uiDp(12))
-            setBackgroundResource(selectableBackground())
-            addView(primaryText(title, 16f))
-            addView(secondaryText(summary, 13f).apply {
-                setPaddingRelative(0, uiDp(3), 0, 0)
-            })
-            setOnClickListener { onClick() }
-        }
-
-    private fun meteredNetworkRow(allowed: Boolean) = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = android.view.Gravity.CENTER_VERTICAL
-        setPaddingRelative(uiDp(20), uiDp(12), uiDp(12), uiDp(12))
-        val text = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(primaryText(getString(R.string.online_ai_allow_metered_network), 16f))
-            addView(
-                secondaryText(
-                    getString(R.string.online_ai_allow_metered_network_summary),
-                    13f,
-                ).apply { setPaddingRelative(0, uiDp(3), uiDp(8), 0) },
-            )
-        }
-        addView(text, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        addView(SwitchCompat(context).apply {
-            isChecked = allowed
-            contentDescription = getString(R.string.online_ai_allow_metered_network)
-            setOnCheckedChangeListener { _, checked -> updateMeteredNetworkPolicy(checked) }
-        })
-    }
-
-    private fun emptyProfiles() = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = android.view.Gravity.CENTER_HORIZONTAL
-        setPaddingRelative(uiDp(24), uiDp(28), uiDp(24), uiDp(20))
-        addView(primaryText(getString(R.string.online_ai_empty_title), 17f).apply {
-            typeface = Typeface.DEFAULT_BOLD
-        })
-        addView(secondaryText(getString(R.string.online_ai_empty_description), 14f).apply {
-            gravity = android.view.Gravity.CENTER
-            setPaddingRelative(0, uiDp(6), 0, 0)
-        })
-    }
-
-    private fun profileRow(
+    private fun profileCard(
         state: ConfiguredOnlineAiProfile,
         current: OnlineAiProfileRegistrySnapshot,
-    ) = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        isClickable = true
-        isFocusable = true
-        setPaddingRelative(uiDp(16), uiDp(14), uiDp(16), uiDp(14))
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = uiDp(12).toFloat()
-            setColor(appPalette.inputSurface)
-            setStroke(uiDp(1), appPalette.chatBorder)
-        }
+    ): View {
+        val card = cardContainer(interactive = true)
         val summary = getString(
             R.string.online_ai_profile_summary,
             providerLabel(state.profile.provider),
@@ -270,40 +209,41 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 else R.string.online_ai_no,
             ),
         )
-        addView(primaryText(state.profile.displayName, 17f).apply {
-            typeface = Typeface.DEFAULT_BOLD
-        })
-        addView(secondaryText(summary, 13f).apply {
-            setPaddingRelative(0, uiDp(5), 0, 0)
-            setLineSpacing(0f, 1.08f)
-        })
-        addView(secondaryText(getString(R.string.online_ai_profile_action_hint), 12f).apply {
-            setPaddingRelative(0, uiDp(7), 0, 0)
-            setTextColor(appPalette.accent)
-        })
-        contentDescription = "${state.profile.displayName}, $summary"
-        setOnClickListener { showProfileActions(state) }
-    }.also { row ->
-        row.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply {
-            marginStart = uiDp(16)
-            marginEnd = uiDp(16)
-            topMargin = uiDp(10)
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
         }
+        header.addView(
+            primaryText(state.profile.displayName, Ui.TEXT_ITEM).apply {
+                typeface = Ui.mediumTypeface
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        header.addView(
+            iconButton(R.drawable.ic_more_vert_24, R.string.online_ai_profile_action_hint) {
+                showProfileActions(state)
+            },
+        )
+        card.addView(header)
+        card.addView(
+            secondaryText(summary, Ui.TEXT_SECONDARY).apply {
+                setPaddingRelative(0, uiDp(2), 0, 0)
+                setLineSpacing(0f, 1.12f)
+            },
+        )
+        card.contentDescription = "${state.profile.displayName}, $summary"
+        card.setOnClickListener { showProfileEditor(state) }
+        card.layoutParams = cardListParams().apply {
+            marginStart = uiDp(Ui.SCREEN_MARGIN)
+            marginEnd = uiDp(Ui.SCREEN_MARGIN)
+        }
+        return card
     }
 
     private fun messageBlock(resource: Int) = secondaryText(getString(resource), 15f).apply {
         setPaddingRelative(uiDp(20), uiDp(24), uiDp(20), uiDp(24))
-    }
-
-    private fun divider() = View(this).apply {
-        setBackgroundColor(appPalette.divider)
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            uiDp(1),
-        ).apply { marginStart = uiDp(20) }
     }
 
     private fun primaryText(value: CharSequence, size: Float) = TextView(this).apply {
@@ -316,15 +256,6 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         text = value
         textSize = size
         setTextColor(appPalette.secondaryText)
-    }
-
-    private fun selectableBackground(): Int {
-        val value = android.util.TypedValue()
-        return if (theme.resolveAttribute(android.R.attr.selectableItemBackground, value, true)) {
-            value.resourceId
-        } else {
-            android.R.color.transparent
-        }
     }
 
     private fun defaultTargetSummary(current: OnlineAiProfileRegistrySnapshot): String {
@@ -353,10 +284,14 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             .filter(ConfiguredOnlineAiProfile::configured)
             .sortedBy { it.profile.displayName.lowercase(Locale.ROOT) }
         if (configured.isEmpty() && current.defaultProfileId == null) {
-            Toast.makeText(this, R.string.online_ai_no_configured_profiles, Toast.LENGTH_LONG).show()
+            showSnackbar(
+                screenRoot,
+                getString(R.string.online_ai_no_configured_profiles),
+                Snackbar.LENGTH_LONG,
+            )
             return
         }
-        val labels = arrayOf(getString(R.string.online_ai_no_default_target)) + configured.map { state ->
+        val labels = listOf(getString(R.string.online_ai_no_default_target)) + configured.map { state ->
             getString(
                 R.string.online_ai_default_target_summary,
                 state.profile.displayName,
@@ -365,25 +300,23 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         }
         val selected = configured.indexOfFirst { it.profile.profileId == current.defaultProfileId }
             .let { if (it < 0) 0 else it + 1 }
-        AlertDialog.Builder(this)
-            .setTitle(R.string.online_ai_default_target)
-            .setSingleChoiceItems(labels, selected) { dialog, index ->
-                dialog.dismiss()
-                updateDefaultProfile(configured.getOrNull(index - 1)?.profile?.profileId)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also(::tintDialogButtons)
+        singleChoiceDialog(
+            title = getString(R.string.online_ai_default_target),
+            labels = labels,
+            checkedIndex = selected,
+        ) { index ->
+            updateDefaultProfile(configured.getOrNull(index - 1)?.profile?.profileId)
+        }
     }
 
     private fun updateDefaultProfile(profileId: String?) {
         runCatching { registry.setDefaultProfile(profileId) }
             .onSuccess {
-                Toast.makeText(this, R.string.online_ai_default_saved, Toast.LENGTH_SHORT).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_default_saved))
                 reloadSnapshot()
             }
             .onFailure {
-                Toast.makeText(this, R.string.online_ai_default_save_failed, Toast.LENGTH_LONG).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_default_save_failed), Snackbar.LENGTH_LONG)
                 reloadSnapshot()
             }
     }
@@ -393,11 +326,11 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         if (allowed == previous) return
         runCatching { registry.setAllowMeteredNetwork(allowed) }
             .onSuccess {
-                Toast.makeText(this, R.string.online_ai_metered_saved, Toast.LENGTH_SHORT).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_metered_saved))
                 reloadSnapshot()
             }
             .onFailure {
-                Toast.makeText(this, R.string.online_ai_metered_save_failed, Toast.LENGTH_LONG).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_metered_save_failed), Snackbar.LENGTH_LONG)
                 reloadSnapshot()
             }
     }
@@ -413,7 +346,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             if (state.configured) add(ProfileAction.CLEAR_KEY)
             add(ProfileAction.DELETE)
         }
-        AlertDialog.Builder(this)
+        materialDialog()
             .setTitle(state.profile.displayName)
             .setItems(actions.map { getString(it.labelResource) }.toTypedArray()) { _, index ->
                 when (actions[index]) {
@@ -431,168 +364,196 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             .also(::tintDialogButtons)
     }
 
-    @Suppress("DEPRECATION")
     private fun showProfileEditor(existing: ConfiguredOnlineAiProfile?) {
         val templates = OnlineAiProviderCatalog.templates
         val initialProvider = existing?.profile?.provider ?: OnlineAiProvider.OPENAI
         val initialTemplate = OnlineAiProviderCatalog.templateFor(initialProvider)
-        val providerSpinner = Spinner(this).apply {
-            adapter = ArrayAdapter(
-                this@OnlineAiSettingsActivity,
-                android.R.layout.simple_spinner_item,
-                templates.map { providerLabel(it.provider) },
-            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-            setSelection(templates.indexOfFirst { it.provider == initialProvider })
-        }
+        var selectedProvider = initialProvider
         var lastSuggestedName = existing?.profile?.displayName
             ?: uniqueSuggestedName(providerLabel(initialProvider))
-        val nameInput = formInput(
-            value = existing?.profile?.displayName ?: lastSuggestedName,
-            hintResource = R.string.online_ai_profile_name_hint,
-            inputTypeValue = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES,
-            maximumCharacters = PROFILE_TEXT_MAXIMUM_CHARACTERS,
+        val (nameField, nameInput) = formTextField(
+            initialValue = existing?.profile?.displayName ?: lastSuggestedName,
+            hint = getString(R.string.online_ai_profile_name),
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES,
+            maxLength = PROFILE_TEXT_MAXIMUM_CHARACTERS,
         )
-        val baseUrlInput = formInput(
-            value = existing?.profile?.baseUrl ?: initialTemplate.defaultBaseUrl.orEmpty(),
-            hintResource = R.string.online_ai_base_url_hint,
-            inputTypeValue = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI,
-            maximumCharacters = BASE_URL_MAXIMUM_CHARACTERS,
+        nameField.placeholderText = getString(R.string.online_ai_profile_name_hint)
+        val (baseUrlField, baseUrlInput) = formTextField(
+            initialValue = existing?.profile?.baseUrl ?: initialTemplate.defaultBaseUrl.orEmpty(),
+            hint = getString(R.string.online_ai_base_url),
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI,
+            maxLength = BASE_URL_MAXIMUM_CHARACTERS,
         )
-        val credentialInput = formInput(
-            value = "",
-            hintResource = if (existing == null) {
+        baseUrlField.helperText = getString(R.string.online_ai_base_url_hint)
+        val (credentialField, credentialInput) = formTextField(
+            initialValue = "",
+            hint = getString(R.string.online_ai_credential),
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD,
+            maxLength = CREDENTIAL_MAXIMUM_CHARACTERS,
+        )
+        credentialField.helperText = getString(
+            if (existing == null) {
                 R.string.online_ai_credential_new_hint
             } else {
                 R.string.online_ai_credential_edit_hint
             },
-            inputTypeValue = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD,
-            maximumCharacters = CREDENTIAL_MAXIMUM_CHARACTERS,
-        ).apply {
-            transformationMethod = PasswordTransformationMethod.getInstance()
-            isSaveEnabled = false
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
-                setAutofillHints(null)
-            }
+        )
+        credentialField.endIconMode = TextInputLayout.END_ICON_PASSWORD_TOGGLE
+        credentialInput.transformationMethod = PasswordTransformationMethod.getInstance()
+        credentialInput.isSaveEnabled = false
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            credentialInput.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+            credentialInput.setAutofillHints(null)
         }
-        var selectedProvider = initialProvider
         var selectedModelIds = existing?.profile?.modelIds
             ?: OnlineAiModelPresetCatalog.forProvider(initialProvider).take(1)
         var selectedDefaultModelId = existing?.profile?.modelId ?: selectedModelIds.first()
-        val modelSummary = secondaryText("", 13f).apply {
-            setLineSpacing(0f, 1.08f)
-            setPaddingRelative(0, uiDp(4), uiDp(24), uiDp(4))
-        }
-        val modelPicker = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            minimumHeight = uiDp(54)
-            isClickable = true
-            isFocusable = true
-            setBackgroundResource(selectableBackground())
-            addView(
-                modelSummary,
-                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
-            )
-            addView(secondaryText("\u203a", 24f))
-        }
-        val activeModelAdapter = ArrayAdapter<String>(
-            this,
-            android.R.layout.simple_spinner_item,
-            ArrayList(),
-        ).also { adapter ->
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
-        val activeModelSpinner = Spinner(this).apply { adapter = activeModelAdapter }
+
+        var onProviderClick: () -> Unit = {}
+        var onModelsClick: () -> Unit = {}
+        var onDefaultModelClick: () -> Unit = {}
+        val providerField = pickerField(providerLabel(initialProvider)) { onProviderClick() }
+        val modelsField = pickerField("") { onModelsClick() }
+        val defaultModelField = pickerField("") { onDefaultModelClick() }
 
         fun refreshModelControls() {
-            modelSummary.text = selectedModelIds.joinToString("\n")
-            activeModelAdapter.clear()
-            activeModelAdapter.addAll(selectedModelIds)
-            activeModelAdapter.notifyDataSetChanged()
+            modelsField.second.text = selectedModelIds.joinToString("\n")
             if (selectedDefaultModelId !in selectedModelIds) {
                 selectedDefaultModelId = selectedModelIds.first()
             }
-            activeModelSpinner.setSelection(selectedModelIds.indexOf(selectedDefaultModelId))
+            defaultModelField.second.text = selectedDefaultModelId
         }
-        modelPicker.setOnClickListener {
+
+        fun applyProvider(provider: OnlineAiProvider) {
+            if (provider == selectedProvider) return
+            selectedProvider = provider
+            baseUrlInput.setText(OnlineAiProviderCatalog.templateFor(provider).defaultBaseUrl.orEmpty())
+            if (existing == null) {
+                selectedModelIds = OnlineAiModelPresetCatalog.forProvider(provider).take(1)
+                selectedDefaultModelId = selectedModelIds.first()
+                refreshModelControls()
+            }
+            if (existing == null && nameInput.text.toString() == lastSuggestedName) {
+                lastSuggestedName = uniqueSuggestedName(providerLabel(provider))
+                nameInput.setText(lastSuggestedName)
+                nameInput.setSelection(nameInput.text?.length ?: 0)
+            }
+            providerField.second.text = providerLabel(provider)
+        }
+
+        onProviderClick = {
+            singleChoiceDialog(
+                title = getString(R.string.online_ai_provider),
+                labels = templates.map { providerLabel(it.provider) },
+                checkedIndex = templates.indexOfFirst { it.provider == selectedProvider },
+            ) { index -> applyProvider(templates[index].provider) }
+        }
+        onModelsClick = {
             showModelIdSelector(selectedProvider, selectedModelIds) { selected ->
                 selectedModelIds = selected
                 refreshModelControls()
             }
         }
-        refreshModelControls()
-
-        providerSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val provider = templates[position].provider
-                if (provider == selectedProvider) return
-                selectedProvider = provider
-                baseUrlInput.setText(templates[position].defaultBaseUrl.orEmpty())
-                if (existing == null) {
-                    selectedModelIds = OnlineAiModelPresetCatalog.forProvider(provider).take(1)
-                    selectedDefaultModelId = selectedModelIds.first()
-                    refreshModelControls()
-                }
-                if (existing == null && nameInput.text.toString() == lastSuggestedName) {
-                    lastSuggestedName = uniqueSuggestedName(providerLabel(provider))
-                    nameInput.setText(lastSuggestedName)
-                    nameInput.setSelection(nameInput.text.length)
-                }
+        onDefaultModelClick = {
+            singleChoiceDialog(
+                title = getString(R.string.online_ai_default_model),
+                labels = selectedModelIds,
+                checkedIndex = selectedModelIds.indexOf(selectedDefaultModelId),
+            ) { index ->
+                selectedDefaultModelId = selectedModelIds[index]
+                refreshModelControls()
             }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
+        refreshModelControls()
 
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPaddingRelative(uiDp(22), uiDp(4), uiDp(22), uiDp(4))
+            setPaddingRelative(uiDp(Ui.SPACE_XXL), 0, uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM))
             addView(formLabel(R.string.online_ai_provider))
-            addView(providerSpinner)
-            addView(formLabel(R.string.online_ai_profile_name))
-            addView(nameInput)
-            addView(formLabel(R.string.online_ai_base_url))
-            addView(baseUrlInput)
+            addView(providerField.first)
+            addView(fieldParamsWrap(nameField))
+            addView(fieldParamsWrap(baseUrlField))
             addView(formLabel(R.string.online_ai_model_ids))
-            addView(modelPicker)
+            addView(modelsField.first)
             addView(formLabel(R.string.online_ai_default_model))
-            addView(activeModelSpinner)
-            addView(formLabel(R.string.online_ai_credential))
-            addView(credentialInput)
+            addView(defaultModelField.first)
+            addView(fieldParamsWrap(credentialField))
         }
-        applyThemeToControls(form)
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        formBottomSheet(
+            title = getString(
                 if (existing == null) R.string.online_ai_add_profile_title
                 else R.string.online_ai_edit_profile_title,
-            )
-            .setView(ScrollView(this).apply { addView(form) })
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.chat_settings_save, null)
-            .create()
-        dialog.setOnShowListener {
-            tintDialogButtons(dialog)
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            ),
+            content = form,
+            positiveResource = R.string.chat_settings_save,
+            onPositive = {
                 saveProfileFromForm(
-                    dialog = dialog,
                     existing = existing,
                     provider = selectedProvider,
                     nameInput = nameInput,
                     baseUrlInput = baseUrlInput,
                     modelIds = selectedModelIds,
-                    defaultModelId = activeModelSpinner.selectedItem as? String
-                        ?: selectedDefaultModelId,
+                    defaultModelId = selectedDefaultModelId,
+                    credentialField = credentialField,
                     credentialInput = credentialInput,
                 )
-            }
+            },
+            onDismiss = {
+                credentialInput.text?.clear()
+                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            },
+        )
+    }
+
+    /** Outlined picker field visually consistent with the sheet's text fields. */
+    private fun pickerField(
+        value: CharSequence,
+        onClick: () -> Unit,
+    ): Pair<LinearLayout, TextView> {
+        val valueView = TextView(this).apply {
+            text = value
+            textSize = Ui.TEXT_BODY
+            setTextColor(appPalette.primaryText)
+            setLineSpacing(0f, 1.1f)
         }
-        dialog.setOnDismissListener {
-            credentialInput.text.clear()
-            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            minimumHeight = uiDp(52)
+            isClickable = true
+            isFocusable = true
+            background = android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(
+                    AppColorPolicy.withAlpha(appPalette.accent, 0x2E),
+                ),
+                android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = uiDpF(Ui.RADIUS_CONTROL.toFloat())
+                    setColor(appPalette.surface)
+                    setStroke(uiDp(1), appPalette.outline)
+                },
+                null,
+            )
+            setPaddingRelative(uiDp(Ui.SPACE_LG), uiDp(Ui.SPACE_SM), uiDp(Ui.SPACE_MD), uiDp(Ui.SPACE_SM))
+            addView(valueView, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(
+                android.widget.ImageView(context).apply {
+                    setImageDrawable(
+                        tintedDrawable(R.drawable.ic_arrow_down_24, appPalette.secondaryText),
+                    )
+                },
+                LinearLayout.LayoutParams(uiDp(20), uiDp(20)),
+            )
+            setOnClickListener { onClick() }
         }
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        dialog.show()
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        return row to valueView
+    }
+
+    private fun fieldParamsWrap(field: TextInputLayout): TextInputLayout = field.apply {
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply { topMargin = uiDp(Ui.SPACE_LG) }
     }
 
     private fun showModelIdSelector(
@@ -602,7 +563,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
     ) {
         val presets = OnlineAiModelPresetCatalog.forProvider(provider)
         val presetBoxes = presets.map { modelId ->
-            CheckBox(this).apply {
+            MaterialCheckBox(this).apply {
                 text = modelId
                 textSize = FORM_TEXT_SIZE_SP
                 isChecked = modelId in initial
@@ -611,45 +572,33 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 setTextColor(appPalette.primaryText)
             }
         }
-        val customInput = EditText(this).apply {
-            hint = getString(R.string.online_ai_custom_model_ids_hint)
-            setText(initial.filterNot(presets::contains).joinToString("\n"))
-            textSize = FORM_TEXT_SIZE_SP
+        val (customField, customInput) = formTextField(
+            initialValue = initial.filterNot(presets::contains).joinToString("\n"),
+            hint = getString(R.string.online_ai_custom_model_ids),
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or
-                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-            minLines = 2
-            maxLines = 5
-            filters = arrayOf(
-                InputFilter.LengthFilter(
-                    OnlineAiProfilePolicy.MAXIMUM_MODEL_ID_BYTES *
-                        OnlineAiProfilePolicy.MAXIMUM_MODELS_PER_PROFILE,
-                ),
-            )
-            setTextColor(appPalette.primaryText)
-            setHintTextColor(appPalette.secondaryText)
-            setPaddingRelative(uiDp(4), uiDp(8), uiDp(4), uiDp(8))
-        }
+                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS,
+            maxLength = OnlineAiProfilePolicy.MAXIMUM_MODEL_ID_BYTES *
+                OnlineAiProfilePolicy.MAXIMUM_MODELS_PER_PROFILE,
+            singleLine = false,
+        )
+        customField.placeholderText = getString(R.string.online_ai_custom_model_ids_hint)
+        customInput.minLines = 2
+        customInput.maxLines = 5
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPaddingRelative(uiDp(22), uiDp(2), uiDp(22), uiDp(8))
+            setPaddingRelative(uiDp(Ui.SPACE_XXL), 0, uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM))
             addView(secondaryText(getString(R.string.online_ai_model_ids_help), 12.5f).apply {
-                setPaddingRelative(0, uiDp(4), 0, uiDp(8))
+                setLineSpacing(0f, 1.15f)
             })
             addView(formLabel(R.string.online_ai_model_presets))
             presetBoxes.forEach(::addView)
-            addView(formLabel(R.string.online_ai_custom_model_ids))
-            addView(customInput)
+            addView(fieldParamsWrap(customField))
         }
-        applyThemeToControls(content)
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.online_ai_model_ids)
-            .setView(ScrollView(this).apply { addView(content) })
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.chat_settings_save, null)
-            .create()
-        dialog.setOnShowListener {
-            tintDialogButtons(dialog)
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+        formBottomSheet(
+            title = getString(R.string.online_ai_model_ids),
+            content = content,
+            positiveResource = R.string.chat_settings_save,
+            onPositive = {
                 val custom = customInput.text.toString()
                     .lineSequence()
                     .map(String::trim)
@@ -666,27 +615,28 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                         initial.filter(selectedSet::contains) +
                             normalized.filterNot(initial::contains),
                     )
-                }.getOrElse {
-                    customInput.error = getString(R.string.online_ai_model_ids_invalid)
-                    return@setOnClickListener
+                }.getOrNull()
+                if (selected == null) {
+                    customField.error = getString(R.string.online_ai_model_ids_invalid)
+                    false
+                } else {
+                    onSelected(selected)
+                    true
                 }
-                dialog.dismiss()
-                onSelected(selected)
-            }
-        }
-        dialog.show()
+            },
+        )
     }
 
     private fun saveProfileFromForm(
-        dialog: AlertDialog,
         existing: ConfiguredOnlineAiProfile?,
         provider: OnlineAiProvider,
-        nameInput: EditText,
-        baseUrlInput: EditText,
+        nameInput: android.widget.EditText,
+        baseUrlInput: android.widget.EditText,
         modelIds: List<String>,
         defaultModelId: String,
-        credentialInput: EditText,
-    ) {
+        credentialField: TextInputLayout,
+        credentialInput: android.widget.EditText,
+    ): Boolean {
         val candidate = runCatching {
             val raw = existing?.profile?.copy(
                 displayName = nameInput.text.toString(),
@@ -703,21 +653,21 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             )
             OnlineAiProfilePolicy.normalizeProfile(raw)
         }.getOrElse {
-            Toast.makeText(this, R.string.online_ai_form_invalid, Toast.LENGTH_LONG).show()
-            return
+            showSnackbar(screenRoot, getString(R.string.online_ai_form_invalid), Snackbar.LENGTH_LONG)
+            return false
         }
         val credentialText = credentialInput.text
         if (credentialText.isNotEmpty() && !isValidCredential(credentialText)) {
-            credentialInput.error = getString(R.string.online_ai_credential_invalid)
-            return
+            credentialField.error = getString(R.string.online_ai_credential_invalid)
+            return false
         }
         val destinationChanged = existing != null &&
             !OnlineAiProfileUrls.sameCredentialDestination(existing.profile, candidate)
         if (destinationChanged && existing.configured && credentialText.isEmpty()) {
-            credentialInput.error = getString(
+            credentialField.error = getString(
                 R.string.online_ai_credential_required_after_destination_change,
             )
-            return
+            return false
         }
 
         val replacement = credentialText.takeIf(Editable::isNotEmpty)?.let(::copyCharacters)
@@ -732,36 +682,22 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         } finally {
             replacement?.fill('\u0000')
         }
-        saved.onSuccess {
-            dialog.dismiss()
-            Toast.makeText(this, R.string.online_ai_profile_saved, Toast.LENGTH_SHORT).show()
-            reloadSnapshot()
-        }.onFailure {
-            Toast.makeText(this, R.string.online_ai_profile_save_failed, Toast.LENGTH_LONG).show()
-            reloadSnapshot()
-        }
-    }
-
-    private fun formInput(
-        value: String,
-        hintResource: Int,
-        inputTypeValue: Int,
-        maximumCharacters: Int,
-    ) = EditText(this).apply {
-        setText(value)
-        hint = getString(hintResource)
-        textSize = FORM_TEXT_SIZE_SP
-        inputType = inputTypeValue
-        filters = arrayOf(InputFilter.LengthFilter(maximumCharacters))
-        setTextColor(appPalette.primaryText)
-        setHintTextColor(appPalette.secondaryText)
-        setSingleLine(true)
-        setPaddingRelative(uiDp(4), uiDp(8), uiDp(4), uiDp(8))
-    }
-
-    private fun formLabel(resource: Int) = primaryText(getString(resource), 13f).apply {
-        typeface = Typeface.DEFAULT_BOLD
-        setPaddingRelative(0, uiDp(13), 0, uiDp(3))
+        return saved.fold(
+            onSuccess = {
+                showSnackbar(screenRoot, getString(R.string.online_ai_profile_saved))
+                reloadSnapshot()
+                true
+            },
+            onFailure = {
+                showSnackbar(
+                    screenRoot,
+                    getString(R.string.online_ai_profile_save_failed),
+                    Snackbar.LENGTH_LONG,
+                )
+                reloadSnapshot()
+                false
+            },
+        )
     }
 
     private fun uniqueSuggestedName(base: String): String {
@@ -801,16 +737,16 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 modelIds = profile.modelIds,
             )
         }.getOrElse {
-            Toast.makeText(this, R.string.online_ai_profile_clone_failed, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.online_ai_profile_clone_failed), Snackbar.LENGTH_LONG)
             return
         }
         runCatching { registry.save(clone, OnlineAiCredentialUpdate.Clear) }
             .onSuccess {
-                Toast.makeText(this, R.string.online_ai_profile_cloned, Toast.LENGTH_LONG).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_profile_cloned), Snackbar.LENGTH_LONG)
                 reloadSnapshot()
             }
             .onFailure {
-                Toast.makeText(this, R.string.online_ai_profile_clone_failed, Toast.LENGTH_LONG).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_profile_clone_failed), Snackbar.LENGTH_LONG)
                 reloadSnapshot()
             }
     }
@@ -822,7 +758,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
     private fun openProfileExportPicker() {
         val current = snapshot
         if (current == null || current.profiles.isEmpty()) {
-            Toast.makeText(this, R.string.online_ai_export_empty, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.online_ai_export_empty), Snackbar.LENGTH_LONG)
             return
         }
         profileExportPicker.launch(PROFILE_EXPORT_FILE_NAME)
@@ -835,12 +771,14 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             contentResolver.openOutputStream(uri, "wt")?.use { output -> output.write(encoded) }
                 ?: error("The selected export document could not be opened")
         }
-        Toast.makeText(
-            this,
-            if (result.isSuccess) R.string.online_ai_export_succeeded
-            else R.string.online_ai_export_failed,
-            Toast.LENGTH_LONG,
-        ).show()
+        showSnackbar(
+            screenRoot,
+            getString(
+                if (result.isSuccess) R.string.online_ai_export_succeeded
+                else R.string.online_ai_export_failed,
+            ),
+            Snackbar.LENGTH_LONG,
+        )
     }
 
     private fun importProfiles(uri: Uri) {
@@ -873,14 +811,14 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             document.profiles.size
         }
         result.onSuccess { count ->
-            Toast.makeText(
-                this,
+            showSnackbar(
+                screenRoot,
                 getString(R.string.online_ai_import_succeeded, count),
-                Toast.LENGTH_LONG,
-            ).show()
+                Snackbar.LENGTH_LONG,
+            )
             reloadSnapshot()
         }.onFailure {
-            Toast.makeText(this, R.string.online_ai_import_failed, Toast.LENGTH_LONG).show()
+            showSnackbar(screenRoot, getString(R.string.online_ai_import_failed), Snackbar.LENGTH_LONG)
             reloadSnapshot()
         }
     }
@@ -910,35 +848,33 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
     }
 
     private fun confirmClearKey(state: ConfiguredOnlineAiProfile) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.online_ai_clear_key_title)
-            .setMessage(getString(R.string.online_ai_clear_key_message, state.profile.displayName))
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.online_ai_action_clear_key) { _, _ -> clearKey(state) }
-            .show()
-            .also(::tintDialogButtons)
+        confirmDialog(
+            title = getString(R.string.online_ai_clear_key_title),
+            message = getString(R.string.online_ai_clear_key_message, state.profile.displayName),
+            positiveResource = R.string.online_ai_action_clear_key,
+            destructive = true,
+        ) { clearKey(state) }
     }
 
     private fun clearKey(state: ConfiguredOnlineAiProfile) {
         runCatching { registry.save(state.profile, OnlineAiCredentialUpdate.Clear) }
             .onSuccess {
-                Toast.makeText(this, R.string.online_ai_key_cleared, Toast.LENGTH_SHORT).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_key_cleared))
                 reloadSnapshot()
             }
             .onFailure {
-                Toast.makeText(this, R.string.online_ai_key_clear_failed, Toast.LENGTH_LONG).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_key_clear_failed), Snackbar.LENGTH_LONG)
                 reloadSnapshot()
             }
     }
 
     private fun confirmDeleteProfile(state: ConfiguredOnlineAiProfile) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.online_ai_delete_title)
-            .setMessage(getString(R.string.online_ai_delete_message, state.profile.displayName))
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.online_ai_action_delete) { _, _ -> deleteProfile(state) }
-            .show()
-            .also(::tintDialogButtons)
+        confirmDialog(
+            title = getString(R.string.online_ai_delete_title),
+            message = getString(R.string.online_ai_delete_message, state.profile.displayName),
+            positiveResource = R.string.online_ai_action_delete,
+            destructive = true,
+        ) { deleteProfile(state) }
     }
 
     private fun deleteProfile(state: ConfiguredOnlineAiProfile) {
@@ -947,23 +883,21 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         }
         runCatching { registry.delete(state.profile.profileId) }
             .onSuccess {
-                Toast.makeText(this, R.string.online_ai_profile_deleted, Toast.LENGTH_SHORT).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_profile_deleted))
                 reloadSnapshot()
             }
             .onFailure {
-                Toast.makeText(this, R.string.online_ai_profile_delete_failed, Toast.LENGTH_LONG).show()
+                showSnackbar(screenRoot, getString(R.string.online_ai_profile_delete_failed), Snackbar.LENGTH_LONG)
                 reloadSnapshot()
             }
     }
 
     private fun confirmConnectionTest(state: ConfiguredOnlineAiProfile) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.online_ai_test_title)
-            .setMessage(getString(R.string.online_ai_test_message, state.profile.displayName))
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.online_ai_test_start) { _, _ -> beginConnectionTest(state) }
-            .show()
-            .also(::tintDialogButtons)
+        confirmDialog(
+            title = getString(R.string.online_ai_test_title),
+            message = getString(R.string.online_ai_test_message, state.profile.displayName),
+            positiveResource = R.string.online_ai_test_start,
+        ) { beginConnectionTest(state) }
     }
 
     private fun beginConnectionTest(state: ConfiguredOnlineAiProfile) {
@@ -976,8 +910,14 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         val progressView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
-            setPaddingRelative(uiDp(22), uiDp(10), uiDp(22), uiDp(8))
-            addView(ProgressBar(context).apply { isIndeterminate = true })
+            setPaddingRelative(uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_MD), uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM))
+            addView(
+                CircularProgressIndicator(context).apply {
+                    isIndeterminate = true
+                    indicatorSize = uiDp(32)
+                    setIndicatorColor(appPalette.accent)
+                },
+            )
             addView(
                 secondaryText(
                     getString(R.string.online_ai_test_progress, state.profile.displayName),
@@ -986,8 +926,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
             )
         }
-        applyThemeToControls(progressView)
-        val dialog = AlertDialog.Builder(this)
+        val dialog = materialDialog()
             .setTitle(R.string.online_ai_action_test)
             .setView(progressView)
             .setNegativeButton(android.R.string.cancel, null)
@@ -1027,10 +966,10 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         mainHandler.removeCallbacks(active.timeout)
         active.dialog.dismiss()
         when (failure) {
-            null -> Toast.makeText(this, R.string.online_ai_test_success, Toast.LENGTH_LONG).show()
+            null -> showSnackbar(screenRoot, getString(R.string.online_ai_test_success), Snackbar.LENGTH_LONG)
             is CancellationException ->
-                Toast.makeText(this, R.string.online_ai_test_cancelled, Toast.LENGTH_SHORT).show()
-            else -> AlertDialog.Builder(this)
+                showSnackbar(screenRoot, getString(R.string.online_ai_test_cancelled))
+            else -> materialDialog()
                 .setTitle(R.string.online_ai_test_failed)
                 .setMessage(getString(connectionFailureMessage(failure)))
                 .setPositiveButton(android.R.string.ok, null)
@@ -1046,7 +985,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         active.operation.cancel()
         active.future?.cancel(true)
         active.dialog.dismiss()
-        Toast.makeText(this, R.string.online_ai_test_timed_out, Toast.LENGTH_LONG).show()
+        showSnackbar(screenRoot, getString(R.string.online_ai_test_timed_out), Snackbar.LENGTH_LONG)
     }
 
     private fun cancelConnectionTest(active: ActiveConnectionTest?, showFeedback: Boolean) {
@@ -1057,7 +996,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         active.future?.cancel(true)
         active.dialog.dismiss()
         if (showFeedback && !isFinishing && !isDestroyed) {
-            Toast.makeText(this, R.string.online_ai_test_cancelled, Toast.LENGTH_SHORT).show()
+            showSnackbar(screenRoot, getString(R.string.online_ai_test_cancelled))
         }
     }
 

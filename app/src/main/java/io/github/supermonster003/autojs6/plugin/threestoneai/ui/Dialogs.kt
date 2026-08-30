@@ -66,10 +66,16 @@ internal fun ConfiguredActivity.inputDialog(
         maxLength?.let { filters = arrayOf(InputFilter.LengthFilter(it)) }
         setTextColor(appPalette.primaryText)
         tintEditText(this)
-        backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+        backgroundTintList = null
+        // Drop the framework underline so the layout installs its outline box instead.
+        background = null
     }
     val inputLayout = TextInputLayout(this).apply {
         boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+        boxBackgroundColor = android.graphics.Color.TRANSPARENT
+        // The programmatic default style is the filled box, whose stroke widths are zero.
+        boxStrokeWidth = uiDp(1)
+        boxStrokeWidthFocused = uiDp(2)
         val radius = uiDpF(Ui.RADIUS_CONTROL.toFloat())
         setBoxCornerRadii(radius, radius, radius, radius)
         setBoxStrokeColorStateList(
@@ -88,6 +94,8 @@ internal fun ConfiguredActivity.inputDialog(
         this.hint = hint
         addView(editText)
     }
+    // The box drawable becomes the field's background; a leftover tint would erase it.
+    editText.backgroundTintList = null
     val container = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPaddingRelative(uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM), uiDp(Ui.SPACE_XXL), 0)
@@ -279,10 +287,16 @@ internal fun ConfiguredActivity.formTextField(
         maxLength?.let { filters = arrayOf(InputFilter.LengthFilter(it)) }
         setTextColor(appPalette.primaryText)
         tintEditText(this)
-        backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+        backgroundTintList = null
+        // Drop the framework underline so the layout installs its outline box instead.
+        background = null
     }
     val layout = TextInputLayout(this).apply {
         boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+        boxBackgroundColor = android.graphics.Color.TRANSPARENT
+        // The programmatic default style is the filled box, whose stroke widths are zero.
+        boxStrokeWidth = uiDp(1)
+        boxStrokeWidthFocused = uiDp(2)
         val radius = uiDpF(Ui.RADIUS_CONTROL.toFloat())
         setBoxCornerRadii(radius, radius, radius, radius)
         setBoxStrokeColorStateList(
@@ -298,5 +312,7 @@ internal fun ConfiguredActivity.formTextField(
         this.hint = hint
         addView(editText)
     }
+    // The box drawable becomes the field's background; a leftover tint would erase it.
+    editText.backgroundTintList = null
     return layout to editText
 }

@@ -131,7 +131,7 @@ ConversationContextCoordinator
   - 验收: `ChatUiSettingsTest` 扩展通过; 修改预算即刻影响下一轮编译.
 - [x] **P1-7** 真机冒烟并记录 `docs/dev/context-budget-smoke.md`: 同一在线 target 连续 40+ 轮, usage 显示单轮输入 tokens 有界且重建后明显回落; 本地 target 长会话延迟不再单调上升.
   - 验收: 文档含前后对比数据 (对照 P0-3 基线).
-  - 状态: 2026-08-31 已在 G8441 上分别完成 40 轮在线与 40 轮 LiteRT 长会话.两条通道均由精确记账触发水位轮换, 裁剪仅保留完整 turn, 重建后回落至 45% 目标以内; 设置已恢复为 16K / Unlimited.数据、provider usage 异常边界与 P0 对比见 [`docs/dev/context-budget-smoke.md`](docs/dev/context-budget-smoke.md).
+  - 状态: 2026-08-31 已在 G8441 上分别完成 40 轮在线与 40 轮 LiteRT 长会话.两条通道均由精确记账触发水位轮换, 裁剪仅保留完整 turn, 重建后回落至 45% 目标以内; 设置已恢复为 16K / Unlimited.数据, provider usage 异常边界与 P0 对比见 [`docs/dev/context-budget-smoke.md`](docs/dev/context-budget-smoke.md).
 
 > P1 已于 2026-08-31 完成: 由客户端历史增长造成的输入曲线从 O(n) 锯齿封顶为常数带, 累计费用回落为 O(n).已知边界是 provider 可在客户端请求之外注入或上报固定开销; 该开销只能在本轮 usage 返回后被发现, 但会在下一轮触发重建.超出预算的旧原文目前直接遗忘, 由 P2 补记忆.
 

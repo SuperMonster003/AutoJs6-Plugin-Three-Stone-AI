@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="chat_model_label">モデル</string>
     <string name="chat_model_switch_title">モデルを切り替え</string>
     <string name="chat_model_switch_summary">%1$s | %2$s</string>
     <string name="chat_open_model_switcher">モデル切り替えを開く</string>

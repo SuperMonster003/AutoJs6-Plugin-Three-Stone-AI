@@ -2,14 +2,11 @@
 <resources>
     <string name="button_cancel_download">إلغاء التنزيل</string>
     <string name="button_choose_download_location">اختيار موقع الحفظ</string>
-    <string name="button_download_model">استعراض نماذج LiteRT-LM</string>
     <string name="button_import_downloaded_model">استيراد النموذج المنزل</string>
     <string name="button_view_model_source">مصدر النموذج</string>
     <string name="download_already_running">يوجد تنزيل نموذج قيد التشغيل بالفعل</string>
     <string name="download_cancelled">ألغي تنزيل النموذج.</string>
     <string name="download_cancelling">جار إلغاء تنزيل %1$s...</string>
-    <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">نماذج LiteRT-LM</string>
     <string name="download_cleanup_failed">تعذر مسح الوجهة غير المكتملة. احذفها يدويا.</string>
     <string name="download_cleanup_truncated">مسح المحتوى غير المكتمل, لكن قد يبقى مستند فارغ.</string>
     <string name="download_confirm_message">حجم التنزيل: %1$s\nSHA-256 المثبت: %2$s\nالترخيص: %3$s\n\nاختر أي موقع قابل للكتابة في منتقي ملفات النظام. استخدم Wi-Fi ما لم تكن تنوي استخدام بيانات الهاتف. لا يتاح الاستيراد إلا بعد التحقق من النموذج.</string>
@@ -25,7 +22,6 @@
     <string name="download_failed_network">فشل التنزيل: تحقق من اتصال الشبكة ثم حاول مجددا</string>
     <string name="download_import_insufficient_storage">يتطلب الاستيراد نحو %1$s من مساحة التطبيق الخاصة, لكن الميزانية الحالية %2$s.</string>
     <string name="download_import_unavailable">لا يمكن استيراد النموذج المنزل أثناء عملية نموذج أخرى</string>
-    <string name="download_progress_known">جار تنزيل %1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="download_section_title">تنزيل نموذج</string>
     <string name="download_source_unavailable">لا يوجد تطبيق يمكنه فتح صفحة مصدر النموذج</string>
     <string name="download_succeeded">اكتمل التنزيل والتحقق: %1$s (%2$s). يمكنك استيراده الآن أو الاحتفاظ بالملف الخارجي لاحقا.</string>
@@ -48,8 +44,6 @@
     <string name="import_failed_source_unavailable">فشل استيراد النموذج: تعذرت قراءة الملف المحدد</string>
     <string name="import_picker_blocked_insufficient_storage">لا يمكن اختيار نموذج: يجب أن تتجاوز المساحة الحرة الاحتياطي البالغ %1$s.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">جار استيراد النموذج...</string>
-    <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
-    <string name="import_progress_unknown">%1$s: تمت معالجة %2$s</string>
     <string name="import_stage_copying">جار نسخ النموذج والتحقق منه</string>
     <string name="import_stage_checking_compatibility">جارٍ التحقق من توافق LiteRT-LM</string>
     <string name="import_stage_publishing">جار نشر النموذج</string>
@@ -62,11 +56,9 @@
     <string name="model_catalog_empty">لا توجد نماذج مستوردة</string>
     <string name="model_catalog_loading">جارٍ تحميل كتالوج النماذج</string>
     <string name="model_catalog_unavailable">كتالوج النماذج غير متاح</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s\nالحالة: %4$s</string>
     <string name="model_catalog_summary">النماذج المستوردة: %1$d - إجمالي مساحة التخزين: %2$s</string>
     <string name="model_cleanup_empty">لم يتم العثور على ملفات نماذج غير مرجعية</string>
     <string name="model_cleanup_failed">فشل تنظيف مساحة التخزين</string>
-    <string name="model_cleanup_in_progress">جار تنظيف الملفات غير المرجعية...</string>
     <string name="model_cleanup_succeeded">اكتمل التنظيف: تم حذف %1$d من الملفات وتحرير %2$s</string>
     <string name="model_none">لا يوجد نموذج مهيأ</string>
     <string name="model_delete_confirm_title">حذف النموذج?</string>
@@ -93,8 +85,6 @@
     <string name="plugin_description">توليد نص بالذكاء الاصطناعي بنماذج محلية خاصة وخدمات عبر الإنترنت يعدها المستخدم</string>
     <string name="screen_description">اختر نموذج LiteRT-LM محليا. ينسخ الملف إلى مساحة التطبيق الخاصة ولا يرفع أبدا</string>
     <string name="chat_screen_title">محادثة</string>
-    <string name="chat_open_menu">فتح قائمة المحادثة</string>
-    <string name="chat_open_target_selector">اختيار هدف الذكاء الاصطناعي لهذه المحادثة</string>
     <string name="chat_target_loading">جار تحميل أهداف الذكاء الاصطناعي...</string>
     <string name="chat_target_catalog_unavailable">كتالوج أهداف الذكاء الاصطناعي غير متاح | اضغط للإعداد</string>
     <string name="chat_no_target">لم يحدد هدف | اضغط للاختيار</string>
@@ -103,7 +93,6 @@
     <string name="chat_target_locality_local">محلي</string>
     <string name="chat_target_locality_cloud">سحابي</string>
     <string name="chat_target_unavailable_suffix"> | غير متاح</string>
-    <string name="chat_target_selector_title">اختيار هدف المحادثة</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">جار إعداد أهداف الذكاء الاصطناعي</string>
     <string name="chat_target_loading_description">جار قراءة النماذج المحلية وملفات الخدمات عبر الإنترنت الخاصة بالتطبيق.</string>
@@ -133,8 +122,6 @@
     <string name="chat_input_no_target_hint">اختر هدفا قبل المحادثة</string>
     <string name="chat_send">إرسال</string>
     <string name="chat_stop">إيقاف</string>
-    <string name="chat_privacy_note">تبقى الأهداف المحلية على هذا الجهاز. ترسل الأهداف السحابية السياق إلى الخدمة المعدة.</string>
-    <string name="chat_role_user">أنت</string>
     <string name="chat_thinking">في انتظار الهدف...</string>
     <string name="chat_streaming">جار التوليد...</string>
     <string name="chat_empty_response">اكتمل الهدف من دون إرجاع نص.</string>
@@ -148,7 +135,6 @@
     <string name="chat_generation_failure_unknown">تعذر على الهدف المحدد إكمال هذا الطلب.</string>
     <string name="chat_generation_failure_choose_target">فشل التوليد | اختيار هدف آخر</string>
     <string name="chat_new_conversation">محادثة جديدة</string>
-    <string name="chat_model_settings">إعدادات النماذج والتخزين</string>
     <string name="chat_clipboard_label">رسالة ذكاء اصطناعي</string>
     <string name="chat_message_copied">تم نسخ الرسالة</string>
     <string name="chat_duration_milliseconds">%1$d مللي ثانية</string>
@@ -161,7 +147,6 @@
     <string name="chat_history_metadata">%1$s | %2$s</string>
     <string name="chat_history_untitled">محادثة</string>
     <string name="chat_history_not_found">لم تعد هذه المحادثة متاحة</string>
-    <string name="chat_edit_message">تعديل</string>
     <string name="chat_edit_warning_title">هل تريد تعديل هذه الرسالة?</string>
     <string name="chat_edit_warning_message">سيؤدي إرسال النسخة المعدلة إلى حذف %1$d من الرسائل التالية نهائيًا واستبدال هذا الفرع من المحادثة.</string>
     <string name="chat_edit_continue">متابعة التعديل</string>
@@ -172,7 +157,6 @@
     <string name="chat_search_hint">البحث في الرسائل</string>
     <string name="chat_search_previous">السابق</string>
     <string name="chat_search_next">التالي</string>
-    <string name="chat_settings_title">إعدادات المحادثة</string>
     <string name="chat_font_size">حجم خط الرسائل</string>
     <string name="chat_font_size_small">صغير</string>
     <string name="chat_font_size_default">افتراضي</string>
@@ -181,8 +165,6 @@
     <string name="chat_follow_streaming_output">متابعة الإخراج المتدفق تلقائيًا</string>
     <string name="chat_show_generation_usage">إظهار تفاصيل الرموز والوقت</string>
     <string name="chat_settings_save">حفظ</string>
-    <string name="chat_settings_display_section">العرض</string>
-    <string name="chat_settings_input_section">الإدخال</string>
     <string name="chat_settings_generation_section">التوليد</string>
     <string name="chat_enter_key_behavior">مفتاح Enter</string>
     <string name="chat_enter_key_send">إرسال (Shift+Enter يضيف سطرا)</string>
@@ -227,7 +209,6 @@
     <string name="app_settings_custom_color_title">لون سمة مخصص</string>
     <string name="app_settings_dark_mode">الوضع الداكن</string>
     <string name="app_settings_follow_autojs6">اتباع AutoJs6</string>
-    <string name="app_settings_follow_autojs6_explanation">يقرأ خيار اتباع AutoJs6 لون سمة المضيف وسياسة الوضع الداكن واللغة عبر عقد إعدادات رسمي للملحقات للقراءة فقط.</string>
     <string name="app_settings_follow_system">اتباع النظام</string>
     <string name="app_settings_information">المعلومات</string>
     <string name="app_settings_language">اللغة</string>
@@ -266,10 +247,6 @@
     <string name="chat_code_copied">تم نسخ الرمز البرمجي</string>
     <string name="chat_code_clipboard_label">رمز الذكاء الاصطناعي المحلي</string>
     <string name="app_settings_follow_autojs6_unavailable">اتباع AutoJs6 (غير متاح)</string>
-    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 غير مثبت أو معطل أو لا يوفر عقد الإعدادات الرسمي للملحقات. يبقى خيار اتباع AutoJs6 ظاهرا ولكن لا يمكن تحديده. تستخدم إعدادات التطبيق الافتراضية بدلا منه.</string>
-    <string name="app_settings_online_ai_category">الذكاء الاصطناعي عبر الإنترنت</string>
-    <string name="app_settings_online_ai">الخدمات عبر الإنترنت</string>
-    <string name="app_settings_online_ai_summary">إدارة المزودين وبيانات الاعتماد والوصول إلى الشبكة والهدف الافتراضي عبر الإنترنت</string>
     <string name="online_ai_settings_title">الخدمات عبر الإنترنت</string>
     <string name="online_ai_general_section">عام</string>
     <string name="online_ai_profiles_section">الملفات الشخصية</string>
@@ -293,8 +270,6 @@
     <string name="online_ai_profile_name_hint">مثال, العمل</string>
     <string name="online_ai_base_url">عنوان HTTPS الأساسي</string>
     <string name="online_ai_base_url_hint">https://api.example.com/v1</string>
-    <string name="online_ai_model_id">معرف النموذج</string>
-    <string name="online_ai_model_id_hint">أدخل معرف النموذج الدقيق لدى المزود</string>
     <string name="online_ai_credential">مفتاح API</string>
     <string name="online_ai_credential_new_hint">اختياري; الحفظ من دون مفتاح يترك الملف الشخصي غير معد</string>
     <string name="online_ai_credential_edit_hint">اتركه فارغا للاحتفاظ بالمفتاح الحالي</string>

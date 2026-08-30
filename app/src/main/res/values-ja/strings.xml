@@ -2,14 +2,11 @@
 <resources>
     <string name="button_cancel_download">ダウンロードをキャンセル</string>
     <string name="button_choose_download_location">保存先を選択</string>
-    <string name="button_download_model">LiteRT-LM モデルを閲覧</string>
     <string name="button_import_downloaded_model">ダウンロード済みモデルをインポート</string>
     <string name="button_view_model_source">モデルの配布元</string>
     <string name="download_already_running">モデルのダウンロードがすでに実行中です</string>
     <string name="download_cancelled">モデルのダウンロードをキャンセルしました.</string>
     <string name="download_cancelling">%1$s のダウンロードをキャンセルしています...</string>
-    <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">LiteRT-LM モデル</string>
     <string name="download_cleanup_failed">不完全な保存先を消去できませんでした. 手動で削除してください.</string>
     <string name="download_cleanup_truncated">不完全な内容は消去されましたが, 空のドキュメントが残っている場合があります.</string>
     <string name="download_confirm_message">ダウンロードサイズ: %1$s\n固定 SHA-256: %2$s\nライセンス: %3$s\n\nシステムのファイル選択画面で書き込み可能な保存先を選んでください. モバイルデータを使う意図がなければ Wi-Fi を使用してください. モデルは検証後にのみインポートできます.</string>
@@ -25,7 +22,6 @@
     <string name="download_failed_network">ダウンロード失敗: ネットワーク接続を確認して再試行してください</string>
     <string name="download_import_insufficient_storage">インポートには約 %1$s の非公開ストレージが必要ですが, 現在の上限は %2$s です.</string>
     <string name="download_import_unavailable">別のモデル操作中はダウンロード済みモデルをインポートできません</string>
-    <string name="download_progress_known">%1$s をダウンロード中: %2$s / %3$s (%4$d%%)</string>
     <string name="download_section_title">モデルをダウンロード</string>
     <string name="download_source_unavailable">モデル配布元ページを開けるアプリがありません</string>
     <string name="download_succeeded">ダウンロードと検証が完了しました: %1$s (%2$s). 今すぐインポートするか, 外部ファイルを後で使用できます.</string>
@@ -48,8 +44,6 @@
     <string name="import_failed_source_unavailable">モデルのインポートに失敗: 選択したファイルを読み取れません</string>
     <string name="import_picker_blocked_insufficient_storage">モデルを選択できません: 空き容量が %1$s の予約領域を上回る必要があります.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">モデルをインポート中...</string>
-    <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
-    <string name="import_progress_unknown">%1$s: %2$s 処理済み</string>
     <string name="import_stage_copying">モデルをコピーして検証中</string>
     <string name="import_stage_checking_compatibility">LiteRT-LM の互換性を確認中</string>
     <string name="import_stage_publishing">モデルを公開中</string>
@@ -62,11 +56,9 @@
     <string name="model_catalog_empty">インポート済みのモデルはありません</string>
     <string name="model_catalog_loading">モデルカタログを読み込んでいます</string>
     <string name="model_catalog_unavailable">モデルカタログを利用できません</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s\n状態: %4$s</string>
     <string name="model_catalog_summary">インポート済みモデル: %1$d - 合計使用容量: %2$s</string>
     <string name="model_cleanup_empty">未参照のモデルファイルはありません</string>
     <string name="model_cleanup_failed">ストレージのクリーンアップに失敗しました</string>
-    <string name="model_cleanup_in_progress">未参照ファイルをクリーンアップ中...</string>
     <string name="model_cleanup_succeeded">クリーンアップ完了: %1$d 個のファイルを削除し, %2$s を解放しました</string>
     <string name="model_none">モデルが設定されていません</string>
     <string name="model_delete_confirm_title">モデルを削除しますか?</string>
@@ -93,8 +85,6 @@
     <string name="plugin_description">プライベートなローカルモデルとユーザー設定オンラインサービスによる AI テキスト生成</string>
     <string name="screen_description">ローカル LiteRT-LM モデルを選択します. ファイルはアプリ専用ストレージにコピーされ, アップロードされません</string>
     <string name="chat_screen_title">チャット</string>
-    <string name="chat_open_menu">会話メニューを開く</string>
-    <string name="chat_open_target_selector">この会話の AI ターゲットを選択</string>
     <string name="chat_target_loading">AI ターゲットを読み込み中...</string>
     <string name="chat_target_catalog_unavailable">AI ターゲットカタログを利用できません | タップして設定</string>
     <string name="chat_no_target">ターゲット未選択 | タップして選択</string>
@@ -103,7 +93,6 @@
     <string name="chat_target_locality_local">ローカル</string>
     <string name="chat_target_locality_cloud">クラウド</string>
     <string name="chat_target_unavailable_suffix"> | 利用不可</string>
-    <string name="chat_target_selector_title">会話ターゲットを選択</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">AI ターゲットを準備中</string>
     <string name="chat_target_loading_description">ローカルモデルとアプリ専用のオンラインプロファイルを読み込んでいます.</string>
@@ -133,8 +122,6 @@
     <string name="chat_input_no_target_hint">チャットする前にターゲットを選択</string>
     <string name="chat_send">送信</string>
     <string name="chat_stop">停止</string>
-    <string name="chat_privacy_note">ローカルターゲットはこの端末内に留まります. クラウドターゲットは設定済みサービスへコンテキストを送信します.</string>
-    <string name="chat_role_user">あなた</string>
     <string name="chat_thinking">ターゲットの応答を待機中...</string>
     <string name="chat_streaming">生成中...</string>
     <string name="chat_empty_response">ターゲットはテキストを返さずに完了しました.</string>
@@ -148,7 +135,6 @@
     <string name="chat_generation_failure_unknown">選択したターゲットはこのリクエストを完了できませんでした.</string>
     <string name="chat_generation_failure_choose_target">生成に失敗 | 別のターゲットを選択</string>
     <string name="chat_new_conversation">新しい会話</string>
-    <string name="chat_model_settings">モデルとストレージの設定</string>
     <string name="chat_clipboard_label">AI メッセージ</string>
     <string name="chat_message_copied">メッセージをコピーしました</string>
     <string name="chat_duration_milliseconds">%1$d ms</string>
@@ -161,7 +147,6 @@
     <string name="chat_history_metadata">%1$s | %2$s</string>
     <string name="chat_history_untitled">会話</string>
     <string name="chat_history_not_found">この会話は利用できなくなりました</string>
-    <string name="chat_edit_message">編集</string>
     <string name="chat_edit_warning_title">このメッセージを編集しますか?</string>
     <string name="chat_edit_warning_message">編集した内容を送信すると, この位置より後の %1$d 件のメッセージが完全に削除され, 会話の分岐が置き換えられます.</string>
     <string name="chat_edit_continue">編集を続ける</string>
@@ -172,7 +157,6 @@
     <string name="chat_search_hint">メッセージを検索</string>
     <string name="chat_search_previous">前へ</string>
     <string name="chat_search_next">次へ</string>
-    <string name="chat_settings_title">会話設定</string>
     <string name="chat_font_size">メッセージの文字サイズ</string>
     <string name="chat_font_size_small">小</string>
     <string name="chat_font_size_default">標準</string>
@@ -181,8 +165,6 @@
     <string name="chat_follow_streaming_output">ストリーミング出力を自動的に追従</string>
     <string name="chat_show_generation_usage">トークン数と処理時間を表示</string>
     <string name="chat_settings_save">保存</string>
-    <string name="chat_settings_display_section">表示</string>
-    <string name="chat_settings_input_section">入力</string>
     <string name="chat_settings_generation_section">生成</string>
     <string name="chat_enter_key_behavior">Enter キー</string>
     <string name="chat_enter_key_send">送信 (Shift+Enter で改行)</string>
@@ -227,7 +209,6 @@
     <string name="app_settings_custom_color_title">カスタムテーマ色</string>
     <string name="app_settings_dark_mode">ダークモード</string>
     <string name="app_settings_follow_autojs6">AutoJs6 に従う</string>
-    <string name="app_settings_follow_autojs6_explanation">AutoJs6 に従う設定では, 読み取り専用の公式プラグイン設定契約を通じて宿主のテーマ色, ダークモード方針, 言語を読み取ります.</string>
     <string name="app_settings_follow_system">システムに従う</string>
     <string name="app_settings_information">情報</string>
     <string name="app_settings_language">言語</string>
@@ -266,10 +247,6 @@
     <string name="chat_code_copied">コードをコピーしました</string>
     <string name="chat_code_clipboard_label">ローカル AI コード</string>
     <string name="app_settings_follow_autojs6_unavailable">AutoJs6 に従う (利用不可)</string>
-    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 が未インストール, 無効, または公式プラグイン設定契約を提供していません. AutoJs6 に従う項目は表示されますが選択できません. 代わりにアプリの既定設定を使います.</string>
-    <string name="app_settings_online_ai_category">オンライン AI</string>
-    <string name="app_settings_online_ai">オンラインサービス</string>
-    <string name="app_settings_online_ai_summary">プロバイダー, 認証情報, ネットワークアクセス, 既定のオンラインターゲットを管理</string>
     <string name="online_ai_settings_title">オンラインサービス</string>
     <string name="online_ai_general_section">全般</string>
     <string name="online_ai_profiles_section">プロファイル</string>
@@ -293,8 +270,6 @@
     <string name="online_ai_profile_name_hint">例, 仕事</string>
     <string name="online_ai_base_url">HTTPS base URL</string>
     <string name="online_ai_base_url_hint">https://api.example.com/v1</string>
-    <string name="online_ai_model_id">モデル ID</string>
-    <string name="online_ai_model_id_hint">プロバイダーの正確なモデル ID を入力</string>
     <string name="online_ai_credential">API キー</string>
     <string name="online_ai_credential_new_hint">任意; キーなしで保存するとプロファイルは未設定のままです</string>
     <string name="online_ai_credential_edit_hint">現在のキーを保持するには空欄のままにします</string>

@@ -16,27 +16,12 @@
     <color name="chat_notice_surface">#EEF1F9</color>
     <color name="chat_input_surface">#FFFFFF</color>
     <color name="chat_border">#E1DED8</color>
-    <color name="chat_ripple">#243A5CC8</color>
     <color name="chat_markdown_code_surface">#14000000</color>
     <color name="chat_markdown_quote">#8A867E</color>
     <color name="chat_markdown_link">#3A5CC8</color>
     <color name="chat_search_match">#66FFD54F</color>
     <color name="chat_search_match_current">#B3FF9800</color>
 
-    <color name="verification_match">#FF2E7D32</color>
-    <color name="verification_mismatch">#FFC62828</color>
     <color name="validation_error">#FFC62828</color>
 
-    <!-- Legacy tokens kept until the resource reconciliation pass retires them. -->
-    <color name="error_background">#CC3B1F1F</color>
-    <color name="error_text">#FFFFFFFF</color>
-    <color name="image_surface">#FF111111</color>
-    <color name="color_primary">#E88A00</color>
-    <color name="color_primary_dark">#A85A00</color>
-    <color name="color_secondary">#0097A7</color>
-    <color name="toolbar_text">#FFFFFFFF</color>
-    <color name="chat_accent">#007C8A</color>
-    <color name="chat_action">#007C8A</color>
-    <color name="chat_on_action">#FFFFFFFF</color>
-    <color name="chat_action_ripple">#40FFFFFF</color>
 </resources>

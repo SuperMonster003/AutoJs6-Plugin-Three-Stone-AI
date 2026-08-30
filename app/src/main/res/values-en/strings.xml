@@ -2,14 +2,11 @@
 <resources>
     <string name="button_cancel_download">Cancel download</string>
     <string name="button_choose_download_location">Choose save location</string>
-    <string name="button_download_model">Browse LiteRT-LM models</string>
     <string name="button_import_downloaded_model">Import downloaded model</string>
     <string name="button_view_model_source">Model source</string>
     <string name="download_already_running">A model download is already running</string>
     <string name="download_cancelled">Model download cancelled.</string>
     <string name="download_cancelling">Cancelling %1$s download...</string>
-    <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">LiteRT-LM models</string>
     <string name="download_cleanup_failed">The incomplete destination could not be cleared. Delete it manually.</string>
     <string name="download_cleanup_truncated">The incomplete content was cleared, but an empty document may remain.</string>
     <string name="download_confirm_message">Download size: %1$s\nPinned SHA-256: %2$s\nLicense: %3$s\n\nChoose any writable location in the system file picker. Use Wi-Fi unless you intend to use mobile data. The model is verified before it is offered for import.</string>
@@ -25,7 +22,6 @@
     <string name="download_failed_network">Model download failed: check the network connection and try again</string>
     <string name="download_import_insufficient_storage">Import needs approximately %1$s of private storage, but the current import budget is %2$s.</string>
     <string name="download_import_unavailable">The downloaded model cannot be imported while another model operation is active</string>
-    <string name="download_progress_known">Downloading %1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="download_section_title">Download a model</string>
     <string name="download_source_unavailable">No app could open the model source page</string>
     <string name="download_succeeded">Downloaded and verified: %1$s (%2$s). You can import it now or keep the external file for later.</string>
@@ -48,8 +44,6 @@
     <string name="import_failed_source_unavailable">Model import failed: the selected file could not be read</string>
     <string name="import_picker_blocked_insufficient_storage">Cannot choose a model: free space must exceed the %1$s reserve.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">Importing model...</string>
-    <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
-    <string name="import_progress_unknown">%1$s: %2$s processed</string>
     <string name="import_stage_copying">Copying and verifying model</string>
     <string name="import_stage_checking_compatibility">Checking LiteRT-LM compatibility</string>
     <string name="import_stage_publishing">Publishing model</string>
@@ -62,11 +56,9 @@
     <string name="model_catalog_empty">No imported models</string>
     <string name="model_catalog_loading">Loading model catalog</string>
     <string name="model_catalog_unavailable">Model catalog is unavailable</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s\nStatus: %4$s</string>
     <string name="model_catalog_summary">Imported models: %1$d - Total storage: %2$s</string>
     <string name="model_cleanup_empty">No unreferenced model files found</string>
     <string name="model_cleanup_failed">Storage cleanup failed</string>
-    <string name="model_cleanup_in_progress">Cleaning unreferenced files...</string>
     <string name="model_cleanup_succeeded">Storage cleanup complete: %2$s released; files removed: %1$d</string>
     <string name="model_none">No model is configured</string>
     <string name="model_delete_confirm_title">Delete model?</string>
@@ -93,8 +85,6 @@
     <string name="plugin_description">AI text generation with private local models and user-configured online services</string>
     <string name="screen_description">Choose a local LiteRT-LM model. The file is copied into private app storage and is never uploaded</string>
     <string name="chat_screen_title">Chat</string>
-    <string name="chat_open_menu">Open conversation menu</string>
-    <string name="chat_open_target_selector">Choose the AI target for this conversation</string>
     <string name="chat_target_loading">Loading AI targets...</string>
     <string name="chat_target_catalog_unavailable">AI target catalog unavailable | Tap to configure</string>
     <string name="chat_no_target">No target selected | Tap to choose</string>
@@ -103,7 +93,6 @@
     <string name="chat_target_locality_local">Local</string>
     <string name="chat_target_locality_cloud">Cloud</string>
     <string name="chat_target_unavailable_suffix"> | Unavailable</string>
-    <string name="chat_target_selector_title">Choose conversation target</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">Preparing AI targets</string>
     <string name="chat_target_loading_description">Reading local models and app-private online profiles.</string>
@@ -133,8 +122,6 @@
     <string name="chat_input_no_target_hint">Choose a target before chatting</string>
     <string name="chat_send">Send</string>
     <string name="chat_stop">Stop</string>
-    <string name="chat_privacy_note">Local targets stay on this device. Cloud targets send context to the configured service.</string>
-    <string name="chat_role_user">You</string>
     <string name="chat_thinking">Waiting for the target...</string>
     <string name="chat_streaming">Generating...</string>
     <string name="chat_empty_response">The target completed without returning text.</string>
@@ -148,7 +135,6 @@
     <string name="chat_generation_failure_unknown">The selected target could not complete this request.</string>
     <string name="chat_generation_failure_choose_target">Generation failed | Choose another target</string>
     <string name="chat_new_conversation">New conversation</string>
-    <string name="chat_model_settings">Model and storage settings</string>
     <string name="chat_clipboard_label">AI message</string>
     <string name="chat_message_copied">Message copied</string>
     <string name="chat_duration_milliseconds">%1$d ms</string>
@@ -161,7 +147,6 @@
     <string name="chat_history_metadata">%1$s | %2$s</string>
     <string name="chat_history_untitled">Conversation</string>
     <string name="chat_history_not_found">This conversation is no longer available</string>
-    <string name="chat_edit_message">Edit</string>
     <string name="chat_edit_warning_title">Edit this message?</string>
     <string name="chat_edit_warning_message">Sending an edited version will permanently remove every message after this point (%1$d total) and replace that branch of the conversation.</string>
     <string name="chat_edit_continue">Continue to edit</string>
@@ -172,7 +157,6 @@
     <string name="chat_search_hint">Search messages</string>
     <string name="chat_search_previous">Previous</string>
     <string name="chat_search_next">Next</string>
-    <string name="chat_settings_title">Conversation settings</string>
     <string name="chat_font_size">Message font size</string>
     <string name="chat_font_size_small">Small</string>
     <string name="chat_font_size_default">Default</string>
@@ -181,8 +165,6 @@
     <string name="chat_follow_streaming_output">Follow streaming output automatically</string>
     <string name="chat_show_generation_usage">Show token and timing details</string>
     <string name="chat_settings_save">Save</string>
-    <string name="chat_settings_display_section">Display</string>
-    <string name="chat_settings_input_section">Input</string>
     <string name="chat_settings_generation_section">Generation</string>
     <string name="chat_enter_key_behavior">Enter key</string>
     <string name="chat_enter_key_send">Send (Shift+Enter inserts a new line)</string>
@@ -227,7 +209,6 @@
     <string name="app_settings_custom_color_title">Custom theme color</string>
     <string name="app_settings_dark_mode">Dark mode</string>
     <string name="app_settings_follow_autojs6">Follow AutoJs6</string>
-    <string name="app_settings_follow_autojs6_explanation">Follow AutoJs6 reads the host theme color, dark mode policy, and language through the read-only official-plugin settings contract.</string>
     <string name="app_settings_follow_system">Follow system</string>
     <string name="app_settings_information">Information</string>
     <string name="app_settings_language">Language</string>
@@ -266,10 +247,6 @@
     <string name="chat_code_copied">Code copied</string>
     <string name="chat_code_clipboard_label">local AI code</string>
     <string name="app_settings_follow_autojs6_unavailable">Follow AutoJs6 (unavailable)</string>
-    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 is not installed, is disabled, or does not provide the official-plugin settings contract. Follow AutoJs6 remains visible but cannot be selected. App defaults are used instead.</string>
-    <string name="app_settings_online_ai_category">Online AI</string>
-    <string name="app_settings_online_ai">Online services</string>
-    <string name="app_settings_online_ai_summary">Manage providers, credentials, network access, and the default online target</string>
     <string name="online_ai_settings_title">Online services</string>
     <string name="online_ai_general_section">General</string>
     <string name="online_ai_profiles_section">Profiles</string>
@@ -293,8 +270,6 @@
     <string name="online_ai_profile_name_hint">For example, Work</string>
     <string name="online_ai_base_url">HTTPS base URL</string>
     <string name="online_ai_base_url_hint">https://api.example.com/v1</string>
-    <string name="online_ai_model_id">Model ID</string>
-    <string name="online_ai_model_id_hint">Enter the exact provider model ID</string>
     <string name="online_ai_credential">API key</string>
     <string name="online_ai_credential_new_hint">Optional; saving without a key leaves the profile unconfigured</string>
     <string name="online_ai_credential_edit_hint">Leave blank to keep the current key</string>

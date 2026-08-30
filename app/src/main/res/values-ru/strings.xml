@@ -2,14 +2,11 @@
 <resources>
     <string name="button_cancel_download">Отменить загрузку</string>
     <string name="button_choose_download_location">Выбрать место</string>
-    <string name="button_download_model">Обзор моделей LiteRT-LM</string>
     <string name="button_import_downloaded_model">Импортировать скачанную модель</string>
     <string name="button_view_model_source">Источник модели</string>
     <string name="download_already_running">Загрузка модели уже выполняется</string>
     <string name="download_cancelled">Загрузка отменена.</string>
     <string name="download_cancelling">Отмена загрузки %1$s...</string>
-    <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">Модели LiteRT-LM</string>
     <string name="download_cleanup_failed">Не удалось очистить неполный файл. Удалите его вручную.</string>
     <string name="download_cleanup_truncated">Неполное содержимое очищено, но пустой документ мог сохраниться.</string>
     <string name="download_confirm_message">Размер: %1$s\nЗакреплённый SHA-256: %2$s\nЛицензия: %3$s\n\nВыберите доступное для записи место в системном окне. Используйте Wi-Fi, если не хотите расходовать мобильный трафик. Перед импортом модель будет проверена.</string>
@@ -25,7 +22,6 @@
     <string name="download_failed_network">Ошибка загрузки: проверьте подключение к сети и повторите попытку</string>
     <string name="download_import_insufficient_storage">Для импорта требуется около %1$s закрытого хранилища, текущий лимит - %2$s.</string>
     <string name="download_import_unavailable">Нельзя импортировать скачанную модель во время другой операции с моделями</string>
-    <string name="download_progress_known">Загрузка %1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="download_section_title">Скачать модель</string>
     <string name="download_source_unavailable">Ни одно приложение не смогло открыть страницу источника модели</string>
     <string name="download_succeeded">Скачано и проверено: %1$s (%2$s). Можно импортировать сейчас или сохранить внешний файл.</string>
@@ -48,8 +44,6 @@
     <string name="import_failed_source_unavailable">Не удалось импортировать модель: не удалось прочитать выбранный файл</string>
     <string name="import_picker_blocked_insufficient_storage">Нельзя выбрать модель: свободного места должно быть больше резерва %1$s.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">Импорт модели...</string>
-    <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
-    <string name="import_progress_unknown">%1$s: обработано %2$s</string>
     <string name="import_stage_copying">Копирование и проверка модели</string>
     <string name="import_stage_checking_compatibility">Проверка совместимости с LiteRT-LM</string>
     <string name="import_stage_publishing">Публикация модели</string>
@@ -62,11 +56,9 @@
     <string name="model_catalog_empty">Нет импортированных моделей</string>
     <string name="model_catalog_loading">Загрузка каталога моделей</string>
     <string name="model_catalog_unavailable">Каталог моделей недоступен</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s\nСтатус: %4$s</string>
     <string name="model_catalog_summary">Импортировано моделей: %1$d - Всего занято: %2$s</string>
     <string name="model_cleanup_empty">Файлы моделей без ссылок не найдены</string>
     <string name="model_cleanup_failed">Не удалось очистить хранилище</string>
-    <string name="model_cleanup_in_progress">Очистка файлов без ссылок...</string>
     <string name="model_cleanup_succeeded">Очистка завершена: удалено файлов - %1$d, освобождено %2$s</string>
     <string name="model_none">Модель не настроена</string>
     <string name="model_delete_confirm_title">Удалить модель?</string>
@@ -93,8 +85,6 @@
     <string name="plugin_description">Генерация текста ИИ с закрытыми локальными моделями и настроенными пользователем онлайн-сервисами</string>
     <string name="screen_description">Выберите локальную модель LiteRT-LM. Файл копируется в закрытое хранилище приложения и никогда не отправляется</string>
     <string name="chat_screen_title">Чат</string>
-    <string name="chat_open_menu">Открыть меню диалога</string>
-    <string name="chat_open_target_selector">Выбрать цель ИИ для этого диалога</string>
     <string name="chat_target_loading">Загрузка целей ИИ...</string>
     <string name="chat_target_catalog_unavailable">Каталог целей ИИ недоступен | Нажмите для настройки</string>
     <string name="chat_no_target">Цель не выбрана | Нажмите для выбора</string>
@@ -103,7 +93,6 @@
     <string name="chat_target_locality_local">Локально</string>
     <string name="chat_target_locality_cloud">Облако</string>
     <string name="chat_target_unavailable_suffix"> | Недоступно</string>
-    <string name="chat_target_selector_title">Выберите цель диалога</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">Подготовка целей ИИ</string>
     <string name="chat_target_loading_description">Чтение локальных моделей и закрытых профилей онлайн-сервисов приложения.</string>
@@ -133,8 +122,6 @@
     <string name="chat_input_no_target_hint">Выберите цель перед началом диалога</string>
     <string name="chat_send">Отправить</string>
     <string name="chat_stop">Остановить</string>
-    <string name="chat_privacy_note">Локальные цели остаются на устройстве. Облачные цели отправляют контекст настроенному сервису.</string>
-    <string name="chat_role_user">Вы</string>
     <string name="chat_thinking">Ожидание ответа цели...</string>
     <string name="chat_streaming">Генерация...</string>
     <string name="chat_empty_response">Цель завершила генерацию, не вернув текст.</string>
@@ -148,7 +135,6 @@
     <string name="chat_generation_failure_unknown">Выбранная цель не смогла выполнить этот запрос.</string>
     <string name="chat_generation_failure_choose_target">Сбой генерации | Выбрать другую цель</string>
     <string name="chat_new_conversation">Новый диалог</string>
-    <string name="chat_model_settings">Настройки моделей и хранилища</string>
     <string name="chat_clipboard_label">сообщение ИИ</string>
     <string name="chat_message_copied">Сообщение скопировано</string>
     <string name="chat_duration_milliseconds">%1$d мс</string>
@@ -161,7 +147,6 @@
     <string name="chat_history_metadata">%1$s | %2$s</string>
     <string name="chat_history_untitled">Диалог</string>
     <string name="chat_history_not_found">Этот разговор больше недоступен</string>
-    <string name="chat_edit_message">Изменить</string>
     <string name="chat_edit_warning_title">Изменить это сообщение?</string>
     <string name="chat_edit_warning_message">После отправки изменённой версии следующие сообщения (%1$d) будут навсегда удалены, а эта ветвь разговора будет заменена.</string>
     <string name="chat_edit_continue">Продолжить изменение</string>
@@ -172,7 +157,6 @@
     <string name="chat_search_hint">Поиск сообщений</string>
     <string name="chat_search_previous">Назад</string>
     <string name="chat_search_next">Далее</string>
-    <string name="chat_settings_title">Настройки разговора</string>
     <string name="chat_font_size">Размер текста сообщений</string>
     <string name="chat_font_size_small">Мелкий</string>
     <string name="chat_font_size_default">По умолчанию</string>
@@ -181,8 +165,6 @@
     <string name="chat_follow_streaming_output">Автоматически следить за потоковым ответом</string>
     <string name="chat_show_generation_usage">Показывать токены и время</string>
     <string name="chat_settings_save">Сохранить</string>
-    <string name="chat_settings_display_section">Отображение</string>
-    <string name="chat_settings_input_section">Ввод</string>
     <string name="chat_settings_generation_section">Генерация</string>
     <string name="chat_enter_key_behavior">Клавиша Enter</string>
     <string name="chat_enter_key_send">Отправка (Shift+Enter добавляет строку)</string>
@@ -227,7 +209,6 @@
     <string name="app_settings_custom_color_title">Свой цвет темы</string>
     <string name="app_settings_dark_mode">Темная тема</string>
     <string name="app_settings_follow_autojs6">Следовать AutoJs6</string>
-    <string name="app_settings_follow_autojs6_explanation">Режим следования AutoJs6 читает цвет темы хоста, политику темного режима и язык через доступный только для чтения контракт настроек официальных плагинов.</string>
     <string name="app_settings_follow_system">Следовать системе</string>
     <string name="app_settings_information">Информация</string>
     <string name="app_settings_language">Язык</string>
@@ -266,10 +247,6 @@
     <string name="chat_code_copied">Код скопирован</string>
     <string name="chat_code_clipboard_label">код локального ИИ</string>
     <string name="app_settings_follow_autojs6_unavailable">Следовать AutoJs6 (недоступно)</string>
-    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 не установлен, отключен, или не предоставляет контракт настроек официальных плагинов. Пункт следования AutoJs6 остается видимым, но его нельзя выбрать. Вместо него используются настройки приложения по умолчанию.</string>
-    <string name="app_settings_online_ai_category">Онлайн-ИИ</string>
-    <string name="app_settings_online_ai">Онлайн-сервисы</string>
-    <string name="app_settings_online_ai_summary">Управление поставщиками, учетными данными, сетью и онлайн-целью по умолчанию</string>
     <string name="online_ai_settings_title">Онлайн-сервисы</string>
     <string name="online_ai_general_section">Общие</string>
     <string name="online_ai_profiles_section">Профили</string>
@@ -293,8 +270,6 @@
     <string name="online_ai_profile_name_hint">Например, Работа</string>
     <string name="online_ai_base_url">Базовый URL HTTPS</string>
     <string name="online_ai_base_url_hint">https://api.example.com/v1</string>
-    <string name="online_ai_model_id">ID модели</string>
-    <string name="online_ai_model_id_hint">Введите точный ID модели поставщика</string>
     <string name="online_ai_credential">Ключ API</string>
     <string name="online_ai_credential_new_hint">Необязательно; без ключа профиль останется ненастроенным</string>
     <string name="online_ai_credential_edit_hint">Оставьте пустым, чтобы сохранить текущий ключ</string>

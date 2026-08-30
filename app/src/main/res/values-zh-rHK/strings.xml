@@ -2,14 +2,11 @@
 <resources>
     <string name="button_cancel_download">取消下載</string>
     <string name="button_choose_download_location">選擇儲存位置</string>
-    <string name="button_download_model">瀏覽 LiteRT-LM 模型</string>
     <string name="button_import_downloaded_model">匯入已下載模型</string>
     <string name="button_view_model_source">模型來源</string>
     <string name="download_already_running">已有模型下載正在執行</string>
     <string name="download_cancelled">模型下載已取消.</string>
     <string name="download_cancelling">正在取消 %1$s 下載...</string>
-    <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">LiteRT-LM 模型</string>
     <string name="download_cleanup_failed">無法清除未完整的目標檔案, 請手動刪除.</string>
     <string name="download_cleanup_truncated">未完整內容已清空, 但可能仍留有空白文件.</string>
     <string name="download_confirm_message">下載大小: %1$s\n固定 SHA-256: %2$s\n授權條款: %3$s\n\n請在系統檔案選擇器中選擇任何可寫入位置. 除非有意使用流動數據, 否則建議使用 Wi-Fi. 模型通過驗證後才可匯入.</string>
@@ -25,7 +22,6 @@
     <string name="download_failed_network">模型下載失敗: 請檢查網絡連線後再試</string>
     <string name="download_import_insufficient_storage">匯入約需 %1$s 私人儲存空間, 目前匯入預算為 %2$s.</string>
     <string name="download_import_unavailable">其他模型操作進行期間無法匯入已下載模型</string>
-    <string name="download_progress_known">正在下載 %1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="download_section_title">下載模型</string>
     <string name="download_source_unavailable">沒有應用程式可以開啟模型來源頁面</string>
     <string name="download_succeeded">已下載並驗證: %1$s (%2$s). 現在可以匯入, 亦可保留外部檔案稍後使用.</string>
@@ -48,8 +44,6 @@
     <string name="import_failed_source_unavailable">模型匯入失敗: 無法讀取所選檔案</string>
     <string name="import_picker_blocked_insufficient_storage">無法選擇模型: 可用空間必須超過 %1$s 預留空間.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">正在匯入模型...</string>
-    <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
-    <string name="import_progress_unknown">%1$s: 已處理 %2$s</string>
     <string name="import_stage_copying">正在複製並驗證模型</string>
     <string name="import_stage_checking_compatibility">正在檢查 LiteRT-LM 相容性</string>
     <string name="import_stage_publishing">正在發佈模型</string>
@@ -62,11 +56,9 @@
     <string name="model_catalog_empty">尚未匯入模型</string>
     <string name="model_catalog_loading">正在載入模型目錄</string>
     <string name="model_catalog_unavailable">模型目錄無法使用</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s\n狀態: %4$s</string>
     <string name="model_catalog_summary">已匯入模型: %1$d - 總儲存空間用量: %2$s</string>
     <string name="model_cleanup_empty">未發現未引用的模型檔案</string>
     <string name="model_cleanup_failed">儲存空間清理失敗</string>
-    <string name="model_cleanup_in_progress">正在清理未引用檔案...</string>
     <string name="model_cleanup_succeeded">儲存空間清理完成: 已刪除 %1$d 個檔案, 釋放 %2$s</string>
     <string name="model_none">尚未設定模型</string>
     <string name="model_delete_confirm_title">刪除模型?</string>
@@ -93,8 +85,6 @@
     <string name="plugin_description">使用私人本機模型同用戶設定網上服務嘅 AI 文本生成</string>
     <string name="screen_description">選擇本地 LiteRT-LM 模型. 檔案會複製到應用程式私人儲存空間且絕不會上傳</string>
     <string name="chat_screen_title">對話</string>
-    <string name="chat_open_menu">開啟對話選單</string>
-    <string name="chat_open_target_selector">選擇此對話的 AI 目標</string>
     <string name="chat_target_loading">正在載入 AI 目標...</string>
     <string name="chat_target_catalog_unavailable">AI 目標目錄無法使用 | 點按以設定</string>
     <string name="chat_no_target">尚未選擇目標 | 點按以選擇</string>
@@ -103,7 +93,6 @@
     <string name="chat_target_locality_local">本機</string>
     <string name="chat_target_locality_cloud">雲端</string>
     <string name="chat_target_unavailable_suffix"> | 無法使用</string>
-    <string name="chat_target_selector_title">選擇對話目標</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">正在準備 AI 目標</string>
     <string name="chat_target_loading_description">正在讀取本機模型與應用程式私人的網上服務設定檔.</string>
@@ -133,8 +122,6 @@
     <string name="chat_input_no_target_hint">選擇目標後即可開始對話</string>
     <string name="chat_send">傳送</string>
     <string name="chat_stop">停止</string>
-    <string name="chat_privacy_note">本機目標的資料保留在此裝置; 雲端目標會把上下文傳送給已設定的服務.</string>
-    <string name="chat_role_user">你</string>
     <string name="chat_thinking">正在等候目標回應...</string>
     <string name="chat_streaming">正在生成...</string>
     <string name="chat_empty_response">目標已結束生成, 但沒有回傳文字.</string>
@@ -148,7 +135,6 @@
     <string name="chat_generation_failure_unknown">所選嘅目標無法完成呢個請求.</string>
     <string name="chat_generation_failure_choose_target">生成失敗 | 選擇其他目標</string>
     <string name="chat_new_conversation">新增對話</string>
-    <string name="chat_model_settings">模型與儲存空間設定</string>
     <string name="chat_clipboard_label">AI 訊息</string>
     <string name="chat_message_copied">訊息已複製</string>
     <string name="chat_duration_milliseconds">%1$d 毫秒</string>
@@ -161,7 +147,6 @@
     <string name="chat_history_metadata">%1$s | %2$s</string>
     <string name="chat_history_untitled">對話</string>
     <string name="chat_history_not_found">此對話已不存在</string>
-    <string name="chat_edit_message">編輯</string>
     <string name="chat_edit_warning_title">編輯這則訊息?</string>
     <string name="chat_edit_warning_message">傳送編輯後的內容將永久刪除此節點之後的 %1$d 則訊息, 並取代該對話分支.</string>
     <string name="chat_edit_continue">繼續編輯</string>
@@ -172,7 +157,6 @@
     <string name="chat_search_hint">搜尋訊息</string>
     <string name="chat_search_previous">上一個</string>
     <string name="chat_search_next">下一個</string>
-    <string name="chat_settings_title">對話設定</string>
     <string name="chat_font_size">訊息字體大小</string>
     <string name="chat_font_size_small">小</string>
     <string name="chat_font_size_default">預設</string>
@@ -181,8 +165,6 @@
     <string name="chat_follow_streaming_output">自動跟隨串流輸出</string>
     <string name="chat_show_generation_usage">顯示權杖及耗時詳情</string>
     <string name="chat_settings_save">儲存</string>
-    <string name="chat_settings_display_section">顯示</string>
-    <string name="chat_settings_input_section">輸入</string>
     <string name="chat_settings_generation_section">生成</string>
     <string name="chat_enter_key_behavior">Enter 鍵</string>
     <string name="chat_enter_key_send">傳送 (Shift+Enter 換行)</string>
@@ -227,7 +209,6 @@
     <string name="app_settings_custom_color_title">自訂主題色</string>
     <string name="app_settings_dark_mode">深色模式</string>
     <string name="app_settings_follow_autojs6">跟隨 AutoJs6</string>
-    <string name="app_settings_follow_autojs6_explanation">跟隨 AutoJs6 會透過唯讀嘅官方外掛程式設定契約讀取宿主嘅主題色, 深色模式策略同語言.</string>
     <string name="app_settings_follow_system">跟隨系統</string>
     <string name="app_settings_information">資訊</string>
     <string name="app_settings_language">語言</string>
@@ -266,10 +247,6 @@
     <string name="chat_code_copied">程式碼已複製</string>
     <string name="chat_code_clipboard_label">本機 AI 程式碼</string>
     <string name="app_settings_follow_autojs6_unavailable">跟隨 AutoJs6 (無法使用)</string>
-    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 未安裝, 已停用, 或未提供官方外掛程式設定契約. 跟隨 AutoJs6 仍會顯示, 但無法選擇. 應用程式將改用自身預設設定.</string>
-    <string name="app_settings_online_ai_category">網上 AI</string>
-    <string name="app_settings_online_ai">網上服務</string>
-    <string name="app_settings_online_ai_summary">管理供應商, 憑證, 網絡存取及預設網上目標</string>
     <string name="online_ai_settings_title">網上服務</string>
     <string name="online_ai_general_section">一般</string>
     <string name="online_ai_profiles_section">設定檔</string>
@@ -293,8 +270,6 @@
     <string name="online_ai_profile_name_hint">例如, 工作</string>
     <string name="online_ai_base_url">HTTPS base URL</string>
     <string name="online_ai_base_url_hint">https://api.example.com/v1</string>
-    <string name="online_ai_model_id">模型 ID</string>
-    <string name="online_ai_model_id_hint">輸入供應商的準確模型 ID</string>
     <string name="online_ai_credential">API Key</string>
     <string name="online_ai_credential_new_hint">可選; 不填寫 Key 儲存時, 設定檔會保持未設定狀態</string>
     <string name="online_ai_credential_edit_hint">留空以保留目前 Key</string>

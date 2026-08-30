@@ -2,14 +2,11 @@
 <resources>
     <string name="button_cancel_download">Cancelar descarga</string>
     <string name="button_choose_download_location">Elegir ubicación</string>
-    <string name="button_download_model">Explorar modelos LiteRT-LM</string>
     <string name="button_import_downloaded_model">Importar modelo descargado</string>
     <string name="button_view_model_source">Fuente del modelo</string>
     <string name="download_already_running">Ya hay una descarga de modelo en curso</string>
     <string name="download_cancelled">Descarga cancelada.</string>
     <string name="download_cancelling">Cancelando la descarga de %1$s...</string>
-    <string name="download_catalog_item">%1$s - %2$s - %3$s</string>
-    <string name="download_catalog_title">Modelos LiteRT-LM</string>
     <string name="download_cleanup_failed">No se pudo limpiar el destino incompleto. Elimínalo manualmente.</string>
     <string name="download_cleanup_truncated">Se limpió el contenido incompleto, pero puede quedar un documento vacío.</string>
     <string name="download_confirm_message">Tamaño: %1$s\nSHA-256 fijado: %2$s\nLicencia: %3$s\n\nElige cualquier ubicación escribible en el selector del sistema. Usa Wi-Fi salvo que quieras utilizar datos móviles. El modelo se verifica antes de permitir su importación.</string>
@@ -25,7 +22,6 @@
     <string name="download_failed_network">Error de descarga: comprueba la conexión de red e inténtalo de nuevo</string>
     <string name="download_import_insufficient_storage">La importación requiere unos %1$s de almacenamiento privado, pero el presupuesto actual es %2$s.</string>
     <string name="download_import_unavailable">No se puede importar el modelo descargado mientras haya otra operación activa</string>
-    <string name="download_progress_known">Descargando %1$s: %2$s / %3$s (%4$d%%)</string>
     <string name="download_section_title">Descargar un modelo</string>
     <string name="download_source_unavailable">Ninguna aplicación pudo abrir la página de origen del modelo</string>
     <string name="download_succeeded">Descargado y verificado: %1$s (%2$s). Puedes importarlo ahora o conservar el archivo externo.</string>
@@ -48,8 +44,6 @@
     <string name="import_failed_source_unavailable">Error al importar el modelo: no se pudo leer el archivo seleccionado</string>
     <string name="import_picker_blocked_insufficient_storage">No se puede elegir un modelo: el espacio libre debe superar la reserva de %1$s.</string>
     <string name="import_in_progress" tools:ignore="TypographyEllipsis" xmlns:tools="http://schemas.android.com/tools">Importando modelo...</string>
-    <string name="import_progress_known">%1$s: %2$s / %3$s (%4$d%%)</string>
-    <string name="import_progress_unknown">%1$s: %2$s procesados</string>
     <string name="import_stage_copying">Copiando y verificando el modelo</string>
     <string name="import_stage_checking_compatibility">Comprobando la compatibilidad con LiteRT-LM</string>
     <string name="import_stage_publishing">Publicando el modelo</string>
@@ -62,11 +56,9 @@
     <string name="model_catalog_empty">No hay modelos importados</string>
     <string name="model_catalog_loading">Cargando catálogo de modelos</string>
     <string name="model_catalog_unavailable">El catálogo de modelos no está disponible</string>
-    <string name="model_catalog_item">%1$s - %2$s\n%3$s\nEstado: %4$s</string>
     <string name="model_catalog_summary">Modelos importados: %1$d - Almacenamiento total: %2$s</string>
     <string name="model_cleanup_empty">No se encontraron archivos de modelos sin referencia</string>
     <string name="model_cleanup_failed">Error al limpiar el almacenamiento</string>
-    <string name="model_cleanup_in_progress">Limpiando archivos sin referencia...</string>
     <string name="model_cleanup_succeeded">Limpieza completada: %1$d archivos eliminados - %2$s liberados</string>
     <string name="model_none">No hay ningún modelo configurado</string>
     <string name="model_delete_confirm_title">Eliminar modelo?</string>
@@ -93,8 +85,6 @@
     <string name="plugin_description">Generación de texto con IA mediante modelos locales privados y servicios en línea configurados por el usuario</string>
     <string name="screen_description">Elige un modelo LiteRT-LM local. El archivo se copia al almacenamiento privado de la aplicación y nunca se sube</string>
     <string name="chat_screen_title">Chat</string>
-    <string name="chat_open_menu">Abrir menú de conversación</string>
-    <string name="chat_open_target_selector">Elegir el destino de IA de esta conversación</string>
     <string name="chat_target_loading">Cargando destinos de IA...</string>
     <string name="chat_target_catalog_unavailable">Catálogo de destinos de IA no disponible | Toca para configurar</string>
     <string name="chat_no_target">Ningún destino seleccionado | Toca para elegir</string>
@@ -103,7 +93,6 @@
     <string name="chat_target_locality_local">Local</string>
     <string name="chat_target_locality_cloud">Nube</string>
     <string name="chat_target_unavailable_suffix"> | No disponible</string>
-    <string name="chat_target_selector_title">Elegir destino de la conversación</string>
     <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_loading_title">Preparando destinos de IA</string>
     <string name="chat_target_loading_description">Leyendo modelos locales y perfiles privados de servicios en línea.</string>
@@ -133,8 +122,6 @@
     <string name="chat_input_no_target_hint">Elige un destino antes de chatear</string>
     <string name="chat_send">Enviar</string>
     <string name="chat_stop">Detener</string>
-    <string name="chat_privacy_note">Los destinos locales permanecen en este dispositivo. Los destinos en la nube envían contexto al servicio configurado.</string>
-    <string name="chat_role_user">Tú</string>
     <string name="chat_thinking">Esperando al destino...</string>
     <string name="chat_streaming">Generando...</string>
     <string name="chat_empty_response">El destino terminó sin devolver texto.</string>
@@ -148,7 +135,6 @@
     <string name="chat_generation_failure_unknown">El destino seleccionado no pudo completar esta solicitud.</string>
     <string name="chat_generation_failure_choose_target">La generación falló | Elegir otro destino</string>
     <string name="chat_new_conversation">Nueva conversación</string>
-    <string name="chat_model_settings">Ajustes de modelos y almacenamiento</string>
     <string name="chat_clipboard_label">mensaje de IA</string>
     <string name="chat_message_copied">Mensaje copiado</string>
     <string name="chat_duration_milliseconds">%1$d ms</string>
@@ -161,7 +147,6 @@
     <string name="chat_history_metadata">%1$s | %2$s</string>
     <string name="chat_history_untitled">Conversación</string>
     <string name="chat_history_not_found">Esta conversación ya no está disponible</string>
-    <string name="chat_edit_message">Editar</string>
     <string name="chat_edit_warning_title">Editar este mensaje?</string>
     <string name="chat_edit_warning_message">Al enviar la versión editada se eliminarán permanentemente los %1$d mensajes posteriores y se reemplazará esa rama de la conversación.</string>
     <string name="chat_edit_continue">Continuar editando</string>
@@ -172,7 +157,6 @@
     <string name="chat_search_hint">Buscar mensajes</string>
     <string name="chat_search_previous">Anterior</string>
     <string name="chat_search_next">Siguiente</string>
-    <string name="chat_settings_title">Ajustes de conversación</string>
     <string name="chat_font_size">Tamaño de letra de los mensajes</string>
     <string name="chat_font_size_small">Pequeño</string>
     <string name="chat_font_size_default">Predeterminado</string>
@@ -181,8 +165,6 @@
     <string name="chat_follow_streaming_output">Seguir automáticamente la respuesta en curso</string>
     <string name="chat_show_generation_usage">Mostrar tokens y tiempo empleado</string>
     <string name="chat_settings_save">Guardar</string>
-    <string name="chat_settings_display_section">Visualización</string>
-    <string name="chat_settings_input_section">Entrada</string>
     <string name="chat_settings_generation_section">Generación</string>
     <string name="chat_enter_key_behavior">Tecla Intro</string>
     <string name="chat_enter_key_send">Enviar (Mayús+Intro inserta una línea)</string>
@@ -227,7 +209,6 @@
     <string name="app_settings_custom_color_title">Color de tema personalizado</string>
     <string name="app_settings_dark_mode">Modo oscuro</string>
     <string name="app_settings_follow_autojs6">Seguir AutoJs6</string>
-    <string name="app_settings_follow_autojs6_explanation">Seguir AutoJs6 lee el color del tema, la política del modo oscuro y el idioma del host mediante el contrato de solo lectura para plugins oficiales.</string>
     <string name="app_settings_follow_system">Seguir el sistema</string>
     <string name="app_settings_information">Información</string>
     <string name="app_settings_language">Idioma</string>
@@ -266,10 +247,6 @@
     <string name="chat_code_copied">Código copiado</string>
     <string name="chat_code_clipboard_label">código de IA local</string>
     <string name="app_settings_follow_autojs6_unavailable">Seguir AutoJs6 (no disponible)</string>
-    <string name="app_settings_follow_autojs6_unavailable_explanation">AutoJs6 no está instalado, está deshabilitado, o no proporciona el contrato de configuración para plugins oficiales. Seguir AutoJs6 sigue visible pero no se puede seleccionar. Se usan los valores predeterminados de la aplicación.</string>
-    <string name="app_settings_online_ai_category">IA en línea</string>
-    <string name="app_settings_online_ai">Servicios en línea</string>
-    <string name="app_settings_online_ai_summary">Gestiona proveedores, credenciales, acceso de red y el destino en línea predeterminado</string>
     <string name="online_ai_settings_title">Servicios en línea</string>
     <string name="online_ai_general_section">General</string>
     <string name="online_ai_profiles_section">Perfiles</string>
@@ -293,8 +270,6 @@
     <string name="online_ai_profile_name_hint">Por ejemplo, Trabajo</string>
     <string name="online_ai_base_url">URL base HTTPS</string>
     <string name="online_ai_base_url_hint">https://api.example.com/v1</string>
-    <string name="online_ai_model_id">ID del modelo</string>
-    <string name="online_ai_model_id_hint">Introduce el ID exacto del modelo del proveedor</string>
     <string name="online_ai_credential">Clave API</string>
     <string name="online_ai_credential_new_hint">Opcional; guardar sin clave deja el perfil sin configurar</string>
     <string name="online_ai_credential_edit_hint">Déjalo vacío para conservar la clave actual</string>

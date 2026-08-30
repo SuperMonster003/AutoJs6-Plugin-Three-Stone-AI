@@ -48,15 +48,11 @@
     <string name="import_stage_checking_compatibility">Vérification de la compatibilité LiteRT-LM</string>
     <string name="import_stage_publishing">Publication du modèle</string>
     <string name="import_stage_validating">Validation de la source</string>
-    <string name="import_storage_preflight_ready">Contrôle avant import : %1$s disponibles ; jusqu\'à %2$s peuvent être ajoutés ; %3$s restent réservés. La copie privée occupe environ la taille du fichier sélectionné.</string>
-    <string name="import_storage_preflight_unavailable">Import indisponible : %1$s disponibles ; l\'espace libre doit dépasser la réserve de %2$s.</string>
     <string name="import_succeeded">Modèle importé</string>
     <string name="model_id_clipboard_label">ID du modèle de texte IA</string>
     <string name="model_id_copied">ID du modèle copié</string>
-    <string name="model_catalog_empty">Aucun modèle importé</string>
     <string name="model_catalog_loading">Chargement du catalogue de modèles</string>
     <string name="model_catalog_unavailable">Catalogue de modèles indisponible</string>
-    <string name="model_catalog_summary">Modèles importés : %1$d - Stockage total : %2$s</string>
     <string name="model_cleanup_empty">Aucun fichier de modèle non référencé</string>
     <string name="model_cleanup_failed">Échec du nettoyage du stockage</string>
     <string name="model_cleanup_succeeded">Nettoyage terminé : %1$d fichiers supprimés - %2$s libérés</string>
@@ -81,7 +77,6 @@
     <string name="model_selection_failed">Échec de la sélection du modèle</string>
     <string name="model_selection_succeeded">Modèle sélectionné</string>
     <string name="model_status_format">Modèle: %1$s\nTaille: %2$s\nSHA-256: %3$s\nID du modèle: %4$s\nÉtat: %5$s</string>
-    <string name="option_check_after_import">Vérifier la compatibilité après l\'import (initialise puis ferme le modèle une fois)</string>
     <string name="plugin_description">Génération de texte IA avec des modèles locaux privés et des services en ligne configurés par l\'utilisateur</string>
     <string name="screen_description">Choisissez un modèle LiteRT-LM local. Le fichier est copié dans le stockage privé de l\'application et jamais envoyé</string>
     <string name="chat_screen_title">Conversation</string>
@@ -223,7 +218,7 @@
     <string name="app_settings_theme_custom">Personnalisée</string>
     <string name="app_settings_theme_follow_summary">Suivre AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">Vert</string>
-    <string name="app_settings_theme_three_stone_ai">Orange 3-Stone AI</string>
+    <string name="app_settings_theme_three_stone_ai">Orange</string>
     <string name="app_settings_theme_purple">Violet</string>
     <string name="app_settings_theme_teal">Sarcelle</string>
     <string name="app_settings_title">Paramètres</string>
@@ -251,7 +246,6 @@
     <string name="chat_code_copy">Copier le code</string>
     <string name="chat_code_copied">Code copié</string>
     <string name="chat_code_clipboard_label">code IA local</string>
-    <string name="app_settings_follow_autojs6_unavailable">Suivre AutoJs6 (indisponible)</string>
     <string name="online_ai_settings_title">Services en ligne</string>
     <string name="online_ai_general_section">Général</string>
     <string name="online_ai_profiles_section">Profils</string>

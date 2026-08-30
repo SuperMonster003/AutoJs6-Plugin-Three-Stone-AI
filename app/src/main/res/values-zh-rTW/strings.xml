@@ -48,15 +48,11 @@
     <string name="import_stage_checking_compatibility">正在檢查 LiteRT-LM 相容性</string>
     <string name="import_stage_publishing">正在發佈模型</string>
     <string name="import_stage_validating">正在驗證來源</string>
-    <string name="import_storage_preflight_ready">匯入預檢: 目前可用 %1$s; 最多可新增 %2$s; 保留 %3$s 可用空間. 私人副本預計占用與所選檔案大小相近.</string>
-    <string name="import_storage_preflight_unavailable">無法匯入: 目前可用 %1$s; 可用空間必須超過 %2$s 預留空間.</string>
     <string name="import_succeeded">模型已匯入</string>
     <string name="model_id_clipboard_label">AI 文字模型 ID</string>
     <string name="model_id_copied">模型 ID 已複製</string>
-    <string name="model_catalog_empty">尚未匯入模型</string>
     <string name="model_catalog_loading">正在載入模型目錄</string>
     <string name="model_catalog_unavailable">模型目錄無法使用</string>
-    <string name="model_catalog_summary">已匯入模型: %1$d - 儲存空間總用量: %2$s</string>
     <string name="model_cleanup_empty">未發現未參照的模型檔案</string>
     <string name="model_cleanup_failed">儲存空間清理失敗</string>
     <string name="model_cleanup_succeeded">儲存空間清理完成: 已刪除 %1$d 個檔案, 釋放 %2$s</string>
@@ -81,7 +77,6 @@
     <string name="model_selection_failed">選取模型失敗</string>
     <string name="model_selection_succeeded">已選取模型</string>
     <string name="model_status_format">模型: %1$s\n大小: %2$s\nSHA-256: %3$s\n模型 ID: %4$s\n狀態: %5$s</string>
-    <string name="option_check_after_import">匯入後檢查相容性 (初始化模型一次並立即關閉)</string>
     <string name="plugin_description">使用私有本機模型與使用者設定線上服務的 AI 文字生成</string>
     <string name="screen_description">選擇本機 LiteRT-LM 模型. 檔案會複製到應用程式私人儲存空間且絕不會上傳</string>
     <string name="chat_screen_title">對話</string>
@@ -223,7 +218,7 @@
     <string name="app_settings_theme_custom">自訂</string>
     <string name="app_settings_theme_follow_summary">跟隨 AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">綠色</string>
-    <string name="app_settings_theme_three_stone_ai">3-Stone AI 橙色</string>
+    <string name="app_settings_theme_three_stone_ai">橙色</string>
     <string name="app_settings_theme_purple">紫色</string>
     <string name="app_settings_theme_teal">青色</string>
     <string name="app_settings_title">設定</string>
@@ -251,7 +246,6 @@
     <string name="chat_code_copy">複製程式碼</string>
     <string name="chat_code_copied">程式碼已複製</string>
     <string name="chat_code_clipboard_label">本機 AI 程式碼</string>
-    <string name="app_settings_follow_autojs6_unavailable">跟隨 AutoJs6 (無法使用)</string>
     <string name="online_ai_settings_title">線上服務</string>
     <string name="online_ai_general_section">一般</string>
     <string name="online_ai_profiles_section">設定檔</string>

@@ -48,15 +48,11 @@
     <string name="import_stage_checking_compatibility">LiteRT-LM の互換性を確認中</string>
     <string name="import_stage_publishing">モデルを公開中</string>
     <string name="import_stage_validating">ソースを検証中</string>
-    <string name="import_storage_preflight_ready">インポート事前確認: 空き容量 %1$s, 現在追加可能な上限 %2$s, 予約領域 %3$s. プライベートコピーは選択ファイルとほぼ同じ容量を使用します.</string>
-    <string name="import_storage_preflight_unavailable">インポートできません: 空き容量は %1$s です. %2$s の予約領域を上回る必要があります.</string>
     <string name="import_succeeded">モデルをインポートしました</string>
     <string name="model_id_clipboard_label">AI テキストモデル ID</string>
     <string name="model_id_copied">モデル ID をコピーしました</string>
-    <string name="model_catalog_empty">インポート済みのモデルはありません</string>
     <string name="model_catalog_loading">モデルカタログを読み込んでいます</string>
     <string name="model_catalog_unavailable">モデルカタログを利用できません</string>
-    <string name="model_catalog_summary">インポート済みモデル: %1$d - 合計使用容量: %2$s</string>
     <string name="model_cleanup_empty">未参照のモデルファイルはありません</string>
     <string name="model_cleanup_failed">ストレージのクリーンアップに失敗しました</string>
     <string name="model_cleanup_succeeded">クリーンアップ完了: %1$d 個のファイルを削除し, %2$s を解放しました</string>
@@ -81,7 +77,6 @@
     <string name="model_selection_failed">モデルの選択に失敗しました</string>
     <string name="model_selection_succeeded">モデルを選択しました</string>
     <string name="model_status_format">モデル: %1$s\nサイズ: %2$s\nSHA-256: %3$s\nモデル ID: %4$s\n状態: %5$s</string>
-    <string name="option_check_after_import">インポート後に互換性を確認 (モデルを一度初期化してすぐに閉じます)</string>
     <string name="plugin_description">プライベートなローカルモデルとユーザー設定オンラインサービスによる AI テキスト生成</string>
     <string name="screen_description">ローカル LiteRT-LM モデルを選択します. ファイルはアプリ専用ストレージにコピーされ, アップロードされません</string>
     <string name="chat_screen_title">チャット</string>
@@ -223,7 +218,7 @@
     <string name="app_settings_theme_custom">カスタム</string>
     <string name="app_settings_theme_follow_summary">AutoJs6 に従う (%1$s)</string>
     <string name="app_settings_theme_green">緑</string>
-    <string name="app_settings_theme_three_stone_ai">3-Stone AI オレンジ</string>
+    <string name="app_settings_theme_three_stone_ai">オレンジ</string>
     <string name="app_settings_theme_purple">紫</string>
     <string name="app_settings_theme_teal">ティール</string>
     <string name="app_settings_title">設定</string>
@@ -251,7 +246,6 @@
     <string name="chat_code_copy">コードをコピー</string>
     <string name="chat_code_copied">コードをコピーしました</string>
     <string name="chat_code_clipboard_label">ローカル AI コード</string>
-    <string name="app_settings_follow_autojs6_unavailable">AutoJs6 に従う (利用不可)</string>
     <string name="online_ai_settings_title">オンラインサービス</string>
     <string name="online_ai_general_section">全般</string>
     <string name="online_ai_profiles_section">プロファイル</string>

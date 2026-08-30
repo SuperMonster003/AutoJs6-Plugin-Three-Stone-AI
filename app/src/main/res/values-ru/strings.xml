@@ -48,15 +48,11 @@
     <string name="import_stage_checking_compatibility">Проверка совместимости с LiteRT-LM</string>
     <string name="import_stage_publishing">Публикация модели</string>
     <string name="import_stage_validating">Проверка источника</string>
-    <string name="import_storage_preflight_ready">Проверка перед импортом: доступно %1$s; сейчас можно добавить до %2$s; %3$s остаётся в резерве. Закрытая копия занимает примерно столько же, сколько выбранный файл.</string>
-    <string name="import_storage_preflight_unavailable">Импорт недоступен: доступно %1$s; свободного места должно быть больше резерва %2$s.</string>
     <string name="import_succeeded">Модель импортирована</string>
     <string name="model_id_clipboard_label">ID модели генерации текста ИИ</string>
     <string name="model_id_copied">ID модели скопирован</string>
-    <string name="model_catalog_empty">Нет импортированных моделей</string>
     <string name="model_catalog_loading">Загрузка каталога моделей</string>
     <string name="model_catalog_unavailable">Каталог моделей недоступен</string>
-    <string name="model_catalog_summary">Импортировано моделей: %1$d - Всего занято: %2$s</string>
     <string name="model_cleanup_empty">Файлы моделей без ссылок не найдены</string>
     <string name="model_cleanup_failed">Не удалось очистить хранилище</string>
     <string name="model_cleanup_succeeded">Очистка завершена: удалено файлов - %1$d, освобождено %2$s</string>
@@ -81,7 +77,6 @@
     <string name="model_selection_failed">Не удалось выбрать модель</string>
     <string name="model_selection_succeeded">Модель выбрана</string>
     <string name="model_status_format">Модель: %1$s\nРазмер: %2$s\nSHA-256: %3$s\nID модели: %4$s\nСтатус: %5$s</string>
-    <string name="option_check_after_import">Проверять совместимость после импорта (однократно инициализирует и закрывает модель)</string>
     <string name="plugin_description">Генерация текста ИИ с закрытыми локальными моделями и настроенными пользователем онлайн-сервисами</string>
     <string name="screen_description">Выберите локальную модель LiteRT-LM. Файл копируется в закрытое хранилище приложения и никогда не отправляется</string>
     <string name="chat_screen_title">Чат</string>
@@ -223,7 +218,7 @@
     <string name="app_settings_theme_custom">Свой</string>
     <string name="app_settings_theme_follow_summary">Следовать AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">Зеленый</string>
-    <string name="app_settings_theme_three_stone_ai">Оранжевый 3-Stone AI</string>
+    <string name="app_settings_theme_three_stone_ai">Оранжевый</string>
     <string name="app_settings_theme_purple">Фиолетовый</string>
     <string name="app_settings_theme_teal">Бирюзовый</string>
     <string name="app_settings_title">Настройки</string>
@@ -251,7 +246,6 @@
     <string name="chat_code_copy">Копировать код</string>
     <string name="chat_code_copied">Код скопирован</string>
     <string name="chat_code_clipboard_label">код локального ИИ</string>
-    <string name="app_settings_follow_autojs6_unavailable">Следовать AutoJs6 (недоступно)</string>
     <string name="online_ai_settings_title">Онлайн-сервисы</string>
     <string name="online_ai_general_section">Общие</string>
     <string name="online_ai_profiles_section">Профили</string>

@@ -3,8 +3,10 @@ package io.github.supermonster003.autojs6.plugin.threestoneai
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import com.google.android.material.snackbar.Snackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -191,7 +193,7 @@ internal class AppUpdateController(
     private fun check(manual: Boolean) {
         if (activeCall != null) return
         if (manual) {
-            progressDialog = AlertDialog.Builder(activity)
+            progressDialog = activity.materialDialog()
                 .setTitle(R.string.app_update_checking)
                 .setMessage(R.string.app_update_checking_summary)
                 .setNegativeButton(android.R.string.cancel) { _, _ -> activeCall?.cancel() }
@@ -213,11 +215,11 @@ internal class AppUpdateController(
                     onSuccess = { release -> handleRelease(release, manual) },
                     onFailure = {
                         if (manual && !wasCancelled) {
-                            Toast.makeText(
-                                activity,
-                                R.string.app_update_check_failed,
-                                Toast.LENGTH_LONG,
-                            ).show()
+                            activity.showSnackbar(
+                                activity.findViewById(android.R.id.content),
+                                activity.getString(R.string.app_update_check_failed),
+                                Snackbar.LENGTH_LONG,
+                            )
                         }
                     },
                 )
@@ -232,7 +234,7 @@ internal class AppUpdateController(
             .orEmpty()
         if (!UpdateVersionPolicy.isNewer(release.tag, installedVersion)) {
             if (manual) {
-                AlertDialog.Builder(activity)
+                activity.materialDialog()
                     .setTitle(R.string.app_update_up_to_date)
                     .setMessage(activity.getString(R.string.app_update_current_version, installedVersion))
                     .setPositiveButton(android.R.string.ok, null)
@@ -249,7 +251,7 @@ internal class AppUpdateController(
                 append(release.notes)
             }
         }
-        val builder = AlertDialog.Builder(activity)
+        val builder = activity.materialDialog()
             .setTitle(release.name)
             .setMessage(message)
             .setNegativeButton(R.string.app_update_later, null)
@@ -257,7 +259,10 @@ internal class AppUpdateController(
         if (release.tag !in store.ignoredTags) {
             builder.setNeutralButton(R.string.app_update_ignore) { _, _ ->
                 store.ignore(release.tag)
-                Toast.makeText(activity, R.string.app_update_ignored, Toast.LENGTH_SHORT).show()
+                activity.showSnackbar(
+                    activity.findViewById(android.R.id.content),
+                    activity.getString(R.string.app_update_ignored),
+                )
             }
         }
         builder.show().also(activity::tintDialogButtons)
@@ -267,7 +272,11 @@ internal class AppUpdateController(
         runCatching {
             activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         }.onFailure {
-            Toast.makeText(activity, R.string.app_update_open_failed, Toast.LENGTH_LONG).show()
+            activity.showSnackbar(
+                activity.findViewById(android.R.id.content),
+                activity.getString(R.string.app_update_open_failed),
+                Snackbar.LENGTH_LONG,
+            )
         }
     }
 }

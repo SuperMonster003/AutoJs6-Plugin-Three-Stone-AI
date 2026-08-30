@@ -2,8 +2,9 @@ package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.os.Bundle
 import android.view.View
-import android.widget.LinearLayout
-import android.widget.ScrollView
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.ContentPadding
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.emptyStateView
 import java.util.Locale
 
 class ReleaseHistoryActivity : ConfiguredActivity() {
@@ -12,32 +13,28 @@ class ReleaseHistoryActivity : ConfiguredActivity() {
         setContentView(createContentView())
     }
 
-    private fun createContentView(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setBackgroundColor(appPalette.windowBackground)
-        val statusBarBackground = createStatusBarBackground()
-        addView(
-            statusBarBackground,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
+    private fun createContentView(): View {
+        val scaffold = buildScaffold(
+            R.string.release_history_title,
+            contentPadding = ContentPadding.SCREEN,
         )
-        addView(createAppToolbar(R.string.release_history_title, showBack = true))
-        addView(ScrollView(context).apply {
-            isFillViewport = true
-            addView(MarkdownMessageView(context, appPalette).apply {
-                setPaddingRelative(dp(20), dp(18), dp(20), dp(28))
-                val document = loadReleaseHistory()
-                if (document == null) {
-                    showPlainText(getString(R.string.release_history_load_failed), 14.5f)
-                } else {
+        val document = loadReleaseHistory()
+        if (document == null) {
+            scaffold.content.addView(
+                emptyStateView(
+                    title = getString(R.string.release_history_load_failed),
+                    description = null,
+                    iconResource = R.drawable.ic_warning_24,
+                ),
+            )
+        } else {
+            scaffold.content.addView(
+                MarkdownMessageView(this, appPalette).apply {
                     showDocument(document, 14.5f)
-                }
-            })
-        }, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            0,
-            1f,
-        ))
-        applySystemBarInsets(this, statusBarBackground)
+                },
+            )
+        }
+        return scaffold.root
     }
 
     private fun loadReleaseHistory(): MarkdownDocument? {
@@ -49,8 +46,6 @@ class ReleaseHistoryActivity : ConfiguredActivity() {
         }.getOrNull() ?: return null
         return StreamingMarkdownParser.parse(source)
     }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }
 
 internal object ReleaseHistoryAssetPolicy {

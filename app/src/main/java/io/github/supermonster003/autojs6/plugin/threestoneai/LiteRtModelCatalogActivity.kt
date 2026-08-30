@@ -1,28 +1,35 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.content.Intent
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.text.format.Formatter
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
+import android.text.format.Formatter
+import com.google.android.material.snackbar.Snackbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.AvailableLiteRtModel
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.AvailableLiteRtModelCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.LiteRtModelCapability
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.ContentPadding
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardContainer
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardListParams
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.emptyStateView
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.roundedFill
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.textButton
 import java.text.NumberFormat
 
 class LiteRtModelCatalogActivity : ConfiguredActivity() {
     private lateinit var modelRows: LinearLayout
+    private lateinit var screenRoot: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,69 +37,72 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
         renderModels("")
     }
 
-    private fun createContentView(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setBackgroundColor(appPalette.windowBackground)
-        val statusBarBackground = createStatusBarBackground()
-        addView(
-            statusBarBackground,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0),
+    private fun createContentView(): View {
+        val scaffold = buildScaffold(
+            R.string.litert_catalog_title,
+            contentPadding = ContentPadding.SCREEN,
         )
-        addView(createAppToolbar(R.string.litert_catalog_title, showBack = true))
+        val content = scaffold.content
+        content.addView(TextView(this).apply {
+            text = getString(R.string.litert_catalog_summary)
+            textSize = Ui.TEXT_SECONDARY
+            setTextColor(appPalette.secondaryText)
+            setLineSpacing(0f, Ui.LINE_SPACING_BODY)
+            setPaddingRelative(0, 0, 0, uiDp(Ui.SPACE_MD))
+        })
+        content.addView(createSearchField())
+        modelRows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        content.addView(modelRows)
+        screenRoot = scaffold.root
+        return scaffold.root
+    }
+
+    private fun createSearchField(): View = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = uiDp(Ui.TOUCH_TARGET)
+        background = roundedFill(appPalette.surface, Ui.RADIUS_SHEET, appPalette.outline)
+        setPaddingRelative(uiDp(Ui.SPACE_LG), 0, uiDp(Ui.SPACE_LG), 0)
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply { bottomMargin = uiDp(Ui.SPACE_LG) }
         addView(
-            ScrollView(context).apply {
-                isFillViewport = true
-                addView(LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPaddingRelative(dp(18), dp(16), dp(18), dp(30))
-                    addView(TextView(context).apply {
-                        text = getString(R.string.litert_catalog_summary)
-                        textSize = 14f
-                        setTextColor(appPalette.secondaryText)
-                        setLineSpacing(0f, 1.14f)
-                        setPaddingRelative(dp(2), 0, dp(2), dp(10))
-                    })
-                    addView(EditText(context).apply {
-                        hint = getString(R.string.litert_catalog_search_hint)
-                        textSize = 14f
-                        isSingleLine = true
-                        setTextColor(appPalette.primaryText)
-                        setHintTextColor(appPalette.secondaryText)
-                        backgroundTintList = controlTintList()
-                        addTextChangedListener(object : TextWatcher {
-                            override fun beforeTextChanged(
-                                value: CharSequence?,
-                                start: Int,
-                                count: Int,
-                                after: Int,
-                            ) = Unit
+            ImageView(context).apply {
+                setImageDrawable(tintedDrawable(R.drawable.ic_search_24, appPalette.secondaryText))
+            },
+            LinearLayout.LayoutParams(uiDp(20), uiDp(20)).apply { marginEnd = uiDp(Ui.SPACE_MD) },
+        )
+        addView(
+            EditText(context).apply {
+                hint = getString(R.string.litert_catalog_search_hint)
+                textSize = Ui.TEXT_BODY
+                isSingleLine = true
+                background = null
+                setTextColor(appPalette.primaryText)
+                setHintTextColor(appPalette.secondaryText)
+                tintEditText(this)
+                backgroundTintList = null
+                addTextChangedListener(object : TextWatcher {
+                    override fun beforeTextChanged(
+                        value: CharSequence?,
+                        start: Int,
+                        count: Int,
+                        after: Int,
+                    ) = Unit
 
-                            override fun onTextChanged(
-                                value: CharSequence?,
-                                start: Int,
-                                before: Int,
-                                count: Int,
-                            ) = renderModels(value?.toString().orEmpty())
+                    override fun onTextChanged(
+                        value: CharSequence?,
+                        start: Int,
+                        before: Int,
+                        count: Int,
+                    ) = renderModels(value?.toString().orEmpty())
 
-                            override fun afterTextChanged(value: Editable?) = Unit
-                        })
-                    }, LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    ).apply { setMargins(0, 0, 0, dp(10)) })
-                    modelRows = LinearLayout(context).apply {
-                        orientation = LinearLayout.VERTICAL
-                    }
-                    addView(modelRows)
+                    override fun afterTextChanged(value: Editable?) = Unit
                 })
             },
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f,
-            ),
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
         )
-        applySystemBarInsets(this, statusBarBackground)
     }
 
     private fun renderModels(rawQuery: String) {
@@ -109,50 +119,39 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
         }
         modelRows.removeAllViews()
         if (visible.isEmpty()) {
-            modelRows.addView(TextView(this).apply {
-                text = getString(R.string.litert_catalog_no_results)
-                textSize = 15f
-                gravity = Gravity.CENTER
-                setTextColor(appPalette.secondaryText)
-                setPaddingRelative(0, dp(34), 0, dp(34))
-            })
+            modelRows.addView(
+                emptyStateView(
+                    title = getString(R.string.litert_catalog_no_results),
+                    description = null,
+                    iconResource = R.drawable.ic_search_24,
+                ),
+            )
         } else {
             visible.forEach { model -> modelRows.addView(modelCard(model)) }
         }
         applyThemeToControls(modelRows)
     }
 
-    private fun modelCard(model: AvailableLiteRtModel) = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(14).toFloat()
-            setColor(appPalette.assistantSurface)
-            setStroke(dp(1), appPalette.chatBorder)
-        }
-        setPaddingRelative(dp(16), dp(14), dp(16), dp(12))
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { setMargins(0, dp(6), 0, dp(6)) }
+    private fun modelCard(model: AvailableLiteRtModel): View = cardContainer().apply {
+        layoutParams = cardListParams()
 
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(context).apply {
                 text = model.displayName
-                textSize = 17f
-                typeface = Typeface.DEFAULT_BOLD
+                textSize = Ui.TEXT_ITEM
+                typeface = Ui.mediumTypeface
                 setTextColor(appPalette.primaryText)
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
             addView(statusBadge(model.verifiedDownload != null))
         })
         addView(TextView(context).apply {
             text = getString(modelDescriptionResource(model.id))
-            textSize = 13.5f
+            textSize = Ui.TEXT_SECONDARY
             setTextColor(appPalette.secondaryText)
             setLineSpacing(0f, 1.12f)
-            setPaddingRelative(0, dp(7), 0, dp(9))
+            setPaddingRelative(0, uiDp(Ui.SPACE_SM), 0, uiDp(Ui.SPACE_SM))
         })
         addView(metadataText(
             getString(
@@ -184,17 +183,24 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
                 model.repositoryId,
                 model.commitHash.take(12),
             )
-            textSize = 11.5f
+            textSize = Ui.TEXT_CAPTION
+            alpha = 0.85f
             setTextColor(appPalette.secondaryText)
             setTextIsSelectable(true)
-            setPaddingRelative(0, dp(7), 0, dp(6))
+            setPaddingRelative(0, uiDp(Ui.SPACE_SM), 0, uiDp(Ui.SPACE_XS))
         })
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
-            addView(actionText(R.string.button_view_model_source) { openSource(model) })
+            addView(textButton(R.string.button_view_model_source) { openSource(model) })
             model.verifiedDownload?.let {
-                addView(actionText(R.string.litert_catalog_download) { chooseModel(model) })
+                addView(
+                    textButton(R.string.litert_catalog_download) { chooseModel(model) },
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ).apply { marginStart = uiDp(Ui.SPACE_SM) },
+                )
             }
         })
     }
@@ -204,37 +210,22 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
             if (verified) R.string.litert_catalog_verified_download else R.string.litert_catalog_source_only,
         )
         textSize = 11f
-        typeface = Typeface.DEFAULT_BOLD
+        typeface = Ui.mediumTypeface
         setTextColor(if (verified) appPalette.accent else appPalette.secondaryText)
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(20).toFloat()
-            setColor(appPalette.windowBackground)
-            setStroke(dp(1), if (verified) appPalette.accent else appPalette.divider)
-        }
-        setPaddingRelative(dp(9), dp(4), dp(9), dp(4))
+        background = roundedFill(
+            appPalette.windowBackground,
+            Ui.RADIUS_SHEET,
+            if (verified) appPalette.accent else appPalette.divider,
+        )
+        setPaddingRelative(uiDp(10), uiDp(Ui.SPACE_XS), uiDp(10), uiDp(Ui.SPACE_XS))
     }
 
     private fun metadataText(value: String) = TextView(this).apply {
         text = value
-        textSize = 12.5f
+        textSize = Ui.TEXT_SECTION
         setTextColor(appPalette.primaryText)
         setLineSpacing(0f, 1.1f)
-        setPaddingRelative(0, dp(2), 0, dp(2))
-    }
-
-    private fun actionText(textResource: Int, action: () -> Unit) = TextView(this).apply {
-        text = getString(textResource)
-        textSize = 13.5f
-        typeface = Typeface.DEFAULT_BOLD
-        setTextColor(appPalette.accent)
-        gravity = Gravity.CENTER
-        isClickable = true
-        isFocusable = true
-        minimumHeight = dp(44)
-        setPaddingRelative(dp(12), dp(8), dp(12), dp(8))
-        applySelectableBackground(this)
-        setOnClickListener { action() }
+        setPaddingRelative(0, uiDp(2), 0, uiDp(2))
     }
 
     private fun chooseModel(model: AvailableLiteRtModel) {
@@ -248,7 +239,11 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
     private fun openSource(model: AvailableLiteRtModel) {
         runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(model.sourceUrl))) }
             .onFailure {
-                Toast.makeText(this, R.string.download_source_unavailable, Toast.LENGTH_LONG).show()
+                showSnackbar(
+                    screenRoot,
+                    getString(R.string.download_source_unavailable),
+                    Snackbar.LENGTH_LONG,
+                )
             }
     }
 
@@ -280,15 +275,6 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
     }
 
     private fun formatCount(value: Int): String = NumberFormat.getIntegerInstance().format(value)
-
-    private fun applySelectableBackground(view: View) {
-        val value = TypedValue()
-        if (theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, value, true)) {
-            view.setBackgroundResource(value.resourceId)
-        }
-    }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     companion object {
         const val EXTRA_MODEL_ID = "liteRtCatalogModelId"

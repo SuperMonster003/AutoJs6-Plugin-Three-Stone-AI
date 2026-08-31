@@ -39,6 +39,9 @@ ai.session({
 
 同一会话一次只允许一个活动轮次. 使用完毕后应调用 `session.close()`; 取消, 超时或生成失败也会关闭整个会话.
 
+<!-- persistent-context-policy: successful-turns-only; transparent-step-compaction; 512-KiB-transcript-guard; no-hidden-summary; fail-closed -->
+持久会话只留存成功完成的 user/assistant 轮次. 达到 token 水位或 512 KiB 转写护栏时, 插件会使用原始 SYSTEM 消息和最近完整轮次后缀在内部透明重建 backend; 不会发起隐藏摘要请求. Binder session ID, 固定生成选项以及 stream/usage/completion 回调顺序均保持不变. 如果 SYSTEM 消息, 当前提示词与最近轮次保底仍超过绝对安全上限, 会话会使用既有 invalid-request 错误 fail-closed.
+
 可在同一个 options 对象中控制采样和输出长度:
 
 ```javascript

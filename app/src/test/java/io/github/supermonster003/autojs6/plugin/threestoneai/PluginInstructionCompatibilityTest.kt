@@ -55,6 +55,14 @@ class PluginInstructionCompatibilityTest {
                 source.contains("\"cpu\"   // explicit backend profile"),
             )
             assertTrue(
+                "$label must document bounded persistent-session context",
+                source.contains(PERSISTENT_CONTEXT_POLICY_MARKER),
+            )
+            assertTrue(
+                "$label must disclose the persistent transcript memory guard",
+                source.contains("512 KiB"),
+            )
+            assertTrue(
                 "$label runnable examples must not impose a token limit by default",
                 source.lineSequence().none { line ->
                     line.trimStart().startsWith("maxTokens:")
@@ -155,5 +163,8 @@ class PluginInstructionCompatibilityTest {
     private companion object {
         const val GENERATION_OPTIONS_MARKER = "new TextApi.AiGenerationOptions("
         const val GENERATION_OPTIONS_PARAMETER_COUNT = 16
+        const val PERSISTENT_CONTEXT_POLICY_MARKER =
+            "persistent-context-policy: successful-turns-only; transparent-step-compaction; " +
+                "512-KiB-transcript-guard; no-hidden-summary; fail-closed"
     }
 }

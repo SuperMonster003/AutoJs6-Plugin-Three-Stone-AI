@@ -39,6 +39,9 @@ ai.session({
 
 تسمح الجلسة بجولة نشطة واحدة فقط. استدع `session.close()` عند الانتهاء; كما يؤدي الإلغاء أو timeout أو فشل التوليد إلى إغلاق الجلسة كاملة.
 
+<!-- persistent-context-policy: successful-turns-only; transparent-step-compaction; 512-KiB-transcript-guard; no-hidden-summary; fail-closed -->
+تحتفظ الجلسة المستمرة فقط بجولات user/assistant التي اكتملت بنجاح. عند بلوغ حد token أو حاجز نص المحادثة البالغ 512 KiB, تعيد الإضافة إنشاء backend بشفافية من رسائل SYSTEM الأصلية ولاحقة حديثة من الجولات الكاملة; ولا تنفذ طلب تلخيص مخفيا. يبقى Binder session ID وخيارات التوليد الثابتة وترتيب stream/usage/completion بلا تغيير. إذا ظلت رسائل SYSTEM والطلب الحالي واللاحقة الحديثة الدنيا تتجاوز حد الأمان المطلق, تفشل الجلسة وفق fail-closed باستخدام خطأ invalid-request الموجود.
+
 يمكن التحكم في sampling وطول الإخراج من كائن options نفسه:
 
 ```javascript

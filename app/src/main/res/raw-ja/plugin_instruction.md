@@ -39,6 +39,9 @@ ai.session({
 
 セッションで同時に実行できるターンは 1 つだけです. 使用後は必ず `session.close()` を呼び出してください. キャンセル, timeout, 生成失敗でもセッション全体が終了します.
 
+<!-- persistent-context-policy: successful-turns-only; transparent-step-compaction; 512-KiB-transcript-guard; no-hidden-summary; fail-closed -->
+永続セッションが保持するのは正常に完了した user/assistant ターンだけです. token ウォーターマークまたは 512 KiB のトランスクリプト保護上限に達すると, プラグインは元の SYSTEM メッセージと直近の完全なターンのサフィックスから backend を透過的に再構築します. 隠れた要約リクエストは実行しません. Binder session ID, 固定された生成オプション, stream/usage/completion の順序は変わりません. SYSTEM メッセージ, 現在のプロンプト, 最小限の直近サフィックスが絶対安全上限を超える場合, セッションは既存の invalid-request エラーで fail-closed します.
+
 同じ options object で sampling と出力長を制御できます:
 
 ```javascript

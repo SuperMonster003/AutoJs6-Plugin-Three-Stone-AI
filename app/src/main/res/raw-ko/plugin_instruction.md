@@ -39,6 +39,9 @@ ai.session({
 
 세션에서는 한 번에 하나의 턴만 활성화할 수 있습니다. 사용 후에는 항상 `session.close()`를 호출하십시오. 취소, timeout 또는 생성 실패도 전체 세션을 닫습니다.
 
+<!-- persistent-context-policy: successful-turns-only; transparent-step-compaction; 512-KiB-transcript-guard; no-hidden-summary; fail-closed -->
+영구 세션은 성공적으로 완료된 user/assistant 턴만 유지합니다. token 워터마크 또는 512 KiB 대화 기록 보호 한도에 도달하면 플러그인은 원래 SYSTEM 메시지와 최근의 완전한 턴 접미사로 backend를 투명하게 다시 만듭니다. 숨겨진 요약 요청은 실행하지 않습니다. Binder session ID, 고정 생성 옵션 및 stream/usage/completion 순서는 바뀌지 않습니다. SYSTEM 메시지, 현재 프롬프트 및 최소 최근 접미사가 절대 안전 한도를 초과하면 세션은 기존 invalid-request 오류로 fail-closed됩니다.
+
 같은 options 객체에서 sampling과 출력 길이를 제어할 수 있습니다:
 
 ```javascript

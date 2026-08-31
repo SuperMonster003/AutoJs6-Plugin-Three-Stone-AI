@@ -39,6 +39,9 @@ ai.session({
 
 同一工作階段一次只允許一個活動輪次. 使用完畢後應呼叫 `session.close()`; 取消, 逾時或生成失敗也會關閉整個工作階段.
 
+<!-- persistent-context-policy: successful-turns-only; transparent-step-compaction; 512-KiB-transcript-guard; no-hidden-summary; fail-closed -->
+持久工作階段只保留成功完成的 user/assistant 輪次. 達到 token 水位或 512 KiB 轉寫護欄時, 外掛會使用原始 SYSTEM 訊息和最近完整輪次後綴在內部透明重建 backend; 不會發出隱藏摘要要求. Binder session ID, 固定生成選項以及 stream/usage/completion 回呼順序均維持不變. 如果 SYSTEM 訊息, 目前提示詞與最近輪次保底仍超過絕對安全上限, 工作階段會使用既有 invalid-request 錯誤 fail-closed.
+
 可在同一個 options 物件中控制取樣與輸出長度:
 
 ```javascript

@@ -39,6 +39,9 @@ ai.session({
 
 Only one turn may be active in a session. Always call `session.close()` when finished; cancellation, timeout, or generation failure also closes the entire session.
 
+<!-- persistent-context-policy: successful-turns-only; transparent-step-compaction; 512-KiB-transcript-guard; no-hidden-summary; fail-closed -->
+A persistent session retains only successfully completed user/assistant turns. At its token watermark or 512 KiB transcript guard, the plugin transparently rebuilds the backend from the original SYSTEM messages and a recent complete-turn suffix; it never makes a hidden summarization request. The Binder session ID, fixed generation options, and stream/usage/completion order remain unchanged. If the SYSTEM messages, current prompt, and minimum recent suffix still exceed the absolute safety limit, the session fails closed with the existing invalid-request error.
+
 Sampling and output length can be controlled from the same options object:
 
 ```javascript

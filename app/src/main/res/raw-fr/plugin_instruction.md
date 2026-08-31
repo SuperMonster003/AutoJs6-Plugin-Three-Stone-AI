@@ -39,6 +39,9 @@ ai.session({
 
 Un seul tour peut être actif par session. Appelez toujours `session.close()` à la fin; une annulation, un timeout ou un échec de génération ferme également toute la session.
 
+<!-- persistent-context-policy: successful-turns-only; transparent-step-compaction; 512-KiB-transcript-guard; no-hidden-summary; fail-closed -->
+Une session persistante ne conserve que les tours user/assistant terminés avec succès. Au seuil de tokens ou à la limite de transcription de 512 KiB, le plugin reconstruit le backend de façon transparente à partir des messages SYSTEM d'origine et d'un suffixe récent de tours complets; il ne lance jamais de requête de résumé cachée. Le Binder session ID, les options de génération fixes et l'ordre stream/usage/completion restent inchangés. Si les messages SYSTEM, le prompt actuel et le suffixe récent minimal dépassent encore la limite de sécurité absolue, la session échoue en mode fail-closed avec l'erreur invalid-request existante.
+
 L'échantillonnage et la longueur de sortie se règlent dans le même objet d'options :
 
 ```javascript

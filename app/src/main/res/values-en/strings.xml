@@ -135,7 +135,7 @@
     <string name="chat_duration_milliseconds">%1$d ms</string>
     <string name="chat_duration_seconds">%1$s s</string>
     <string name="chat_usage_format">%1$d input | %2$d output | %3$s | %4$d session input</string>
-    <string name="chat_context_usage_compact">Context %1$s / %2$s tokens (%3$d%%) · L1 %4$s · L2 %5$s · Recall %6$s · L3 %7$s</string>
+    <string name="chat_context_usage_compact">Context %1$s / %2$s tokens (%3$d%%) | L1 %4$s | L2 %5$s | Recall %6$s | L3 %7$s</string>
     <string name="chat_context_usage_unavailable">Context usage unavailable</string>
     <string name="chat_context_usage_title">Context usage</string>
     <string name="chat_context_usage_details">Used: %1$s / %2$s tokens\nSource: %3$s\nL0 fixed: %4$s\nL1 memory: %5$s\nL2 summary: %6$s\nRecall: %7$s\nL3 recent: %8$s\nProvider/template: %9$s\nSoft / hard / absolute: %10$s / %11$s / %12$s</string>

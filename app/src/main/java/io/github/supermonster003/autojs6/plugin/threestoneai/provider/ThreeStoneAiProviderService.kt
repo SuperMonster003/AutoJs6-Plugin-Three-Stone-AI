@@ -51,7 +51,10 @@ class ThreeStoneAiProviderService : Service() {
 
     override fun onDestroy() {
         activeSession.set(null)
-        sessions.toList().forEach(RemoteThreeStoneAiSession::serviceDestroyed)
+        // ConcurrentHashMap's weakly consistent traversal tolerates serviceDestroyed() removing
+        // itself through onFinished. Kotlin's size-based toList() does not: a concurrent removal
+        // can leave it calling next() after the iterator has been exhausted.
+        sessions.forEach(RemoteThreeStoneAiSession::serviceDestroyed)
         sessions.clear()
         worker.shutdownNow()
         targetPager.close()

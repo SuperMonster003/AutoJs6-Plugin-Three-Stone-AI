@@ -137,21 +137,23 @@ ConversationContextCoordinator
 
 ### P2 - 摘要检查点与结构化工作记忆 (把遗忘变成压缩)
 
-- [ ] **P2-1** 数据模型: `ConversationContextState { coveredThroughMessageId, summarySegments[], workingMemory, schemaVersion }`; `SummarySegment` 带 `firstMessageId / lastMessageId / sourceHash`; `MemoryItem` 带 `sourceMessageIds / status (PROPOSED | CONFIRMED | REJECTED | SUPERSEDED)`; 随 `StoredConversation` 持久化, 会话历史 codec 升 v4 (fail-closed, 无迁移分支, D4).
+- [x] **P2-1** 数据模型: `ConversationContextState { coveredThroughMessageId, summarySegments[], workingMemory, schemaVersion }`; `SummarySegment` 带 `firstMessageId / lastMessageId / sourceHash`; `MemoryItem` 带 `sourceMessageIds / status (PROPOSED | CONFIRMED | REJECTED | SUPERSEDED)`; 随 `StoredConversation` 持久化, 会话历史 codec 升 v4 (fail-closed, 无迁移分支, D4).
   - 验收: codec 编解码单测; 旧 v3 文件按既有约定整体拒读.
-- [ ] **P2-2** 触发与范围: 软水位后台生成; 每次只摘要 "下次台阶驱逐将移出原文窗口的完整 turn 段" (上个检查点之后), 绝不重摘全会话, 也绝不摘要进行中/失败/停止轮.
+- [x] **P2-2** 触发与范围: 软水位后台生成; 每次只摘要 "下次台阶驱逐将移出原文窗口的完整 turn 段" (上个检查点之后), 绝不重摘全会话, 也绝不摘要进行中/失败/停止轮.
   - 验收: 单测验证检查点链连续覆盖,范围不重叠不跳跃.
-- [ ] **P2-3** 摘要调用 (D1/D5): 用当前会话 target 新建一次性 backend session, 要求严格 JSON 输出 (target 具 `structuredJson` 能力时用 schema, 否则 prompt 约束 + 严格解析); 输入输出均设硬上限; 后台执行,与聊天互不阻塞, 失败重试 1 次后放弃并保留旧检查点, 聊天退化为纯截断继续可用.
+- [x] **P2-3** 摘要调用 (D1/D5): 用当前会话 target 新建一次性 backend session, 要求严格 JSON 输出 (target 具 `structuredJson` 能力时用 schema, 否则 prompt 约束 + 严格解析); 输入输出均设硬上限; 后台执行,与聊天互不阻塞, 失败重试 1 次后放弃并保留旧检查点, 聊天退化为纯截断继续可用.
   - 验收: 伪 backend 单测覆盖 成功 / 超限 / 解析失败 / 网络失败退化; 摘要调用不占用聊天的 backend session.
-- [ ] **P2-4** 本地验证器: 引用的 `sourceMessageIds` 必须落在覆盖范围内且真实存在; 字段长度 / 条数硬上限; 状态机规则 - 模型未经用户确认的建议只能是 PROPOSED, 不得直接产出 CONFIRMED 决定; 验证失败整段丢弃, 保留旧检查点.
+- [x] **P2-4** 本地验证器: 引用的 `sourceMessageIds` 必须落在覆盖范围内且真实存在; 字段长度 / 条数硬上限; 状态机规则 - 模型未经用户确认的建议只能是 PROPOSED, 不得直接产出 CONFIRMED 决定; 验证失败整段丢弃, 保留旧检查点.
   - 验收: 单测逐条覆盖拒绝分支 (越界来源 / 超长 / 非法状态跃迁).
-- [ ] **P2-5** 装配整合: `compileContext` 增加 L1 (工作记忆) / L2 (摘要段) 层, 按第 4 节优先级与各层上限装箱; 绝对保护水位时丢弃 L1/L2.
+- [x] **P2-5** 装配整合: `compileContext` 增加 L1 (工作记忆) / L2 (摘要段) 层, 按第 4 节优先级与各层上限装箱; 绝对保护水位时丢弃 L1/L2.
   - 验收: 单测覆盖各层上限,优先级,紧急降级路径.
-- [ ] **P2-6** 失效规则: 编辑 / 删除 / 重新生成使 "覆盖该消息及之后" 的检查点与相关记忆失效并异步重建; target 切换保留检查点 (纯文本, 跨 target 通用); 检查点变更即触发 backend 重建 (fingerprint 变化).
+- [x] **P2-6** 失效规则: 编辑 / 删除 / 重新生成使 "覆盖该消息及之后" 的检查点与相关记忆失效并异步重建; target 切换保留检查点 (纯文本, 跨 target 通用); 检查点变更即触发 backend 重建 (fingerprint 变化).
   - 验收: 单测覆盖 编辑早于 / 晚于 检查点边界,连续编辑,重建期间再次编辑.
-- [ ] **P2-7** 存储配套: `ConversationHistoryPolicy.normalized()` 裁剪最旧消息前, 确保其已被检查点覆盖 (未覆盖则先保留); 缓解 S8 写放大 - 首选对 `persistConversationNow` 节流合并 (流式增量期已有 UI 侧缓冲, 落盘可去抖), 不足时再评估拆分文件, 单独立项.
+- [x] **P2-7** 存储配套: `ConversationHistoryPolicy.normalized()` 裁剪最旧消息前, 确保其已被检查点覆盖 (未覆盖则先保留); 缓解 S8 写放大 - 首选对 `persistConversationNow` 节流合并 (流式增量期已有 UI 侧缓冲, 落盘可去抖), 不足时再评估拆分文件, 单独立项.
   - 验收: 单测验证 "未覆盖不裁剪"; 长会话下落盘频率可观测下降.
-- [ ] **P2-8** 真机冒烟并记录: 60+ 轮跨话题长会话, 验证 (a) 单轮输入仍有界; (b) 询问 30 轮前的已确认约束能被正确回忆 (命中工作记忆/摘要); (c) 断网时摘要失败聊天不受影响.
+- [x] **P2-8** 真机冒烟并记录: 60+ 轮跨话题长会话, 验证 (a) 单轮输入仍有界; (b) 询问 30 轮前的已确认约束能被正确回忆 (命中工作记忆/摘要); (c) 断网时摘要失败聊天不受影响.
+
+> P2 已于 2026-08-31 完成: 在线 target 真机连续完成 63 个可见轮次, 三个增量检查点连续覆盖消息 1-22; 第 61 轮仅携带最近两轮原文与 L1 工作记忆, 仍精确回忆首轮约束 `ORCHID-731`.断网测试中隐藏摘要两次失败后保留旧检查点, 恢复网络后的下一条可见消息正常完成.绝对保护水位的临时 L1/L2 丢弃会以独立 fingerprint 强制下一轮重建并恢复记忆.完整数据, provider 兼容性修正与环境恢复记录见 [`docs/dev/context-summary-smoke.md`](docs/dev/context-summary-smoke.md).
 
 ### P3 - Binder 持久会话透明压缩 (堵住旁路, D2)
 

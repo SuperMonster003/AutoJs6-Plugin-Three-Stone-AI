@@ -22,6 +22,19 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         }
         val messageBytes = OnlineAiRequestSupport.requireConversation(messages)
         val body = JsonObject().apply {
+            val systemMessages = messages.filter { message -> message.role == GenerationRole.SYSTEM }
+            if (systemMessages.isNotEmpty()) {
+                // Keep invariant L0/L1/L2 bytes ahead of the append-only raw content array.
+                add("systemInstruction", JsonObject().apply {
+                    add("parts", JsonArray().apply {
+                        systemMessages.forEach { message ->
+                            add(JsonObject().apply {
+                                addProperty("text", OnlineAiRequestSupport.text(message))
+                            })
+                        }
+                    })
+                })
+            }
             add("contents", JsonArray().apply {
                 messages.filterNot { message -> message.role == GenerationRole.SYSTEM }
                     .forEach { message ->
@@ -42,18 +55,6 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
                         })
                     }
             })
-            val systemMessages = messages.filter { message -> message.role == GenerationRole.SYSTEM }
-            if (systemMessages.isNotEmpty()) {
-                add("systemInstruction", JsonObject().apply {
-                    add("parts", JsonArray().apply {
-                        systemMessages.forEach { message ->
-                            add(JsonObject().apply {
-                                addProperty("text", OnlineAiRequestSupport.text(message))
-                            })
-                        }
-                    })
-                })
-            }
             val generationConfig = JsonObject()
             turn.maximumOutputTokens?.let { maximumOutputTokens ->
                 require(maximumOutputTokens > 0) { "Online AI maximum output tokens must be positive" }
@@ -145,11 +146,14 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         val input = OnlineAiResponseSupport.countOrNull(value, "promptTokenCount")
         val output = OnlineAiResponseSupport.countOrNull(value, "candidatesTokenCount")
         val total = OnlineAiResponseSupport.countOrNull(value, "totalTokenCount")
-        if (input == null && output == null && total == null) return null
+        val cached = OnlineAiResponseSupport.countOrNull(value, "cachedContentTokenCount")
+        if (input == null && output == null && total == null && cached == null) return null
         return OnlineAiUsageUpdate(
             inputTokens = input,
             outputTokens = output,
             totalTokens = total,
+            cachedInputTokens = cached,
+            cacheEligibleInputTokens = input.takeIf { cached != null },
         )
     }
 

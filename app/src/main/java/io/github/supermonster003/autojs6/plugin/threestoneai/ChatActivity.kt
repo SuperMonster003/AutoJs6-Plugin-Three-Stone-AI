@@ -2149,6 +2149,10 @@ class ChatActivity : ConfiguredActivity() {
                 "estimatedInputTokens=${completedObservation.inputEstimate.estimatedTokens} " +
                 "actualInputTokens=${statistics?.inputTokens} " +
                 "actualOutputTokens=${statistics?.outputTokens} " +
+                "cacheReadInputTokens=${statistics?.cachedInputTokens} " +
+                "cacheWriteInputTokens=${statistics?.cacheWriteInputTokens} " +
+                "cacheEligibleInputTokens=${statistics?.cacheEligibleInputTokens} " +
+                "promptCacheHitRate=${statistics?.promptCacheHitRate} " +
                 "accountingTokens=${accounting.tokens} accountingSource=${accounting.source} " +
                 "hardWatermarkTokens=${completedObservation.hardWatermarkTokens} " +
                 "cumulativeInputTokens=$cumulativeInputTokens " +

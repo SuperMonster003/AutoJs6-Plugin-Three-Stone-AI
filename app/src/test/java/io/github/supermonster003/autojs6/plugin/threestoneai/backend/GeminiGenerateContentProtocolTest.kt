@@ -151,6 +151,36 @@ class GeminiGenerateContentProtocolTest {
     }
 
     @Test
+    fun usageParsesGeminiCachedContentTokens() {
+        val update = GeminiGenerateContentProtocolAdapter.parseEvent(
+            event(
+                """
+                {
+                  "candidates":[{"content":{"parts":[{"text":"OK"}]}}],
+                  "usageMetadata":{
+                    "promptTokenCount":1000,
+                    "cachedContentTokenCount":800,
+                    "candidatesTokenCount":2,
+                    "totalTokenCount":1002
+                  }
+                }
+                """.trimIndent(),
+            ),
+        ).usage
+
+        assertEquals(
+            OnlineAiUsageUpdate(
+                inputTokens = 1000L,
+                outputTokens = 2L,
+                totalTokens = 1002L,
+                cachedInputTokens = 800L,
+                cacheEligibleInputTokens = 1000L,
+            ),
+            update,
+        )
+    }
+
+    @Test
     fun jsonFallbackRequiresTerminalTextAndReturnsUsage() {
         val response = GeminiGenerateContentProtocolAdapter.parseJson(
             """

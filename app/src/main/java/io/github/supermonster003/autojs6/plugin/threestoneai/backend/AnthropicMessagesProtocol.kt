@@ -29,6 +29,18 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
             addProperty("model", normalized.modelId)
             addProperty("stream", true)
             addProperty("max_tokens", maximumOutputTokens)
+            val systemMessages = messages.filter { message -> message.role == GenerationRole.SYSTEM }
+            if (systemMessages.isNotEmpty()) {
+                // Keep invariant L0/L1/L2 bytes ahead of the append-only raw message array.
+                add("system", JsonArray().apply {
+                    systemMessages.forEach { message ->
+                        add(JsonObject().apply {
+                            addProperty("type", "text")
+                            addProperty("text", OnlineAiRequestSupport.text(message))
+                        })
+                    }
+                })
+            }
             add("messages", JsonArray().apply {
                 messages.filterNot { message -> message.role == GenerationRole.SYSTEM }
                     .forEach { message ->
@@ -45,17 +57,6 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
                         })
                     }
             })
-            val systemMessages = messages.filter { message -> message.role == GenerationRole.SYSTEM }
-            if (systemMessages.isNotEmpty()) {
-                add("system", JsonArray().apply {
-                    systemMessages.forEach { message ->
-                        add(JsonObject().apply {
-                            addProperty("type", "text")
-                            addProperty("text", OnlineAiRequestSupport.text(message))
-                        })
-                    }
-                })
-            }
             turn.samplingOptions?.let { sampling ->
                 addProperty("temperature", sampling.temperature)
                 addProperty("top_k", sampling.topK)
@@ -172,10 +173,30 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
 
     private fun usage(value: JsonObject?): OnlineAiUsageUpdate? {
         value ?: return null
-        val input = OnlineAiResponseSupport.countOrNull(value, "input_tokens")
+        val uncachedInput = OnlineAiResponseSupport.countOrNull(value, "input_tokens")
         val output = OnlineAiResponseSupport.countOrNull(value, "output_tokens")
-        if (input == null && output == null) return null
-        return OnlineAiUsageUpdate(inputTokens = input, outputTokens = output)
+        val cacheRead = OnlineAiResponseSupport.countOrNull(value, "cache_read_input_tokens")
+        val cacheWrite = OnlineAiResponseSupport.countOrNull(value, "cache_creation_input_tokens")
+        if (uncachedInput == null && output == null && cacheRead == null && cacheWrite == null) return null
+        val fullInput = if (uncachedInput != null || cacheRead != null || cacheWrite != null) {
+            try {
+                Math.addExact(
+                    Math.addExact(uncachedInput ?: 0L, cacheRead ?: 0L),
+                    cacheWrite ?: 0L,
+                )
+            } catch (_: ArithmeticException) {
+                OnlineAiResponseSupport.invalidResponse()
+            }
+        } else {
+            null
+        }
+        return OnlineAiUsageUpdate(
+            inputTokens = fullInput,
+            outputTokens = output,
+            cachedInputTokens = cacheRead,
+            cacheWriteInputTokens = cacheWrite,
+            cacheEligibleInputTokens = fullInput.takeIf { cacheRead != null || cacheWrite != null },
+        )
     }
 
     private fun endpoint(baseUrl: String): HttpUrl {

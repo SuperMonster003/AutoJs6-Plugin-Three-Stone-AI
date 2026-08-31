@@ -397,6 +397,9 @@ internal class OnlineAiSession(
         private var outputBytes = 0L
         private var inputTokens: Long? = null
         private var outputTokens: Long? = null
+        private var cachedInputTokens: Long? = null
+        private var cacheWriteInputTokens: Long? = null
+        private var cacheEligibleInputTokens: Long? = null
         var contentSeen = false
             private set
 
@@ -421,6 +424,9 @@ internal class OnlineAiSession(
         fun recordUsage(value: OnlineAiUsageUpdate) {
             value.inputTokens?.let { inputTokens = it }
             value.outputTokens?.let { outputTokens = it }
+            value.cachedInputTokens?.let { cachedInputTokens = it }
+            value.cacheWriteInputTokens?.let { cacheWriteInputTokens = it }
+            value.cacheEligibleInputTokens?.let { cacheEligibleInputTokens = it }
         }
 
         fun recordContent() {
@@ -440,6 +446,9 @@ internal class OnlineAiSession(
                     (System.nanoTime() - startedNanos).coerceAtLeast(0L),
                 ),
                 contextTokensAfterTurn = Math.addExact(input, output),
+                cachedInputTokens = cachedInputTokens,
+                cacheWriteInputTokens = cacheWriteInputTokens,
+                cacheEligibleInputTokens = cacheEligibleInputTokens,
             )
         }
     }

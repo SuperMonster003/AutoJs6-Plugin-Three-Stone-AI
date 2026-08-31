@@ -127,6 +127,35 @@ class AnthropicMessagesProtocolTest {
     }
 
     @Test
+    fun usageAddsAnthropicUncachedCreatedAndReadInputCounters() {
+        val update = AnthropicMessagesProtocolAdapter.parseEvent(
+            event(
+                "message_start",
+                """
+                {
+                  "type":"message_start",
+                  "message":{"usage":{
+                    "input_tokens":7,
+                    "cache_creation_input_tokens":3,
+                    "cache_read_input_tokens":11
+                  }}
+                }
+                """.trimIndent(),
+            ),
+        ).usage
+
+        assertEquals(
+            OnlineAiUsageUpdate(
+                inputTokens = 21L,
+                cachedInputTokens = 11L,
+                cacheWriteInputTokens = 3L,
+                cacheEligibleInputTokens = 21L,
+            ),
+            update,
+        )
+    }
+
+    @Test
     fun jsonFallbackCollectsOnlyTextBlocksAndUsage() {
         val response = AnthropicMessagesProtocolAdapter.parseJson(
             """

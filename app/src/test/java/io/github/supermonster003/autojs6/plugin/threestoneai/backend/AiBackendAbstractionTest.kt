@@ -57,6 +57,25 @@ class AiBackendAbstractionTest {
         assertThrows(IllegalArgumentException::class.java) {
             GenerationStatistics(Long.MAX_VALUE, 1L, 0L)
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            GenerationStatistics(
+                inputTokens = 10L,
+                outputTokens = 1L,
+                durationMillis = 1L,
+                cachedInputTokens = 11L,
+                cacheEligibleInputTokens = 10L,
+            )
+        }
+
+        val cached = GenerationStatistics(
+            inputTokens = 100L,
+            outputTokens = 1L,
+            durationMillis = 1L,
+            cachedInputTokens = 75L,
+            cacheWriteInputTokens = 20L,
+            cacheEligibleInputTokens = 100L,
+        )
+        assertEquals(0.75, cached.promptCacheHitRate!!, 0.0)
     }
 
     @Test

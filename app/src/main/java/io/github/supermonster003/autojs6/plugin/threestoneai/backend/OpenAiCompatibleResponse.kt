@@ -83,7 +83,25 @@ internal object OpenAiCompatibleResponseParser {
             invalidResponse()
         }
         if (total != null && total != expectedTotal) invalidResponse()
-        return OnlineAiUsageUpdate(input, output, total)
+        val inputDetails = usage.optionalObject("prompt_tokens_details")
+            ?: usage.optionalObject("input_tokens_details")
+        val cached = inputDetails?.countOrNull("cached_tokens")
+        val cacheWrite = inputDetails?.countOrNull("cache_write_tokens")
+        return OnlineAiUsageUpdate(
+            inputTokens = input,
+            outputTokens = output,
+            totalTokens = total,
+            cachedInputTokens = cached,
+            cacheWriteInputTokens = cacheWrite,
+            cacheEligibleInputTokens = input.takeIf { cached != null || cacheWrite != null },
+        )
+    }
+
+    private fun JsonObject.optionalObject(name: String): JsonObject? {
+        val value = get(name) ?: return null
+        if (value.isJsonNull) return null
+        if (!value.isJsonObject) invalidResponse()
+        return value.asJsonObject
     }
 
     private fun JsonObject.countOrNull(name: String): Long? {

@@ -92,6 +92,40 @@ class OpenAiCompatibleResponseTest {
     }
 
     @Test
+    fun usageParsesPromptCacheReadAndWriteDetails() {
+        val usage = OpenAiCompatibleResponseParser.parseEvent(
+            event(
+                """
+                {
+                  "choices":[],
+                  "usage":{
+                    "prompt_tokens":2000,
+                    "completion_tokens":4,
+                    "total_tokens":2004,
+                    "prompt_tokens_details":{
+                      "cached_tokens":1536,
+                      "cache_write_tokens":256
+                    }
+                  }
+                }
+                """.trimIndent(),
+            ),
+        ).usage
+
+        assertEquals(
+            OnlineAiUsageUpdate(
+                inputTokens = 2000L,
+                outputTokens = 4L,
+                totalTokens = 2004L,
+                cachedInputTokens = 1536L,
+                cacheWriteInputTokens = 256L,
+                cacheEligibleInputTokens = 2000L,
+            ),
+            usage,
+        )
+    }
+
+    @Test
     fun providerErrorsAndMalformedResponsesExposeOnlyFixedMessages() {
         val secret = "credential-should-not-escape"
         val providerFailure = assertThrows(OnlineAiFailureException::class.java) {

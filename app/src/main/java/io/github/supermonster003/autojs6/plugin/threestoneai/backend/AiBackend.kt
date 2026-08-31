@@ -269,6 +269,12 @@ internal data class GenerationStatistics(
     val durationMillis: Long,
     /** Full retained context after this turn when the backend can report it exactly. */
     val contextTokensAfterTurn: Long? = null,
+    /** Provider-reported prompt tokens served from a reusable prefix cache. */
+    val cachedInputTokens: Long? = null,
+    /** Provider-reported prompt tokens written into a reusable prefix cache. */
+    val cacheWriteInputTokens: Long? = null,
+    /** Input-token denominator to use for cache-rate telemetry. */
+    val cacheEligibleInputTokens: Long? = null,
 ) {
     val totalTokens: Long
 
@@ -277,9 +283,27 @@ internal data class GenerationStatistics(
         require(outputTokens >= 0L)
         require(durationMillis >= 0L)
         require(contextTokensAfterTurn == null || contextTokensAfterTurn >= 0L)
+        require(cachedInputTokens == null || cachedInputTokens >= 0L)
+        require(cacheWriteInputTokens == null || cacheWriteInputTokens >= 0L)
+        require(cacheEligibleInputTokens == null || cacheEligibleInputTokens >= 0L)
+        require(
+            cachedInputTokens == null || cacheEligibleInputTokens == null ||
+                cachedInputTokens <= cacheEligibleInputTokens
+        )
+        require(
+            cacheWriteInputTokens == null || cacheEligibleInputTokens == null ||
+                cacheWriteInputTokens <= cacheEligibleInputTokens
+        )
         require(inputTokens <= Long.MAX_VALUE - outputTokens)
         totalTokens = inputTokens + outputTokens
     }
+
+    val promptCacheHitRate: Double?
+        get() {
+            val cached = cachedInputTokens ?: return null
+            val eligible = cacheEligibleInputTokens ?: inputTokens
+            return if (eligible > 0L) cached.toDouble() / eligible.toDouble() else 0.0
+        }
 }
 
 /**

@@ -29,6 +29,7 @@ The session applies both capacity and memory limits:
 | Limit | Default | Behavior |
 |---|---:|---|
 | Application input budget | 16,384 tokens | Same default budget as launcher chat; target capacity can reduce it |
+| LiteRT runtime capacity | 4,096 tokens | Shared input/output KV cache; one constant configures both the Engine and local target limit |
 | Hard watermark | 80% of effective input | Rebuild before the next turn |
 | Absolute protection | 90% of effective input | Reject an irreducible request before generation |
 | Rebuild target | 45% of effective input | Pack a recent complete-turn suffix |
@@ -43,6 +44,13 @@ falls back to conservative incremental estimation. A large new prompt participat
 preflight projection, so it can trigger an early rebuild instead of overflowing an otherwise
 reusable backend.
 
+LiteRT-LM 0.15.0 cannot report a loaded package's supported context size. The plugin therefore
+configures `EngineConfig.maxNumTokens` and `AiTargetLimits.maximumContextTokens` from the same
+4,096-token runtime constant. Model import health checking uses that identical Engine factory, so
+a package that cannot initialize under the declared contract fails before it can be selected. With
+a 16-token output reservation and the 8% safety margin used in the device smoke, the effective
+input budget is 3,752 tokens, the hard watermark is 3,001, and the absolute guard is 3,376.
+
 The 512 KiB transcript guard is independent of the per-request byte limit. It bounds plugin-owned
 session memory between rebuilds. If retaining the recent floor cannot reach the 45% byte target,
 the policy keeps the floor while it remains below 512 KiB. It may evict below the floor only to
@@ -56,16 +64,22 @@ exhausted and the next turn fails closed.
 2. `PersistentSessionContext` returns an immutable plan:
    - `INITIAL`: use the first request unchanged with a new backend session.
    - `CONTINUE`: keep the backend and call `streamNext()` with only the new prompt.
-   - `REBUILD`: close the completed backend, create a new one, and call `stream()` with original
-     SYSTEM messages, anchored initial data, the compacted recent suffix, and the current prompt.
+   - `REBUILD`: dispatch original SYSTEM messages, anchored initial data, the compacted recent
+     suffix, and the current prompt through a fresh backend context. Online sessions close and
+     recreate the backend before `stream()`. LiteRT closes only the completed `Conversation`,
+     creates its replacement on the retained initialized Engine lease, and calls the internal
+     `streamRebuilt()` path.
 3. The ordinary listener forwards text deltas. The context plan is still provisional.
 4. After output aggregation and protocol completion validation succeed, the output snapshot is
    appended as the assistant side of the turn and accounting is updated. Every failure path
    abandons the plan without changing the last successful transcript.
 
-Backend replacement happens before `onStarted` for that turn. `persistentSessionId` remains stored
+Context replacement happens before `onStarted` for that turn. `persistentSessionId` remains stored
 on the outer Binder session, so every `onStarted` event continues to report the same ID. The same
-`FixedConfiguration` comparison runs before either continuation or rebuild.
+`FixedConfiguration` comparison runs before either continuation or rebuild. LiteRT avoids closing
+and immediately reacquiring the same cached Engine because native cancellation can outlive a
+completed Conversation on older devices; only an actually active turn calls `cancelProcess()`
+during session shutdown.
 
 ## Hard failure contract
 
@@ -98,8 +112,12 @@ change and rebuilt input returns to the compaction band. Prompts and model outpu
 - complete-turn memory-guard eviction;
 - irregular initial-history anchoring;
 - 48 turns through fake persistent backend sessions, including both `streamNext()` and rebuilt
-  `stream()` dispatch with an unchanged host event sequence;
+  `stream()` dispatch, plus the in-place `streamRebuilt()` branch, with an unchanged host event
+  sequence;
 - absolute-limit failure and reuse of the existing `INVALID_REQUEST` code.
 
 `PluginInstructionCompatibilityTest` requires all eleven localized instruction resources to carry
 the synchronized persistent-context contract and 512 KiB guard marker.
+
+The local and online 100-turn device evidence is recorded in
+[`binder-persistent-context-smoke.md`](binder-persistent-context-smoke.md).

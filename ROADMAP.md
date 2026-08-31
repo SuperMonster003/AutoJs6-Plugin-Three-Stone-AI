@@ -75,12 +75,12 @@ ConversationContextCoordinator
     └── SummaryCheckpointer      (P2: 检查点生成/验证/失效)
             │
             ▼
-      AiBackendSession (stream / streamNext 不变)
+      AiBackendSession (stream / streamNext / 插件内 streamRebuilt)
 ```
 
 关键机制:
 
-- 轮换判定从 "轮数" 改为 "上下文水位": 记账值达到硬水位 → 下一轮前关闭旧 session, 用编译后的精简上下文重建.`MAXIMUM_BACKEND_TURNS` 保留为泄漏保护 (提高到 64), 不再是主策略.
+- 轮换判定从 "轮数" 改为 "上下文水位": 记账值达到硬水位 → 下一轮前用编译后的精简上下文重建.在线 backend 关闭旧 session 后新建; LiteRT 保留已初始化 Engine, 原位替换已完成的 `Conversation`.`MAXIMUM_BACKEND_TURNS` 保留为泄漏保护 (提高到 64), 不再是主策略.
 - 台阶式驱逐: 达到水位时一次驱逐一批最旧 turn (回落到压缩目标), 而不是每轮滑动 1 turn - 两次重建之间请求前缀保持稳定, 减少重建频率, 也利于 provider 侧 prompt cache.
 - 记账口径归一: 在线用实报 `inputTokens + outputTokens` 近似当前上下文全量; 本地经 `getTokenCount()` 取全量真值; 均不可得时用估算兜底.
 - 摘要是派生索引不是唯一真相: 原文在存储保留期内不因摘要而删除; 检查点带来源 ID 与哈希, 可随时从原文重建.
@@ -117,7 +117,7 @@ ConversationContextCoordinator
 
 ### P1 - token 预算装配与水位轮换 (止血: 输入从锯齿增长变为恒定有界)
 
-- [x] **P1-1** `AiTargetLimits` 增加 `maximumContextTokens: Int?` (插件内部字段, 不经 `TargetPager` 透出 Binder); `OnlineAiBackend` 目录 codec 版本 +1 (fail-closed); 本地 target 暂不填, 走全局默认预算.
+- [x] **P1-1** `AiTargetLimits` 增加 `maximumContextTokens: Int?` (插件内部字段, 不经 `TargetPager` 透出 Binder); `OnlineAiBackend` 目录 codec 版本 +1 (fail-closed); 本地 target 在 P1 阶段先走全局默认预算, P3 真机校准后已与 LiteRT `EngineConfig.maxNumTokens` 同源声明 4,096 tokens.
   - 验收: 既有 `OnlineAiBackendTest` / 目录编解码测试更新通过.
 - [x] **P1-2** 新增 `ContextBudgetCalculator`: `有效输入预算 = min(target.maximumContextTokens - 输出预留 - 安全余量, 应用预算设置)`; 上下文窗口未知的在线 target 只受应用预算约束 (预算即成本上限, 不冒充容量推断).
   - 验收: 单测覆盖 有/无 target 上限,有/无输出设置,极小预算钳制 (保底 2 turn + 当前消息).
@@ -157,15 +157,17 @@ ConversationContextCoordinator
 
 ### P3 - Binder 持久会话透明压缩 (堵住旁路, D2)
 
-- [ ] **P3-1** 会话转写留存: `RemoteThreeStoneAiSession` 记录每轮 user prompt (来自 `PromptPlanner` 产物) 与完成输出 (来自 `StreamingOutputBuffer.snapshot()`), 仅成功轮入账; 首轮完整 history 与 SYSTEM 消息一并留存; 内存护栏 512 KiB, 超出即对最旧 turn 做台阶驱逐 (原文裁剪, 无 LLM 摘要, D2).
+- [x] **P3-1** 会话转写留存: `RemoteThreeStoneAiSession` 记录每轮 user prompt (来自 `PromptPlanner` 产物) 与完成输出 (来自 `StreamingOutputBuffer.snapshot()`), 仅成功轮入账; 首轮完整 history 与 SYSTEM 消息一并留存; 内存护栏 512 KiB, 超出即对最旧 turn 做台阶驱逐 (原文裁剪, 无 LLM 摘要, D2).
   - 验收: 单测覆盖 成功/失败/取消轮的入账边界,护栏驱逐.
-- [ ] **P3-2** 记账与透明重建: 复用 `ContextAccounting` (usage 已随 `GenerationStatistics` 可得); 达到硬水位后, 在下一次 `generateNext` 前于插件内部关闭旧 backend session, 用 `compileContext` 产物 (SYSTEM 原样置顶 + 最近原文) 调用新 session 的 `stream()`; `sessionId`,`FixedConfiguration`,回调时序对脚本完全不变.
+- [x] **P3-2** 记账与透明重建: 复用 `ContextAccounting` (usage 已随 `GenerationStatistics` 可得); 达到硬水位后, 在下一次 `generateNext` 前于插件内部重建精简上下文 (SYSTEM 原样置顶 + 最近原文).在线 backend 关闭旧 session 后新建并调用 `stream()`; LiteRT 保留 Engine lease, 关闭旧 `Conversation` 后调用内部 `streamRebuilt()`; `sessionId`,`FixedConfiguration`,回调时序对脚本完全不变.
   - 验收: 伪 backend 单测 - 40+ 轮连续 `generateNext`, 断言脚本视角流式/完成/usage 事件序列与不重建时一致, 且底层 session 发生过重建,重建后输入有界.
-- [ ] **P3-3** 硬保底: 极端情况下 (单轮 prompt 加保底原文仍超绝对保护水位) 沿用现有 fail-closed 路径与既有错误码关闭会话, 不引入新协议错误码.
+- [x] **P3-3** 硬保底: 极端情况下 (单轮 prompt 加保底原文仍超绝对保护水位) 沿用现有 fail-closed 路径与既有错误码关闭会话, 不引入新协议错误码.
   - 验收: 单测覆盖该路径; 错误码不超出宿主 API 现有集合.
-- [ ] **P3-4** 文档: `plugin_instruction.md` 增补持久会话上下文行为说明 (透明压缩,护栏,硬保底), 按既有流程同步各语言资源; `docs/dev/` 增补设计要点.
+- [x] **P3-4** 文档: `plugin_instruction.md` 增补持久会话上下文行为说明 (透明压缩,护栏,硬保底), 按既有流程同步各语言资源; `docs/dev/` 增补设计要点.
   - 验收: `PluginInstructionCompatibilityTest` 通过.
-- [ ] **P3-5** 真机冒烟并记录: AutoJs6 脚本经 provider 连续 100 轮对话 (本地与在线 target 各一轮次), 无溢出,无会话中断; usage 曲线有界.
+- [x] **P3-5** 真机冒烟并记录: AutoJs6 脚本经 provider 连续 100 轮对话 (本地与在线 target 各一轮次), 无溢出,无会话中断; usage 曲线有界.
+
+> P3 已于 2026-08-31 完成: AutoJs6 provider 持久会话在在线与 LiteRT target 上分别连续完成 100/100 轮, host 可见 `sessionId` 与回调协议全程不变.在线两次重建将输入从 12,054/13,032 回落到 7,562/7,275; 本地两次原位重建将 KV 记账从 2,976/3,011 回落到 1,852/1,702, 第 100 轮结束为 2,379/3,001.完整脚本结果, 重建边界, 压力诊断, 自动化回归与设备恢复记录见 [`docs/dev/binder-persistent-context-smoke.md`](docs/dev/binder-persistent-context-smoke.md).
 
 ### P4 - 可选优化 (按需立项, 非本 Roadmap 承诺)
 

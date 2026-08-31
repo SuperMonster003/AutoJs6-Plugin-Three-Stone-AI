@@ -43,9 +43,12 @@ internal fun AiBackendSession.streamPreparedPersistentTurn(
     listener: GenerationListener,
 ) {
     when (plan.mode) {
-        PersistentBackendTurnMode.INITIAL,
-        PersistentBackendTurnMode.REBUILD,
-        -> stream(plan.generationRequest, listener)
+        PersistentBackendTurnMode.INITIAL -> stream(plan.generationRequest, listener)
+        PersistentBackendTurnMode.REBUILD -> if (supportsInPlacePersistentRebuild) {
+            streamRebuilt(plan.generationRequest, listener)
+        } else {
+            stream(plan.generationRequest, listener)
+        }
         PersistentBackendTurnMode.CONTINUE -> streamNext(plan.generationRequest, listener)
     }
 }

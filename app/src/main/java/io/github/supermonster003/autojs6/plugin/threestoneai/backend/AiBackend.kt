@@ -148,12 +148,21 @@ internal interface AiBackend {
 internal interface AiBackendSession : Closeable {
     val target: AiTarget
 
+    /** True when retained native resources can rebuild persistent state without a new session. */
+    val supportsInPlacePersistentRebuild: Boolean
+        get() = false
+
     /** Streams the first turn and creates any implementation-specific persistent state. */
     fun stream(request: GenerationRequest, listener: GenerationListener)
 
     /** Streams a subsequent turn using state retained by the first [stream] call. */
     fun streamNext(request: GenerationRequest, listener: GenerationListener) {
         throw UnsupportedOperationException("Persistent generation is not supported")
+    }
+
+    /** Replaces persistent state while retaining expensive implementation-specific resources. */
+    fun streamRebuilt(request: GenerationRequest, listener: GenerationListener) {
+        throw UnsupportedOperationException("In-place persistent rebuild is not supported")
     }
 
     /** Requests cancellation before releasing every session resource. */

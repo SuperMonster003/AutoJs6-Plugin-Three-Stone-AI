@@ -256,6 +256,53 @@ class PersistentSessionContextTest {
     }
 
     @Test
+    fun inPlaceCapableBackendRetainsOneResourceSessionAcrossRebuilds() {
+        val context = context(applicationInputTokenBudget = 200)
+        val backend = FakePersistentBackendSession(
+            target = target(),
+            estimator = exactEstimator,
+            supportsInPlaceRebuild = true,
+        )
+        val modes = ArrayList<PersistentBackendTurnMode>()
+
+        repeat(48) { turn ->
+            val prepared = if (turn == 0) {
+                context.prepareFirst(request(prompt = "user-$turn"), target())
+            } else {
+                context.prepareNext(request(prompt = "user-$turn"), target())
+            }
+            modes += prepared.mode
+            backend.streamPreparedPersistentTurn(
+                prepared,
+                object : GenerationListener {
+                    private val output = StringBuilder()
+
+                    override fun onTextDelta(text: String) {
+                        output.append(text)
+                    }
+
+                    override fun onCompleted(statistics: GenerationStatistics?) {
+                        context.complete(prepared, output.toString(), statistics)
+                    }
+
+                    override fun onFailed(
+                        error: Throwable,
+                        statistics: GenerationStatistics?,
+                    ) = throw AssertionError(error)
+                },
+            )
+        }
+
+        assertEquals(1, backend.initialStreamCount)
+        assertTrue(backend.inPlaceRebuildCount > 0)
+        assertTrue(backend.continuationCount > 0)
+        assertTrue(modes.contains(PersistentBackendTurnMode.REBUILD))
+        assertFalse(backend.closed)
+        backend.close()
+        assertTrue(backend.closed)
+    }
+
+    @Test
     fun irreduciblePromptFailsClosedWithAnExistingProtocolErrorCode() {
         val context = context(applicationInputTokenBudget = 100)
         completeFirst(context, prompt = "small", answer = "answer")
@@ -356,14 +403,23 @@ class PersistentSessionContextTest {
     private class FakePersistentBackendSession(
         override val target: AiTarget,
         private val estimator: ContextTokenEstimator,
+        private val supportsInPlaceRebuild: Boolean = false,
     ) : AiBackendSession {
+        override val supportsInPlacePersistentRebuild: Boolean = supportsInPlaceRebuild
         private var messages = emptyList<GenerationMessage>()
         private var initialized = false
+        var initialStreamCount = 0
+            private set
+        var continuationCount = 0
+            private set
+        var inPlaceRebuildCount = 0
+            private set
         var closed = false
             private set
 
         override fun stream(request: GenerationRequest, listener: GenerationListener) {
             check(!closed)
+            initialStreamCount += 1
             messages = request.history
             initialized = true
             generate(request, listener)
@@ -372,6 +428,14 @@ class PersistentSessionContextTest {
         override fun streamNext(request: GenerationRequest, listener: GenerationListener) {
             check(initialized && !closed)
             check(request.history.isEmpty())
+            continuationCount += 1
+            generate(request, listener)
+        }
+
+        override fun streamRebuilt(request: GenerationRequest, listener: GenerationListener) {
+            check(supportsInPlaceRebuild && initialized && !closed)
+            inPlaceRebuildCount += 1
+            messages = request.history
             generate(request, listener)
         }
 

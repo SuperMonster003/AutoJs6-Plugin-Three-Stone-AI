@@ -22,6 +22,8 @@ internal class LiteRtLocalSession(
     private val cacheDirectory: File,
     private val engineCache: ReusableResourceCache<EngineCacheKey, Engine>,
 ) : AiBackendSession {
+    override val supportsInPlacePersistentRebuild: Boolean = true
+
     private val lifecycleLock = Any()
     private val nativeLifecycleLock = Any()
     private val callbackGate = CallbackQuiescenceGate()
@@ -55,15 +57,7 @@ internal class LiteRtLocalSession(
                 synchronized(lifecycleLock) { engineLease = localEngineLease }
                 if (closed.get() || cancelled.get()) return
 
-                val localConversation = localEngineLease.value.createConversation(
-                    ConversationConfig(
-                        initialMessages = request.history.map(::toLiteRtMessage),
-                        samplerConfig = request.samplingOptions?.toLiteRtSamplerConfig(),
-                        automaticToolCalling = false,
-                        maxOutputToken = request.maximumOutputTokens,
-                        enableResponseFormat = request.responseJsonSchema != null,
-                    ),
-                )
+                val localConversation = createConversation(localEngineLease.value, request)
                 synchronized(lifecycleLock) { conversation = localConversation }
                 if (closed.get() || cancelled.get()) return
                 runTurn(
@@ -96,6 +90,48 @@ internal class LiteRtLocalSession(
                     throw error
                 }
                 runTurn(request, listener, localConversation, localEngineLease, tokenBaseline)
+            }
+        } catch (error: Throwable) {
+            synchronized(lifecycleLock) { engineLease }?.invalidate()
+            callbackGate.runCallback {
+                if (!closed.get() && !cancelled.get()) listener.onFailed(error, null)
+            }
+        }
+    }
+
+    override fun streamRebuilt(request: GenerationRequest, listener: GenerationListener) {
+        check(started.get()) { "LiteRT-LM session has not been started" }
+        check(request.prompt.role == GenerationRole.USER) {
+            "The final LiteRT-LM prompt must be a user message"
+        }
+        try {
+            synchronized(nativeLifecycleLock) {
+                check(!closed.get() && !cancelled.get()) { "LiteRT-LM session is closed" }
+                check(!turnActive.get()) { "LiteRT-LM generation turn is already active" }
+                val localEngineLease = checkNotNull(synchronized(lifecycleLock) { engineLease })
+                val previousConversation = checkNotNull(
+                    synchronized(lifecycleLock) {
+                        conversation.also { conversation = null }
+                    },
+                )
+                try {
+                    previousConversation.close()
+                } catch (error: Throwable) {
+                    localEngineLease.invalidate()
+                    throw error
+                }
+                if (closed.get() || cancelled.get()) return
+
+                val replacement = createConversation(localEngineLease.value, request)
+                synchronized(lifecycleLock) { conversation = replacement }
+                if (closed.get() || cancelled.get()) return
+                runTurn(
+                    request = request,
+                    listener = listener,
+                    localConversation = replacement,
+                    localEngineLease = localEngineLease,
+                    tokenBaseline = 0L,
+                )
             }
         } catch (error: Throwable) {
             synchronized(lifecycleLock) { engineLease }?.invalidate()
@@ -176,7 +212,7 @@ internal class LiteRtLocalSession(
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
         callbackGate.stopDelivering()
-        cancel()
+        cancelled.set(true)
         callbackGate.awaitQuiescenceAndSeal()
         synchronized(nativeLifecycleLock) {
             val activeConversation = synchronized(lifecycleLock) {
@@ -185,11 +221,23 @@ internal class LiteRtLocalSession(
             val activeEngineLease = synchronized(lifecycleLock) {
                 engineLease.also { engineLease = null }
             }
+            if (turnActive.get()) runCatching { activeConversation?.cancelProcess() }
             val conversationClosed = runCatching { activeConversation?.close() }.isSuccess
             if (!conversationClosed) activeEngineLease?.invalidate()
             runCatching { activeEngineLease?.close() }
         }
     }
+
+    private fun createConversation(engine: Engine, request: GenerationRequest): Conversation =
+        engine.createConversation(
+            ConversationConfig(
+                initialMessages = request.history.map(::toLiteRtMessage),
+                samplerConfig = request.samplingOptions?.toLiteRtSamplerConfig(),
+                automaticToolCalling = false,
+                maxOutputToken = request.maximumOutputTokens,
+                enableResponseFormat = request.responseJsonSchema != null,
+            ),
+        )
 
     private fun toLiteRtMessage(message: GenerationMessage): Message {
         val contents = Contents.of(message.textParts.map(Content::Text))

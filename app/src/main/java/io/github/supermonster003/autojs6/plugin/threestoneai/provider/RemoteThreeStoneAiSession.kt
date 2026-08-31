@@ -225,9 +225,12 @@ internal class RemoteThreeStoneAiSession(
                 null
             }
             val rebuildBackend = contextPlan?.mode == PersistentBackendTurnMode.REBUILD
+            val retainedBackend = backendSession.get()
+            val rebuildInPlace = rebuildBackend &&
+                retainedBackend?.supportsInPlacePersistentRebuild == true
             val activeBackend = when {
                 turn.firstTurn -> createAndInstallBackend(request)
-                rebuildBackend -> {
+                rebuildBackend && !rebuildInPlace -> {
                     runCatching { backendSession.getAndSet(null)?.close() }
                     turn.ensureActive()
                     createAndInstallBackend(request)

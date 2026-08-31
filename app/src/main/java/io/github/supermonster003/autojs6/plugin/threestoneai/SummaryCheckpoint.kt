@@ -242,7 +242,11 @@ internal object SummaryCheckpointJsonCodec {
             ?: throw IllegalArgumentException("$label must be an object")
 
     private fun JsonObject.requireExactKeys(expected: Set<String>, label: String) {
-        require(keySet() == expected) { "$label contains missing or unknown properties" }
+        val actual = keySet()
+        require(actual == expected) {
+            "$label contains missing or unknown properties " +
+                "(missing=${expected - actual}, unknown=${actual - expected})"
+        }
     }
 
     private fun JsonObject.requireString(name: String): String {

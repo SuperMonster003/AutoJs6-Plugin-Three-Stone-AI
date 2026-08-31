@@ -19,6 +19,12 @@ internal object ContextPolicy {
     const val MAXIMUM_TOKENS_PER_UTF8_BYTE = 0.60
     const val MESSAGE_ROLE_OVERHEAD_TOKENS = 4
     const val CALIBRATION_EMA_ALPHA = 0.20
+    const val SUMMARY_LAYER_MAXIMUM_TOKENS = 2_048
+    const val WORKING_MEMORY_MAXIMUM_TOKENS = 1_024
+    const val SUMMARY_SOURCE_MAXIMUM_TOKENS = 8_192
+    const val SUMMARY_SOURCE_MAXIMUM_BYTES = 64 * 1_024
+    const val SUMMARY_INPUT_INSTRUCTION_RESERVE_TOKENS = 512
+    const val SUMMARY_MAXIMUM_OUTPUT_TOKENS = 2_048
 }
 
 internal data class ContextTokenEstimate(

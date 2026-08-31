@@ -141,6 +141,165 @@ class ContextCompilationTest {
     }
 
     @Test
+    fun `derived memory and summaries precede only the raw turns after checkpoint coverage`() {
+        val transcript = listOf(
+            user(1, "covered"),
+            assistant(2, "covered-answer"),
+            user(3, "recent-a"),
+            assistant(4, "reply-a"),
+            user(5, "recent-b"),
+            assistant(6, "reply-b"),
+        )
+        val contextState = contextState(transcript.take(2))
+
+        val context = ChatConversationPolicy.compileContext(
+            transcript = transcript,
+            prompt = prompt("current"),
+            policy = policy(
+                maximumInputTokens = 10_000L,
+                contextState = contextState,
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                GenerationRole.SYSTEM,
+                GenerationRole.SYSTEM,
+                GenerationRole.USER,
+                GenerationRole.ASSISTANT,
+                GenerationRole.USER,
+                GenerationRole.ASSISTANT,
+            ),
+            context.messages.map(GenerationMessage::role),
+        )
+        assertEquals(listOf(3L, 4L, 5L, 6L), context.coveredMessageIds)
+        assertEquals(1, context.workingMemoryItemsIncluded)
+        assertEquals(1, context.summarySegmentsIncluded)
+        assertEquals(ConversationContextPolicy.fingerprint(contextState), context.contextFingerprint)
+        assertTrue(context.requiresSessionRebuild)
+    }
+
+    @Test
+    fun `working memory cap keeps confirmed items before proposed items`() {
+        val transcript = listOf(
+            user(1, "covered"),
+            assistant(2, "covered-answer"),
+            user(3, "recent-a"),
+            assistant(4, "reply-a"),
+            user(5, "recent-b"),
+            assistant(6, "reply-b"),
+        )
+        val confirmed = MemoryItem(
+            key = "constraint.confirmed",
+            kind = MemoryItemKind.CONSTRAINT,
+            text = "Confirmed constraint.",
+            sourceMessageIds = listOf(1L),
+            status = MemoryItemStatus.CONFIRMED,
+        )
+        val proposed = MemoryItem(
+            key = "fact.proposed",
+            kind = MemoryItemKind.FACT,
+            text = "Proposed fact.",
+            sourceMessageIds = listOf(2L),
+            status = MemoryItemStatus.PROPOSED,
+        )
+        val state = contextState(transcript.take(2)).copy(
+            workingMemory = listOf(proposed, confirmed),
+        )
+        val confirmedOnlyLimit = exactEstimator.estimateMessage(
+            ConversationContextFormatter.workingMemoryMessage(listOf(confirmed)),
+        ).estimatedTokens
+
+        val context = ChatConversationPolicy.compileContext(
+            transcript = transcript,
+            prompt = prompt("current"),
+            policy = policy(
+                maximumInputTokens = 100_000L,
+                contextState = state,
+                maximumWorkingMemoryTokens = confirmedOnlyLimit,
+            ),
+        )
+
+        val memoryJson = context.messages.first().textParts.single()
+        assertEquals(1, context.workingMemoryItemsIncluded)
+        assertTrue(memoryJson.contains(confirmed.key))
+        assertFalse(memoryJson.contains(proposed.key))
+    }
+
+    @Test
+    fun `summary cap keeps the newest checkpoint segment`() {
+        val transcript = listOf(
+            user(1, "old"),
+            assistant(2, "old-answer"),
+            user(3, "middle"),
+            assistant(4, "middle-answer"),
+            user(5, "recent-a"),
+            assistant(6, "reply-a"),
+            user(7, "recent-b"),
+            assistant(8, "reply-b"),
+        )
+        val older = summarySegment(transcript.subList(0, 2), "OLDER-CHECKPOINT")
+        val newer = summarySegment(transcript.subList(2, 4), "NEWER-CHECKPOINT")
+        val state = ConversationContextState(
+            coveredThroughMessageId = 4L,
+            summarySegments = listOf(older, newer),
+        )
+        val newestOnlyLimit = exactEstimator.estimateMessage(
+            ConversationContextFormatter.summaryMessage(listOf(newer)),
+        ).estimatedTokens
+
+        val context = ChatConversationPolicy.compileContext(
+            transcript = transcript,
+            prompt = prompt("current"),
+            policy = policy(
+                maximumInputTokens = 100_000L,
+                contextState = state,
+                maximumSummaryTokens = newestOnlyLimit,
+            ),
+        )
+
+        val summaryJson = context.messages.first().textParts.single()
+        assertEquals(1, context.summarySegmentsIncluded)
+        assertTrue(summaryJson.contains("NEWER-CHECKPOINT"))
+        assertFalse(summaryJson.contains("OLDER-CHECKPOINT"))
+    }
+
+    @Test
+    fun `absolute protection drops derived layers while preserving the recent raw floor`() {
+        val transcript = listOf(
+            user(1, "covered"),
+            assistant(2, "covered-answer"),
+            user(3, "recent-a"),
+            assistant(4, "reply-a"),
+            user(5, "recent-b"),
+            assistant(6, "reply-b"),
+        )
+
+        val context = ChatConversationPolicy.compileContext(
+            transcript = transcript,
+            prompt = prompt("current"),
+            policy = policy(
+                maximumInputTokens = 10_000L,
+                contextState = contextState(transcript.take(2)),
+                includeDerivedContext = false,
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                GenerationRole.USER,
+                GenerationRole.ASSISTANT,
+                GenerationRole.USER,
+                GenerationRole.ASSISTANT,
+            ),
+            context.messages.map(GenerationMessage::role),
+        )
+        assertEquals(0, context.workingMemoryItemsIncluded)
+        assertEquals(0, context.summarySegmentsIncluded)
+        assertEquals(listOf(3L, 4L, 5L, 6L), context.coveredMessageIds)
+    }
+
+    @Test
     fun `compiler validates prompt and policy boundaries`() {
         assertThrows(IllegalArgumentException::class.java) {
             ChatConversationPolicy.compileContext(
@@ -161,11 +320,49 @@ class ContextCompilationTest {
         maximumInputTokens: Long,
         minimumRecentTurns: Int = ContextPolicy.MINIMUM_RECENT_TURNS,
         maximumHistoryBytes: Long = ChatConversationPolicy.MAXIMUM_RETAINED_HISTORY_BYTES.toLong(),
+        contextState: ConversationContextState = ConversationContextState.EMPTY,
+        includeDerivedContext: Boolean = true,
+        maximumWorkingMemoryTokens: Long = ContextPolicy.WORKING_MEMORY_MAXIMUM_TOKENS.toLong(),
+        maximumSummaryTokens: Long = ContextPolicy.SUMMARY_LAYER_MAXIMUM_TOKENS.toLong(),
     ) = ContextCompilationPolicy(
         estimator = exactEstimator,
         maximumInputTokens = maximumInputTokens,
         minimumRecentTurns = minimumRecentTurns,
         maximumHistoryBytes = maximumHistoryBytes,
+        contextState = contextState,
+        includeDerivedContext = includeDerivedContext,
+        maximumWorkingMemoryTokens = maximumWorkingMemoryTokens,
+        maximumSummaryTokens = maximumSummaryTokens,
+    )
+
+    private fun summarySegment(source: List<ChatMessage>, summary: String) = SummarySegment(
+        firstMessageId = source.first().id,
+        lastMessageId = source.last().id,
+        sourceMessageIds = source.map(ChatMessage::id),
+        sourceHash = ConversationContextPolicy.sourceHash(source),
+        summary = summary,
+    )
+
+    private fun contextState(source: List<ChatMessage>) = ConversationContextState(
+        coveredThroughMessageId = source.last().id,
+        summarySegments = listOf(
+            SummarySegment(
+                firstMessageId = source.first().id,
+                lastMessageId = source.last().id,
+                sourceMessageIds = source.map(ChatMessage::id),
+                sourceHash = ConversationContextPolicy.sourceHash(source),
+                summary = "Earlier checkpoint.",
+            ),
+        ),
+        workingMemory = listOf(
+            MemoryItem(
+                key = "preference.concise",
+                kind = MemoryItemKind.PREFERENCE,
+                text = "Keep answers concise.",
+                sourceMessageIds = listOf(source.first().id),
+                status = MemoryItemStatus.CONFIRMED,
+            ),
+        ),
     )
 
     private fun prompt(text: String) = GenerationMessage(GenerationRole.USER, listOf(text))

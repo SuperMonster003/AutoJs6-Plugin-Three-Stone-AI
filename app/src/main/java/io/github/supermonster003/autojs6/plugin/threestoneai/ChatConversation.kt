@@ -50,36 +50,59 @@ internal data class ChatMessage(
     }
 }
 
+internal data class CompletedChatTurn(
+    val user: ChatMessage,
+    val assistant: ChatMessage,
+)
+
 internal data class ContextCompilationPolicy(
     val estimator: ContextTokenEstimator,
     val maximumInputTokens: Long,
     val minimumRecentTurns: Int = ContextPolicy.MINIMUM_RECENT_TURNS,
     val maximumHistoryBytes: Long = ChatConversationPolicy.MAXIMUM_RETAINED_HISTORY_BYTES.toLong(),
+    val contextState: ConversationContextState = ConversationContextState.EMPTY,
+    val includeDerivedContext: Boolean = true,
+    val maximumWorkingMemoryTokens: Long = ContextPolicy.WORKING_MEMORY_MAXIMUM_TOKENS.toLong(),
+    val maximumSummaryTokens: Long = ContextPolicy.SUMMARY_LAYER_MAXIMUM_TOKENS.toLong(),
 ) {
     init {
         require(maximumInputTokens > 0L)
         require(minimumRecentTurns >= 0)
         require(maximumHistoryBytes > 0L)
+        require(maximumWorkingMemoryTokens > 0L)
+        require(maximumSummaryTokens > 0L)
     }
 }
 
 internal data class CompiledContext(
-    /** Complete successful history only. The current prompt remains a separate request field. */
+    /** Derived SYSTEM layers followed by complete successful raw history. */
     val messages: List<GenerationMessage>,
     val estimatedInputTokens: Long,
+    /** IDs for raw user/assistant messages only; derived layers cite IDs inside their text. */
     val coveredMessageIds: List<Long>,
     val requiresSessionRebuild: Boolean,
     val inputTokenLimit: Long,
+    val workingMemoryItemsIncluded: Int = 0,
+    val summarySegmentsIncluded: Int = 0,
+    val contextFingerprint: String = ConversationContextPolicy.fingerprint(
+        ConversationContextState.EMPTY,
+    ),
 ) {
     init {
         require(estimatedInputTokens >= 0L)
-        require(coveredMessageIds.size == messages.size)
         require(coveredMessageIds.distinct().size == coveredMessageIds.size)
         require(inputTokenLimit > 0L)
+        require(workingMemoryItemsIncluded >= 0)
+        require(summarySegmentsIncluded >= 0)
+        require(CONTEXT_FINGERPRINT.matches(contextFingerprint))
     }
 
     val exceedsInputBudget: Boolean
         get() = estimatedInputTokens > inputTokenLimit
+
+    private companion object {
+        val CONTEXT_FINGERPRINT = Regex("^[0-9a-f]{64}$")
+    }
 }
 
 /** Pure transcript rules shared by the launcher UI and its local unit tests. */
@@ -103,42 +126,76 @@ internal object ChatConversationPolicy {
         require(prompt.role == GenerationRole.USER) {
             "The compiled context prompt must be a user message"
         }
-        val completedTurns = completedTurns(transcript)
-        val promptEstimate = policy.estimator.estimateMessage(prompt)
-        val retainedReversed = ArrayList<CompletedTurn>()
+        val allCompletedTurns = completedTurns(transcript)
+        val coveredThrough = policy.contextState.coveredThroughMessageId ?: 0L
+        val completedTurns = allCompletedTurns.filter { turn -> turn.assistant.id > coveredThrough }
+        val retainedReversed = ArrayList<CompletedChatTurn>()
         var retainedUtf8Bytes = 0L
-        var retainedMessageCount = 0
-        for (turn in completedTurns.asReversed()) {
-            val turnBytes = saturatedAdd(
-                turn.user.text.toByteArray(Charsets.UTF_8).size.toLong(),
-                turn.assistant.text.toByteArray(Charsets.UTF_8).size.toLong(),
-            )
+        for (turn in completedTurns.asReversed().take(policy.minimumRecentTurns)) {
+            val turnBytes = turn.utf8Bytes()
             if (saturatedAdd(retainedUtf8Bytes, turnBytes) > policy.maximumHistoryBytes) break
-            val candidateBytes = saturatedAdd(
-                promptEstimate.utf8Bytes,
-                saturatedAdd(retainedUtf8Bytes, turnBytes),
-            )
-            val candidateMessages = promptEstimate.messageCount + retainedMessageCount + 2
-            val candidateTokens = policy.estimator
-                .estimatePayload(candidateBytes, candidateMessages)
-                .estimatedTokens
-            if (
-                retainedReversed.size >= policy.minimumRecentTurns &&
-                candidateTokens > policy.maximumInputTokens
-            ) {
-                break
-            }
             retainedReversed += turn
             retainedUtf8Bytes = saturatedAdd(retainedUtf8Bytes, turnBytes)
-            retainedMessageCount += 2
+        }
+
+        var retainedMemory = emptyList<MemoryItem>()
+        var retainedSummaries = emptyList<SummarySegment>()
+        if (policy.includeDerivedContext) {
+            ConversationContextFormatter.memoryPriority(policy.contextState.workingMemory)
+                .forEach { item ->
+                    val candidate = retainedMemory + item
+                    val layerMessage = ConversationContextFormatter.workingMemoryMessage(candidate)
+                    val layerEstimate = policy.estimator.estimateMessage(layerMessage)
+                    if (layerEstimate.estimatedTokens > policy.maximumWorkingMemoryTokens) {
+                        return@forEach
+                    }
+                    if (fits(policy, prompt, listOf(layerMessage), retainedReversed)) {
+                        retainedMemory = candidate
+                    }
+                }
+            val selectedReversed = ArrayList<SummarySegment>()
+            policy.contextState.summarySegments.asReversed().forEach { segment ->
+                val candidateReversed = selectedReversed + segment
+                val candidate = candidateReversed.asReversed()
+                val layerMessage = ConversationContextFormatter.summaryMessage(candidate)
+                val layerEstimate = policy.estimator.estimateMessage(layerMessage)
+                if (layerEstimate.estimatedTokens > policy.maximumSummaryTokens) {
+                    return@forEach
+                }
+                val derived = retainedMemory.takeIf { memory -> memory.isNotEmpty() }
+                    ?.let { memory ->
+                        listOf(ConversationContextFormatter.workingMemoryMessage(memory))
+                    }.orEmpty() + layerMessage
+                if (fits(policy, prompt, derived, retainedReversed)) {
+                    selectedReversed += segment
+                    retainedSummaries = candidate
+                }
+            }
+        }
+        val derivedMessages = buildList {
+            if (retainedMemory.isNotEmpty()) {
+                add(ConversationContextFormatter.workingMemoryMessage(retainedMemory))
+            }
+            if (retainedSummaries.isNotEmpty()) {
+                add(ConversationContextFormatter.summaryMessage(retainedSummaries))
+            }
+        }
+        for (turn in completedTurns.asReversed().drop(retainedReversed.size)) {
+            val turnBytes = turn.utf8Bytes()
+            if (saturatedAdd(retainedUtf8Bytes, turnBytes) > policy.maximumHistoryBytes) break
+            val candidate = retainedReversed + turn
+            if (!fits(policy, prompt, derivedMessages, candidate)) break
+            retainedReversed += turn
+            retainedUtf8Bytes = saturatedAdd(retainedUtf8Bytes, turnBytes)
         }
         val retained = retainedReversed.asReversed()
-        val messages = retained.flatMap { turn ->
+        val rawMessages = retained.flatMap { turn ->
             listOf(
                 GenerationMessage(GenerationRole.USER, listOf(turn.user.text)),
                 GenerationMessage(GenerationRole.ASSISTANT, listOf(turn.assistant.text)),
             )
         }
+        val messages = derivedMessages + rawMessages
         val coveredMessageIds = retained.flatMap { turn ->
             listOf(turn.user.id, turn.assistant.id)
         }
@@ -147,10 +204,37 @@ internal object ChatConversationPolicy {
             messages = messages,
             estimatedInputTokens = estimate.estimatedTokens,
             coveredMessageIds = coveredMessageIds,
-            requiresSessionRebuild = retained.size != completedTurns.size,
+            requiresSessionRebuild = retained.size != allCompletedTurns.size,
             inputTokenLimit = policy.maximumInputTokens,
+            workingMemoryItemsIncluded = retainedMemory.size,
+            summarySegmentsIncluded = retainedSummaries.size,
+            contextFingerprint = ConversationContextPolicy.fingerprint(policy.contextState),
         )
     }
+
+    private fun fits(
+        policy: ContextCompilationPolicy,
+        prompt: GenerationMessage,
+        derivedMessages: List<GenerationMessage>,
+        retainedReversed: List<CompletedChatTurn>,
+    ): Boolean {
+        val rawMessages = retainedReversed.asReversed().flatMap { turn ->
+            listOf(
+                GenerationMessage(GenerationRole.USER, listOf(turn.user.text)),
+                GenerationMessage(GenerationRole.ASSISTANT, listOf(turn.assistant.text)),
+            )
+        }
+        val history = derivedMessages + rawMessages
+        val historyEstimate = policy.estimator.estimateMessages(history)
+        if (historyEstimate.utf8Bytes > policy.maximumHistoryBytes) return false
+        return policy.estimator.estimateMessages(history + prompt).estimatedTokens <=
+            policy.maximumInputTokens
+    }
+
+    private fun CompletedChatTurn.utf8Bytes(): Long = saturatedAdd(
+        user.text.toByteArray(Charsets.UTF_8).size.toLong(),
+        assistant.text.toByteArray(Charsets.UTF_8).size.toLong(),
+    )
 
     /** Cumulative provider input through one visible message, saturated for hostile counters. */
     fun cumulativeInputTokensThrough(messages: List<ChatMessage>, messageId: Long): Long {
@@ -171,8 +255,8 @@ internal object ChatConversationPolicy {
         }
     }
 
-    private fun completedTurns(messages: List<ChatMessage>): List<CompletedTurn> {
-        val turns = ArrayList<CompletedTurn>()
+    fun completedTurns(messages: List<ChatMessage>): List<CompletedChatTurn> {
+        val turns = ArrayList<CompletedChatTurn>()
         var pendingUser: ChatMessage? = null
         messages.forEach { message ->
             when (message.role) {
@@ -183,7 +267,7 @@ internal object ChatConversationPolicy {
                         user != null && message.status == ChatMessageStatus.COMPLETE &&
                         message.text.isNotBlank()
                     ) {
-                        turns += CompletedTurn(user, message)
+                        turns += CompletedChatTurn(user, message)
                     }
                     pendingUser = null
                 }
@@ -193,8 +277,4 @@ internal object ChatConversationPolicy {
         return turns
     }
 
-    private data class CompletedTurn(
-        val user: ChatMessage,
-        val assistant: ChatMessage,
-    )
 }

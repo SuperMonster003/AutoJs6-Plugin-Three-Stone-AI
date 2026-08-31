@@ -11,6 +11,17 @@ import org.junit.Test
 class ConversationHistoryTest {
     @Test
     fun `codec round trips messages usage and target snapshot`() {
+        val messages = listOf(
+            ChatMessage(1, ChatMessageRole.USER, "First question"),
+            ChatMessage(
+                2,
+                ChatMessageRole.ASSISTANT,
+                "**Answer**",
+                usage = ChatMessageUsage(12, 34, 567),
+                target = assistantTarget,
+            ),
+        )
+        val contextState = contextState(messages)
         val original = StoredConversation(
             id = "conversation-1",
             title = "First question",
@@ -23,16 +34,8 @@ class ConversationHistoryTest {
                 displayName = "PoloAPI",
                 locality = AiTargetLocality.REMOTE,
             ),
-            messages = listOf(
-                ChatMessage(1, ChatMessageRole.USER, "First question"),
-                ChatMessage(
-                    2,
-                    ChatMessageRole.ASSISTANT,
-                    "**Answer**",
-                    usage = ChatMessageUsage(12, 34, 567),
-                    target = assistantTarget,
-                ),
-            ),
+            messages = messages,
+            contextState = contextState,
         )
 
         val restored = ConversationHistoryCodec.decode(ConversationHistoryCodec.encode(listOf(original)))
@@ -40,11 +43,12 @@ class ConversationHistoryTest {
         assertEquals(listOf(original), restored)
         assertEquals(AiTargetLocality.REMOTE, restored.single().target?.locality)
         assertEquals(assistantTarget, restored.single().messages.last().target)
+        assertEquals(contextState, restored.single().contextState)
     }
 
     @Test
     fun `codec rejects every unpublished older version instead of retaining compatibility`() {
-        listOf(1, 2).forEach { version ->
+        listOf(1, 2, 3).forEach { version ->
             val encoded = ConversationHistoryCodec.encode(emptyList())
             ByteBuffer.wrap(encoded).putInt(Int.SIZE_BYTES, version)
 
@@ -81,7 +85,7 @@ class ConversationHistoryTest {
     }
 
     @Test
-    fun `oversized conversations retain a recent bounded suffix instead of disappearing`() {
+    fun `uncheckpointed oversized conversations retain source truth beyond the soft item cap`() {
         val messages = (1..ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION + 2).map { id ->
             ChatMessage(id.toLong(), ChatMessageRole.USER, "message-$id")
         }
@@ -89,9 +93,41 @@ class ConversationHistoryTest {
             listOf(conversation("large", updatedAt = 20).copy(messages = messages)),
         ).single()
 
+        assertEquals(messages.size, normalized.messages.size)
+        assertEquals(1L, normalized.messages.first().id)
+        assertEquals(messages.last(), normalized.messages.last())
+    }
+
+    @Test
+    fun `oversized conversations prune only a checkpoint-covered prefix`() {
+        val messages = (1..ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION + 2).map { id ->
+            ChatMessage(id.toLong(), ChatMessageRole.USER, "message-$id")
+        }
+        val covered = ConversationContextState(
+            coveredThroughMessageId = 2L,
+            summarySegments = listOf(
+                SummarySegment(
+                    firstMessageId = 1L,
+                    lastMessageId = 2L,
+                    sourceMessageIds = listOf(1L, 2L),
+                    sourceHash = ConversationContextPolicy.sourceHash(messages.take(2)),
+                    summary = "The first two messages were checkpointed.",
+                ),
+            ),
+        )
+
+        val normalized = ConversationHistoryPolicy.normalized(
+            listOf(
+                conversation("large", updatedAt = 20).copy(
+                    messages = messages,
+                    contextState = covered,
+                ),
+            ),
+        ).single()
+
         assertEquals(ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION, normalized.messages.size)
         assertEquals(3L, normalized.messages.first().id)
-        assertEquals(messages.last(), normalized.messages.last())
+        assertEquals(covered, normalized.contextState)
     }
 
     @Test
@@ -220,6 +256,29 @@ class ConversationHistoryTest {
         text = text,
         target = assistantTarget,
     )
+
+    private fun contextState(messages: List<ChatMessage>): ConversationContextState =
+        ConversationContextState(
+            coveredThroughMessageId = 2L,
+            summarySegments = listOf(
+                SummarySegment(
+                    firstMessageId = 1L,
+                    lastMessageId = 2L,
+                    sourceMessageIds = listOf(1L, 2L),
+                    sourceHash = ConversationContextPolicy.sourceHash(messages),
+                    summary = "The user asked a first question and received an answer.",
+                ),
+            ),
+            workingMemory = listOf(
+                MemoryItem(
+                    key = "goal.first-question",
+                    kind = MemoryItemKind.GOAL,
+                    text = "Answer the first question.",
+                    sourceMessageIds = listOf(1L),
+                    status = MemoryItemStatus.CONFIRMED,
+                ),
+            ),
+        )
 
     private companion object {
         val assistantTarget = ConversationTargetSnapshot(

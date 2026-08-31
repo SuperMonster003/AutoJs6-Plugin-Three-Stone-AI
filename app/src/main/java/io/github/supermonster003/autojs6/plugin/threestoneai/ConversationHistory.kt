@@ -14,13 +14,16 @@ internal data class StoredConversation(
     val updatedAtMillis: Long,
     val target: ConversationTargetSnapshot?,
     val messages: List<ChatMessage>,
+    val contextState: ConversationContextState = ConversationContextState.EMPTY,
 ) {
     init {
         require(id.isNotBlank())
         require(title.isNotBlank())
         require(createdAtMillis >= 0L)
         require(updatedAtMillis >= createdAtMillis)
-        require(messages.map(ChatMessage::id).distinct().size == messages.size)
+        require(messages.map(ChatMessage::id) == messages.map(ChatMessage::id).distinct().sorted()) {
+            "Conversation messages must have unique increasing IDs"
+        }
     }
 }
 
@@ -85,7 +88,13 @@ internal object ConversationHistoryPolicy {
             retainedReversed += message
             retainedBytes += messageBytes
         }
-        return copy(messages = retainedReversed.asReversed())
+        val desiredStart = messages.size - retainedReversed.size
+        val coveredThrough = contextState.coveredThroughMessageId ?: return this
+        val firstUncoveredIndex = messages.indexOfFirst { message ->
+            message.id > coveredThrough
+        }.let { index -> if (index < 0) messages.size else index }
+        val safeStart = minOf(desiredStart, firstUncoveredIndex)
+        return if (safeStart <= 0) this else copy(messages = messages.drop(safeStart))
     }
 
     private fun StoredConversation.estimatedMessageBytes(): Int = messages.sumOf { message ->
@@ -95,7 +104,18 @@ internal object ConversationHistoryPolicy {
 
     private fun StoredConversation.estimatedBytes(): Int = estimatedMessageBytes() +
         id.toByteArray(Charsets.UTF_8).size + title.toByteArray(Charsets.UTF_8).size +
-        target.estimatedBytes() + CONVERSATION_OVERHEAD_BYTES
+        target.estimatedBytes() + contextState.estimatedBytes() + CONVERSATION_OVERHEAD_BYTES
+
+    private fun ConversationContextState.estimatedBytes(): Int =
+        summarySegments.sumOf { segment ->
+            segment.summary.toByteArray(Charsets.UTF_8).size +
+                segment.sourceHash.toByteArray(Charsets.UTF_8).size +
+                segment.sourceMessageIds.size * Long.SIZE_BYTES + CONTEXT_ITEM_OVERHEAD_BYTES
+        } + workingMemory.sumOf { item ->
+            item.key.toByteArray(Charsets.UTF_8).size +
+                item.text.toByteArray(Charsets.UTF_8).size +
+                item.sourceMessageIds.size * Long.SIZE_BYTES + CONTEXT_ITEM_OVERHEAD_BYTES
+        }
 
     private fun ConversationTargetSnapshot?.estimatedBytes(): Int = this?.let { snapshot ->
         snapshot.targetId.toByteArray(Charsets.UTF_8).size +
@@ -112,6 +132,7 @@ internal object ConversationHistoryPolicy {
     private const val MESSAGE_OVERHEAD_BYTES = 80
     private const val CONVERSATION_OVERHEAD_BYTES = 128
     private const val TARGET_OVERHEAD_BYTES = 64
+    private const val CONTEXT_ITEM_OVERHEAD_BYTES = 64
 }
 
 internal data class ConversationSearchMatch(
@@ -289,7 +310,7 @@ internal object ConversationHistoryCodec {
         output.writeLong(conversation.createdAtMillis)
         output.writeLong(conversation.updatedAtMillis)
         output.writeNullableTarget(conversation.target)
-        require(conversation.messages.size <= ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION)
+        require(conversation.messages.size <= MAXIMUM_SERIALIZED_MESSAGES_PER_CONVERSATION)
         output.writeInt(conversation.messages.size)
         conversation.messages.forEach { message ->
             output.writeLong(message.id)
@@ -304,6 +325,7 @@ internal object ConversationHistoryCodec {
             }
             output.writeNullableTarget(message.target)
         }
+        output.writeContextState(conversation.contextState)
     }
 
     private fun readConversation(input: DataInputStream): StoredConversation {
@@ -312,9 +334,7 @@ internal object ConversationHistoryCodec {
         val createdAt = input.readLong()
         val updatedAt = input.readLong()
         val target = input.readNullableTarget()
-        val messageCount = input.readBoundedCount(
-            ConversationHistoryPolicy.MAXIMUM_MESSAGES_PER_CONVERSATION,
-        )
+        val messageCount = input.readBoundedCount(MAXIMUM_SERIALIZED_MESSAGES_PER_CONVERSATION)
         val messages = buildList(messageCount) {
             repeat(messageCount) {
                 val messageId = input.readLong()
@@ -339,7 +359,81 @@ internal object ConversationHistoryCodec {
                 )
             }
         }
-        return StoredConversation(id, title, createdAt, updatedAt, target, messages)
+        val contextState = input.readContextState()
+        return StoredConversation(
+            id = id,
+            title = title,
+            createdAtMillis = createdAt,
+            updatedAtMillis = updatedAt,
+            target = target,
+            messages = messages,
+            contextState = contextState,
+        )
+    }
+
+    private fun DataOutputStream.writeContextState(state: ConversationContextState) {
+        writeInt(state.schemaVersion)
+        writeBoolean(state.coveredThroughMessageId != null)
+        state.coveredThroughMessageId?.let { messageId -> writeLong(messageId) }
+        writeInt(state.summarySegments.size)
+        state.summarySegments.forEach { segment ->
+            writeLong(segment.firstMessageId)
+            writeLong(segment.lastMessageId)
+            writeLongList(segment.sourceMessageIds)
+            writeText(segment.sourceHash, MAXIMUM_SOURCE_HASH_BYTES)
+            writeText(segment.summary, ConversationContextPolicy.MAXIMUM_SUMMARY_BYTES)
+        }
+        writeInt(state.workingMemory.size)
+        state.workingMemory.forEach { item ->
+            writeText(item.key, MAXIMUM_MEMORY_KEY_BYTES)
+            writeText(item.kind.name, MAXIMUM_ENUM_BYTES)
+            writeText(item.text, ConversationContextPolicy.MAXIMUM_MEMORY_TEXT_BYTES)
+            writeLongList(item.sourceMessageIds)
+            writeText(item.status.name, MAXIMUM_ENUM_BYTES)
+        }
+    }
+
+    private fun DataInputStream.readContextState(): ConversationContextState {
+        val schemaVersion = readInt()
+        val coveredThrough = if (readBoolean()) readLong() else null
+        val segmentCount = readBoundedCount(ConversationContextPolicy.MAXIMUM_SUMMARY_SEGMENTS)
+        val segments = buildList(segmentCount) {
+            repeat(segmentCount) {
+                add(
+                    SummarySegment(
+                        firstMessageId = readLong(),
+                        lastMessageId = readLong(),
+                        sourceMessageIds = readLongList(
+                            ConversationContextPolicy.MAXIMUM_SEGMENT_SOURCE_IDS,
+                        ),
+                        sourceHash = readText(MAXIMUM_SOURCE_HASH_BYTES),
+                        summary = readText(ConversationContextPolicy.MAXIMUM_SUMMARY_BYTES),
+                    ),
+                )
+            }
+        }
+        val memoryCount = readBoundedCount(ConversationContextPolicy.MAXIMUM_WORKING_MEMORY_ITEMS)
+        val workingMemory = buildList(memoryCount) {
+            repeat(memoryCount) {
+                add(
+                    MemoryItem(
+                        key = readText(MAXIMUM_MEMORY_KEY_BYTES),
+                        kind = MemoryItemKind.valueOf(readText(MAXIMUM_ENUM_BYTES)),
+                        text = readText(ConversationContextPolicy.MAXIMUM_MEMORY_TEXT_BYTES),
+                        sourceMessageIds = readLongList(
+                            ConversationContextPolicy.MAXIMUM_MEMORY_SOURCE_IDS,
+                        ),
+                        status = MemoryItemStatus.valueOf(readText(MAXIMUM_ENUM_BYTES)),
+                    ),
+                )
+            }
+        }
+        return ConversationContextState(
+            coveredThroughMessageId = coveredThrough,
+            summarySegments = segments,
+            workingMemory = workingMemory,
+            schemaVersion = schemaVersion,
+        )
     }
 
     private fun DataOutputStream.writeText(value: String, maximumBytes: Int) {
@@ -383,9 +477,20 @@ internal object ConversationHistoryCodec {
         require(count in 0..maximum) { "Invalid conversation history item count" }
     }
 
+    private fun DataOutputStream.writeLongList(values: List<Long>) {
+        writeInt(values.size)
+        values.forEach { value -> writeLong(value) }
+    }
+
+    private fun DataInputStream.readLongList(maximum: Int): List<Long> {
+        val count = readBoundedCount(maximum)
+        return List(count) { readLong() }
+    }
+
     const val MAXIMUM_FILE_BYTES = 32 * 1_024 * 1_024
     private const val MAGIC = 0x33534143 // 3SAC
-    private const val VERSION = 3
+    private const val VERSION = 4
+    private const val MAXIMUM_SERIALIZED_MESSAGES_PER_CONVERSATION = 100_000
     private const val MAXIMUM_ID_BYTES = 128
     private const val MAXIMUM_TITLE_BYTES = 512
     private const val MAXIMUM_TARGET_ID_BYTES = 512
@@ -394,4 +499,6 @@ internal object ConversationHistoryCodec {
     private const val MAXIMUM_TARGET_NAME_BYTES = 1_024
     private const val MAXIMUM_ENUM_BYTES = 32
     private const val MAXIMUM_MESSAGE_BYTES = 2 * 1_024 * 1_024
+    private const val MAXIMUM_SOURCE_HASH_BYTES = 128
+    private const val MAXIMUM_MEMORY_KEY_BYTES = 128
 }

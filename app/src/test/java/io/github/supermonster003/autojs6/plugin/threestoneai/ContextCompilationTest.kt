@@ -176,6 +176,13 @@ class ContextCompilationTest {
         assertEquals(listOf(3L, 4L, 5L, 6L), context.coveredMessageIds)
         assertEquals(1, context.workingMemoryItemsIncluded)
         assertEquals(1, context.summarySegmentsIncluded)
+        assertTrue(context.layerTokens.workingMemoryTokens > 0L)
+        assertTrue(context.layerTokens.summaryTokens > 0L)
+        assertTrue(context.layerTokens.recentRawTokens > 0L)
+        assertEquals(
+            exactEstimator.estimateMessages(context.messages).estimatedTokens,
+            context.layerTokens.estimatedTotalTokens,
+        )
         assertEquals(ConversationContextPolicy.fingerprint(contextState), context.contextFingerprint)
         assertTrue(context.requiresSessionRebuild)
     }

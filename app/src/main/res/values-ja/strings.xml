@@ -135,6 +135,16 @@
     <string name="chat_duration_milliseconds">%1$d ms</string>
     <string name="chat_duration_seconds">%1$s 秒</string>
     <string name="chat_usage_format">入力 %1$d | 出力 %2$d | %3$s | セッション累計入力 %4$d</string>
+    <string name="chat_context_usage_compact">コンテキスト %1$s / %2$s Token (%3$d%%) · L1 %4$s · L2 %5$s · 取得 %6$s · L3 %7$s</string>
+    <string name="chat_context_usage_unavailable">コンテキスト使用量を取得できません</string>
+    <string name="chat_context_usage_title">コンテキスト使用量</string>
+    <string name="chat_context_usage_details">使用量: %1$s / %2$s Token\nソース: %3$s\nL0 固定指示: %4$s\nL1 作業メモリ: %5$s\nL2 要約: %6$s\n履歴取得: %7$s\nL3 最近の原文: %8$s\nProvider/テンプレート: %9$s\nソフト / ハード / 絶対: %10$s / %11$s / %12$s</string>
+    <string name="chat_context_usage_source_exact">Backend の正確な値</string>
+    <string name="chat_context_usage_source_estimated">校正済み推定値</string>
+    <string name="chat_context_compact_now">今すぐ圧縮</string>
+    <string name="chat_context_compact_busy">生成を停止してからコンテキストを圧縮してください</string>
+    <string name="chat_context_compact_complete">Backend コンテキストを解放しました; 次のメッセージで圧縮コンテキストを再構築します</string>
+    <string name="chat_context_compact_already">有効な Backend コンテキストはありません; 次のメッセージは既に圧縮コンテキストを使用します</string>
     <string name="chat_history_title">会話履歴</string>
     <string name="chat_history_empty_title">保存された会話はありません</string>
     <string name="chat_history_empty_description">最初のメッセージを送信すると, 会話がここに表示されます.</string>

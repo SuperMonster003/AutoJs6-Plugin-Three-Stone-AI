@@ -135,6 +135,16 @@
     <string name="chat_duration_milliseconds">%1$d мс</string>
     <string name="chat_duration_seconds">%1$s с</string>
     <string name="chat_usage_format">Ввод %1$d | Вывод %2$d | %3$s | Накопленный ввод %4$d</string>
+    <string name="chat_context_usage_compact">Контекст %1$s / %2$s токенов (%3$d%%) · L1 %4$s · L2 %5$s · Поиск %6$s · L3 %7$s</string>
+    <string name="chat_context_usage_unavailable">Данные контекста недоступны</string>
+    <string name="chat_context_usage_title">Использование контекста</string>
+    <string name="chat_context_usage_details">Использовано: %1$s / %2$s токенов\nИсточник: %3$s\nL0 инструкции: %4$s\nL1 память: %5$s\nL2 сводка: %6$s\nПоиск в истории: %7$s\nL3 недавнее: %8$s\nProvider/шаблон: %9$s\nМягкий / жёсткий / абсолютный: %10$s / %11$s / %12$s</string>
+    <string name="chat_context_usage_source_exact">Точный счётчик Backend</string>
+    <string name="chat_context_usage_source_estimated">Калиброванная оценка</string>
+    <string name="chat_context_compact_now">Сжать сейчас</string>
+    <string name="chat_context_compact_busy">Остановите генерацию перед сжатием контекста</string>
+    <string name="chat_context_compact_complete">Контекст Backend освобождён; следующее сообщение перестроит компактный контекст</string>
+    <string name="chat_context_compact_already">Активного контекста Backend нет; следующее сообщение уже использует компактный контекст</string>
     <string name="chat_history_title">История разговоров</string>
     <string name="chat_history_empty_title">Нет сохранённых разговоров</string>
     <string name="chat_history_empty_description">Разговоры появятся здесь после отправки первого сообщения.</string>

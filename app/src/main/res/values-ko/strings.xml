@@ -135,6 +135,16 @@
     <string name="chat_duration_milliseconds">%1$d ms</string>
     <string name="chat_duration_seconds">%1$s초</string>
     <string name="chat_usage_format">입력 %1$d | 출력 %2$d | %3$s | 세션 누적 입력 %4$d</string>
+    <string name="chat_context_usage_compact">컨텍스트 %1$s / %2$s 토큰 (%3$d%%) · L1 %4$s · L2 %5$s · 검색 %6$s · L3 %7$s</string>
+    <string name="chat_context_usage_unavailable">컨텍스트 사용량을 확인할 수 없음</string>
+    <string name="chat_context_usage_title">컨텍스트 사용량</string>
+    <string name="chat_context_usage_details">사용: %1$s / %2$s 토큰\n출처: %3$s\nL0 고정 지침: %4$s\nL1 작업 메모리: %5$s\nL2 요약: %6$s\n기록 검색: %7$s\nL3 최근 원문: %8$s\nProvider/템플릿: %9$s\n소프트 / 하드 / 절대: %10$s / %11$s / %12$s</string>
+    <string name="chat_context_usage_source_exact">Backend 정확한 값</string>
+    <string name="chat_context_usage_source_estimated">보정된 추정값</string>
+    <string name="chat_context_compact_now">지금 압축</string>
+    <string name="chat_context_compact_busy">생성을 중지한 후 컨텍스트를 압축하세요</string>
+    <string name="chat_context_compact_complete">Backend 컨텍스트가 해제됨; 다음 메시지에서 압축 컨텍스트를 다시 구성합니다</string>
+    <string name="chat_context_compact_already">활성 Backend 컨텍스트가 없음; 다음 메시지는 이미 압축 컨텍스트를 사용합니다</string>
     <string name="chat_history_title">대화 기록</string>
     <string name="chat_history_empty_title">저장된 대화가 없습니다</string>
     <string name="chat_history_empty_description">첫 메시지를 보내면 대화가 여기에 표시됩니다.</string>

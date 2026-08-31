@@ -67,6 +67,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiPro
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import java.text.DateFormat
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -88,6 +89,7 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var toolbar: Toolbar
     private lateinit var targetLocalityStatus: TextView
     private lateinit var targetStatus: TextView
+    private lateinit var contextUsageStatus: TextView
     private lateinit var searchInput: EditText
     private lateinit var messagesScroll: ScrollView
     private lateinit var messagesColumn: LinearLayout
@@ -650,8 +652,7 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun createTargetBar(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
+        orientation = LinearLayout.VERTICAL
         setPaddingRelative(dp(16), dp(2), dp(16), dp(8))
 
         val capsule = LinearLayout(context).apply {
@@ -707,6 +708,24 @@ class ChatActivity : ConfiguredActivity() {
         addView(
             capsule,
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT),
+        )
+        contextUsageStatus = TextView(context).apply {
+            textSize = 11f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setTextColor(appPalette.secondaryText)
+            isClickable = true
+            isFocusable = true
+            background = boundedRipple(accentRipple(appPalette.accent), Ui.RADIUS_CONTROL)
+            setPaddingRelative(dp(8), dp(4), dp(8), dp(3))
+            setOnClickListener { showContextUsageDialog() }
+        }
+        addView(
+            contextUsageStatus,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(2) },
         )
     }
 
@@ -1377,7 +1396,134 @@ class ChatActivity : ConfiguredActivity() {
         }
         renderEmptyState()
         renderComposerState()
+        renderContextUsage()
     }
+
+    private fun renderContextUsage() {
+        if (!::contextUsageStatus.isInitialized) return
+        val snapshot = currentContextUsageSnapshot()
+        if (snapshot == null) {
+            contextUsageStatus.text = getString(R.string.chat_context_usage_unavailable)
+            contextUsageStatus.contentDescription = contextUsageStatus.text
+            contextUsageStatus.isEnabled = false
+            contextUsageStatus.alpha = Ui.DISABLED_ALPHA
+            return
+        }
+        val layers = snapshot.layers
+        contextUsageStatus.text = getString(
+            R.string.chat_context_usage_compact,
+            formatContextTokens(snapshot.usedTokens),
+            formatContextTokens(snapshot.budgetTokens),
+            snapshot.usedPercent,
+            formatContextTokens(layers.workingMemoryTokens),
+            formatContextTokens(layers.summaryTokens),
+            formatContextTokens(layers.recalledHistoryTokens),
+            formatContextTokens(layers.recentRawTokens),
+        )
+        contextUsageStatus.contentDescription = contextUsageStatus.text
+        contextUsageStatus.isEnabled = true
+        contextUsageStatus.alpha = 1f
+    }
+
+    private fun currentContextUsageSnapshot(): ContextUsageSnapshot? {
+        val target = resolvedConversationTarget()?.takeIf(::isTargetReady) ?: return null
+        val budget = ContextBudgetCalculator.calculate(
+            targetLimits = target.limits,
+            applicationInputTokenBudget = uiSettings.contextTokenBudget,
+            maximumOutputTokens = uiSettings.maximumOutputTokens,
+        )
+        val active = synchronized(backendLock) {
+            activeBackendContextTelemetry
+                ?.takeIf {
+                    activeBackendTarget?.matchesExecutionIdentity(target) == true
+                }
+                ?.let { telemetry -> telemetry.accounting to telemetry.layerTokens }
+        }
+        if (active != null) {
+            return ContextUsagePolicy.snapshot(
+                accounting = active.first,
+                budget = budget,
+                layers = active.second,
+            )
+        }
+
+        val estimator = contextTokenCalibrationStore.current(target.targetId).estimator()
+        val compiled = ChatConversationPolicy.compileContext(
+            transcript = messages,
+            prompt = GenerationMessage(GenerationRole.USER, listOf("")),
+            policy = ContextCompilationPolicy(
+                estimator = estimator,
+                maximumInputTokens = budget.compactionTargetTokens,
+                contextState = conversationContextState,
+            ),
+        )
+        return ContextUsagePolicy.snapshot(
+            accounting = ContextAccounting.initial(compiled.layerTokens.estimatedTotalTokens),
+            budget = budget,
+            layers = compiled.layerTokens,
+        )
+    }
+
+    private fun showContextUsageDialog() {
+        val snapshot = currentContextUsageSnapshot() ?: return
+        val layers = snapshot.layers
+        val source = getString(
+            if (snapshot.exact) {
+                R.string.chat_context_usage_source_exact
+            } else {
+                R.string.chat_context_usage_source_estimated
+            },
+        )
+        val builder = materialDialog()
+            .setTitle(R.string.chat_context_usage_title)
+            .setMessage(
+                getString(
+                    R.string.chat_context_usage_details,
+                    formatContextTokens(snapshot.usedTokens),
+                    formatContextTokens(snapshot.budgetTokens),
+                    source,
+                    formatContextTokens(layers.fixedInstructionTokens),
+                    formatContextTokens(layers.workingMemoryTokens),
+                    formatContextTokens(layers.summaryTokens),
+                    formatContextTokens(layers.recalledHistoryTokens),
+                    formatContextTokens(layers.recentRawTokens),
+                    formatContextTokens(snapshot.unattributedTokens),
+                    formatContextTokens(snapshot.softWatermarkTokens),
+                    formatContextTokens(snapshot.hardWatermarkTokens),
+                    formatContextTokens(snapshot.absoluteProtectionTokens),
+                ),
+            )
+            .setNegativeButton(android.R.string.cancel, null)
+        if (!isGenerating && messages.isNotEmpty()) {
+            builder.setPositiveButton(R.string.chat_context_compact_now) { _, _ ->
+                requestManualContextCompaction()
+            }
+        }
+        builder.show().also(::tintDialogButtons)
+    }
+
+    private fun requestManualContextCompaction() {
+        if (isGenerating) {
+            showSnackbar(drawerLayout, getString(R.string.chat_context_compact_busy))
+            return
+        }
+        val hadBackend = synchronized(backendLock) { activeBackend != null }
+        closeCurrentBackend()
+        renderContextUsage()
+        showSnackbar(
+            drawerLayout,
+            getString(
+                if (hadBackend) {
+                    R.string.chat_context_compact_complete
+                } else {
+                    R.string.chat_context_compact_already
+                },
+            ),
+        )
+    }
+
+    private fun formatContextTokens(tokens: Long): String =
+        NumberFormat.getIntegerInstance().format(tokens)
 
     private fun renderEmptyState() {
         if (!::emptyState.isInitialized) return
@@ -1979,6 +2125,7 @@ class ChatActivity : ConfiguredActivity() {
                         committedMessages = history.map { message -> message.contextSnapshot() },
                         accounting = ContextAccounting.initial(historyEstimate.estimatedTokens),
                         contextFingerprint = compiled.contextFingerprint,
+                        layerTokens = compiled.layerTokens,
                     )
                     activeBackend = created
                     activeBackendTarget = actualTarget
@@ -2140,9 +2287,15 @@ class ChatActivity : ConfiguredActivity() {
         synchronized(backendLock) {
             val telemetry = activeBackendContextTelemetry
             if (telemetry?.epoch == completedObservation.backendEpoch) {
-                activeBackendContextTelemetry = telemetry.copy(accounting = accounting)
+                activeBackendContextTelemetry = telemetry.copy(
+                    accounting = accounting,
+                    layerTokens = telemetry.layerTokens.withAdditionalRecentTokens(
+                        estimatedTurnTokens,
+                    ),
+                )
             }
         }
+        renderContextUsage()
         Log.d(
             TAG,
             "Context complete target=${actualTarget.targetId} " +
@@ -2607,7 +2760,9 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun closeCurrentBackend() {
-        val detached = detachBackend() ?: return
+        val detached = detachBackend()
+        renderContextUsage()
+        detached ?: return
         try {
             backendExecutor.execute { runCatching(detached::cancelAndClose) }
         } catch (_: RejectedExecutionException) {
@@ -2785,6 +2940,7 @@ class ChatActivity : ConfiguredActivity() {
         }
         messages.forEach(::updateMessageView)
         if (currentSearchMatchIndex >= 0) locateCurrentSearchResult()
+        renderContextUsage()
     }
 
     private fun persistComposerDraft() {
@@ -3545,6 +3701,7 @@ class ChatActivity : ConfiguredActivity() {
         val committedMessages: List<GenerationMessage>,
         val accounting: ContextAccounting,
         val contextFingerprint: String,
+        val layerTokens: ContextLayerTokenUsage,
     )
 
     private data class ContextTurnObservation(

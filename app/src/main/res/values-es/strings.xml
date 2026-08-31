@@ -135,6 +135,16 @@
     <string name="chat_duration_milliseconds">%1$d ms</string>
     <string name="chat_duration_seconds">%1$s s</string>
     <string name="chat_usage_format">Entrada %1$d | Salida %2$d | %3$s | Entrada acumulada %4$d</string>
+    <string name="chat_context_usage_compact">Contexto %1$s / %2$s tokens (%3$d%%) · L1 %4$s · L2 %5$s · Memoria %6$s · L3 %7$s</string>
+    <string name="chat_context_usage_unavailable">Uso de contexto no disponible</string>
+    <string name="chat_context_usage_title">Uso de contexto</string>
+    <string name="chat_context_usage_details">Usado: %1$s / %2$s tokens\nOrigen: %3$s\nL0 fijo: %4$s\nL1 memoria: %5$s\nL2 resumen: %6$s\nRecuperación histórica: %7$s\nL3 reciente: %8$s\nProvider/plantilla: %9$s\nUmbral suave / duro / absoluto: %10$s / %11$s / %12$s</string>
+    <string name="chat_context_usage_source_exact">Recuento exacto del Backend</string>
+    <string name="chat_context_usage_source_estimated">Estimación calibrada</string>
+    <string name="chat_context_compact_now">Compactar ahora</string>
+    <string name="chat_context_compact_busy">Detén la generación antes de compactar el contexto</string>
+    <string name="chat_context_compact_complete">Contexto Backend liberado; el siguiente mensaje reconstruirá un contexto compacto</string>
+    <string name="chat_context_compact_already">No hay contexto Backend activo; el siguiente mensaje ya usa un contexto compacto</string>
     <string name="chat_history_title">Historial de conversaciones</string>
     <string name="chat_history_empty_title">No hay conversaciones guardadas</string>
     <string name="chat_history_empty_description">Las conversaciones aparecerán aquí después de enviar el primer mensaje.</string>

@@ -135,6 +135,16 @@
     <string name="chat_duration_milliseconds">%1$d مللي ثانية</string>
     <string name="chat_duration_seconds">%1$s ث</string>
     <string name="chat_usage_format">إدخال %1$d | إخراج %2$d | %3$s | إدخال تراكمي %4$d</string>
+    <string name="chat_context_usage_compact">السياق %1$s / %2$s رمز (%3$d%%) · L1 %4$s · L2 %5$s · استرجاع %6$s · L3 %7$s</string>
+    <string name="chat_context_usage_unavailable">استخدام السياق غير متاح</string>
+    <string name="chat_context_usage_title">استخدام السياق</string>
+    <string name="chat_context_usage_details">المستخدم: %1$s / %2$s رمز\nالمصدر: %3$s\nL0 تعليمات ثابتة: %4$s\nL1 ذاكرة العمل: %5$s\nL2 الملخص: %6$s\nاسترجاع السجل: %7$s\nL3 النص الحديث: %8$s\nProvider/القالب: %9$s\nالحد المرن / الصلب / المطلق: %10$s / %11$s / %12$s</string>
+    <string name="chat_context_usage_source_exact">عدّ Backend الدقيق</string>
+    <string name="chat_context_usage_source_estimated">تقدير مُعاير</string>
+    <string name="chat_context_compact_now">ضغط الآن</string>
+    <string name="chat_context_compact_busy">أوقف التوليد قبل ضغط السياق</string>
+    <string name="chat_context_compact_complete">تم تحرير سياق Backend; ستعيد الرسالة التالية بناء سياق مضغوط</string>
+    <string name="chat_context_compact_already">لا يوجد سياق Backend نشط; ستستخدم الرسالة التالية سياقاً مضغوطاً بالفعل</string>
     <string name="chat_history_title">سجل المحادثات</string>
     <string name="chat_history_empty_title">لا توجد محادثات محفوظة</string>
     <string name="chat_history_empty_description">ستظهر المحادثات هنا بعد إرسال الرسالة الأولى.</string>

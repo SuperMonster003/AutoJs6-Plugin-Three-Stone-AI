@@ -84,6 +84,7 @@ internal data class CompiledContext(
     val inputTokenLimit: Long,
     val workingMemoryItemsIncluded: Int = 0,
     val summarySegmentsIncluded: Int = 0,
+    val layerTokens: ContextLayerTokenUsage = ContextLayerTokenUsage.EMPTY,
     val contextFingerprint: String = ConversationContextPolicy.fingerprint(
         ConversationContextState.EMPTY,
     ),
@@ -200,6 +201,16 @@ internal object ChatConversationPolicy {
             listOf(turn.user.id, turn.assistant.id)
         }
         val estimate = policy.estimator.estimateMessages(messages + prompt)
+        val workingMemoryTokens = derivedMessages.firstOrNull()
+            ?.takeIf { retainedMemory.isNotEmpty() }
+            ?.let(policy.estimator::estimateMessage)
+            ?.estimatedTokens
+            ?: 0L
+        val summaryTokens = derivedMessages.lastOrNull()
+            ?.takeIf { retainedSummaries.isNotEmpty() }
+            ?.let(policy.estimator::estimateMessage)
+            ?.estimatedTokens
+            ?: 0L
         return CompiledContext(
             messages = messages,
             estimatedInputTokens = estimate.estimatedTokens,
@@ -208,6 +219,11 @@ internal object ChatConversationPolicy {
             inputTokenLimit = policy.maximumInputTokens,
             workingMemoryItemsIncluded = retainedMemory.size,
             summarySegmentsIncluded = retainedSummaries.size,
+            layerTokens = ContextLayerTokenUsage(
+                workingMemoryTokens = workingMemoryTokens,
+                summaryTokens = summaryTokens,
+                recentRawTokens = policy.estimator.estimateMessages(rawMessages).estimatedTokens,
+            ),
             contextFingerprint = ConversationContextPolicy.compilationFingerprint(
                 state = policy.contextState,
                 includeDerivedContext = policy.includeDerivedContext,

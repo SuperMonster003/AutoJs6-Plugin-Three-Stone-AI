@@ -135,6 +135,16 @@
     <string name="chat_duration_milliseconds">%1$d 毫秒</string>
     <string name="chat_duration_seconds">%1$s 秒</string>
     <string name="chat_usage_format">輸入 %1$d | 輸出 %2$d | %3$s | 會話累計輸入 %4$d</string>
+    <string name="chat_context_usage_compact">上下文 %1$s / %2$s Token (%3$d%%) · L1 %4$s · L2 %5$s · 召回 %6$s · L3 %7$s</string>
+    <string name="chat_context_usage_unavailable">上下文用量暫不可用</string>
+    <string name="chat_context_usage_title">上下文用量</string>
+    <string name="chat_context_usage_details">已用: %1$s / %2$s Token\n來源: %3$s\nL0 固定指令: %4$s\nL1 工作記憶: %5$s\nL2 摘要: %6$s\n歷史召回: %7$s\nL3 最近原文: %8$s\nProvider/範本: %9$s\n軟 / 硬 / 絕對水位: %10$s / %11$s / %12$s</string>
+    <string name="chat_context_usage_source_exact">Backend 精確計數</string>
+    <string name="chat_context_usage_source_estimated">校準估算</string>
+    <string name="chat_context_compact_now">立即壓縮</string>
+    <string name="chat_context_compact_busy">請先停止生成再壓縮上下文</string>
+    <string name="chat_context_compact_complete">Backend 上下文已釋放; 下一則訊息將以精簡上下文重建</string>
+    <string name="chat_context_compact_already">目前沒有活動 Backend; 下一則訊息已會使用精簡上下文</string>
     <string name="chat_history_title">對話記錄</string>
     <string name="chat_history_empty_title">尚未儲存任何對話</string>
     <string name="chat_history_empty_description">傳送第一則訊息後, 對話便會顯示在此處.</string>

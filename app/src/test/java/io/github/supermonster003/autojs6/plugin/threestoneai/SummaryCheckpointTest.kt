@@ -159,6 +159,38 @@ class SummaryCheckpointTest {
     }
 
     @Test
+    fun `prompt only JSON mode still carries the complete response contract`() {
+        val transcript = listOf(
+            user(1, "remember this"),
+            assistant(2, "understood"),
+            user(3, "recent"),
+            assistant(4, "reply"),
+        )
+        val plan = checkNotNull(
+            SummaryCheckpointPlanner.plan(
+                transcript = transcript,
+                state = ConversationContextState.EMPTY,
+                retainedRawMessageIds = listOf(3L, 4L),
+                estimator = exactEstimator,
+                maximumSourceTokens = 1_000L,
+            ),
+        )
+
+        val request = SummaryPromptProtocol.generationRequest(
+            plan = plan,
+            state = ConversationContextState.EMPTY,
+            structuredJson = false,
+        )
+        val systemInstruction = request.history.single().textParts.single()
+
+        assertNull(request.responseJsonSchema)
+        assertTrue(systemInstruction.contains("exactly two properties"))
+        assertTrue(systemInstruction.contains("\"summary\""))
+        assertTrue(systemInstruction.contains("\"workingMemory\""))
+        assertTrue(systemInstruction.contains("sourceMessageIds"))
+    }
+
+    @Test
     fun `validator accepts user-confirmed memory and rejects assistant-only confirmation`() {
         val transcript = listOf(
             user(1, "Always answer concisely."),

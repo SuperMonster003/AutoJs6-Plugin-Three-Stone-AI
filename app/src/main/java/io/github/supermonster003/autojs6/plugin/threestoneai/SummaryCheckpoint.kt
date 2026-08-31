@@ -509,6 +509,12 @@ internal object SummaryPromptProtocol {
         New assistant suggestions are PROPOSED. CONFIRMED is allowed only when the final cited source
         is a user message that states or confirms the item. Do not silently remove existing items;
         mark an obsolete item REJECTED or SUPERSEDED with new provenance.
+        The top-level object must contain exactly two properties: "summary", a non-empty string
+        summarizing only the new source, and "workingMemory", the complete memory array. Every
+        workingMemory item must contain exactly "key", "kind", "text", "sourceMessageIds", and
+        "status". kind is GOAL, CONSTRAINT, DECISION, OPEN_QUESTION, PREFERENCE, or FACT. status is
+        PROPOSED, CONFIRMED, REJECTED, or SUPERSEDED. sourceMessageIds is an array of integer IDs.
+        Both top-level properties are required even when either source summary or memory is short.
         Output strict JSON only, with no markdown fence or commentary.
     """.trimIndent()
 

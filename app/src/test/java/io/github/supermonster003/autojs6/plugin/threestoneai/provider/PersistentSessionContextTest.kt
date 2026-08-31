@@ -73,6 +73,25 @@ class PersistentSessionContextTest {
     }
 
     @Test
+    fun nonMonotonicExactUsageCannotLowerTheCurrentBackendHighWater() {
+        val context = context(applicationInputTokenBudget = 1_000)
+        val first = context.prepareFirst(request(prompt = "first"), target())
+        context.complete(first, "answer", statistics(100L))
+        val dipped = context.prepareNext(request(prompt = "dip"), target())
+        context.complete(dipped, "answer", statistics(60L))
+
+        val diagnostics = context.diagnostics()
+        assertEquals(60L, diagnostics.accounting.tokens)
+        assertEquals(100L, diagnostics.accountingHighWater.tokens)
+
+        val next = context.prepareNext(request(prompt = "after-dip"), target())
+        assertEquals(PersistentBackendTurnMode.CONTINUE, next.mode)
+        assertEquals(100L, next.accountingBefore.tokens)
+        assertTrue(next.estimatedInputTokens > 100L)
+        context.abandon(next)
+    }
+
+    @Test
     fun memoryGuardEvictsOldestWholeTurnsAndForcesTheNextRebuild() {
         val context = context(
             applicationInputTokenBudget = 10_000,

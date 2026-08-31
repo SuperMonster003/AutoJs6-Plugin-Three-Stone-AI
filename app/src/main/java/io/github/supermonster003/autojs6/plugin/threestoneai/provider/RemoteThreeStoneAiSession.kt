@@ -475,6 +475,7 @@ internal class RemoteThreeStoneAiSession(
                 "actualOutputTokens=${statistics?.outputTokens} " +
                 "accountingTokens=${diagnostics.accounting.tokens} " +
                 "accountingSource=${diagnostics.accounting.source} " +
+                "accountingHighWaterTokens=${diagnostics.accountingHighWater.tokens} " +
                 "transcriptBytes=${diagnostics.transcriptBytes} " +
                 "retainedTurns=${diagnostics.completedTurnCount} " +
                 "guardEvictedTurns=${commit.evictedByMemoryGuard} " +

@@ -72,6 +72,7 @@ internal data class PersistentContextDiagnostics(
     val anchoredMessageCount: Int,
     val completedTurnCount: Int,
     val accounting: ContextAccounting,
+    val accountingHighWater: ContextAccounting,
     val completedTurnsOnBackend: Int,
     val backendEpoch: Long,
     val rebuildRequired: Boolean,
@@ -114,6 +115,7 @@ internal class PersistentSessionContext(
     private var initialized = false
     private var transcript = PersistentTranscript.EMPTY
     private var accounting = ContextAccounting.initial()
+    private var accountingHighWater = ContextAccounting.initial()
     private var completedTurnsOnBackend = 0
     private var backendEpoch = 0L
     private var rebuildRequired = false
@@ -171,15 +173,19 @@ internal class PersistentSessionContext(
         require(request.prompt.role == GenerationRole.USER)
         if (contextExhausted) throw exhausted()
         val budget = budget(target, request)
+        val conservativeAccounting = conservativeAccounting()
         val promptEstimate = estimator.estimateMessage(request.prompt)
-        val projectedTokens = saturatedAdd(accounting.tokens, promptEstimate.estimatedTokens)
+        val projectedTokens = saturatedAdd(
+            conservativeAccounting.tokens,
+            promptEstimate.estimatedTokens,
+        )
         val projectedBytes = saturatedAdd(transcript.utf8Bytes, promptEstimate.utf8Bytes)
         val requestByteLimit = requestByteLimit(target)
         val rotate = rebuildRequired ||
             projectedTokens >= budget.hardWatermarkTokens ||
             projectedBytes > requestByteLimit ||
             ContextAccountingPolicy.shouldRotateBackend(
-                accounting = accounting,
+                accounting = conservativeAccounting,
                 budget = budget,
                 completedTurnsOnBackend = completedTurnsOnBackend,
             )
@@ -192,7 +198,7 @@ internal class PersistentSessionContext(
                 base = transcript,
                 evictedTurnCount = 0,
                 proposedBackendEpoch = backendEpoch,
-                accountingBefore = accounting,
+                accountingBefore = conservativeAccounting,
             )
         }
 
@@ -201,7 +207,7 @@ internal class PersistentSessionContext(
             prompt = request.prompt,
             maximumInputTokens = budget.compactionTargetTokens,
             maximumRequestBytes = requestByteLimit,
-            accountedTranscriptTokens = accounting.tokens,
+            accountedTranscriptTokens = conservativeAccounting.tokens,
         )
         requireWithinAbsoluteLimits(
             estimatedTokens = compilation.estimatedInputTokens,
@@ -259,6 +265,15 @@ internal class PersistentSessionContext(
         initialized = true
         transcript = guarded.transcript
         accounting = updatedAccounting
+        accountingHighWater = if (plan.mode == PersistentBackendTurnMode.CONTINUE) {
+            if (updatedAccounting.tokens >= accountingHighWater.tokens) {
+                updatedAccounting
+            } else {
+                accountingHighWater
+            }
+        } else {
+            updatedAccounting
+        }
         completedTurnsOnBackend = if (plan.mode == PersistentBackendTurnMode.CONTINUE) {
             (completedTurnsOnBackend + 1).coerceAtMost(Int.MAX_VALUE)
         } else {
@@ -419,6 +434,7 @@ internal class PersistentSessionContext(
         anchoredMessageCount = transcript.anchoredMessages.size,
         completedTurnCount = transcript.turns.size,
         accounting = accounting,
+        accountingHighWater = accountingHighWater,
         completedTurnsOnBackend = completedTurnsOnBackend,
         backendEpoch = backendEpoch,
         rebuildRequired = rebuildRequired,
@@ -426,6 +442,9 @@ internal class PersistentSessionContext(
     )
 
     private fun exhausted() = PersistentSessionContextExhaustedException()
+
+    private fun conservativeAccounting(): ContextAccounting =
+        if (accountingHighWater.tokens > accounting.tokens) accountingHighWater else accounting
 }
 
 internal class PersistentTranscript private constructor(

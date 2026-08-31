@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai.provider
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.RemoteException
+import android.util.Log
 import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSession
@@ -73,6 +74,7 @@ internal class RemoteThreeStoneAiSession(
     private val activeTurn = AtomicReference<Turn?>()
     private val fixedConfiguration = AtomicReference<FixedConfiguration?>()
     private val persistentSessionId = AtomicReference<String?>()
+    private val persistentContext = PersistentSessionContext()
 
     override fun grantCredits(count: Int) {
         callerVerifier.enforceSessionOwner(ownerUid)
@@ -189,9 +191,14 @@ internal class RemoteThreeStoneAiSession(
                 provider = ThreeStoneAiPlugin.capabilities,
                 descriptorCount = turn.descriptors.count,
             )
+            val target = try {
+                aiBackend.catalog().requireTarget(request.targetId)
+            } catch (_: AiTargetUnavailableException) {
+                throw TargetUnavailable()
+            }
             try {
                 TargetRequestPolicy.requireSupported(
-                    target = aiBackend.catalog().requireTarget(request.targetId),
+                    target = target,
                     request = request,
                     quota = quota,
                 )
@@ -206,25 +213,31 @@ internal class RemoteThreeStoneAiSession(
             turn.ensureActive()
             requireTurnConfiguration(turn, request, materialized)
             val generationRequest = PromptPlanner.plan(request, materialized)
-            val activeBackend = if (turn.firstTurn) {
-                try {
-                    aiBackend.createSession(
-                        AiBackendSessionRequest(
-                            targetId = request.targetId,
-                            executionProfileId = request.options.backendProfile,
-                        ),
-                    )
-                } catch (_: AiTargetUnavailableException) {
-                    throw TargetUnavailable()
-                }.also { created ->
-                    if (closed.get() || !backendSession.compareAndSet(null, created)) {
-                        runCatching(created::close)
-                        throw SessionStopped()
-                    }
+            val contextPlan = if (persistent) {
+                val prepared = if (turn.firstTurn) {
+                    persistentContext.prepareFirst(generationRequest, target)
+                } else {
+                    persistentContext.prepareNext(generationRequest, target)
                 }
+                turn.installContextPlan(prepared)
+                prepared
             } else {
-                checkNotNull(backendSession.get()) { "Persistent generation backend is unavailable" }
+                null
             }
+            val rebuildBackend = contextPlan?.mode == PersistentBackendTurnMode.REBUILD
+            val activeBackend = when {
+                turn.firstTurn -> createAndInstallBackend(request)
+                rebuildBackend -> {
+                    runCatching { backendSession.getAndSet(null)?.close() }
+                    turn.ensureActive()
+                    createAndInstallBackend(request)
+                }
+                else -> checkNotNull(backendSession.get()) {
+                    "Persistent generation backend is unavailable"
+                }
+            }
+            val effectiveRequest = contextPlan?.generationRequest ?: generationRequest
+            contextPlan?.let { plan -> logContextStart(request.targetId, plan) }
             turn.emitStarted(request)
             turn.ensureActive()
             val listener = object : GenerationListener {
@@ -235,10 +248,10 @@ internal class RemoteThreeStoneAiSession(
                 override fun onFailed(error: Throwable, statistics: GenerationStatistics?) =
                     turn.backendFailed(statistics)
             }
-            if (turn.firstTurn) {
-                activeBackend.stream(generationRequest, listener)
+            if (contextPlan != null) {
+                activeBackend.streamPreparedPersistentTurn(contextPlan, listener)
             } else {
-                activeBackend.streamNext(generationRequest, listener)
+                activeBackend.stream(effectiveRequest, listener)
             }
         } catch (_: SessionStopped) {
             Unit
@@ -248,6 +261,11 @@ internal class RemoteThreeStoneAiSession(
             turn.fail(AiErrorCode.UNSUPPORTED_CAPABILITY, "AI request capability is unsupported")
         } catch (_: TargetUnavailable) {
             turn.fail(AiErrorCode.TARGET_UNAVAILABLE, "The selected AI target is unavailable")
+        } catch (_: PersistentSessionContextExhaustedException) {
+            turn.fail(
+                PersistentSessionFailurePolicy.contextExhaustedErrorCode,
+                PersistentSessionFailurePolicy.CONTEXT_EXHAUSTED_MESSAGE,
+            )
         } catch (_: IllegalArgumentException) {
             turn.fail(AiErrorCode.INVALID_REQUEST, "AI request is invalid")
         } catch (_: IllegalStateException) {
@@ -413,6 +431,58 @@ internal class RemoteThreeStoneAiSession(
         }
     }
 
+    private fun createAndInstallBackend(request: AiProviderRequest): AiBackendSession {
+        val created = try {
+            aiBackend.createSession(
+                AiBackendSessionRequest(
+                    targetId = request.targetId,
+                    executionProfileId = request.options.backendProfile,
+                ),
+            )
+        } catch (_: AiTargetUnavailableException) {
+            throw TargetUnavailable()
+        }
+        if (closed.get() || !backendSession.compareAndSet(null, created)) {
+            runCatching(created::close)
+            throw SessionStopped()
+        }
+        return created
+    }
+
+    private fun logContextStart(targetId: String, plan: PreparedPersistentTurn) {
+        Log.d(
+            TAG,
+            "Persistent context start target=$targetId mode=${plan.mode} " +
+                "estimatedInputTokens=${plan.estimatedInputTokens} " +
+                "hardWatermarkTokens=${plan.budget.hardWatermarkTokens} " +
+                "absoluteProtectionTokens=${plan.budget.absoluteProtectionTokens} " +
+                "retainedBytes=${plan.retainedTranscriptBytes} " +
+                "retainedTurns=${plan.retainedTurnCount} " +
+                "evictedTurns=${plan.evictedTurnCount} backendEpoch=${plan.backendEpoch}",
+        )
+    }
+
+    private fun logContextComplete(
+        plan: PreparedPersistentTurn,
+        commit: PersistentContextCommit,
+        statistics: GenerationStatistics?,
+    ) {
+        val diagnostics = commit.diagnostics
+        Log.d(
+            TAG,
+            "Persistent context complete mode=${plan.mode} " +
+                "actualInputTokens=${statistics?.inputTokens} " +
+                "actualOutputTokens=${statistics?.outputTokens} " +
+                "accountingTokens=${diagnostics.accounting.tokens} " +
+                "accountingSource=${diagnostics.accounting.source} " +
+                "transcriptBytes=${diagnostics.transcriptBytes} " +
+                "retainedTurns=${diagnostics.completedTurnCount} " +
+                "guardEvictedTurns=${commit.evictedByMemoryGuard} " +
+                "rebuildRequired=${diagnostics.rebuildRequired} " +
+                "backendEpoch=${diagnostics.backendEpoch}",
+        )
+    }
+
     private fun cleanupSession(cancelBackend: Boolean, closeBackendDirectly: Boolean = false) {
         if (!cleanupClaimed.compareAndSet(false, true)) return
         unlinkCallbackDeath()
@@ -455,6 +525,7 @@ internal class RemoteThreeStoneAiSession(
         private val timeoutFuture = AtomicReference<Future<*>?>()
         private val generationStatistics = AtomicReference<GenerationStatistics?>()
         private val terminalCause = AtomicReference(TerminalCause.NONE)
+        private val contextPlan = AtomicReference<PreparedPersistentTurn?>()
         val futures = ConcurrentLinkedQueue<Future<*>>()
 
         val isActive: Boolean
@@ -502,6 +573,10 @@ internal class RemoteThreeStoneAiSession(
                 effectiveMaximumToolRounds = 0,
             )
             dispatchCallback { callback.onStarted(AiProviderCodec.encodeSessionStarted(metadata)) }
+        }
+
+        fun installContextPlan(plan: PreparedPersistentTurn) {
+            check(contextPlan.compareAndSet(null, plan)) { "Persistent context plan is already set" }
         }
 
         fun backendTextDelta(text: String) {
@@ -560,6 +635,7 @@ internal class RemoteThreeStoneAiSession(
         fun dispose(cancelWorkers: Boolean) {
             timeoutFuture.getAndSet(null)?.cancel(false)
             descriptors.close()
+            contextPlan.getAndSet(null)?.let(persistentContext::abandon)
             if (cancelWorkers) futures.forEach { it.cancel(true) }
             futures.clear()
         }
@@ -635,6 +711,17 @@ internal class RemoteThreeStoneAiSession(
                 return fail(AiErrorCode.PROVIDER_FAILED, "AI completion validation failed")
             }
             if (!terminal.compareAndSet(false, true)) return
+            if (persistent && terminalCause.get() == TerminalCause.NONE) {
+                val plan = contextPlan.get()
+                    ?: return failClaimedTurn("Persistent context plan is unavailable")
+                val commit = runCatching {
+                    persistentContext.complete(plan, snapshot.text, generationStatistics.get())
+                }.getOrElse {
+                    return failClaimedTurn("Persistent context commit failed")
+                }
+                contextPlan.compareAndSet(plan, null)
+                logContextComplete(plan, commit, generationStatistics.get())
+            }
             val encodedUsage = usage?.let(AiCommonCodec::encodeUsage)
             val encodedCompletion = AiProviderCodec.encodeCompletionResult(result)
             val reusable = persistent && terminalCause.get() == TerminalCause.NONE
@@ -650,6 +737,12 @@ internal class RemoteThreeStoneAiSession(
                     )
                 }
             }
+        }
+
+        private fun failClaimedTurn(message: String) {
+            terminalCause.set(TerminalCause.FAILURE)
+            contextPlan.getAndSet(null)?.let(persistentContext::abandon)
+            failTurn(this, AiError(AiErrorCode.PROVIDER_FAILED, message))
         }
 
         private fun scheduleTimeout() {
@@ -726,4 +819,8 @@ internal class RemoteThreeStoneAiSession(
     private class UnsupportedProtocol : RuntimeException()
     private class UnsupportedSurface : RuntimeException()
     private class TargetUnavailable : RuntimeException()
+
+    private companion object {
+        const val TAG = "ThreeStoneAiBinder"
+    }
 }

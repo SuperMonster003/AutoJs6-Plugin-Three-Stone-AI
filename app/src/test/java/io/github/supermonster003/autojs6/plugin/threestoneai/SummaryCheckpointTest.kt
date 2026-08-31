@@ -188,6 +188,7 @@ class SummaryCheckpointTest {
         assertTrue(systemInstruction.contains("\"summary\""))
         assertTrue(systemInstruction.contains("\"workingMemory\""))
         assertTrue(systemInstruction.contains("sourceMessageIds"))
+        assertTrue(systemInstruction.contains("not [1,2]"))
     }
 
     @Test

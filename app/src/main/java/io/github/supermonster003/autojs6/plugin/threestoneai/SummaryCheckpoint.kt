@@ -509,6 +509,10 @@ internal object SummaryPromptProtocol {
         New assistant suggestions are PROPOSED. CONFIRMED is allowed only when the final cited source
         is a user message that states or confirms the item. Do not silently remove existing items;
         mark an obsolete item REJECTED or SUPERSEDED with new provenance.
+        For a CONFIRMED item, cite only user messages that actually state or confirm it; never append
+        a later assistant acknowledgement to that item's provenance. For example, when user message
+        1 states a confirmed constraint and assistant message 2 only acknowledges it, use
+        "sourceMessageIds":[1], not [1,2]. Keep every sourceMessageIds array sorted and unique.
         The top-level object must contain exactly two properties: "summary", a non-empty string
         summarizing only the new source, and "workingMemory", the complete memory array. Every
         workingMemory item must contain exactly "key", "kind", "text", "sourceMessageIds", and

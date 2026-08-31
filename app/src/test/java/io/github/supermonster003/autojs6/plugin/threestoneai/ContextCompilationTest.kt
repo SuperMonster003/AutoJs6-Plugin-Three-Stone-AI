@@ -5,6 +5,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationM
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRole
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -297,6 +298,10 @@ class ContextCompilationTest {
         assertEquals(0, context.workingMemoryItemsIncluded)
         assertEquals(0, context.summarySegmentsIncluded)
         assertEquals(listOf(3L, 4L, 5L, 6L), context.coveredMessageIds)
+        assertNotEquals(
+            ConversationContextPolicy.fingerprint(contextState(transcript.take(2))),
+            context.contextFingerprint,
+        )
     }
 
     @Test

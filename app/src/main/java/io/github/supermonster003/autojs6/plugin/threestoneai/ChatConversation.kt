@@ -208,7 +208,10 @@ internal object ChatConversationPolicy {
             inputTokenLimit = policy.maximumInputTokens,
             workingMemoryItemsIncluded = retainedMemory.size,
             summarySegmentsIncluded = retainedSummaries.size,
-            contextFingerprint = ConversationContextPolicy.fingerprint(policy.contextState),
+            contextFingerprint = ConversationContextPolicy.compilationFingerprint(
+                state = policy.contextState,
+                includeDerivedContext = policy.includeDerivedContext,
+            ),
         )
     }
 

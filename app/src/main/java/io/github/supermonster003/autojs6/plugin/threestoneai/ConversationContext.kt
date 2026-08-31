@@ -186,6 +186,19 @@ internal object ConversationContextPolicy {
         }
     }
 
+    /** Emergency omission is part of backend identity so the next safe turn restores L1/L2. */
+    fun compilationFingerprint(
+        state: ConversationContextState,
+        includeDerivedContext: Boolean,
+    ): String = if (includeDerivedContext) {
+        fingerprint(state)
+    } else {
+        digest {
+            writeText("derived-context-omitted")
+            writeText(fingerprint(state))
+        }
+    }
+
     /** Hashes the exact source range, including skipped failed/notice records, for invalidation. */
     fun sourceHash(messages: List<ChatMessage>): String {
         require(messages.isNotEmpty())

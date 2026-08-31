@@ -91,18 +91,18 @@ internal class SummaryCheckpointer(
             dispatch { callback(failure) }
             return SummaryCheckpointTask {}
         }
-        return Task(request, generationRequest, callback).also(Task::start)
+        return Task(request, callback).also(Task::start)
     }
 
     private inner class Task(
         private val request: SummaryCheckpointRequest,
-        private val generationRequest: io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRequest,
         private val callback: (SummaryCheckpointOutcome) -> Unit,
     ) : SummaryCheckpointTask {
         private val cancelled = AtomicBoolean(false)
         private val completed = AtomicBoolean(false)
         private val activeSession = AtomicReference<AiBackendSession?>()
         private var attempts = 0
+        private var useStructuredJson = request.structuredJson
 
         fun start() = dispatch(::runAttempt)
 
@@ -115,6 +115,11 @@ internal class SummaryCheckpointer(
         private fun runAttempt() {
             if (cancelled.get() || completed.get()) return
             attempts++
+            val generationRequest = SummaryPromptProtocol.generationRequest(
+                plan = request.plan,
+                state = request.state,
+                structuredJson = useStructuredJson,
+            )
             val session = try {
                 backend.createSession(
                     AiBackendSessionRequest(
@@ -211,8 +216,12 @@ internal class SummaryCheckpointer(
                 result.fold(
                     onSuccess = { outcome -> complete(outcome) },
                     onFailure = { failure ->
-                        if (attempts < maximumAttempts) runAttempt()
-                        else complete(SummaryCheckpointOutcome.Failure(failure, attempts))
+                        if (attempts < maximumAttempts) {
+                            if (error == null && useStructuredJson) useStructuredJson = false
+                            runAttempt()
+                        } else {
+                            complete(SummaryCheckpointOutcome.Failure(failure, attempts))
+                        }
                     },
                 )
             }

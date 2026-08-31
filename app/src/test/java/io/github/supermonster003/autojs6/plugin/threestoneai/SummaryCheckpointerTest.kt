@@ -73,10 +73,15 @@ class SummaryCheckpointerTest {
         assertTrue(malformedOutcome is SummaryCheckpointOutcome.Success)
         assertEquals(2, (malformedOutcome as SummaryCheckpointOutcome.Success).attempts)
         assertEquals(2, malformedBackend.createdSessions)
+        assertEquals(SummaryPromptProtocol.RESPONSE_SCHEMA, malformedBackend.generationRequests[0].responseJsonSchema)
+        assertEquals(null, malformedBackend.generationRequests[1].responseJsonSchema)
         assertTrue(networkOutcome is SummaryCheckpointOutcome.Failure)
         assertEquals(2, (networkOutcome as SummaryCheckpointOutcome.Failure).attempts)
         assertEquals(2, networkBackend.createdSessions)
         assertEquals(2, networkBackend.closedSessions)
+        assertTrue(networkBackend.generationRequests.all { request ->
+            request.responseJsonSchema == SummaryPromptProtocol.RESPONSE_SCHEMA
+        })
     }
 
     @Test

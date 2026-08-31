@@ -53,6 +53,10 @@ class LiteRtLocalBackendTest {
             assertFalse(target.capabilities.tools)
             assertEquals(ThreeStoneAiPlugin.MAXIMUM_CONTEXT_BYTES, target.limits.maximumContextBytes)
             assertEquals(ThreeStoneAiPlugin.MAXIMUM_OUTPUT_BYTES, target.limits.maximumOutputBytes)
+            assertEquals(
+                LiteRtLmEngineFactory.MAXIMUM_CONTEXT_TOKENS,
+                target.limits.maximumContextTokens,
+            )
             assertEquals(listOf("cpu", "gpu"), target.executionProfiles.map(AiExecutionProfile::profileId))
             assertTrue(target.executionProfiles.first().available)
             assertFalse(target.executionProfiles.last().available)

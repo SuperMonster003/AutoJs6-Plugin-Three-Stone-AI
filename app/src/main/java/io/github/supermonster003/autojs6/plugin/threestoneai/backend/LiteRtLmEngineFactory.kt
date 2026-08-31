@@ -10,6 +10,16 @@ import java.io.File
 
 /** Keeps generation and model-health probes on the exact same LiteRT-LM configuration. */
 internal object LiteRtLmEngineFactory {
+    /**
+     * Runtime context contract for every model accepted by this plugin.
+     *
+     * LiteRT-LM defines maxNumTokens as the shared input/output KV-cache size, but 0.15.0
+     * cannot report a package's supported maximum. Keeping the engine override and target
+     * limit on this single value makes an imported model either initialize with this capacity
+     * or fail the existing health check before it can be selected.
+     */
+    const val MAXIMUM_CONTEXT_TOKENS = 4_096
+
     @OptIn(ExperimentalApi::class)
     @Synchronized
     fun create(
@@ -30,6 +40,7 @@ internal object LiteRtLmEngineFactory {
                     LiteRtLmBackendProfile.NPU ->
                         throw IllegalArgumentException("The NPU runtime is not packaged")
                 },
+                maxNumTokens = MAXIMUM_CONTEXT_TOKENS,
                 cacheDir = cacheDirectory.absolutePath,
             ),
         )

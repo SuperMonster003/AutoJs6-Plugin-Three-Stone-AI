@@ -41,6 +41,30 @@ class ContextBudgetTest {
     }
 
     @Test
+    fun `litert 4096 token cache rotates below its native exhaustion boundary`() {
+        val budget = ContextBudgetCalculator.calculate(
+            limits(maximumContextTokens = 4_096),
+            applicationInputTokenBudget = 16_384,
+            maximumOutputTokens = 16,
+        )
+
+        assertEquals(4_096L, budget.targetMaximumContextTokens)
+        assertEquals(16L, budget.outputReserveTokens)
+        assertEquals(328L, budget.safetyMarginTokens)
+        assertEquals(3_752L, budget.effectiveInputTokens)
+        assertEquals(3_001L, budget.hardWatermarkTokens)
+        assertEquals(3_376L, budget.absoluteProtectionTokens)
+        assertEquals(1_688L, budget.compactionTargetTokens)
+        assertTrue(
+            ContextAccountingPolicy.shouldRotateBackend(
+                ContextAccounting.initial(3_001L),
+                budget,
+                completedTurnsOnBackend = 1,
+            ),
+        )
+    }
+
+    @Test
     fun `application budget remains the lower cost cap for a large target`() {
         val budget = ContextBudgetCalculator.calculate(
             limits(maximumContextTokens = 200_000),

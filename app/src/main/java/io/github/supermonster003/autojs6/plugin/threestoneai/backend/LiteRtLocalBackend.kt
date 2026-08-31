@@ -133,6 +133,7 @@ internal object LiteRtLocalCatalog {
             limits = AiTargetLimits(
                 maximumContextBytes = ThreeStoneAiPlugin.MAXIMUM_CONTEXT_BYTES,
                 maximumOutputBytes = ThreeStoneAiPlugin.MAXIMUM_OUTPUT_BYTES,
+                maximumContextTokens = LiteRtLmEngineFactory.MAXIMUM_CONTEXT_TOKENS,
             ),
             executionProfiles = executionProfiles,
         )

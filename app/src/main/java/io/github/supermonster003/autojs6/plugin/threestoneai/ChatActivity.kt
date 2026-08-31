@@ -114,12 +114,16 @@ class ChatActivity : ConfiguredActivity() {
     private val backendExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "three-stone-ai-chat").apply { isDaemon = true }
     }
+    private val summaryExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "three-stone-ai-summary").apply { isDaemon = true }
+    }
 
     private var nextMessageId = 1L
     private var currentConversationId = newConversationId()
     private var conversationCreatedAtMillis = System.currentTimeMillis()
     private var conversationUpdatedAtMillis = conversationCreatedAtMillis
     private var conversationTarget: ConversationTargetSnapshot? = null
+    private var conversationContextState = ConversationContextState.EMPTY
     private var uiSettings = ChatUiSettings()
     private var editingMessageId: Long? = null
     private var draftBeforeEditing: String? = null
@@ -143,6 +147,12 @@ class ChatActivity : ConfiguredActivity() {
     private var activeContextTurnObservation: ContextTurnObservation? = null
     private var backendContextEpoch = 0L
     private var completedTurnsOnBackend = 0
+    private lateinit var summaryCheckpointer: SummaryCheckpointer
+    private var activeSummaryTask: SummaryCheckpointTask? = null
+    private var activeSummaryEpoch = 0L
+    private var activeSummaryConversationId: String? = null
+    private var activeSummarySourceHash: String? = null
+    private var failedSummaryPlanKey: String? = null
     private var managerAttached = false
     private var destroyed = false
     private var pendingDeltaGenerationId = 0L
@@ -176,10 +186,17 @@ class ChatActivity : ConfiguredActivity() {
         uiSettingsStore = ChatUiSettingsStore(applicationContext)
         draftStore = ChatComposerDraftStore(applicationContext)
         contextTokenCalibrationStore = ContextTokenCalibrationStore(applicationContext)
+        summaryCheckpointer = SummaryCheckpointer(
+            backend = (application as ThreeStoneAiApplication).aiBackend,
+            executor = summaryExecutor,
+        )
         uiSettings = uiSettingsStore.load()
         pendingDrawerExportId = savedInstanceState?.getString(STATE_PENDING_DRAWER_EXPORT_ID)
         updateController = AppUpdateController(this)
-        if (!restoreTranscript(savedInstanceState)) {
+        if (restoreTranscript(savedInstanceState)) {
+            conversationContextState = historyStore.find(currentConversationId)?.contextState
+                ?: ConversationContextState.EMPTY
+        } else {
             restoreStoredConversation(
                 intent.getStringExtra(ConversationNavigation.EXTRA_CONVERSATION_ID)
                     ?: historyStore.lastConversationId(),
@@ -424,6 +441,7 @@ class ChatActivity : ConfiguredActivity() {
             managerAttached = false
         }
         generationEpoch.incrementAndGet()
+        cancelSummaryCheckpoint()
         persistConversationNow()
         mainHandler.removeCallbacksAndMessages(null)
         synchronized(deltaLock) {
@@ -439,6 +457,7 @@ class ChatActivity : ConfiguredActivity() {
             }
         }
         backendExecutor.shutdown()
+        summaryExecutor.shutdown()
         super.onDestroy()
     }
 
@@ -1476,7 +1495,6 @@ class ChatActivity : ConfiguredActivity() {
             ?: return
         if (current.target != actualTarget) {
             replaceMessage(current.copy(target = actualTarget))
-            persistConversationNow()
         }
     }
 
@@ -1800,6 +1818,7 @@ class ChatActivity : ConfiguredActivity() {
         activeAssistantMessageId = assistantMessage.id
         isGenerating = true
         if (retainedPrefix != null) {
+            invalidateConversationContextFrom(checkNotNull(messageBeingEdited))
             closeCurrentBackend()
             messages.clear()
             messages.addAll(retainedPrefix)
@@ -1843,10 +1862,13 @@ class ChatActivity : ConfiguredActivity() {
         var reusableBackend: AiBackendSession? = null
         var reusableTelemetry: BackendContextTelemetry? = null
         var backendToReplace: AiBackendSession? = null
+        var emergencyDerivedContextDrop = false
         synchronized(backendLock) {
             val telemetry = activeBackendContextTelemetry
+            val contextFingerprint = ConversationContextPolicy.fingerprint(conversationContextState)
             val reusable = target.capabilities.persistentSession &&
                 activeBackend != null && telemetry != null &&
+                telemetry.contextFingerprint == contextFingerprint &&
                 activeBackendTarget?.let { activeTarget ->
                     activeTarget.matchesExecutionIdentity(target)
                 } == true &&
@@ -1859,6 +1881,8 @@ class ChatActivity : ConfiguredActivity() {
                 reusableBackend = activeBackend
                 reusableTelemetry = telemetry
             } else {
+                emergencyDerivedContextDrop = telemetry?.accounting?.tokens
+                    ?.let { tokens -> tokens >= budget.absoluteProtectionTokens } == true
                 backendToReplace = activeBackend
                 activeBackend = null
                 activeBackendTarget = null
@@ -1901,6 +1925,8 @@ class ChatActivity : ConfiguredActivity() {
             policy = ContextCompilationPolicy(
                 estimator = estimator,
                 maximumInputTokens = budget.compactionTargetTokens,
+                contextState = conversationContextState,
+                includeDerivedContext = !emergencyDerivedContextDrop,
             ),
         )
         if (compiled.exceedsInputBudget) {
@@ -1922,6 +1948,9 @@ class ChatActivity : ConfiguredActivity() {
                 "historyTokens=${historyEstimate.estimatedTokens} " +
                 "historyBytes=${historyEstimate.utf8Bytes} " +
                 "coveredMessages=${compiled.coveredMessageIds.size} " +
+                "workingMemoryItems=${compiled.workingMemoryItemsIncluded} " +
+                "summarySegments=${compiled.summarySegmentsIncluded} " +
+                "emergencyDerivedDrop=$emergencyDerivedContextDrop " +
                 "trimmed=${compiled.requiresSessionRebuild} " +
                 "hardWatermarkTokens=${budget.hardWatermarkTokens} " +
                 "compactionTargetTokens=${budget.compactionTargetTokens}",
@@ -1949,6 +1978,7 @@ class ChatActivity : ConfiguredActivity() {
                         epoch = backendContextEpoch,
                         committedMessages = history.map { message -> message.contextSnapshot() },
                         accounting = ContextAccounting.initial(historyEstimate.estimatedTokens),
+                        contextFingerprint = compiled.contextFingerprint,
                     )
                     activeBackend = created
                     activeBackendTarget = actualTarget
@@ -2268,8 +2298,214 @@ class ChatActivity : ConfiguredActivity() {
             if (activeBackend != null) completedTurnsOnBackend++
         }
         finishGenerationUi(generationId)
-        persistConversationNow()
+        maybeScheduleSummaryCheckpoint(actualTarget)
     }
+
+    private fun maybeScheduleSummaryCheckpoint(actualTarget: ConversationTargetSnapshot) {
+        if (destroyed || activeSummaryTask != null) return
+        val target = ConversationTargetPolicy.resolveExact(actualTarget, targetCatalog)
+            ?.takeIf(::isTargetReady)
+            ?: return
+        val chatBudget = ContextBudgetCalculator.calculate(
+            targetLimits = target.limits,
+            applicationInputTokenBudget = uiSettings.contextTokenBudget,
+            maximumOutputTokens = uiSettings.maximumOutputTokens,
+        )
+        val accounting = synchronized(backendLock) {
+            activeBackendContextTelemetry
+                ?.takeIf { telemetry ->
+                    telemetry.contextFingerprint ==
+                        ConversationContextPolicy.fingerprint(conversationContextState) &&
+                        activeBackendTarget?.matchesExecutionIdentity(target) == true
+                }
+                ?.accounting
+        }
+        if (!SummaryCheckpointTriggerPolicy.shouldSchedule(accounting, chatBudget)) return
+
+        val summaryBudget = ContextBudgetCalculator.calculate(
+            targetLimits = target.limits,
+            applicationInputTokenBudget = uiSettings.contextTokenBudget,
+            maximumOutputTokens = ContextPolicy.SUMMARY_MAXIMUM_OUTPUT_TOKENS,
+        )
+        val maximumSourceTokens = minOf(
+            ContextPolicy.SUMMARY_SOURCE_MAXIMUM_TOKENS.toLong(),
+            summaryBudget.effectiveInputTokens -
+                ContextPolicy.SUMMARY_INPUT_INSTRUCTION_RESERVE_TOKENS.toLong(),
+        )
+        if (maximumSourceTokens <= 0L) {
+            Log.w(
+                TAG,
+                "Context summary skipped target=${target.targetId} " +
+                    "effectiveInputTokens=${summaryBudget.effectiveInputTokens} reason=no-source-budget",
+            )
+            return
+        }
+
+        val transcriptSnapshot = messages.toList()
+        val stateSnapshot = conversationContextState
+        val estimator = contextTokenCalibrationStore.current(target.targetId).estimator()
+        val compacted = ChatConversationPolicy.compileContext(
+            transcript = transcriptSnapshot,
+            prompt = GenerationMessage(GenerationRole.USER, listOf("")),
+            policy = ContextCompilationPolicy(
+                estimator = estimator,
+                maximumInputTokens = chatBudget.compactionTargetTokens,
+                contextState = stateSnapshot,
+            ),
+        )
+        val plan = SummaryCheckpointPlanner.planWithinInputBudget(
+            transcript = transcriptSnapshot,
+            state = stateSnapshot,
+            retainedRawMessageIds = compacted.coveredMessageIds,
+            estimator = estimator,
+            maximumSourceTokens = maximumSourceTokens,
+            maximumInputTokens = summaryBudget.effectiveInputTokens,
+        ) ?: return
+        val planKey = summaryPlanKey(plan)
+        if (failedSummaryPlanKey == planKey) return
+
+        val conversationId = currentConversationId
+        val epoch = nextSummaryEpoch()
+        activeSummaryConversationId = conversationId
+        activeSummarySourceHash = plan.sourceHash
+        Log.d(
+            TAG,
+            "Context summary start target=${target.targetId} " +
+                "conversation=$conversationId range=${plan.firstMessageId}-${plan.lastMessageId} " +
+                "sourceMessages=${plan.sourceMessages.size} " +
+                "sourceTokens=${plan.sourceEstimate.estimatedTokens} " +
+                "accountingTokens=${accounting?.tokens} " +
+                "softWatermarkTokens=${chatBudget.softWatermarkTokens}",
+        )
+        activeSummaryTask = summaryCheckpointer.generate(
+            SummaryCheckpointRequest(
+                targetId = target.targetId,
+                executionProfileId = target.chatExecutionProfileId(),
+                structuredJson = target.capabilities.structuredJson,
+                plan = plan,
+                state = stateSnapshot,
+                transcript = transcriptSnapshot,
+                estimator = estimator,
+                maximumInputTokens = summaryBudget.effectiveInputTokens,
+            ),
+        ) { outcome ->
+            mainHandler.post {
+                completeSummaryCheckpoint(
+                    epoch = epoch,
+                    conversationId = conversationId,
+                    planKey = planKey,
+                    plan = plan,
+                    outcome = outcome,
+                )
+            }
+        }
+    }
+
+    private fun completeSummaryCheckpoint(
+        epoch: Long,
+        conversationId: String,
+        planKey: String,
+        plan: SummaryCheckpointPlan,
+        outcome: SummaryCheckpointOutcome,
+    ) {
+        if (
+            destroyed || epoch != activeSummaryEpoch ||
+            activeSummaryConversationId != conversationId ||
+            activeSummarySourceHash != plan.sourceHash ||
+            currentConversationId != conversationId
+        ) {
+            return
+        }
+        activeSummaryTask = null
+        activeSummaryConversationId = null
+        activeSummarySourceHash = null
+        when (outcome) {
+            is SummaryCheckpointOutcome.Failure -> {
+                failedSummaryPlanKey = planKey
+                Log.w(
+                    TAG,
+                    "Context summary failed conversation=$conversationId " +
+                        "range=${plan.firstMessageId}-${plan.lastMessageId} " +
+                        "attempts=${outcome.attempts}; keeping previous checkpoint",
+                    outcome.error,
+                )
+            }
+            is SummaryCheckpointOutcome.Success -> {
+                val validated = runCatching {
+                    SummaryCheckpointValidator.apply(
+                        state = conversationContextState,
+                        plan = plan,
+                        draft = outcome.draft,
+                        transcript = messages,
+                    )
+                }.onFailure { error ->
+                    Log.w(
+                        TAG,
+                        "Context summary became stale conversation=$conversationId " +
+                            "range=${plan.firstMessageId}-${plan.lastMessageId}; discarding result",
+                        error,
+                    )
+                }.getOrNull()
+                if (validated == null) {
+                    failedSummaryPlanKey = planKey
+                    return
+                }
+                if (validated != outcome.validatedState) {
+                    failedSummaryPlanKey = planKey
+                    Log.e(
+                        TAG,
+                        "Context summary validation was non-deterministic; discarding result " +
+                            "conversation=$conversationId range=${plan.firstMessageId}-${plan.lastMessageId}",
+                    )
+                    return
+                }
+                conversationContextState = validated
+                failedSummaryPlanKey = null
+                markConversationChanged()
+                if (!isGenerating) closeCurrentBackend()
+                Log.d(
+                    TAG,
+                    "Context summary complete conversation=$conversationId " +
+                        "range=${plan.firstMessageId}-${plan.lastMessageId} " +
+                        "segments=${validated.summarySegments.size} " +
+                        "workingMemoryItems=${validated.workingMemory.size} " +
+                        "attempts=${outcome.attempts} " +
+                        "inputTokens=${outcome.statistics?.inputTokens} " +
+                        "outputTokens=${outcome.statistics?.outputTokens} " +
+                        "fingerprint=${ConversationContextPolicy.fingerprint(validated)}",
+                )
+            }
+        }
+    }
+
+    private fun invalidateConversationContextFrom(messageId: Long) {
+        cancelSummaryCheckpoint()
+        failedSummaryPlanKey = null
+        val invalidated = ConversationContextPolicy.invalidateFrom(
+            state = conversationContextState,
+            messageId = messageId,
+        )
+        if (invalidated != conversationContextState) {
+            conversationContextState = invalidated
+            markConversationChanged()
+        }
+    }
+
+    private fun cancelSummaryCheckpoint() {
+        nextSummaryEpoch()
+        activeSummaryTask?.cancel()
+        activeSummaryTask = null
+        activeSummaryConversationId = null
+        activeSummarySourceHash = null
+    }
+
+    private fun nextSummaryEpoch(): Long {
+        activeSummaryEpoch = if (activeSummaryEpoch == Long.MAX_VALUE) 1L else activeSummaryEpoch + 1L
+        return activeSummaryEpoch
+    }
+
+    private fun summaryPlanKey(plan: SummaryCheckpointPlan): String =
+        "${plan.previousCoveredThroughMessageId ?: 0L}:${plan.firstMessageId}"
 
     private fun failGeneration(
         generationId: Long,
@@ -2354,6 +2590,9 @@ class ChatActivity : ConfiguredActivity() {
         conversationCreatedAtMillis = System.currentTimeMillis()
         conversationUpdatedAtMillis = conversationCreatedAtMillis
         conversationTarget = target
+        conversationContextState = ConversationContextState.EMPTY
+        failedSummaryPlanKey = null
+        cancelSummaryCheckpoint()
         allowDeletedConversationRevival = false
         cancelEditing(restoreDraft = false)
         closeSearch()
@@ -2579,6 +2818,7 @@ class ChatActivity : ConfiguredActivity() {
             updatedAtMillis = conversationUpdatedAtMillis,
             target = conversationTarget,
             messages = messages.toList(),
+            contextState = conversationContextState,
         )
         val persisted = runCatching {
             historyStore.upsert(
@@ -2590,6 +2830,13 @@ class ChatActivity : ConfiguredActivity() {
             .getOrDefault(false)
         if (persisted) {
             allowDeletedConversationRevival = false
+            Log.d(
+                TAG,
+                "Conversation persist conversation=$currentConversationId " +
+                    "messages=${messages.size} " +
+                    "summarySegments=${conversationContextState.summarySegments.size} " +
+                    "workingMemoryItems=${conversationContextState.workingMemory.size}",
+            )
             if (
                 ::drawerLayout.isInitialized &&
                 drawerLayout.isDrawerOpen(GravityCompat.START)
@@ -2612,6 +2859,8 @@ class ChatActivity : ConfiguredActivity() {
         conversationCreatedAtMillis = conversation.createdAtMillis
         conversationUpdatedAtMillis = conversation.updatedAtMillis
         conversationTarget = conversation.target
+        conversationContextState = conversation.contextState
+        failedSummaryPlanKey = null
         nextMessageId = (messages.maxOfOrNull(ChatMessage::id) ?: 0L) + 1L
         markdownCache.clear()
         allowDeletedConversationRevival = false
@@ -2625,6 +2874,7 @@ class ChatActivity : ConfiguredActivity() {
             return
         }
         if (isGenerating) stopGeneration(showToast = false) else persistConversationNow()
+        cancelSummaryCheckpoint()
         closeCurrentBackend()
         cancelEditing(restoreDraft = false)
         closeSearch()
@@ -2781,6 +3031,8 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun applyConversationTarget(target: AiTarget, announce: Boolean) {
         if (isGenerating) stopGeneration(showToast = false)
+        cancelSummaryCheckpoint()
+        failedSummaryPlanKey = null
         closeCurrentBackend()
         val snapshot = ConversationTargetSnapshot.from(target)
         conversationTarget = snapshot
@@ -2951,6 +3203,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun deleteMessageAndFollowing(messageId: Long) {
         val retained = ConversationDeletionPolicy.prefixBefore(messages, messageId) ?: return
         if (isGenerating) stopGeneration(showToast = false)
+        invalidateConversationContextFrom(messageId)
         closeCurrentBackend()
         closeSearch()
         cancelEditing(restoreDraft = true)
@@ -3287,6 +3540,7 @@ class ChatActivity : ConfiguredActivity() {
         val epoch: Long,
         val committedMessages: List<GenerationMessage>,
         val accounting: ContextAccounting,
+        val contextFingerprint: String,
     )
 
     private data class ContextTurnObservation(

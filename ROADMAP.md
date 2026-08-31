@@ -58,6 +58,7 @@
 | L0 固定指令 | Binder 首轮 SYSTEM 消息; 启动器聊天暂为空槽位 | 必须原样保留 |
 | L1 结构化工作记忆 | 目标 / 约束 / 已确认决定 / 待解决 / 偏好, 带来源消息 ID 与状态 | 固定 token 上限 (P2) |
 | L2 摘要检查点 | 已移出原文窗口的旧 turn 的分段摘要 | 固定 token 上限 (P2) |
+| Recall 按需历史 | L3 之外与当前查询匹配的完整旧 turn chunk | 固定 token 上限, FTS 失败时直接省略 (P4) |
 | L3 最近原文 | 最近若干完整成功 turn | 按剩余预算装箱, 至少保底 2 turn |
 | 当前消息 | 本轮用户输入 | 必须完整保留 |
 
@@ -72,7 +73,8 @@ ConversationContextCoordinator
     ├── ContextBudgetCalculator  (P1: 预算与水位)
     ├── ContextAssembler         (P1: compileContext 分层装箱)
     ├── ContextAccounting        (P1: 实际 usage 优先的会话 token 记账)
-    └── SummaryCheckpointer      (P2: 检查点生成/验证/失效)
+    ├── SummaryCheckpointer      (P2: 检查点生成/验证/失效)
+    └── ConversationRecallStore  (P4: FTS4 旁路索引与按需召回)
             │
             ▼
       AiBackendSession (stream / streamNext / 插件内 streamRebuilt)
@@ -169,16 +171,18 @@ ConversationContextCoordinator
 
 > P3 已于 2026-08-31 完成: AutoJs6 provider 持久会话在在线与 LiteRT target 上分别连续完成 100/100 轮, host 可见 `sessionId` 与回调协议全程不变.在线两次重建将输入从 12,054/13,032 回落到 7,562/7,275; 本地两次原位重建将 KV 记账从 2,976/3,011 回落到 1,852/1,702, 第 100 轮结束为 2,379/3,001.完整脚本结果, 重建边界, 压力诊断, 自动化回归与设备恢复记录见 [`docs/dev/binder-persistent-context-smoke.md`](docs/dev/binder-persistent-context-smoke.md).
 
-### P4 - 可选优化 (按需立项, 非本 Roadmap 承诺)
+### P4 - 可选优化 (已按需部署)
 
-- [ ] **P4-1** 前缀稳定性复核: 校验各协议适配器在台阶驱逐间隔内保持字节级稳定请求前缀 (L0/L1/L2 置前), 实测 provider prompt cache 命中率.
-- [ ] **P4-2** 上下文用量 UI: 会话页展示 `已用 / 预算` 与分层构成; 提供 "立即压缩" 手动动作.
-- [ ] **P4-3** FTS 历史召回 (L3 之外的按需片段召回): SQLite FTS 按 2~4 turn 分块索引, 关键词 + 时间权重选 2~4 片段计入预算; 涉及存储迁移, 需单独评估后立项.
-- [ ] **P4-4** embedding 语义召回: 仅当 P4-3 证实不足时评估.
+- [x] **P4-1** 前缀稳定性复核: 校验 OpenAI / Anthropic / Gemini 协议适配器在台阶驱逐间隔内保持字节级稳定请求前缀 (L0/L1/L2 置前); 解析各 provider cache usage 字段并观测命中率.
+- [x] **P4-2** 上下文用量 UI: 会话页展示 `已用 / 预算` 与 L1 / L2 / Recall / L3 分层构成; 提供 "立即压缩" 手动动作, 不删除历史且不发起隐藏模型调用.
+- [x] **P4-3** FTS 历史召回 (L3 之外的按需片段召回): AtomicFile 继续作为唯一真相, SQLite FTS4 作为可丢弃旁路索引; 按 2~4 turn 分块, 关键词 85% + 时序 15% 排序, 最多选择 4 个片段并计入 token 预算.
+- [x] **P4-4** embedding 语义召回评估: 固定 15 主题 / 16 查询语料的关键词 Top-1 与 Recall@4 均为 100%, 语义改写专用查询 Recall@4 为 0%; 当前不引入 embedding.仅当至少 100 条真实查询审计的 Recall@4 低于 90%, 或语义漏召回对任务结果形成实质影响时重新立项.
+
+> P4 已于 2026-08-31 完成: 三类在线协议的稳定前缀与 cache usage 解析已有自动化覆盖; API 36 模拟器上的本地 HTTPS provider 冒烟显示连续复用阶段 cache 命中率升至 82.73%, 台阶驱逐后输入从 278 回落到 188 tokens.旧 `1-6` 消息 chunk 被 FTS4 命中并实际装入 Recall 层, UI 显示 `Recall 130` 与总上下文 `324 / 768 tokens`.该本地 provider 用于端到端协议验证, 不代表任一厂商的生产缓存性能.完整数据, embedding 门槛与测试环境还原记录见 [`docs/dev/p4-context-optimization-smoke.md`](docs/dev/p4-context-optimization-smoke.md).
 
 ## 7. 阶段门槛
 
-每阶段合入前须满足: (a) 该阶段全部单测通过且新增策略对象无 Android 依赖; (b) 真机冒烟记录落入 `docs/dev/` (含数据, 惯例同 `p3-host-public-api-smoke.md`); (c) 不改变宿主 API 面; (d) 失败路径显式测试 (摘要失败,网络失败,估算缺失).P0→P1→P2→P3 顺序推进, P2 与 P3 可在 P1 合入后并行.
+每阶段合入前须满足: (a) 该阶段全部单测通过且新增策略对象无 Android 依赖; (b) 真机冒烟记录落入 `docs/dev/` (含数据, 惯例同 `p3-host-public-api-smoke.md`); (c) 不改变宿主 API 面; (d) 失败路径显式测试 (摘要失败,网络失败,估算缺失).P0→P1→P2→P3 已依序完成, P4 已按需部署并通过独立阶段门槛.
 
 ## 8. 风险与回退
 
@@ -198,5 +202,5 @@ ConversationContextCoordinator
 2. 台阶式驱逐替代逐轮滑动窗口: 同时服务重建频率与 prompt cache 前缀稳定性.
 3. Binder 首版透明压缩不做隐藏 LLM 摘要 (D2): 避免用调用方额度发起不可见请求; 也因此完全不需要宿主 API 变更 (Codex 稿中 CONTEXT_EXHAUSTED 新错误码方案被放弃).
 4. 记账优先采用实际值 (在线实报 usage / 本地 `getTokenCount`), 估算仅兜底 - 比纯估算方案更稳.
-5. FTS/Room 召回降级为 P4 可选项: 现有 AtomicFile 体系近期够用, 先以 P2-7 缓解写放大, 避免过早引入存储迁移.
+5. FTS/Room 召回最初降级为 P4 可选项: P4 后续按需部署时仍保留 AtomicFile 为唯一真相, 仅增加可丢弃的 SQLite FTS4 旁路索引, 因而没有把主历史存储迁移到 Room.
 6. 摘要失败退化路径按当前网络环境 (5xx/524 常见) 设计为常态而非异常 (D5).

@@ -201,6 +201,7 @@ internal class PersistentSessionContext(
             prompt = request.prompt,
             maximumInputTokens = budget.compactionTargetTokens,
             maximumRequestBytes = requestByteLimit,
+            accountedTranscriptTokens = accounting.tokens,
         )
         requireWithinAbsoluteLimits(
             estimatedTokens = compilation.estimatedInputTokens,
@@ -221,7 +222,7 @@ internal class PersistentSessionContext(
             evictedTurnCount = compilation.evictedTurnCount,
             proposedBackendEpoch = incrementEpoch(backendEpoch),
             accountingBefore = ContextAccounting.initial(
-                estimator.estimateMessages(rebuiltRequest.history).estimatedTokens,
+                compilation.estimatedHistoryTokens,
             ),
         )
     }
@@ -322,7 +323,13 @@ internal class PersistentSessionContext(
         prompt: GenerationMessage,
         maximumInputTokens: Long,
         maximumRequestBytes: Long,
+        accountedTranscriptTokens: Long,
     ): PersistentCompilation {
+        val transcriptEstimate = estimator.estimateMessages(transcript.messages())
+        val calibration = PersistentTokenCalibration.from(
+            estimatedTranscriptTokens = transcriptEstimate.estimatedTokens,
+            accountedTranscriptTokens = accountedTranscriptTokens,
+        )
         val retainedReversed = ArrayList<PersistentContextTurn>()
         transcript.turns.asReversed().take(minimumRecentTurns).forEach(retainedReversed::add)
         for (turn in transcript.turns.asReversed().drop(retainedReversed.size)) {
@@ -330,7 +337,7 @@ internal class PersistentSessionContext(
             val candidateTranscript = transcript.withTurns(candidate.asReversed())
             val estimate = estimator.estimateMessages(candidateTranscript.messages() + prompt)
             if (
-                estimate.estimatedTokens > maximumInputTokens ||
+                calibration.apply(estimate.estimatedTokens) > maximumInputTokens ||
                 estimate.utf8Bytes > maximumRequestBytes
             ) {
                 break
@@ -338,11 +345,13 @@ internal class PersistentSessionContext(
             retainedReversed += turn
         }
         val retained = transcript.withTurns(retainedReversed.asReversed())
-        val estimate = estimator.estimateMessages(retained.messages() + prompt)
+        val historyEstimate = estimator.estimateMessages(retained.messages())
+        val requestEstimate = estimator.estimateMessages(retained.messages() + prompt)
         return PersistentCompilation(
             transcript = retained,
-            estimatedInputTokens = estimate.estimatedTokens,
-            estimatedInputBytes = estimate.utf8Bytes,
+            estimatedHistoryTokens = calibration.apply(historyEstimate.estimatedTokens),
+            estimatedInputTokens = calibration.apply(requestEstimate.estimatedTokens),
+            estimatedInputBytes = requestEstimate.utf8Bytes,
             evictedTurnCount = transcript.turns.size - retained.turns.size,
         )
     }
@@ -487,10 +496,51 @@ internal class PersistentTranscript private constructor(
 
 private data class PersistentCompilation(
     val transcript: PersistentTranscript,
+    val estimatedHistoryTokens: Long,
     val estimatedInputTokens: Long,
     val estimatedInputBytes: Long,
     val evictedTurnCount: Int,
 )
+
+/**
+ * Scales the byte estimator with the latest full-context backend counter before a rebuild.
+ * The ratio is never allowed below 1, so missing or unusually small counters cannot make the
+ * compiler less conservative than its configured estimator.
+ */
+private data class PersistentTokenCalibration(
+    val numerator: Long,
+    val denominator: Long,
+) {
+    init {
+        require(numerator > 0L)
+        require(denominator > 0L)
+        require(numerator >= denominator)
+    }
+
+    fun apply(estimatedTokens: Long): Long {
+        require(estimatedTokens >= 0L)
+        if (estimatedTokens == 0L || numerator == denominator) return estimatedTokens
+        if (estimatedTokens > Long.MAX_VALUE / numerator) return Long.MAX_VALUE
+        val product = estimatedTokens * numerator
+        val quotient = product / denominator
+        return if (product % denominator == 0L) quotient else saturatedAdd(quotient, 1L)
+    }
+
+    companion object {
+        fun from(
+            estimatedTranscriptTokens: Long,
+            accountedTranscriptTokens: Long,
+        ): PersistentTokenCalibration {
+            require(estimatedTranscriptTokens >= 0L)
+            require(accountedTranscriptTokens >= 0L)
+            val denominator = estimatedTranscriptTokens.coerceAtLeast(1L)
+            return PersistentTokenCalibration(
+                numerator = maxOf(denominator, accountedTranscriptTokens),
+                denominator = denominator,
+            )
+        }
+    }
+}
 
 private data class GuardedTranscript(
     val transcript: PersistentTranscript,

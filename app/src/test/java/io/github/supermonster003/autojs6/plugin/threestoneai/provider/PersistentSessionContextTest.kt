@@ -105,7 +105,10 @@ class PersistentSessionContextTest {
 
     @Test
     fun irregularInitialHistoryRemainsAnchoredAcrossARebuild() {
-        val context = context(applicationInputTokenBudget = 120)
+        val context = context(
+            maximumTranscriptBytes = 45L,
+            transcriptCompactionTargetBytes = 20L,
+        )
         val first = context.prepareFirst(
             request(
                 history = listOf(
@@ -116,13 +119,45 @@ class PersistentSessionContextTest {
             ),
             target(),
         )
-        context.complete(first, "answer", statistics(100L))
+        context.complete(first, "answer", statistics(33L))
+        val continued = context.prepareNext(request(prompt = "middle"), target())
+        context.complete(continued, "answer2", statistics(46L))
 
         val rebuild = context.prepareNext(request(prompt = "second"), target())
 
         assertEquals(PersistentBackendTurnMode.REBUILD, rebuild.mode)
         assertEquals(GenerationRole.SYSTEM, rebuild.generationRequest.history[0].role)
         assertEquals("orphan-assistant", rebuild.generationRequest.history[1].textParts.single())
+        context.abandon(rebuild)
+    }
+
+    @Test
+    fun rebuildCalibratesAnUnderestimateAgainstExactContextAccounting() {
+        val underestimated = ContextTokenEstimator(
+            tokensPerUtf8Byte = 0.1,
+            messageRoleOverheadTokens = 0,
+        )
+        val context = context(
+            estimator = underestimated,
+            applicationInputTokenBudget = 400,
+        )
+        val prompt = "u".repeat(20)
+        val answer = "a".repeat(20)
+        val first = context.prepareFirst(request(prompt = prompt), target())
+        context.complete(first, answer, statistics(50L))
+        repeat(6) { index ->
+            val continued = context.prepareNext(request(prompt = prompt), target())
+            assertEquals(PersistentBackendTurnMode.CONTINUE, continued.mode)
+            context.complete(continued, answer, statistics((index + 2L) * 50L))
+        }
+
+        val rebuild = context.prepareNext(request(prompt = prompt), target())
+
+        assertEquals(PersistentBackendTurnMode.REBUILD, rebuild.mode)
+        assertTrue(rebuild.evictedTurnCount > 0)
+        assertTrue(rebuild.retainedTurnCount < 7)
+        assertTrue(rebuild.estimatedInputTokens <= rebuild.budget.compactionTargetTokens)
+        assertEquals(rebuild.retainedTurnCount * 2, rebuild.generationRequest.history.size)
         context.abandon(rebuild)
     }
 
@@ -239,12 +274,13 @@ class PersistentSessionContextTest {
     }
 
     private fun context(
+        estimator: ContextTokenEstimator = exactEstimator,
         applicationInputTokenBudget: Int = 16_384,
         maximumTranscriptBytes: Long = PersistentSessionContextLimits.MAXIMUM_TRANSCRIPT_BYTES,
         transcriptCompactionTargetBytes: Long =
             maximumTranscriptBytes * PersistentSessionContextLimits.COMPACTION_TARGET_PERCENT / 100L,
     ) = PersistentSessionContext(
-        estimator = exactEstimator,
+        estimator = estimator,
         applicationInputTokenBudget = applicationInputTokenBudget,
         maximumTranscriptBytes = maximumTranscriptBytes,
         transcriptCompactionTargetBytes = transcriptCompactionTargetBytes,

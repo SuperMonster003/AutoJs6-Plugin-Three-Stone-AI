@@ -64,6 +64,9 @@ internal data class ContextCompilationPolicy(
     val includeDerivedContext: Boolean = true,
     val maximumWorkingMemoryTokens: Long = ContextPolicy.WORKING_MEMORY_MAXIMUM_TOKENS.toLong(),
     val maximumSummaryTokens: Long = ContextPolicy.SUMMARY_LAYER_MAXIMUM_TOKENS.toLong(),
+    val recalledHistory: List<ConversationRecallChunk> = emptyList(),
+    val maximumRecalledHistoryTokens: Long =
+        ConversationRecallPolicy.MAXIMUM_RECALL_LAYER_TOKENS,
 ) {
     init {
         require(maximumInputTokens > 0L)
@@ -71,6 +74,8 @@ internal data class ContextCompilationPolicy(
         require(maximumHistoryBytes > 0L)
         require(maximumWorkingMemoryTokens > 0L)
         require(maximumSummaryTokens > 0L)
+        require(recalledHistory.size <= ConversationRecallPolicy.MAXIMUM_RECALLED_CHUNKS)
+        require(maximumRecalledHistoryTokens > 0L)
     }
 }
 
@@ -84,6 +89,7 @@ internal data class CompiledContext(
     val inputTokenLimit: Long,
     val workingMemoryItemsIncluded: Int = 0,
     val summarySegmentsIncluded: Int = 0,
+    val recalledHistory: List<ConversationRecallChunk> = emptyList(),
     val layerTokens: ContextLayerTokenUsage = ContextLayerTokenUsage.EMPTY,
     val contextFingerprint: String = ConversationContextPolicy.fingerprint(
         ConversationContextState.EMPTY,
@@ -95,8 +101,12 @@ internal data class CompiledContext(
         require(inputTokenLimit > 0L)
         require(workingMemoryItemsIncluded >= 0)
         require(summarySegmentsIncluded >= 0)
+        require(recalledHistory.size <= ConversationRecallPolicy.MAXIMUM_RECALLED_CHUNKS)
         require(CONTEXT_FINGERPRINT.matches(contextFingerprint))
     }
+
+    val recalledChunksIncluded: Int
+        get() = recalledHistory.size
 
     val exceedsInputBudget: Boolean
         get() = estimatedInputTokens > inputTokenLimit
@@ -181,11 +191,38 @@ internal object ChatConversationPolicy {
                 add(ConversationContextFormatter.summaryMessage(retainedSummaries))
             }
         }
+        var retainedRecall = emptyList<ConversationRecallChunk>()
+        val retainedMinimumMessageIds = retainedReversed.flatMapTo(HashSet()) { turn ->
+            listOf(turn.user.id, turn.assistant.id)
+        }
+        if (policy.includeDerivedContext) {
+            policy.recalledHistory.forEach { chunk ->
+                if (chunk.sourceMessageIds.any(retainedMinimumMessageIds::contains)) {
+                    return@forEach
+                }
+                val candidate = retainedRecall + chunk
+                val recalledMessages = ConversationRecallPolicy.generationMessages(candidate)
+                if (
+                    policy.estimator.estimateMessages(recalledMessages).estimatedTokens >
+                    policy.maximumRecalledHistoryTokens
+                ) {
+                    return@forEach
+                }
+                if (fits(policy, prompt, derivedMessages + recalledMessages, retainedReversed)) {
+                    retainedRecall = candidate
+                }
+            }
+        }
+        val recalledMessages = ConversationRecallPolicy.generationMessages(retainedRecall)
+        val recalledSourceIds = retainedRecall.flatMapTo(HashSet()) { chunk ->
+            chunk.sourceMessageIds
+        }
         for (turn in completedTurns.asReversed().drop(retainedReversed.size)) {
+            if (turn.user.id in recalledSourceIds || turn.assistant.id in recalledSourceIds) break
             val turnBytes = turn.utf8Bytes()
             if (saturatedAdd(retainedUtf8Bytes, turnBytes) > policy.maximumHistoryBytes) break
             val candidate = retainedReversed + turn
-            if (!fits(policy, prompt, derivedMessages, candidate)) break
+            if (!fits(policy, prompt, derivedMessages + recalledMessages, candidate)) break
             retainedReversed += turn
             retainedUtf8Bytes = saturatedAdd(retainedUtf8Bytes, turnBytes)
         }
@@ -196,7 +233,7 @@ internal object ChatConversationPolicy {
                 GenerationMessage(GenerationRole.ASSISTANT, listOf(turn.assistant.text)),
             )
         }
-        val messages = derivedMessages + rawMessages
+        val messages = derivedMessages + recalledMessages + rawMessages
         val coveredMessageIds = retained.flatMap { turn ->
             listOf(turn.user.id, turn.assistant.id)
         }
@@ -211,6 +248,8 @@ internal object ChatConversationPolicy {
             ?.let(policy.estimator::estimateMessage)
             ?.estimatedTokens
             ?: 0L
+        val recalledHistoryTokens = policy.estimator.estimateMessages(recalledMessages)
+            .estimatedTokens
         return CompiledContext(
             messages = messages,
             estimatedInputTokens = estimate.estimatedTokens,
@@ -219,14 +258,18 @@ internal object ChatConversationPolicy {
             inputTokenLimit = policy.maximumInputTokens,
             workingMemoryItemsIncluded = retainedMemory.size,
             summarySegmentsIncluded = retainedSummaries.size,
+            recalledHistory = retainedRecall,
             layerTokens = ContextLayerTokenUsage(
                 workingMemoryTokens = workingMemoryTokens,
                 summaryTokens = summaryTokens,
+                recalledHistoryTokens = recalledHistoryTokens,
                 recentRawTokens = policy.estimator.estimateMessages(rawMessages).estimatedTokens,
             ),
             contextFingerprint = ConversationContextPolicy.compilationFingerprint(
                 state = policy.contextState,
                 includeDerivedContext = policy.includeDerivedContext,
+                recalledHistoryFingerprint = retainedRecall.takeIf(List<*>::isNotEmpty)
+                    ?.let(ConversationRecallPolicy::fingerprint),
             ),
         )
     }

@@ -2005,19 +2005,54 @@ class ChatActivity : ConfiguredActivity() {
             applicationInputTokenBudget = uiSettings.contextTokenBudget,
             maximumOutputTokens = uiSettings.maximumOutputTokens,
         )
+        val calibration = contextTokenCalibrationStore.current(requestedTarget.targetId)
+        val estimator = calibration.estimator()
+        val contextStateSnapshot = conversationContextState
+        val baseCompiled = ChatConversationPolicy.compileContext(
+            transcript = messages,
+            prompt = prompt,
+            policy = ContextCompilationPolicy(
+                estimator = estimator,
+                maximumInputTokens = budget.compactionTargetTokens,
+                contextState = contextStateSnapshot,
+            ),
+        )
+        val freshRecall = historyStore.recall(
+            conversationId = currentConversationId,
+            query = promptText,
+            excludedMessageIds = baseCompiled.coveredMessageIds.toSet(),
+        )
         var reusableBackend: AiBackendSession? = null
         var reusableTelemetry: BackendContextTelemetry? = null
         var backendToReplace: AiBackendSession? = null
         var emergencyDerivedContextDrop = false
+        var recallForRebuild = freshRecall
         synchronized(backendLock) {
             val telemetry = activeBackendContextTelemetry
-            val contextFingerprint = ConversationContextPolicy.fingerprint(conversationContextState)
+            val stateFingerprint = ConversationContextPolicy.fingerprint(contextStateSnapshot)
+            val targetMatches = activeBackendTarget?.let { activeTarget ->
+                activeTarget.matchesExecutionIdentity(target)
+            } == true
+            val stateMatches = telemetry?.contextStateFingerprint == stateFingerprint &&
+                targetMatches
+            val stickyRecall = telemetry?.recalledHistory
+                ?.takeIf { stateMatches }
+                .orEmpty()
+            val mergedRecall = ConversationRecallPolicy.mergeSticky(
+                sticky = stickyRecall,
+                fresh = freshRecall,
+            )
+            val expectedFingerprint = ConversationContextPolicy.compilationFingerprint(
+                state = contextStateSnapshot,
+                includeDerivedContext = true,
+                recalledHistoryFingerprint = stickyRecall.takeIf(List<*>::isNotEmpty)
+                    ?.let(ConversationRecallPolicy::fingerprint),
+            )
+            val installedContextMatches = stateMatches &&
+                telemetry?.contextFingerprint == expectedFingerprint
             val reusable = target.capabilities.persistentSession &&
-                activeBackend != null && telemetry != null &&
-                telemetry.contextFingerprint == contextFingerprint &&
-                activeBackendTarget?.let { activeTarget ->
-                    activeTarget.matchesExecutionIdentity(target)
-                } == true &&
+                activeBackend != null && telemetry != null && installedContextMatches &&
+                ConversationRecallPolicy.sameChunks(stickyRecall, mergedRecall) &&
                 !ContextAccountingPolicy.shouldRotateBackend(
                     accounting = telemetry.accounting,
                     budget = budget,
@@ -2029,6 +2064,12 @@ class ChatActivity : ConfiguredActivity() {
             } else {
                 emergencyDerivedContextDrop = telemetry?.accounting?.tokens
                     ?.let { tokens -> tokens >= budget.absoluteProtectionTokens } == true
+                recallForRebuild = when {
+                    emergencyDerivedContextDrop -> emptyList()
+                    target.capabilities.persistentSession && installedContextMatches ->
+                        mergedRecall
+                    else -> freshRecall
+                }
                 backendToReplace = activeBackend
                 activeBackend = null
                 activeBackendTarget = null
@@ -2063,16 +2104,15 @@ class ChatActivity : ConfiguredActivity() {
             return
         }
 
-        val calibration = contextTokenCalibrationStore.current(requestedTarget.targetId)
-        val estimator = calibration.estimator()
         val compiled = ChatConversationPolicy.compileContext(
             transcript = messages,
             prompt = prompt,
             policy = ContextCompilationPolicy(
                 estimator = estimator,
                 maximumInputTokens = budget.compactionTargetTokens,
-                contextState = conversationContextState,
+                contextState = contextStateSnapshot,
                 includeDerivedContext = !emergencyDerivedContextDrop,
+                recalledHistory = recallForRebuild,
             ),
         )
         if (compiled.exceedsInputBudget) {
@@ -2096,6 +2136,8 @@ class ChatActivity : ConfiguredActivity() {
                 "coveredMessages=${compiled.coveredMessageIds.size} " +
                 "workingMemoryItems=${compiled.workingMemoryItemsIncluded} " +
                 "summarySegments=${compiled.summarySegmentsIncluded} " +
+                "recallCandidates=${freshRecall.size} " +
+                "recalledChunks=${compiled.recalledChunksIncluded} " +
                 "emergencyDerivedDrop=$emergencyDerivedContextDrop " +
                 "trimmed=${compiled.requiresSessionRebuild} " +
                 "hardWatermarkTokens=${budget.hardWatermarkTokens} " +
@@ -2125,6 +2167,10 @@ class ChatActivity : ConfiguredActivity() {
                         committedMessages = history.map { message -> message.contextSnapshot() },
                         accounting = ContextAccounting.initial(historyEstimate.estimatedTokens),
                         contextFingerprint = compiled.contextFingerprint,
+                        contextStateFingerprint = ConversationContextPolicy.fingerprint(
+                            contextStateSnapshot,
+                        ),
+                        recalledHistory = compiled.recalledHistory,
                         layerTokens = compiled.layerTokens,
                     )
                     activeBackend = created
@@ -2471,7 +2517,7 @@ class ChatActivity : ConfiguredActivity() {
         val accounting = synchronized(backendLock) {
             activeBackendContextTelemetry
                 ?.takeIf { telemetry ->
-                    telemetry.contextFingerprint ==
+                    telemetry.contextStateFingerprint ==
                         ConversationContextPolicy.fingerprint(conversationContextState) &&
                         activeBackendTarget?.matchesExecutionIdentity(target) == true
                 }
@@ -3701,6 +3747,8 @@ class ChatActivity : ConfiguredActivity() {
         val committedMessages: List<GenerationMessage>,
         val accounting: ContextAccounting,
         val contextFingerprint: String,
+        val contextStateFingerprint: String,
+        val recalledHistory: List<ConversationRecallChunk>,
         val layerTokens: ContextLayerTokenUsage,
     )
 

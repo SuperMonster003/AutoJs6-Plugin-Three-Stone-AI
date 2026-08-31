@@ -186,16 +186,26 @@ internal object ConversationContextPolicy {
         }
     }
 
-    /** Emergency omission is part of backend identity so the next safe turn restores L1/L2. */
+    /** Emergency omission and installed recall are backend identity, preserving safe reuse. */
     fun compilationFingerprint(
         state: ConversationContextState,
         includeDerivedContext: Boolean,
-    ): String = if (includeDerivedContext) {
-        fingerprint(state)
-    } else {
-        digest {
-            writeText("derived-context-omitted")
-            writeText(fingerprint(state))
+        recalledHistoryFingerprint: String? = null,
+    ): String {
+        val contextFingerprint = if (includeDerivedContext) {
+            fingerprint(state)
+        } else {
+            digest {
+                writeText("derived-context-omitted")
+                writeText(fingerprint(state))
+            }
+        }
+        if (recalledHistoryFingerprint == null) return contextFingerprint
+        require(SHA_256.matches(recalledHistoryFingerprint))
+        return digest {
+            writeText("recalled-history-installed")
+            writeText(contextFingerprint)
+            writeText(recalledHistoryFingerprint)
         }
     }
 
@@ -257,4 +267,6 @@ internal object ConversationContextPolicy {
         writeInt(values.size)
         values.forEach { value -> writeLong(value) }
     }
+
+    private val SHA_256 = Regex("^[0-9a-f]{64}$")
 }

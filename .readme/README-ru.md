@@ -2,7 +2,10 @@
 
 <div align="center">
   <p>
-    <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="three-stone-ai-ic-launcher" border="0" width="128" />
+    <picture>
+      <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
+      <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-three-stone-ai-ic-launcher" border="0" width="128" />
+    </picture>
   </p>
 
   <p>Единый плагин ИИ. LiteRT-LM всегда локален; онлайн-цели всегда выбираются явно</p>
@@ -168,7 +171,7 @@ AI Provider V2 публикует единый постраничный ката
 
 # v1.1.0
 
-###### 2026/08/26
+###### 2026/09/01
 
 * `Функция` Бренд и идентификаторы среды выполнения официального локального ИИ-плагина AutoJs6 окончательно унифицированы как 3-Stone AI
 * `Функция` Межпроцессная интеграция использует нейтральные идентификаторы `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` и `IAiProvider`/`IAiSession`/`IAiCallback` без сохранения псевдонимов замененных идентификаторов
@@ -203,6 +206,8 @@ AI Provider V2 публикует единый постраничный ката
 * `Улучшение` Пунктуация в приложении и сгенерированных локализованных текстах приведена к ASCII и защищена регрессионным тестом
 * `Улучшение` Введен общий слой `AiBackend`/`AiTarget`/`AiBackendSession`, благодаря которому чат launcher и Binder provider используют единый путь `LiteRtLocalBackend` для каталога, возможностей, создания сессии, streaming и отмены
 * `Улучшение` Локальные target `local:*` и онлайн-target `profile:*` объединены в единый каталог и диспетчер уровня Application и напрямую представлены через AI Provider V2; provider locality, credential mode и HTTPS origins динамически выводятся из текущего каталога без публикации байтов учетных данных
+* `Улучшение` Унифицировать оформление README и управление версиями платформы Gradle
+* `Улучшение` Открывать встроенную страницу истории выпусков кнопкой истории выпусков в диалоге обновления
 
 # v1.0.0
 

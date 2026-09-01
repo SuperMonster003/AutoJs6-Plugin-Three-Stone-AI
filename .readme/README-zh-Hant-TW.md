@@ -2,7 +2,10 @@
 
 <div align="center">
   <p>
-    <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="three-stone-ai-ic-launcher" border="0" width="128" />
+    <picture>
+      <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
+      <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-three-stone-ai-ic-launcher" border="0" width="128" />
+    </picture>
   </p>
 
   <p>統一 AI 外掛. LiteRT-LM 推論始終在本機; 線上目標始終由使用者明確選取</p>
@@ -168,7 +171,7 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 
 # v1.1.0
 
-###### 2026/08/26
+###### 2026/09/01
 
 * `新增` 外掛品牌與執行階段識別統一為 3-Stone AI, 同步應用程式名稱, 套件名稱, 元件名稱, 探索識別, 建置產物及文件
 * `新增` 跨處理程序整合統一採用中性 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 及 `IAiProvider`/`IAiSession`/`IAiCallback` 識別, 不保留被取代識別的別名
@@ -203,6 +206,8 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 * `優化` 將應用程式及產生的本地化文件標點統一為 ASCII, 並增加涵蓋封裝文字與產生文字的迴歸測試
 * `優化` 引入共用的 `AiBackend`/`AiTarget`/`AiBackendSession` 層, 讓啟動器聊天與 Binder Provider 共用 `LiteRtLocalBackend` 的目錄, 能力, 工作階段建立, 串流輸出及取消路徑
 * `優化` 將本機 `local:*` 與線上 `profile:*` 目標合併至 Application 層統一目錄及分派器, 透過 AI Provider V2 直接公開兩者, 並由目前目錄動態推導 provider locality, credential mode 與 HTTPS origins, 不公開憑證位元組
+* `優化` 統一 README 版式與 Gradle 平台版本管理方式
+* `優化` 外掛更新對話框的發行歷史按鈕改為開啟內建發行歷史頁面
 
 # v1.0.0
 

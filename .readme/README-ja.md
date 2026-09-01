@@ -2,7 +2,10 @@
 
 <div align="center">
   <p>
-    <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="three-stone-ai-ic-launcher" border="0" width="128" />
+    <picture>
+      <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
+      <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-three-stone-ai-ic-launcher" border="0" width="128" />
+    </picture>
   </p>
 
   <p>統合 AI プラグイン. LiteRT-LM は常にローカルで, オンラインターゲットは必ず明示選択</p>
@@ -168,7 +171,7 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 
 # v1.1.0
 
-###### 2026/08/26
+###### 2026/09/01
 
 * `機能` AutoJs6 公式ローカル AI プラグインのブランドとランタイム識別子を 3-Stone AI に統一
 * `機能` プロセス間統合に中立な `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER`, `IAiProvider`/`IAiSession`/`IAiCallback` 識別子を採用し, 置換前の識別子 alias は保持しない
@@ -203,6 +206,8 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 * `改善` アプリと生成済みローカライズ文書の句読点を ASCII に統一し, パッケージ済み文書と生成文書を対象とする回帰テストを追加
 * `改善` 共通の `AiBackend`/`AiTarget`/`AiBackendSession` 層を導入し, ランチャーチャットと Binder provider が `LiteRtLocalBackend` のカタログ, capabilities, セッション作成, streaming, キャンセル経路を共有
 * `改善` ローカル `local:*` とオンライン `profile:*` target を Application レベルの統一カタログとディスパッチャーに統合し, AI Provider V2 から両方を直接公開; 現在のカタログから provider locality, credential mode, HTTPS origins を動的に導出し, 認証情報バイトは公開しない
+* `改善` README のレイアウトと Gradle プラットフォームのバージョン管理方式を統一
+* `改善` 更新ダイアログのリリース履歴ボタンから内蔵のリリース履歴ページを開くように変更
 
 # v1.0.0
 

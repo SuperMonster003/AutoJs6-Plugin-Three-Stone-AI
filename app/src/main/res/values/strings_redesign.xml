@@ -2,5 +2,4 @@
 <resources>
     <string name="model_item_actions">Model actions</string>
     <string name="chat_scroll_to_bottom">Scroll to bottom</string>
-    <string name="chat_search_match_count" translatable="false">%1$d / %2$d</string>
 </resources>

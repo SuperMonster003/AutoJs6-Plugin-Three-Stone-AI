@@ -2,7 +2,10 @@
 
 <div align="center">
   <p>
-    <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="three-stone-ai-ic-launcher" border="0" width="128" />
+    <picture>
+      <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
+      <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-three-stone-ai-ic-launcher" border="0" width="128" />
+    </picture>
   </p>
 
   <p>اضافة ذكاء اصطناعي موحدة. يبقى LiteRT-LM محليا وتختار الأهداف عبر الإنترنت صراحة دائما</p>
@@ -168,7 +171,7 @@ required host build: 5276
 
 # v1.1.0
 
-###### 2026/08/26
+###### 2026/09/01
 
 * `ميزة` اعتماد 3-Stone AI كهوية نهائية للعلامة التجارية ووقت التشغيل لاضافة الذكاء الاصطناعي المحلية الرسمية في AutoJs6
 * `ميزة` يستخدم التكامل بين العمليات هويات `ai-provider-api` و `org.autojs.plugin.ai.provider.api` و `org.autojs.plugin.AI_PROVIDER` و `IAiProvider`/`IAiSession`/`IAiCallback` المحايدة من دون الاحتفاظ باسماء بديلة للهويات المستبدلة
@@ -203,6 +206,8 @@ required host build: 5276
 * `تحسين` توحيد علامات الترقيم في نصوص التطبيق والوثائق المحلية المولدة باستخدام ASCII, مع اختبار يمنع تكرار المشكلة
 * `تحسين` إضافة طبقة مشتركة `AiBackend`/`AiTarget`/`AiBackendSession` ليستخدم حوار المشغل و Binder provider مسار `LiteRtLocalBackend` نفسه للفهرس والقدرات وإنشاء الجلسات والبث والإلغاء
 * `تحسين` دمج أهداف `local:*` المحلية وأهداف `profile:*` عبر الإنترنت في كتالوج وموزع موحدين على مستوى Application وعرضهما مباشرة عبر AI Provider V2, مع اشتقاق provider locality وcredential mode وHTTPS origins ديناميكيا من الكتالوج الحالي من دون كشف بايتات بيانات الاعتماد
+* `تحسين` توحيد تخطيط README وطريقة إدارة إصدارات منصة Gradle
+* `تحسين` فتح صفحة سجل الإصدارات المضمنة من زر سجل الإصدارات في مربع حوار التحديث
 
 # v1.0.0
 

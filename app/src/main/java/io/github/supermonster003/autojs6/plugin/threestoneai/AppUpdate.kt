@@ -256,14 +256,8 @@ internal class AppUpdateController(
             .setMessage(message)
             .setNegativeButton(R.string.app_update_later, null)
             .setPositiveButton(R.string.app_update_view_release) { _, _ -> openRelease(release.pageUrl) }
-        if (release.tag !in store.ignoredTags) {
-            builder.setNeutralButton(R.string.app_update_ignore) { _, _ ->
-                store.ignore(release.tag)
-                activity.showSnackbar(
-                    activity.findViewById(android.R.id.content),
-                    activity.getString(R.string.app_update_ignored),
-                )
-            }
+        builder.setNeutralButton(R.string.release_history_title) { _, _ ->
+            activity.startActivity(Intent(activity, ReleaseHistoryActivity::class.java))
         }
         builder.show().also(activity::tintDialogButtons)
     }

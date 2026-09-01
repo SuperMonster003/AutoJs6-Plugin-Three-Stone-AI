@@ -6,7 +6,7 @@
   "changelog_label_dependency": "تبعية",
   "$data": {
     "v1.1.0": {
-      "released_date": "2026/08/26",
+      "released_date": "2026/09/01",
       "feature": [
         "اعتماد 3-Stone AI كهوية نهائية للعلامة التجارية ووقت التشغيل لاضافة الذكاء الاصطناعي المحلية الرسمية في AutoJs6",
         "يستخدم التكامل بين العمليات هويات `ai-provider-api` و `org.autojs.plugin.ai.provider.api` و `org.autojs.plugin.AI_PROVIDER` و `IAiProvider`/`IAiSession`/`IAiCallback` المحايدة من دون الاحتفاظ باسماء بديلة للهويات المستبدلة",
@@ -44,7 +44,9 @@
         "اعادة كتابة ROADMAP كخارطة طريق للميزات ببنود قابلة للتحقق كل على حدة",
         "توحيد علامات الترقيم في نصوص التطبيق والوثائق المحلية المولدة باستخدام ASCII, مع اختبار يمنع تكرار المشكلة",
         "إضافة طبقة مشتركة `AiBackend`/`AiTarget`/`AiBackendSession` ليستخدم حوار المشغل و Binder provider مسار `LiteRtLocalBackend` نفسه للفهرس والقدرات وإنشاء الجلسات والبث والإلغاء",
-        "دمج أهداف `local:*` المحلية وأهداف `profile:*` عبر الإنترنت في كتالوج وموزع موحدين على مستوى Application وعرضهما مباشرة عبر AI Provider V2, مع اشتقاق provider locality وcredential mode وHTTPS origins ديناميكيا من الكتالوج الحالي من دون كشف بايتات بيانات الاعتماد"
+        "دمج أهداف `local:*` المحلية وأهداف `profile:*` عبر الإنترنت في كتالوج وموزع موحدين على مستوى Application وعرضهما مباشرة عبر AI Provider V2, مع اشتقاق provider locality وcredential mode وHTTPS origins ديناميكيا من الكتالوج الحالي من دون كشف بايتات بيانات الاعتماد",
+        "توحيد تخطيط README وطريقة إدارة إصدارات منصة Gradle",
+        "فتح صفحة سجل الإصدارات المضمنة من زر سجل الإصدارات في مربع حوار التحديث"
       ]
     },
     "v1.0.0": {

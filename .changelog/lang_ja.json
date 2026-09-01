@@ -6,7 +6,7 @@
   "changelog_label_dependency": "依存関係",
   "$data": {
     "v1.1.0": {
-      "released_date": "2026/08/26",
+      "released_date": "2026/09/01",
       "feature": [
         "AutoJs6 公式ローカル AI プラグインのブランドとランタイム識別子を 3-Stone AI に統一",
         "プロセス間統合に中立な `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER`, `IAiProvider`/`IAiSession`/`IAiCallback` 識別子を採用し, 置換前の識別子 alias は保持しない",
@@ -44,7 +44,9 @@
         "ROADMAP を項目ごとにチェック可能な機能ロードマップとして再構成",
         "アプリと生成済みローカライズ文書の句読点を ASCII に統一し, パッケージ済み文書と生成文書を対象とする回帰テストを追加",
         "共通の `AiBackend`/`AiTarget`/`AiBackendSession` 層を導入し, ランチャーチャットと Binder provider が `LiteRtLocalBackend` のカタログ, capabilities, セッション作成, streaming, キャンセル経路を共有",
-        "ローカル `local:*` とオンライン `profile:*` target を Application レベルの統一カタログとディスパッチャーに統合し, AI Provider V2 から両方を直接公開; 現在のカタログから provider locality, credential mode, HTTPS origins を動的に導出し, 認証情報バイトは公開しない"
+        "ローカル `local:*` とオンライン `profile:*` target を Application レベルの統一カタログとディスパッチャーに統合し, AI Provider V2 から両方を直接公開; 現在のカタログから provider locality, credential mode, HTTPS origins を動的に導出し, 認証情報バイトは公開しない",
+        "README のレイアウトと Gradle プラットフォームのバージョン管理方式を統一",
+        "更新ダイアログのリリース履歴ボタンから内蔵のリリース履歴ページを開くように変更"
       ]
     },
     "v1.0.0": {

@@ -1,5 +1,7 @@
 {
   "repo_url": "https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI",
+  "icon_alt": "autojs6-plugin-three-stone-ai-ic-launcher",
+  "license_url": "{{ repo_url }}/blob/master/LICENSE",
   "repo_slug": "SuperMonster003/AutoJs6-Plugin-Three-Stone-AI",
   "docs_autojs6_url": "https://docs.autojs6.com",
   "upstream_url": "https://github.com/google-ai-edge/LiteRT-LM",

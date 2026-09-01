@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">3-Stone AI</string>
+    <string name="chat_search_match_count" translatable="false">%1$d / %2$d</string>
+</resources>

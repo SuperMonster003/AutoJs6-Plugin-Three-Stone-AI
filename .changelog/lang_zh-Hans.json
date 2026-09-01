@@ -6,7 +6,7 @@
   "changelog_label_dependency": "依赖",
   "$data": {
     "v1.1.0": {
-      "released_date": "2026/08/26",
+      "released_date": "2026/09/01",
       "feature": [
         "插件品牌与运行时标识统一为 3-Stone AI, 同步应用名, 包名, 组件名, 发现标识, 构建产物及文档",
         "跨进程集成统一采用中性 `ai-provider-api`, `org.autojs.plugin.ai.provider.api`, `org.autojs.plugin.AI_PROVIDER` 及 `IAiProvider`/`IAiSession`/`IAiCallback` 身份, 不保留被替换身份的别名",
@@ -44,7 +44,9 @@
         "重写 ROADMAP 为可逐项勾选的功能路线图",
         "将应用及生成的本地化文档标点统一为 ASCII, 并增加覆盖打包文本和生成文本的回归测试",
         "引入共享的 `AiBackend`/`AiTarget`/`AiBackendSession` 层, 使启动器聊天和 Binder Provider 共用 `LiteRtLocalBackend` 的目录, 能力, 会话创建, 流式输出及取消路径",
-        "将本地 `local:*` 与在线 `profile:*` 目标合入 Application 级统一目录及分发层, 通过 AI Provider V2 直接公开二者, 并从当前目录动态推导 provider locality, credential mode 和 HTTPS origins, 不公开凭据字节"
+        "将本地 `local:*` 与在线 `profile:*` 目标合入 Application 级统一目录及分发层, 通过 AI Provider V2 直接公开二者, 并从当前目录动态推导 provider locality, credential mode 和 HTTPS origins, 不公开凭据字节",
+        "统一 README 版式与 Gradle 平台版本管理方式",
+        "插件更新对话框的发行历史按钮改为打开内置发行历史页面"
       ]
     },
     "v1.0.0": {

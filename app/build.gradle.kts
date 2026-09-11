@@ -31,6 +31,8 @@ android {
         resValue("string", "plugin_author", "SuperMonster003")
         resValue("string", "plugin_version_date", utils.getDateString("MMM d, yyyy", "GMT+08:00"))
 
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         ndk {
             abiFilters += supportedAbis
         }
@@ -150,6 +152,8 @@ dependencies {
     implementation(files("$rootDir/libs/ai-provider-api.aar"))
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.test.ext.junit)
+    androidTestImplementation(libs.test.runner)
 }
 
 tasks {

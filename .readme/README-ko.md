@@ -169,6 +169,12 @@ AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 cat
 
 ******
 
+# v1.1.1
+
+###### 2026/09/11
+
+* `개선` 64비트 네이티브 라이브러리의 16 KB 페이지 정렬을 빌드 시 검증, manifest 계약 검사 및 JSON 보고서 지원
+
 # v1.1.0
 
 ###### 2026/09/01
@@ -289,3 +295,6 @@ app/src/main/res/values-*/strings.xml
 
 - AutoJs6 문서: https://docs.autojs6.com
 - LiteRT-LM 프로젝트: https://github.com/google-ai-edge/LiteRT-LM
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)

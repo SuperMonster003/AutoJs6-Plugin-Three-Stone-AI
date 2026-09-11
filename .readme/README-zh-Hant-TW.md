@@ -169,6 +169,12 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 
 ******
 
+# v1.1.1
+
+###### 2026/09/11
+
+* `優化` 建置階段校驗 64 位原生函式庫的 16 KB 頁面大小對齊, 檢查 manifest 契約並輸出 JSON 報告
+
 # v1.1.0
 
 ###### 2026/09/01
@@ -289,3 +295,6 @@ app/src/main/res/values-*/strings.xml
 
 - AutoJs6 文件: https://docs.autojs6.com
 - LiteRT-LM 專案: https://github.com/google-ai-edge/LiteRT-LM
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)

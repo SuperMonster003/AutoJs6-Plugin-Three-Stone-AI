@@ -169,6 +169,12 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ******
 
+# v1.1.1
+
+###### 2026/09/11
+
+* `Mejora` Verificación de compilación de la alineación de páginas de 16 KB en bibliotecas nativas de 64 bits, con controles del contrato manifest e informes JSON
+
 # v1.1.0
 
 ###### 2026/09/01
@@ -289,3 +295,6 @@ app/src/main/res/values-*/strings.xml
 
 - Documentación de AutoJs6: https://docs.autojs6.com
 - Proyecto LiteRT-LM: https://github.com/google-ai-edge/LiteRT-LM
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)

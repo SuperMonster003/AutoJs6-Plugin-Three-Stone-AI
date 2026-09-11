@@ -169,6 +169,12 @@ AI Provider V2 публикует единый постраничный ката
 
 ******
 
+# v1.1.1
+
+###### 2026/09/11
+
+* `Улучшение` Проверка выравнивания страниц 16 KB для 64-битных нативных библиотек при сборке, включая контракт manifest и отчеты JSON
+
 # v1.1.0
 
 ###### 2026/09/01
@@ -289,3 +295,6 @@ app/src/main/res/values-*/strings.xml
 
 - Документация AutoJs6: https://docs.autojs6.com
 - Проект LiteRT-LM: https://github.com/google-ai-edge/LiteRT-LM
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)

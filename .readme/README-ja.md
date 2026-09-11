@@ -169,6 +169,12 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 
 ******
 
+# v1.1.1
+
+###### 2026/09/11
+
+* `改善` 64 ビットのネイティブライブラリの 16 KB ページアラインメントをビルド時に検証, manifest 契約の検査と JSON レポートに対応
+
 # v1.1.0
 
 ###### 2026/09/01
@@ -289,3 +295,6 @@ app/src/main/res/values-*/strings.xml
 
 - AutoJs6 ドキュメント: https://docs.autojs6.com
 - LiteRT-LM プロジェクト: https://github.com/google-ai-edge/LiteRT-LM
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)

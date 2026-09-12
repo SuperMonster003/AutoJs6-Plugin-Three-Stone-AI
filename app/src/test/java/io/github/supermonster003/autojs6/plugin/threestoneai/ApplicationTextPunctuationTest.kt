@@ -8,7 +8,7 @@ import java.nio.file.Paths
 
 class ApplicationTextPunctuationTest {
     @Test
-    fun `application and generated text use ASCII punctuation`() {
+    fun `application and generated text use approved punctuation`() {
         val projectRoot = findProjectRoot()
         val sourceRoots = listOf(
             projectRoot.resolve("app/src/main"),
@@ -34,7 +34,7 @@ class ApplicationTextPunctuationTest {
         }
 
         assertTrue(
-            "Packaged text contains non-ASCII punctuation:\n${violations.joinToString("\n")}",
+            "Packaged text contains unapproved punctuation:\n${violations.joinToString("\n")}",
             violations.isEmpty(),
         )
     }
@@ -49,7 +49,7 @@ class ApplicationTextPunctuationTest {
             toString().endsWith(".json")
 
     private fun isNonAsciiPunctuation(codePoint: Int): Boolean {
-        if (codePoint <= ASCII_MAXIMUM) return false
+        if (codePoint <= ASCII_MAXIMUM || codePoint == FOLLOW_VALUE_SEPARATOR) return false
         return when (Character.getType(codePoint)) {
             Character.CONNECTOR_PUNCTUATION.toInt(),
             Character.DASH_PUNCTUATION.toInt(),
@@ -74,5 +74,6 @@ class ApplicationTextPunctuationTest {
 
     private companion object {
         const val ASCII_MAXIMUM = 0x7F
+        const val FOLLOW_VALUE_SEPARATOR = 0x00B7
     }
 }

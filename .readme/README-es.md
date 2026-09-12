@@ -171,8 +171,11 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 # v1.1.1
 
-###### 2026/09/11
+###### 2026/09/12
 
+* `Función` Eliminar el modelo local seleccionado con selección automática de otro disponible y un aviso claro en las conversaciones que usan el modelo eliminado
+* `Mejora` Marcar los modelos importados en el catálogo y ofrecer directamente la confirmación de descarga y la selección del destino
+* `Mejora` Mejorar los resúmenes de ajustes que siguen AutoJs6, el contraste del tema y las acciones del historial de conversaciones
 * `Mejora` Verificación de compilación de la alineación de páginas de 16 KB en bibliotecas nativas de 64 bits, con controles del contrato manifest e informes JSON
 
 # v1.1.0

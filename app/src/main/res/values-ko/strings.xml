@@ -59,7 +59,6 @@
     <string name="model_none">설정된 모델이 없습니다</string>
     <string name="model_delete_confirm_title">모델을 삭제하시겠습니까?</string>
     <string name="model_delete_confirm_message">"%1$s" 모델을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
-    <string name="model_delete_selected_blocked">선택한 모델은 삭제할 수 없습니다. 먼저 다른 모델을 선택하세요.</string>
     <string name="model_deletion_failed">모델 삭제에 실패했습니다</string>
     <string name="model_deletion_succeeded">모델을 삭제했습니다</string>
     <string name="model_health_available">사용 가능</string>
@@ -115,6 +114,8 @@
     <string name="chat_suggestion_plan">아이디어를 단계별 계획으로 정리해 줘</string>
     <string name="chat_input_hint">선택한 대상에 메시지 보내기</string>
     <string name="chat_input_no_target_hint">채팅하기 전에 대상을 선택하세요</string>
+    <string name="chat_input_local_model_deleted_hint">이 대화에서 사용한 로컬 모델이 삭제되었습니다</string>
+    <string name="litert_catalog_imported">가져옴</string>
     <string name="chat_send">보내기</string>
     <string name="chat_stop">중지</string>
     <string name="chat_thinking">대상 응답 대기 중...</string>
@@ -219,6 +220,7 @@
     <string name="app_settings_custom_color_title">사용자 지정 테마 색상</string>
     <string name="app_settings_dark_mode">다크 모드</string>
     <string name="app_settings_follow_autojs6">AutoJs6 따르기</string>
+    <string name="app_settings_follow_autojs6_summary">AutoJs6 따르기 · %1$s</string>
     <string name="app_settings_follow_system">시스템 따르기</string>
     <string name="app_settings_information">정보</string>
     <string name="app_settings_language">언어</string>
@@ -226,7 +228,6 @@
     <string name="app_settings_theme_blue">파란색</string>
     <string name="app_settings_theme_color">테마 색상</string>
     <string name="app_settings_theme_custom">사용자 지정</string>
-    <string name="app_settings_theme_follow_summary">AutoJs6 따르기 (%1$s)</string>
     <string name="app_settings_theme_green">초록색</string>
     <string name="app_settings_theme_three_stone_ai">주황색</string>
     <string name="app_settings_theme_purple">보라색</string>

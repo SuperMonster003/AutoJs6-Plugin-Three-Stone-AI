@@ -5,36 +5,90 @@ import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.text.format.Formatter
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.text.format.Formatter
 import com.google.android.material.snackbar.Snackbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.AvailableLiteRtModel
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.AvailableLiteRtModelCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.LiteRtModelCapability
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.RecommendedModel
+import io.github.supermonster003.autojs6.plugin.threestoneai.model.ImportedModel
+import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportCoordinator
+import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.ContentPadding
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardContainer
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardListParams
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.emptyStateView
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.roundedFill
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.textButton
 import java.text.NumberFormat
 
 class LiteRtModelCatalogActivity : ConfiguredActivity() {
+    private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var modelRows: LinearLayout
     private lateinit var screenRoot: View
+    private var importedModels: List<ImportedModel> = emptyList()
+    private var currentQuery = ""
+    private var pendingDownloadModelId: String? = null
+    private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        importCoordinator = ModelImportCoordinator.get(applicationContext)
+        pendingDownloadModelId = savedInstanceState?.getString(STATE_PENDING_DOWNLOAD_MODEL_ID)
         setContentView(createContentView())
-        renderModels("")
+        renderModels(currentQuery)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        renderManagerState(importCoordinator.attachManager(managerObserver))
+    }
+
+    override fun onStop() {
+        importCoordinator.detachManager(managerObserver)
+        super.onStop()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(STATE_PENDING_DOWNLOAD_MODEL_ID, pendingDownloadModelId)
+        super.onSaveInstanceState(outState)
+    }
+
+    @Deprecated("Deprecated in Android SDK")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_CREATE_MODEL_DOWNLOAD) return
+        val modelId = pendingDownloadModelId
+        pendingDownloadModelId = null
+        if (resultCode != RESULT_OK || modelId == null) return
+        val destination = data?.data
+        if (destination == null) {
+            showSnackbar(
+                screenRoot,
+                getString(R.string.download_destination_unavailable),
+                Snackbar.LENGTH_LONG,
+            )
+            return
+        }
+        val grantedFlags = (data?.flags ?: 0) and DOWNLOAD_GRANT_FLAGS
+        setResult(
+            RESULT_OK,
+            Intent()
+                .setData(destination)
+                .putExtra(EXTRA_MODEL_ID, modelId)
+                .addFlags(grantedFlags),
+        )
+        finish()
     }
 
     private fun createContentView(): View {
@@ -96,7 +150,10 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
                         start: Int,
                         before: Int,
                         count: Int,
-                    ) = renderModels(value?.toString().orEmpty())
+                    ) {
+                        currentQuery = value?.toString().orEmpty()
+                        renderModels(currentQuery)
+                    }
 
                     override fun afterTextChanged(value: Editable?) = Unit
                 })
@@ -134,6 +191,13 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
 
     private fun modelCard(model: AvailableLiteRtModel): View = cardContainer().apply {
         layoutParams = cardListParams()
+        val imported = importedModels.any { importedModel ->
+            AvailableLiteRtModelCatalog.matchesImportedModel(
+                model = model,
+                importedSha256 = importedModel.sha256,
+                importedDisplayName = importedModel.displayName,
+            )
+        }
 
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -144,7 +208,7 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
                 typeface = Ui.mediumTypeface
                 setTextColor(appPalette.primaryText)
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(statusBadge(model.verifiedDownload != null))
+            addView(statusBadge(verified = model.verifiedDownload != null, imported = imported))
         })
         addView(TextView(context).apply {
             text = getString(modelDescriptionResource(model.id))
@@ -193,9 +257,9 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
             addView(textButton(R.string.button_view_model_source) { openSource(model) })
-            model.verifiedDownload?.let {
+            model.verifiedDownload?.let { download ->
                 addView(
-                    textButton(R.string.litert_catalog_download) { chooseModel(model) },
+                    textButton(R.string.litert_catalog_download) { confirmDownload(download) },
                     LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -205,17 +269,27 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
         })
     }
 
-    private fun statusBadge(verified: Boolean) = TextView(this).apply {
+    private fun statusBadge(verified: Boolean, imported: Boolean) = TextView(this).apply {
         text = getString(
-            if (verified) R.string.litert_catalog_verified_download else R.string.litert_catalog_source_only,
+            when {
+                imported -> R.string.litert_catalog_imported
+                verified -> R.string.litert_catalog_verified_download
+                else -> R.string.litert_catalog_source_only
+            },
         )
         textSize = 11f
         typeface = Ui.mediumTypeface
-        setTextColor(if (verified) appPalette.accent else appPalette.secondaryText)
+        setTextColor(
+            when {
+                imported -> appPalette.onPrimary
+                verified -> appPalette.accent
+                else -> appPalette.secondaryText
+            },
+        )
         background = roundedFill(
-            appPalette.windowBackground,
+            if (imported) appPalette.primary else appPalette.windowBackground,
             Ui.RADIUS_SHEET,
-            if (verified) appPalette.accent else appPalette.divider,
+            if (imported) null else if (verified) appPalette.accent else appPalette.divider,
         )
         setPaddingRelative(uiDp(10), uiDp(Ui.SPACE_XS), uiDp(10), uiDp(Ui.SPACE_XS))
     }
@@ -228,16 +302,59 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
         setPaddingRelative(0, uiDp(2), 0, uiDp(2))
     }
 
-    private fun chooseModel(model: AvailableLiteRtModel) {
-        setResult(
-            RESULT_OK,
-            Intent().putExtra(EXTRA_MODEL_ID, model.id),
-        )
-        finish()
+    private fun renderManagerState(state: ModelManagerState) {
+        val latest = state.snapshot?.models.orEmpty()
+        if (latest == importedModels) return
+        importedModels = latest
+        renderModels(currentQuery)
+    }
+
+    private fun confirmDownload(model: RecommendedModel) {
+        materialDialog()
+            .setTitle(model.displayName)
+            .setMessage(
+                getString(
+                    R.string.download_confirm_message,
+                    Formatter.formatFileSize(this, model.expectedSizeBytes),
+                    model.expectedSha256,
+                    model.license,
+                ),
+            )
+            .setNegativeButton(android.R.string.cancel, null)
+            .setNeutralButton(R.string.button_view_model_source) { _, _ -> openSource(model.sourceUrl) }
+            .setPositiveButton(R.string.button_choose_download_location) { _, _ ->
+                openDownloadDestinationPicker(model)
+            }
+            .show()
+            .also(::tintDialogButtons)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun openDownloadDestinationPicker(model: RecommendedModel) {
+        pendingDownloadModelId = model.id
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/octet-stream"
+            putExtra(Intent.EXTRA_TITLE, model.fileName)
+            addFlags(DOWNLOAD_GRANT_FLAGS)
+        }
+        runCatching { startActivityForResult(intent, REQUEST_CREATE_MODEL_DOWNLOAD) }
+            .onFailure {
+                pendingDownloadModelId = null
+                showSnackbar(
+                    screenRoot,
+                    getString(R.string.download_destination_unavailable),
+                    Snackbar.LENGTH_LONG,
+                )
+            }
     }
 
     private fun openSource(model: AvailableLiteRtModel) {
-        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(model.sourceUrl))) }
+        openSource(model.sourceUrl)
+    }
+
+    private fun openSource(sourceUrl: String) {
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(sourceUrl))) }
             .onFailure {
                 showSnackbar(
                     screenRoot,
@@ -278,5 +395,9 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
 
     companion object {
         const val EXTRA_MODEL_ID = "liteRtCatalogModelId"
+        private const val REQUEST_CREATE_MODEL_DOWNLOAD = 1001
+        private const val STATE_PENDING_DOWNLOAD_MODEL_ID = "pendingDownloadModelId"
+        private const val DOWNLOAD_GRANT_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+            Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
     }
 }

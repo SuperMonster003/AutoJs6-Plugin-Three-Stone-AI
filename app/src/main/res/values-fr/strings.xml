@@ -59,7 +59,6 @@
     <string name="model_none">Aucun modèle configuré</string>
     <string name="model_delete_confirm_title">Supprimer le modèle ?</string>
     <string name="model_delete_confirm_message">Supprimer le modèle \"%1$s\" ? Cette action est irréversible.</string>
-    <string name="model_delete_selected_blocked">Le modèle sélectionné ne peut pas être supprimé. Sélectionnez d\'abord un autre modèle.</string>
     <string name="model_deletion_failed">Échec de la suppression du modèle</string>
     <string name="model_deletion_succeeded">Modèle supprimé</string>
     <string name="model_health_available">Disponible</string>
@@ -115,6 +114,8 @@
     <string name="chat_suggestion_plan">Transforme une idée en plan étape par étape</string>
     <string name="chat_input_hint">Écrire à la cible sélectionnée</string>
     <string name="chat_input_no_target_hint">Choisissez une cible avant de discuter</string>
+    <string name="chat_input_local_model_deleted_hint">Le modèle local utilisé par cette conversation a été supprimé</string>
+    <string name="litert_catalog_imported">Importé</string>
     <string name="chat_send">Envoyer</string>
     <string name="chat_stop">Arrêter</string>
     <string name="chat_thinking">Attente de la cible...</string>
@@ -219,6 +220,7 @@
     <string name="app_settings_custom_color_title">Couleur de thème personnalisée</string>
     <string name="app_settings_dark_mode">Mode sombre</string>
     <string name="app_settings_follow_autojs6">Suivre AutoJs6</string>
+    <string name="app_settings_follow_autojs6_summary">Suivre AutoJs6 · %1$s</string>
     <string name="app_settings_follow_system">Suivre le système</string>
     <string name="app_settings_information">Informations</string>
     <string name="app_settings_language">Langue</string>
@@ -226,7 +228,6 @@
     <string name="app_settings_theme_blue">Bleu</string>
     <string name="app_settings_theme_color">Couleur du thème</string>
     <string name="app_settings_theme_custom">Personnalisée</string>
-    <string name="app_settings_theme_follow_summary">Suivre AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">Vert</string>
     <string name="app_settings_theme_three_stone_ai">Orange</string>
     <string name="app_settings_theme_purple">Violet</string>

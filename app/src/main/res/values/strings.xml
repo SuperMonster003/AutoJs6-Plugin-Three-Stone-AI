@@ -60,7 +60,6 @@
     <string name="model_none">No model is configured</string>
     <string name="model_delete_confirm_title">Delete model?</string>
     <string name="model_delete_confirm_message">Delete model "%1$s"? This cannot be undone.</string>
-    <string name="model_delete_selected_blocked">The selected model cannot be deleted. Select another model first.</string>
     <string name="model_deletion_failed">Model deletion failed</string>
     <string name="model_deletion_succeeded">Model deleted</string>
     <string name="model_health_available">Available</string>
@@ -119,6 +118,8 @@
     <string name="chat_suggestion_plan">Turn an idea into a step-by-step plan</string>
     <string name="chat_input_hint">Message the selected target</string>
     <string name="chat_input_no_target_hint">Choose a target before chatting</string>
+    <string name="chat_input_local_model_deleted_hint">The local model used by this conversation has been deleted</string>
+    <string name="litert_catalog_imported">Imported</string>
     <string name="chat_send">Send</string>
     <string name="chat_stop">Stop</string>
     <string name="chat_thinking">Waiting for the target...</string>
@@ -299,7 +300,8 @@
     <string name="app_settings_custom_color_title">Custom theme color</string>
     <string name="app_settings_dark_mode">Dark mode</string>
     <string name="app_settings_follow_autojs6">Follow AutoJs6</string>
-    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 is unavailable; &quot;Follow system&quot; will be used</string>
+    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 is unavailable; %1$s will be used</string>
+    <string name="app_settings_follow_autojs6_summary">Follow AutoJs6 · %1$s</string>
     <string name="app_settings_follow_system">Follow system</string>
     <string name="app_settings_information">Information</string>
     <string name="app_settings_language">Language</string>
@@ -307,7 +309,6 @@
     <string name="app_settings_theme_blue">Blue</string>
     <string name="app_settings_theme_color">Theme color</string>
     <string name="app_settings_theme_custom">Custom</string>
-    <string name="app_settings_theme_follow_summary">Follow AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">Green</string>
     <string name="app_settings_theme_three_stone_ai">Orange</string>
     <string name="app_settings_theme_purple">Purple</string>

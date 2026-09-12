@@ -111,34 +111,69 @@ internal object AppColorPolicy {
         return (lighter + 0.05) / (darker + 0.05)
     }
 
-    fun readableAccent(themeColor: Int, backgroundColor: Int): Int {
-        if (contrastRatio(themeColor, backgroundColor) >= MINIMUM_ACCENT_CONTRAST) return themeColor
-        val target = if (luminance(backgroundColor) >= 0.5) OPAQUE_BLACK else OPAQUE_WHITE
-        var low = 0.0
-        var high = 1.0
-        repeat(18) {
-            val middle = (low + high) / 2.0
-            val candidate = blend(themeColor, target, middle)
-            if (contrastRatio(candidate, backgroundColor) >= MINIMUM_ACCENT_CONTRAST) {
-                high = middle
-            } else {
-                low = middle
-            }
+    /** Chooses the higher-contrast opaque foreground for a filled control or badge. */
+    fun onFilledColor(backgroundColor: Int): Int =
+        if (
+            contrastRatio(OPAQUE_BLACK, backgroundColor) >=
+            contrastRatio(OPAQUE_WHITE, backgroundColor)
+        ) {
+            OPAQUE_BLACK
+        } else {
+            OPAQUE_WHITE
         }
-        return blend(themeColor, target, high)
+
+    /**
+     * Keeps the accent hue while moving it toward a neutral endpoint only as far as needed for
+     * the minimum contrast. Both directions are considered because mid-tone backgrounds can make
+     * either a lighter or a darker result valid, with one requiring less adjustment.
+     */
+    fun readableAccent(themeColor: Int, backgroundColor: Int): Int {
+        if (contrastRatio(themeColor, backgroundColor) >= MINIMUM_TEXT_CONTRAST) return themeColor
+
+        fun adjustedToward(target: Int): Int? {
+            if (contrastRatio(target, backgroundColor) < MINIMUM_TEXT_CONTRAST) return null
+            var low = 0.0
+            var high = 1.0
+            repeat(18) {
+                val middle = (low + high) / 2.0
+                val candidate = blend(themeColor, target, middle)
+                if (contrastRatio(candidate, backgroundColor) >= MINIMUM_TEXT_CONTRAST) {
+                    high = middle
+                } else {
+                    low = middle
+                }
+            }
+            return blend(themeColor, target, high)
+        }
+
+        val sourceLuminance = luminance(themeColor)
+        return listOfNotNull(
+            adjustedToward(OPAQUE_BLACK),
+            adjustedToward(OPAQUE_WHITE),
+        ).minByOrNull { candidate ->
+            kotlin.math.abs(luminance(candidate) - sourceLuminance)
+        }
+            // At a 4.5:1 target one of black or white is always reachable. Keep a defensive
+            // fallback in case the threshold changes later.
+            ?: onFilledColor(backgroundColor)
     }
 
     /**
-     * Builds a stable, chromatic control color from an arbitrary seed. Very pale custom colors
-     * gain enough chroma before contrast correction, avoiding the muddy gray-brown result of
-     * simply mixing a light seed with black.
+     * Builds the high-emphasis fill from an arbitrary seed without lowering its value. Very pale
+     * colors gain only enough chroma to remain recognizable, so buttons keep the seed's brightness
+     * instead of becoming muddy after contrast correction.
      */
-    fun dynamicAccent(themeColor: Int, backgroundColor: Int): Int {
+    fun dynamicPrimary(themeColor: Int): Int {
         val hsv = FloatArray(3).also { Color.colorToHSV(themeColor, it) }
-        if (hsv[1] in 0.06f..0.45f) hsv[1] = 0.45f
-        val chromatic = Color.HSVToColor(hsv)
-        return readableAccent(chromatic, backgroundColor)
+        if (hsv[1] >= 0.06f && hsv[1] < MINIMUM_DYNAMIC_SATURATION) {
+            hsv[1] = MINIMUM_DYNAMIC_SATURATION
+        }
+        return Color.HSVToColor(hsv)
     }
+
+    /** Text/icon accent derived separately from the brighter high-emphasis fill. */
+    fun dynamicAccent(themeColor: Int, backgroundColor: Int): Int =
+        readableAccent(dynamicPrimary(themeColor), backgroundColor)
 
     /** Tints a neutral surface while retaining WCAG text contrast against its foreground. */
     fun harmonizeSurface(
@@ -171,13 +206,21 @@ internal object AppColorPolicy {
     fun withAlpha(color: Int, alpha: Int): Int = color and 0xFFFFFF or (alpha.coerceIn(0, 255) shl 24)
 
     /** Reuses a surface's brightness and saturation while associating it with the theme hue. */
-    fun retoneSurface(referenceColor: Int, themeColor: Int, foregroundColor: Int): Int {
+    fun retoneSurface(
+        referenceColor: Int,
+        themeColor: Int,
+        foregroundColor: Int,
+        themeSaturationScale: Float = 0.35f,
+    ): Int {
         val reference = FloatArray(3).also { Color.colorToHSV(referenceColor, it) }
         val theme = FloatArray(3).also { Color.colorToHSV(themeColor, it) }
         reference[0] = theme[0]
         reference[1] = when {
             theme[1] < 0.06f -> 0f
-            else -> max(reference[1].toDouble(), (theme[1] * 0.35f).toDouble()).toFloat()
+            else -> max(
+                reference[1].toDouble(),
+                (theme[1] * themeSaturationScale.coerceIn(0f, 1f)).toDouble(),
+            ).toFloat()
         }.coerceIn(0f, 1f)
         var candidate = Color.HSVToColor(Color.alpha(referenceColor), reference)
         if (contrastRatio(candidate, foregroundColor) >= MINIMUM_TEXT_CONTRAST) return candidate
@@ -212,8 +255,8 @@ internal object AppColorPolicy {
         return -0x1000000 or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
     }
 
-    private const val MINIMUM_ACCENT_CONTRAST = 3.0
     private const val MINIMUM_TEXT_CONTRAST = 4.5
+    private const val MINIMUM_DYNAMIC_SATURATION = 0.28f
     private const val OPAQUE_BLACK = -0x1000000
     private const val OPAQUE_WHITE = -0x1
 }
@@ -240,15 +283,13 @@ internal data class AppThemePalette(
         fun resolve(context: Context): AppThemePalette {
             val resolved = ApplicationSettingsResolver.resolve(context)
             val settings = resolved.settings
-            val themeSeed = when (settings.themeSelection) {
-                AppThemeSelection.FOLLOW_AUTOJS6 -> resolved.hostResult?.snapshot
-                    ?.themeColorPrimary
-                    ?: AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR
-                AppThemeSelection.CUSTOM -> settings.customThemeColor
-            }.let(AppSettingsPolicy::normalizeOpaqueColor)
-            val primary = themeSeed.let { normalized ->
+            val themeSeed = AppSettingsPolicy.resolveThemeColor(
+                settings,
+                resolved.hostResult?.snapshot?.themeColorPrimary,
+            )
+            val seedPrimary = themeSeed.let { normalized ->
                 // The brand color adapts to the active mode; arbitrary host or custom
-                // colors keep their single value and rely on the contrast machinery.
+                // colors retain their brightness and gain only a small chroma floor.
                 if (normalized == AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR) {
                     context.getColor(R.color.brand_primary)
                 } else {
@@ -259,6 +300,7 @@ internal data class AppThemePalette(
             val isDark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
                 Configuration.UI_MODE_NIGHT_YES
             val curated = AppSettingsPolicy.isCuratedThemeColor(themeSeed)
+            val primary = if (curated) seedPrimary else AppColorPolicy.dynamicPrimary(seedPrimary)
             val accent = if (curated) {
                 AppColorPolicy.readableAccent(primary, background)
             } else {
@@ -276,8 +318,8 @@ internal data class AppThemePalette(
             val inputSurface = context.getColor(R.color.chat_input_surface)
             val chatBorder = context.getColor(R.color.chat_border)
             return AppThemePalette(
-                primary = if (curated) primary else accent,
-                onPrimary = AppColorPolicy.onThemeColor(if (curated) primary else accent, isDark),
+                primary = primary,
+                onPrimary = AppColorPolicy.onFilledColor(primary),
                 accent = accent,
                 windowBackground = if (curated) background else AppColorPolicy.harmonizeSurface(
                     background, accent, primaryText, if (isDark) 0.035 else 0.02,
@@ -296,13 +338,12 @@ internal data class AppThemePalette(
                 divider = if (curated) divider else AppColorPolicy.harmonizeSurface(
                     divider, accent, primaryText, if (isDark) 0.10 else 0.06,
                 ),
-                userSurface = if (curated) {
-                    AppColorPolicy.retoneSurface(userSurface, primary, primaryText)
-                } else {
-                    AppColorPolicy.harmonizeSurface(
-                        userSurface, accent, primaryText, if (isDark) 0.24 else 0.20,
-                    )
-                },
+                userSurface = AppColorPolicy.retoneSurface(
+                    userSurface,
+                    primary,
+                    primaryText,
+                    themeSaturationScale = if (isDark) 0.72f else 0.68f,
+                ),
                 assistantSurface = if (curated) assistantSurface else AppColorPolicy.harmonizeSurface(
                     assistantSurface, accent, primaryText, if (isDark) 0.09 else 0.065,
                 ),
@@ -499,6 +540,12 @@ abstract class ConfiguredActivity : AppCompatActivity() {
         editText.highlightColor = AppColorPolicy.withAlpha(appPalette.accent, 0x55)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             editText.textCursorDrawable = editText.textCursorDrawable?.tinted(appPalette.accent)
+            editText.textSelectHandle?.tinted(appPalette.accent)
+                ?.let(editText::setTextSelectHandle)
+            editText.textSelectHandleLeft?.tinted(appPalette.accent)
+                ?.let(editText::setTextSelectHandleLeft)
+            editText.textSelectHandleRight?.tinted(appPalette.accent)
+                ?.let(editText::setTextSelectHandleRight)
         }
     }
 

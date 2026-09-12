@@ -60,7 +60,6 @@
     <string name="model_none">未配置模型</string>
     <string name="model_delete_confirm_title">删除模型?</string>
     <string name="model_delete_confirm_message">确定删除模型\"%1$s\"吗? 此操作无法撤销.</string>
-    <string name="model_delete_selected_blocked">无法删除当前选中的模型. 请先选择其他模型.</string>
     <string name="model_deletion_failed">模型删除失败</string>
     <string name="model_deletion_succeeded">模型已删除</string>
     <string name="model_health_available">可用</string>
@@ -119,6 +118,8 @@
     <string name="chat_suggestion_plan">把一个想法整理成分步计划</string>
     <string name="chat_input_hint">向所选目标发送消息</string>
     <string name="chat_input_no_target_hint">选择目标后即可开始会话</string>
+    <string name="chat_input_local_model_deleted_hint">此会话使用的本地模型已被删除</string>
+    <string name="litert_catalog_imported">已导入</string>
     <string name="chat_send">发送</string>
     <string name="chat_stop">停止</string>
     <string name="chat_thinking">正在等待目标响应...</string>
@@ -261,7 +262,8 @@
     <string name="app_settings_custom_color_title">自定义主题色</string>
     <string name="app_settings_dark_mode">暗色模式</string>
     <string name="app_settings_follow_autojs6">跟随 AutoJs6</string>
-    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 不可用, 将使用 &quot;跟随系统&quot;</string>
+    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 不可用, 将使用 %1$s</string>
+    <string name="app_settings_follow_autojs6_summary">跟随 AutoJs6 · %1$s</string>
     <string name="app_settings_follow_system">跟随系统</string>
     <string name="app_settings_information">信息</string>
     <string name="app_settings_language">语言</string>
@@ -269,7 +271,6 @@
     <string name="app_settings_theme_blue">蓝色</string>
     <string name="app_settings_theme_color">主题色</string>
     <string name="app_settings_theme_custom">自定义</string>
-    <string name="app_settings_theme_follow_summary">跟随 AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">绿色</string>
     <string name="app_settings_theme_three_stone_ai">橙色</string>
     <string name="app_settings_theme_purple">紫色</string>

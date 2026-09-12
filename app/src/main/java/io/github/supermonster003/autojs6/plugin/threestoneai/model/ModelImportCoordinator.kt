@@ -255,13 +255,12 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         return true
     }
 
-    /** Deletes only an unselected model from the last coherent manager snapshot. */
+    /** Deletes a model from the last coherent snapshot, including the selected model. */
     fun beginDeletion(modelId: String): Boolean {
         val active = synchronized(lifecycleLock) {
             if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
             val snapshot = visibleManagerSnapshot ?: return false
             if (snapshot.models.none { it.modelId == modelId }) return false
-            if (snapshot.selectedModelId == modelId) return false
             check(nextDeletionOperationId > 0L) { "Model deletion operation IDs are exhausted" }
             val operationId = nextDeletionOperationId
             nextDeletionOperationId = if (operationId == Long.MAX_VALUE) 0L else operationId + 1L
@@ -608,7 +607,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
 
     private fun executeDeletion(active: ActiveDeletion) {
         val result = runCatching {
-            repository.deleteUnselected(active.modelId).also { deletion ->
+            repository.deleteModel(active.modelId).also { deletion ->
                 check(deletion.deletedModel.modelId == active.modelId) {
                     "Deleted model does not match the requested model"
                 }

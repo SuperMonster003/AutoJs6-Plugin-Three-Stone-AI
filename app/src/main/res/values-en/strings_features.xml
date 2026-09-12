@@ -108,7 +108,7 @@
     <string name="chat_bubble_style_none">No tint</string>
     <string name="chat_bubble_style_background">Background tint</string>
     <string name="chat_bubble_style_border">Border tint</string>
-    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 is unavailable; &quot;Follow system&quot; will be used</string>
+    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 is unavailable; %1$s will be used</string>
     <string name="online_ai_base_url_history">Base URL history</string>
     <string name="online_ai_base_url_history_empty">No saved HTTPS base URLs yet</string>
     <string name="online_ai_base_url_history_manage">Manage history</string>

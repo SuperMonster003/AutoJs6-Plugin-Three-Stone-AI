@@ -59,7 +59,6 @@
     <string name="model_none">Модель не настроена</string>
     <string name="model_delete_confirm_title">Удалить модель?</string>
     <string name="model_delete_confirm_message">Удалить модель \"%1$s\"? Это действие нельзя отменить.</string>
-    <string name="model_delete_selected_blocked">Выбранную модель нельзя удалить. Сначала выберите другую модель.</string>
     <string name="model_deletion_failed">Не удалось удалить модель</string>
     <string name="model_deletion_succeeded">Модель удалена</string>
     <string name="model_health_available">Доступна</string>
@@ -115,6 +114,8 @@
     <string name="chat_suggestion_plan">Преврати идею в пошаговый план</string>
     <string name="chat_input_hint">Сообщение выбранной цели</string>
     <string name="chat_input_no_target_hint">Выберите цель перед началом диалога</string>
+    <string name="chat_input_local_model_deleted_hint">Локальная модель, использованная в этом диалоге, удалена</string>
+    <string name="litert_catalog_imported">Импортировано</string>
     <string name="chat_send">Отправить</string>
     <string name="chat_stop">Остановить</string>
     <string name="chat_thinking">Ожидание ответа цели...</string>
@@ -219,6 +220,7 @@
     <string name="app_settings_custom_color_title">Свой цвет темы</string>
     <string name="app_settings_dark_mode">Темная тема</string>
     <string name="app_settings_follow_autojs6">Следовать AutoJs6</string>
+    <string name="app_settings_follow_autojs6_summary">Следовать AutoJs6 · %1$s</string>
     <string name="app_settings_follow_system">Следовать системе</string>
     <string name="app_settings_information">Информация</string>
     <string name="app_settings_language">Язык</string>
@@ -226,7 +228,6 @@
     <string name="app_settings_theme_blue">Синий</string>
     <string name="app_settings_theme_color">Цвет темы</string>
     <string name="app_settings_theme_custom">Свой</string>
-    <string name="app_settings_theme_follow_summary">Следовать AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">Зеленый</string>
     <string name="app_settings_theme_three_stone_ai">Оранжевый</string>
     <string name="app_settings_theme_purple">Фиолетовый</string>

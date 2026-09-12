@@ -59,7 +59,6 @@
     <string name="model_none">No hay ningún modelo configurado</string>
     <string name="model_delete_confirm_title">Eliminar modelo?</string>
     <string name="model_delete_confirm_message">Eliminar el modelo "%1$s"? Esta acción no se puede deshacer.</string>
-    <string name="model_delete_selected_blocked">No se puede eliminar el modelo seleccionado. Seleccione primero otro modelo.</string>
     <string name="model_deletion_failed">Error al eliminar el modelo</string>
     <string name="model_deletion_succeeded">Modelo eliminado</string>
     <string name="model_health_available">Disponible</string>
@@ -115,6 +114,8 @@
     <string name="chat_suggestion_plan">Convierte una idea en un plan paso a paso</string>
     <string name="chat_input_hint">Escribe al destino seleccionado</string>
     <string name="chat_input_no_target_hint">Elige un destino antes de chatear</string>
+    <string name="chat_input_local_model_deleted_hint">Se eliminó el modelo local usado en esta conversación</string>
+    <string name="litert_catalog_imported">Importado</string>
     <string name="chat_send">Enviar</string>
     <string name="chat_stop">Detener</string>
     <string name="chat_thinking">Esperando al destino...</string>
@@ -219,6 +220,7 @@
     <string name="app_settings_custom_color_title">Color de tema personalizado</string>
     <string name="app_settings_dark_mode">Modo oscuro</string>
     <string name="app_settings_follow_autojs6">Seguir AutoJs6</string>
+    <string name="app_settings_follow_autojs6_summary">Seguir AutoJs6 · %1$s</string>
     <string name="app_settings_follow_system">Seguir el sistema</string>
     <string name="app_settings_information">Información</string>
     <string name="app_settings_language">Idioma</string>
@@ -226,7 +228,6 @@
     <string name="app_settings_theme_blue">Azul</string>
     <string name="app_settings_theme_color">Color del tema</string>
     <string name="app_settings_theme_custom">Personalizado</string>
-    <string name="app_settings_theme_follow_summary">Seguir AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">Verde</string>
     <string name="app_settings_theme_three_stone_ai">Naranja</string>
     <string name="app_settings_theme_purple">Morado</string>

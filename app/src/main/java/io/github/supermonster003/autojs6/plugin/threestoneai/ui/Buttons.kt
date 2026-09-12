@@ -36,19 +36,19 @@ internal fun ConfiguredActivity.filledButton(
     text = getString(textResource)
     backgroundTintList = ColorStateList(
         arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
-        intArrayOf(appPalette.surfaceVariant, appPalette.accent),
+        intArrayOf(appPalette.surfaceVariant, appPalette.primary),
     )
     setTextColor(
         ColorStateList(
             arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
             intArrayOf(
                 AppColorPolicy.withAlpha(appPalette.secondaryText, 0x99),
-                AppColorPolicy.onThemeColor(appPalette.accent, appPalette.isDark),
+                appPalette.onPrimary,
             ),
         ),
     )
     rippleColor = ColorStateList.valueOf(
-        AppColorPolicy.withAlpha(AppColorPolicy.onThemeColor(appPalette.accent, appPalette.isDark), 0x33),
+        AppColorPolicy.withAlpha(appPalette.onPrimary, 0x33),
     )
     setOnClickListener { onClick() }
 }

@@ -112,7 +112,7 @@
     <string name="chat_bubble_style_none">بلا تلوين</string>
     <string name="chat_bubble_style_background">تلوين الخلفية</string>
     <string name="chat_bubble_style_border">تلوين الحدود</string>
-    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 غير متاح; سيتم استخدام &quot;اتباع النظام&quot;</string>
+    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 غير متاح; سيتم استخدام %1$s</string>
     <string name="online_ai_base_url_history">سجل عناوين URL الأساسية</string>
     <string name="online_ai_base_url_history_empty">لا توجد عناوين URL أساسية HTTPS محفوظة</string>
     <string name="online_ai_base_url_history_manage">إدارة السجل</string>

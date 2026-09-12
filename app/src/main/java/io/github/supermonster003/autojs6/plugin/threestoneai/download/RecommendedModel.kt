@@ -453,6 +453,20 @@ internal object AvailableLiteRtModelCatalog {
 
     fun find(id: String): AvailableLiteRtModel? = models.singleOrNull { it.id == id }
 
+    /** Matches a managed import to a Gallery card using pinned identity where available. */
+    fun matchesImportedModel(
+        model: AvailableLiteRtModel,
+        importedSha256: String,
+        importedDisplayName: String,
+    ): Boolean {
+        val expectedSha256 = model.sha256 ?: model.verifiedDownload?.expectedSha256
+        return if (expectedSha256 != null) {
+            expectedSha256.equals(importedSha256, ignoreCase = true)
+        } else {
+            model.fileName.equals(importedDisplayName, ignoreCase = true)
+        }
+    }
+
     fun displayNameForImportedModel(sourceDisplayName: String, importedModelId: String): String {
         val digestPrefix = importedModelId.removePrefix("litertlm.")
         val digestMatch = digestPrefix.takeIf { it.length == 32 }?.let { prefix ->

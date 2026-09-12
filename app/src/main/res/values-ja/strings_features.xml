@@ -107,7 +107,7 @@
     <string name="chat_bubble_style_none">色なし</string>
     <string name="chat_bubble_style_background">背景色</string>
     <string name="chat_bubble_style_border">枠線色</string>
-    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 は使用できません; &quot;システムに従う&quot; を使用します</string>
+    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 は使用できません; %1$s を使用します</string>
     <string name="online_ai_base_url_history">Base URL の履歴</string>
     <string name="online_ai_base_url_history_empty">保存された HTTPS Base URL はありません</string>
     <string name="online_ai_base_url_history_manage">履歴を管理</string>

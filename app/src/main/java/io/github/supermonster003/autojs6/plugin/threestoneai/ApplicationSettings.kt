@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.content.Context
+import java.util.Locale
 
 internal enum class AppThemeSelection {
     FOLLOW_AUTOJS6,
@@ -56,6 +57,19 @@ internal object AppSettingsPolicy {
 
     fun normalizeOpaqueColor(color: Int): Int = color or -0x1000000
 
+    /** Keeps the settings summary and the runtime palette on the same resolved theme seed. */
+    fun resolveThemeColor(
+        settings: ApplicationSettings,
+        autoJs6ThemeColor: Int?,
+    ): Int = when (settings.themeSelection) {
+        AppThemeSelection.FOLLOW_AUTOJS6 -> resolveAutoJs6ThemeColor(autoJs6ThemeColor)
+        AppThemeSelection.CUSTOM -> normalizeOpaqueColor(settings.customThemeColor)
+    }
+
+    /** AutoJs6's documented default is used whenever its settings contract is unavailable. */
+    fun resolveAutoJs6ThemeColor(autoJs6ThemeColor: Int?): Int =
+        normalizeOpaqueColor(autoJs6ThemeColor ?: AUTOJS6_DEFAULT_THEME_COLOR)
+
     fun parseOpaqueColor(value: String): Int? {
         val normalized = value.trim().removePrefix("#")
         if (normalized.length != 6 || normalized.any { it.digitToIntOrNull(16) == null }) return null
@@ -79,6 +93,36 @@ internal object AppSettingsPolicy {
         AppLanguage.FOLLOW_AUTOJS6 -> autoJs6ResolvedLanguageTag?.takeIf(String::isNotBlank)
         AppLanguage.FOLLOW_SYSTEM -> null
         else -> language.languageTag
+    }
+
+    fun languageForResolvedTag(languageTag: String?): AppLanguage? {
+        val locale = languageTag
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?.let(Locale::forLanguageTag)
+            ?.takeIf { it.language.isNotEmpty() }
+            ?: return null
+        return when (locale.language.lowercase(Locale.ROOT)) {
+            "zh" -> when {
+                locale.script.equals("Hans", ignoreCase = true) ->
+                    AppLanguage.CHINESE_SIMPLIFIED
+                locale.country.equals("HK", ignoreCase = true) ||
+                    locale.country.equals("MO", ignoreCase = true) ->
+                    AppLanguage.CHINESE_TRADITIONAL_HONG_KONG
+                locale.script.equals("Hant", ignoreCase = true) ||
+                    locale.country.equals("TW", ignoreCase = true) ->
+                    AppLanguage.CHINESE_TRADITIONAL_TAIWAN
+                else -> AppLanguage.CHINESE_SIMPLIFIED
+            }
+            "en" -> AppLanguage.ENGLISH
+            "fr" -> AppLanguage.FRENCH
+            "es" -> AppLanguage.SPANISH
+            "ja" -> AppLanguage.JAPANESE
+            "ko" -> AppLanguage.KOREAN
+            "ru" -> AppLanguage.RUSSIAN
+            "ar" -> AppLanguage.ARABIC
+            else -> null
+        }
     }
 
     fun storedEnum(value: String?, fallback: AppThemeSelection): AppThemeSelection =

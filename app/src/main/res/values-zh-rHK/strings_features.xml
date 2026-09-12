@@ -107,7 +107,7 @@
     <string name="chat_bubble_style_none">無著色</string>
     <string name="chat_bubble_style_background">背景著色</string>
     <string name="chat_bubble_style_border">邊框著色</string>
-    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 無法使用, 將使用 &quot;跟隨系統&quot;</string>
+    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 無法使用, 將使用 %1$s</string>
     <string name="online_ai_base_url_history">Base URL 歷史記錄</string>
     <string name="online_ai_base_url_history_empty">尚無已儲存的 HTTPS Base URL</string>
     <string name="online_ai_base_url_history_manage">管理歷史記錄</string>

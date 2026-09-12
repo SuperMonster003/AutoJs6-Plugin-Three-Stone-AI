@@ -6,8 +6,11 @@
 
 # v1.1.1
 
-###### 2026/09/11
+###### 2026/09/12
 
+* `Fonction` Supprimer le modèle local sélectionné avec sélection automatique d'un modèle restant et un message clair dans les conversations utilisant le modèle supprimé
+* `Amélioration` Indiquer les modèles importés dans le catalogue et proposer directement la confirmation du téléchargement et le choix de l'emplacement de destination
+* `Amélioration` Améliorer les résumés des réglages suivant AutoJs6, le contraste des couleurs du thème et les actions de l'historique des conversations
 * `Amélioration` Vérification à la compilation de l'alignement des pages de 16 KB des bibliothèques natives 64 bits, avec contrôle du contrat manifest et rapports JSON
 
 # v1.1.0

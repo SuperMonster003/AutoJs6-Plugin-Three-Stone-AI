@@ -59,7 +59,6 @@
     <string name="model_none">尚未設定模型</string>
     <string name="model_delete_confirm_title">刪除模型?</string>
     <string name="model_delete_confirm_message">確定刪除模型\"%1$s\"嗎? 此操作無法復原.</string>
-    <string name="model_delete_selected_blocked">無法刪除目前選取的模型. 請先選擇其他模型.</string>
     <string name="model_deletion_failed">刪除模型失敗</string>
     <string name="model_deletion_succeeded">模型已刪除</string>
     <string name="model_health_available">可用</string>
@@ -115,6 +114,8 @@
     <string name="chat_suggestion_plan">將一個想法整理成逐步計劃</string>
     <string name="chat_input_hint">傳送訊息給所選目標</string>
     <string name="chat_input_no_target_hint">選擇目標後即可開始對話</string>
+    <string name="chat_input_local_model_deleted_hint">此對話使用的本機模型已被刪除</string>
+    <string name="litert_catalog_imported">已匯入</string>
     <string name="chat_send">傳送</string>
     <string name="chat_stop">停止</string>
     <string name="chat_thinking">正在等候目標回應...</string>
@@ -219,6 +220,7 @@
     <string name="app_settings_custom_color_title">自訂主題色</string>
     <string name="app_settings_dark_mode">深色模式</string>
     <string name="app_settings_follow_autojs6">跟隨 AutoJs6</string>
+    <string name="app_settings_follow_autojs6_summary">跟隨 AutoJs6 · %1$s</string>
     <string name="app_settings_follow_system">跟隨系統</string>
     <string name="app_settings_information">資訊</string>
     <string name="app_settings_language">語言</string>
@@ -226,7 +228,6 @@
     <string name="app_settings_theme_blue">藍色</string>
     <string name="app_settings_theme_color">主題色</string>
     <string name="app_settings_theme_custom">自訂</string>
-    <string name="app_settings_theme_follow_summary">跟隨 AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">綠色</string>
     <string name="app_settings_theme_three_stone_ai">橙色</string>
     <string name="app_settings_theme_purple">紫色</string>

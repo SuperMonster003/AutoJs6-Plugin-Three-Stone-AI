@@ -6,8 +6,11 @@
 
 # v1.1.1
 
-###### 2026/09/11
+###### 2026/09/12
 
+* `Feature` Delete the selected local model with automatic selection of a remaining model and a clear notice in conversations that use the deleted model
+* `Improvement` Mark imported models in the catalog and provide download confirmation and destination selection directly from their cards
+* `Improvement` Improve settings summaries when following AutoJs6, theme color contrast, and chat history actions
 * `Improvement` Build verification of 16 KB page alignment for 64-bit native libraries, including manifest contract checks and JSON reports
 
 # v1.1.0

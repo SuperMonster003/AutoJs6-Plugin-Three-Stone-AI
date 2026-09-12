@@ -2,6 +2,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai.download
 
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportPolicy
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -120,6 +121,42 @@ class RecommendedModelCatalogTest {
             AvailableLiteRtModelCatalog.displayNameForImportedModel(
                 "custom-name.litertlm",
                 "litertlm.00000000000000000000000000000000",
+            ),
+        )
+    }
+
+    @Test
+    fun importedBadgesMatchPinnedDigestsAndFallBackToExactSourceFileNames() {
+        val verified = checkNotNull(AvailableLiteRtModelCatalog.find("gemma-4-e2b-it"))
+        val verifiedDigest = checkNotNull(verified.verifiedDownload).expectedSha256
+        assertTrue(
+            AvailableLiteRtModelCatalog.matchesImportedModel(
+                verified,
+                verifiedDigest.uppercase(),
+                "Renamed model",
+            ),
+        )
+        assertFalse(
+            AvailableLiteRtModelCatalog.matchesImportedModel(
+                verified,
+                "00".repeat(32),
+                verified.fileName,
+            ),
+        )
+
+        val sourceOnly = checkNotNull(AvailableLiteRtModelCatalog.find("gemma-3n-e2b-it"))
+        assertTrue(
+            AvailableLiteRtModelCatalog.matchesImportedModel(
+                sourceOnly,
+                "00".repeat(32),
+                sourceOnly.fileName.uppercase(),
+            ),
+        )
+        assertFalse(
+            AvailableLiteRtModelCatalog.matchesImportedModel(
+                sourceOnly,
+                "00".repeat(32),
+                "another-model.litertlm",
             ),
         )
     }

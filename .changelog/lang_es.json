@@ -6,8 +6,13 @@
   "changelog_label_dependency": "Dependencia",
   "$data": {
     "v1.1.1": {
-      "released_date": "2026/09/11",
+      "released_date": "2026/09/12",
+      "feature": [
+        "Eliminar el modelo local seleccionado con selección automática de otro disponible y un aviso claro en las conversaciones que usan el modelo eliminado"
+      ],
       "improvement": [
+        "Marcar los modelos importados en el catálogo y ofrecer directamente la confirmación de descarga y la selección del destino",
+        "Mejorar los resúmenes de ajustes que siguen AutoJs6, el contraste del tema y las acciones del historial de conversaciones",
         "Verificación de compilación de la alineación de páginas de 16 KB en bibliotecas nativas de 64 bits, con controles del contrato manifest e informes JSON"
       ]
     },

@@ -59,7 +59,6 @@
     <string name="model_none">モデルが設定されていません</string>
     <string name="model_delete_confirm_title">モデルを削除しますか?</string>
     <string name="model_delete_confirm_message">モデル\"%1$s\"を削除しますか? この操作は元に戻せません.</string>
-    <string name="model_delete_selected_blocked">選択中のモデルは削除できません. 先に別のモデルを選択してください.</string>
     <string name="model_deletion_failed">モデルの削除に失敗しました</string>
     <string name="model_deletion_succeeded">モデルを削除しました</string>
     <string name="model_health_available">利用可能</string>
@@ -115,6 +114,8 @@
     <string name="chat_suggestion_plan">アイデアを手順ごとの計画にまとめて</string>
     <string name="chat_input_hint">選択したターゲットにメッセージ</string>
     <string name="chat_input_no_target_hint">チャットする前にターゲットを選択</string>
+    <string name="chat_input_local_model_deleted_hint">この会話で使用していたローカルモデルは削除されました</string>
+    <string name="litert_catalog_imported">インポート済み</string>
     <string name="chat_send">送信</string>
     <string name="chat_stop">停止</string>
     <string name="chat_thinking">ターゲットの応答を待機中...</string>
@@ -219,6 +220,7 @@
     <string name="app_settings_custom_color_title">カスタムテーマ色</string>
     <string name="app_settings_dark_mode">ダークモード</string>
     <string name="app_settings_follow_autojs6">AutoJs6 に従う</string>
+    <string name="app_settings_follow_autojs6_summary">AutoJs6 に従う · %1$s</string>
     <string name="app_settings_follow_system">システムに従う</string>
     <string name="app_settings_information">情報</string>
     <string name="app_settings_language">言語</string>
@@ -226,7 +228,6 @@
     <string name="app_settings_theme_blue">青</string>
     <string name="app_settings_theme_color">テーマ色</string>
     <string name="app_settings_theme_custom">カスタム</string>
-    <string name="app_settings_theme_follow_summary">AutoJs6 に従う (%1$s)</string>
     <string name="app_settings_theme_green">緑</string>
     <string name="app_settings_theme_three_stone_ai">オレンジ</string>
     <string name="app_settings_theme_purple">紫</string>

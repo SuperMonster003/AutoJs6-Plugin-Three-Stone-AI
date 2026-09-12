@@ -119,15 +119,16 @@ internal class ModelRepository(context: Context) {
     }
 
     /**
-     * Removes one unselected immutable generation and durably releases its private-storage file.
+     * Removes one immutable generation and durably releases its private-storage file. If it was
+     * selected, the catalog transaction selects its first remaining row before deleting the file.
      * The catalog is published first so a crash can leave only an unreferenced file, never a
      * catalog entry whose file was already removed. Such an orphan remains safe for a later bounded
      * storage-recovery pass.
      */
     @Synchronized
-    fun deleteUnselected(modelId: String): ModelDeletionResult {
+    fun deleteModel(modelId: String): ModelDeletionResult {
         val original = readAuthoritativeManagerCatalog()
-        val deletion = ModelCatalogPolicy.deleteUnselected(original, modelId)
+        val deletion = ModelCatalogPolicy.delete(original, modelId)
         requireCatalogFile(deletion.model)
         val target = File(directory, deletion.model.fileName)
 

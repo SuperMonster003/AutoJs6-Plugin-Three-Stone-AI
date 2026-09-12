@@ -109,7 +109,7 @@
     <string name="chat_bubble_style_none">Sin color</string>
     <string name="chat_bubble_style_background">Color de fondo</string>
     <string name="chat_bubble_style_border">Color de borde</string>
-    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 no está disponible; se usará &quot;Seguir el sistema&quot;</string>
+    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 no está disponible; se usará %1$s</string>
     <string name="online_ai_base_url_history">Historial de URL base</string>
     <string name="online_ai_base_url_history_empty">Todavía no hay URL base HTTPS guardadas</string>
     <string name="online_ai_base_url_history_manage">Gestionar historial</string>

@@ -26,6 +26,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.singleChoiceDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
+import java.util.Locale
 import org.autojs.plugin.ai.provider.api.AiProviderSettingsContract
 
 class AppSettingsActivity : ConfiguredActivity() {
@@ -77,13 +78,13 @@ class AppSettingsActivity : ConfiguredActivity() {
         content.addView(sectionHeader(R.string.app_settings_appearance))
         content.addView(settingRow(
             title = getString(R.string.app_settings_language),
-            summary = getString(settings.language.labelResource()),
+            summary = languageSummary(settings.language),
             iconResource = R.drawable.ic_language_24,
             onClick = ::showLanguageDialog,
         ).view)
         content.addView(settingRow(
             title = getString(R.string.app_settings_dark_mode),
-            summary = getString(settings.darkMode.labelResource()),
+            summary = darkModeSummary(settings.darkMode),
             iconResource = R.drawable.ic_dark_mode_24,
             onClick = ::showDarkModeDialog,
         ).view)
@@ -209,7 +210,10 @@ class AppSettingsActivity : ConfiguredActivity() {
         val labels = choices.mapIndexed { index, choice ->
             val title = getString(choice.labelResource)
             when {
-                index == 0 -> followAutoJs6ChoiceLabel(title)
+                index == 0 -> followAutoJs6ChoiceLabel(
+                    title,
+                    AppSettingsPolicy.colorHex(followedThemeColor()),
+                )
                 choice.color != null -> "$title (${AppSettingsPolicy.colorHex(choice.color)})"
                 else -> title
             }
@@ -265,7 +269,11 @@ class AppSettingsActivity : ConfiguredActivity() {
         val values = AppDarkMode.entries
         val labels = values.mapIndexed { index, value ->
             getString(value.labelResource()).let { label ->
-                if (index == 0) followAutoJs6ChoiceLabel(label) else label
+                if (index == 0) {
+                    followAutoJs6ChoiceLabel(label, quotedFollowSystemLabel())
+                } else {
+                    label
+                }
             }
         }
         singleChoiceDialog(
@@ -279,7 +287,11 @@ class AppSettingsActivity : ConfiguredActivity() {
         val values = AppLanguage.entries
         val labels = values.mapIndexed { index, value ->
             getString(value.labelResource()).let { label ->
-                if (index == 0) followAutoJs6ChoiceLabel(label) else label
+                if (index == 0) {
+                    followAutoJs6ChoiceLabel(label, quotedFollowSystemLabel())
+                } else {
+                    label
+                }
             }
         }
         singleChoiceDialog(
@@ -411,7 +423,12 @@ class AppSettingsActivity : ConfiguredActivity() {
         val useModelDefaults = sheetCheckBox(
             R.string.chat_use_model_sampling_defaults,
             working.useModelSamplingDefaults,
-        ).apply { setPaddingRelative(0, uiDp(Ui.SPACE_MD), 0, 0) }
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = uiDp(Ui.SPACE_MD) }
+        }
         container.addView(useModelDefaults)
         val (temperatureField, temperatureInput) = formTextField(
             initialValue = working.temperature.toString(),
@@ -568,24 +585,59 @@ class AppSettingsActivity : ConfiguredActivity() {
         if (recreate) recreate()
     }
 
-    private fun themeSummary(value: ApplicationSettings): String = when (value.themeSelection) {
-        AppThemeSelection.FOLLOW_AUTOJS6 -> if (hostResult.selectable) {
+    private fun languageSummary(value: AppLanguage): String = when (value) {
+        AppLanguage.FOLLOW_AUTOJS6 -> followAutoJs6Summary(resolvedHostLanguageLabel())
+        else -> getString(value.labelResource())
+    }
+
+    private fun darkModeSummary(value: AppDarkMode): String = when (value) {
+        AppDarkMode.FOLLOW_AUTOJS6 -> followAutoJs6Summary(
             getString(
-                R.string.app_settings_theme_follow_summary,
-                AppSettingsPolicy.colorHex(
-                    hostResult.snapshot?.themeColorPrimary
-                        ?: AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR,
-                ),
-            )
-        } else {
-            getString(R.string.app_settings_follow_autojs6)
-        }
+                hostResult.snapshot?.darkModePolicy?.labelResource()
+                    ?: R.string.app_settings_follow_system,
+            ),
+        )
+        else -> getString(value.labelResource())
+    }
+
+    private fun themeSummary(value: ApplicationSettings): String = when (value.themeSelection) {
+        AppThemeSelection.FOLLOW_AUTOJS6 -> followAutoJs6Summary(
+            AppSettingsPolicy.colorHex(followedThemeColor()),
+        )
         AppThemeSelection.CUSTOM -> AppSettingsPolicy.colorHex(value.customThemeColor)
     }
 
-    private fun followAutoJs6ChoiceLabel(title: String): CharSequence {
+    private fun followAutoJs6Summary(resolvedValue: String): String = getString(
+        R.string.app_settings_follow_autojs6_summary,
+        resolvedValue,
+    )
+
+    private fun followedThemeColor(): Int = AppSettingsPolicy.resolveAutoJs6ThemeColor(
+        hostResult.snapshot?.themeColorPrimary,
+    )
+
+    private fun resolvedHostLanguageLabel(): String {
+        val languageTag = hostResult.snapshot?.resolvedLanguageTag
+            ?.takeIf(String::isNotBlank)
+            ?: return getString(R.string.app_settings_follow_system)
+        AppSettingsPolicy.languageForResolvedTag(languageTag)?.let { language ->
+            return getString(language.labelResource())
+        }
+        return Locale.forLanguageTag(languageTag)
+            .getDisplayName(resources.configuration.locales[0])
+            .takeIf(String::isNotBlank)
+            ?: languageTag
+    }
+
+    private fun quotedFollowSystemLabel(): String =
+        "\"${getString(R.string.app_settings_follow_system)}\""
+
+    private fun followAutoJs6ChoiceLabel(title: String, fallbackValue: String): CharSequence {
         if (hostResult.selectable) return title
-        val subtitle = getString(R.string.app_settings_follow_autojs6_fallback_subtitle)
+        val subtitle = getString(
+            R.string.app_settings_follow_autojs6_fallback_subtitle,
+            fallbackValue,
+        )
         return SpannableString("$title\n$subtitle").apply {
             val start = title.length + 1
             setSpan(
@@ -632,6 +684,12 @@ class AppSettingsActivity : ConfiguredActivity() {
         AppDarkMode.FOLLOW_SYSTEM -> R.string.app_settings_follow_system
         AppDarkMode.LIGHT -> R.string.app_settings_always_light
         AppDarkMode.DARK -> R.string.app_settings_always_dark
+    }
+
+    private fun AutoJs6DarkModePolicy.labelResource(): Int = when (this) {
+        AutoJs6DarkModePolicy.FOLLOW_SYSTEM -> R.string.app_settings_follow_system
+        AutoJs6DarkModePolicy.LIGHT -> R.string.app_settings_always_light
+        AutoJs6DarkModePolicy.DARK -> R.string.app_settings_always_dark
     }
 
     private fun AppLanguage.labelResource(): Int = when (this) {

@@ -209,7 +209,7 @@ class ModelCatalogTest {
         )
         val originalGeneration = listingGeneration(original)
 
-        val deletion = ModelCatalogPolicy.deleteUnselected(original, entryB.modelId)
+        val deletion = ModelCatalogPolicy.delete(original, entryB.modelId)
 
         assertEquals(entryB, deletion.model)
         assertEquals(entryA.modelId, deletion.document.selectedModelId)
@@ -221,17 +221,33 @@ class ModelCatalogTest {
     }
 
     @Test
-    fun deletingSelectedOrUnknownModelFailsWithoutChangingTheCatalog() {
+    fun deletingSelectedModelChoosesTheFirstRemainingRowWithoutMutatingTheInput() {
+        val entryC = entry("33".repeat(32), "C")
+        val original = ModelCatalogPolicy.normalize(
+            ModelCatalogDocument(7L, entryB.modelId, listOf(entryC, entryB, entryA)),
+        )
+        val originalBytes = ModelCatalogCodec.encode(original)
+
+        val deletion = ModelCatalogPolicy.delete(original, entryB.modelId)
+
+        assertEquals(entryB, deletion.model)
+        assertEquals(entryA.modelId, deletion.document.selectedModelId)
+        assertEquals(listOf(entryA, entryC), deletion.document.entries)
+        assertEquals(8L, deletion.document.revision)
+        assertTrue(originalBytes.contentEquals(ModelCatalogCodec.encode(original)))
+        assertEquals(entryB.modelId, original.selectedModelId)
+        assertEquals(7L, original.revision)
+    }
+
+    @Test
+    fun deletingUnknownModelFailsWithoutChangingTheCatalog() {
         val original = ModelCatalogPolicy.normalize(
             ModelCatalogDocument(7L, entryA.modelId, listOf(entryA, entryB)),
         )
         val originalBytes = ModelCatalogCodec.encode(original)
 
         assertThrows(IllegalArgumentException::class.java) {
-            ModelCatalogPolicy.deleteUnselected(original, entryA.modelId)
-        }
-        assertThrows(IllegalArgumentException::class.java) {
-            ModelCatalogPolicy.deleteUnselected(original, "litertlm.${"ff".repeat(16)}")
+            ModelCatalogPolicy.delete(original, "litertlm.${"ff".repeat(16)}")
         }
 
         assertTrue(originalBytes.contentEquals(ModelCatalogCodec.encode(original)))
@@ -243,7 +259,19 @@ class ModelCatalogTest {
     fun catalogWithoutASelectionCanDeleteItsLastModel() {
         val original = ModelCatalogDocument(3L, null, listOf(entryA))
 
-        val deletion = ModelCatalogPolicy.deleteUnselected(original, entryA.modelId)
+        val deletion = ModelCatalogPolicy.delete(original, entryA.modelId)
+
+        assertEquals(entryA, deletion.model)
+        assertEquals(null, deletion.document.selectedModelId)
+        assertTrue(deletion.document.entries.isEmpty())
+        assertEquals(4L, deletion.document.revision)
+    }
+
+    @Test
+    fun deletingTheOnlySelectedModelLeavesAValidEmptyCatalog() {
+        val original = ModelCatalogDocument(3L, entryA.modelId, listOf(entryA))
+
+        val deletion = ModelCatalogPolicy.delete(original, entryA.modelId)
 
         assertEquals(entryA, deletion.model)
         assertEquals(null, deletion.document.selectedModelId)

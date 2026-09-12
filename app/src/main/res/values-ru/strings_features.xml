@@ -110,7 +110,7 @@
     <string name="chat_bubble_style_none">Без окрашивания</string>
     <string name="chat_bubble_style_background">Окрашивание фона</string>
     <string name="chat_bubble_style_border">Окрашивание рамки</string>
-    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 недоступен; будет использован вариант &quot;Следовать системе&quot;</string>
+    <string name="app_settings_follow_autojs6_fallback_subtitle">AutoJs6 недоступен; будет использован вариант %1$s</string>
     <string name="online_ai_base_url_history">История базовых URL</string>
     <string name="online_ai_base_url_history_empty">Сохраненных базовых URL HTTPS пока нет</string>
     <string name="online_ai_base_url_history_manage">Управление историей</string>

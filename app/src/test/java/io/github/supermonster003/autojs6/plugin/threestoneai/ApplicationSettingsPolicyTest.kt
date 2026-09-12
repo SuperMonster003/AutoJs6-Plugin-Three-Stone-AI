@@ -27,6 +27,48 @@ class ApplicationSettingsPolicyTest {
     }
 
     @Test
+    fun `follow AutoJs6 theme uses host color or AutoJs6 default`() {
+        val settings = ApplicationSettings(themeSelection = AppThemeSelection.FOLLOW_AUTOJS6)
+
+        assertEquals(
+            AppSettingsPolicy.AUTOJS6_DEFAULT_THEME_COLOR,
+            AppSettingsPolicy.resolveThemeColor(settings, autoJs6ThemeColor = null),
+        )
+        assertEquals(
+            0xFF12ABEF.toInt(),
+            AppSettingsPolicy.resolveThemeColor(settings, autoJs6ThemeColor = 0x8012ABEF.toInt()),
+        )
+        assertEquals(
+            0xFF654321.toInt(),
+            AppSettingsPolicy.resolveThemeColor(
+                settings.copy(
+                    themeSelection = AppThemeSelection.CUSTOM,
+                    customThemeColor = 0x80654321.toInt(),
+                ),
+                autoJs6ThemeColor = 0xFF12ABEF.toInt(),
+            ),
+        )
+    }
+
+    @Test
+    fun `resolved host language tags map to supported labels`() {
+        assertEquals(
+            AppLanguage.CHINESE_SIMPLIFIED,
+            AppSettingsPolicy.languageForResolvedTag("zh-CN"),
+        )
+        assertEquals(
+            AppLanguage.CHINESE_TRADITIONAL_HONG_KONG,
+            AppSettingsPolicy.languageForResolvedTag("zh-Hant-HK"),
+        )
+        assertEquals(
+            AppLanguage.CHINESE_TRADITIONAL_TAIWAN,
+            AppSettingsPolicy.languageForResolvedTag("zh-TW"),
+        )
+        assertEquals(AppLanguage.ENGLISH, AppSettingsPolicy.languageForResolvedTag("en-US"))
+        assertNull(AppSettingsPolicy.languageForResolvedTag("und"))
+    }
+
+    @Test
     fun `AutoJs6 luminance policy selects readable foreground`() {
         assertEquals(0xFF000000.toInt(), AppColorPolicy.onThemeColor(0xFFFFDEAD.toInt(), false))
         assertEquals(0xFFFFFFFF.toInt(), AppColorPolicy.onThemeColor(0xFF263238.toInt(), false))
@@ -34,8 +76,36 @@ class ApplicationSettingsPolicyTest {
             AppColorPolicy.contrastRatio(
                 AppColorPolicy.readableAccent(0xFFFFDEAD.toInt(), 0xFFFFFFFF.toInt()),
                 0xFFFFFFFF.toInt(),
-            ) >= 3.0,
+            ) >= 4.5,
         )
+    }
+
+    @Test
+    fun `bright action fills stay separate from readable text accents`() {
+        val seed = 0xFFFFDEAD.toInt()
+        val background = 0xFFFFFFFF.toInt()
+        val accent = AppColorPolicy.readableAccent(seed, background)
+        val onFill = AppColorPolicy.onFilledColor(seed)
+
+        assertTrue(AppColorPolicy.luminance(seed) > AppColorPolicy.luminance(accent))
+        assertTrue(AppColorPolicy.contrastRatio(seed, onFill) >= 4.5)
+        assertTrue(AppColorPolicy.contrastRatio(accent, background) >= 4.5)
+    }
+
+    @Test
+    fun `readable accent preserves hue and stops at requested contrast`() {
+        listOf(
+            0xFFE89A00.toInt() to 0xFFF5F5F5.toInt(),
+            0xFF805000.toInt() to 0xFF121212.toInt(),
+            0xFFE89A00.toInt() to 0xFFAAAAAA.toInt(),
+        ).forEach { (seed, background) ->
+            val accent = AppColorPolicy.readableAccent(seed, background)
+            val contrast = AppColorPolicy.contrastRatio(accent, background)
+
+            assertTrue(contrast >= 4.5)
+            assertTrue(contrast < 4.55)
+            assertTrue(hueDistance(hue(seed), hue(accent)) < 1.0)
+        }
     }
 
     @Test
@@ -92,5 +162,26 @@ class ApplicationSettingsPolicyTest {
         assertEquals("CHANGELOG-zh-Hant-TW.md", ReleaseHistoryAssetPolicy.assetFor(Locale.forLanguageTag("zh-Hant-TW")))
         assertEquals("CHANGELOG-ja.md", ReleaseHistoryAssetPolicy.assetFor(Locale.JAPANESE))
         assertEquals("CHANGELOG-en.md", ReleaseHistoryAssetPolicy.assetFor(Locale.GERMAN))
+    }
+
+    private fun hue(color: Int): Double {
+        val red = (color shr 16 and 0xFF) / 255.0
+        val green = (color shr 8 and 0xFF) / 255.0
+        val blue = (color and 0xFF) / 255.0
+        val maximum = maxOf(red, green, blue)
+        val minimum = minOf(red, green, blue)
+        val range = maximum - minimum
+        if (range == 0.0) return 0.0
+        val sector = when (maximum) {
+            red -> (green - blue) / range
+            green -> (blue - red) / range + 2.0
+            else -> (red - green) / range + 4.0
+        }
+        return (sector * 60.0 + 360.0) % 360.0
+    }
+
+    private fun hueDistance(first: Double, second: Double): Double {
+        val distance = kotlin.math.abs(first - second)
+        return minOf(distance, 360.0 - distance)
     }
 }

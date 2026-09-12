@@ -28,7 +28,6 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ui.filledButton
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.hairline
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.iconButton
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.inputDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
@@ -78,7 +77,6 @@ class ModelManagerActivity : ConfiguredActivity() {
     private var cancellableOperationId: Long? = null
     private var cancellableDownloadOperationId: Long? = null
     private var downloadedDestination: ModelDownloadState.Succeeded<Uri>? = null
-    private var pendingDownloadModelId: String? = null
     private var lastNotifiedImportOperationId = 0L
     private var lastNotifiedDownloadOperationId = 0L
     private var lastNotifiedSelectionOperationId = 0L
@@ -99,7 +97,6 @@ class ModelManagerActivity : ConfiguredActivity() {
         super.onCreate(savedInstanceState)
         importCoordinator = ModelImportCoordinator.get(applicationContext)
         downloadCoordinator = ModelDownloadCoordinator.get(applicationContext)
-        pendingDownloadModelId = savedInstanceState?.getString(STATE_PENDING_DOWNLOAD_MODEL_ID)
         val restoredManagerNotifications = savedInstanceState?.takeIf { restored ->
             restored.getString(STATE_PROCESS_SESSION_TOKEN) == importCoordinator.processSessionToken
         }
@@ -190,7 +187,6 @@ class ModelManagerActivity : ConfiguredActivity() {
             STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID,
             lastNotifiedHealthCheckOperationId,
         )
-        outState.putString(STATE_PENDING_DOWNLOAD_MODEL_ID, pendingDownloadModelId)
         outState.putString(STATE_PROCESS_SESSION_TOKEN, importCoordinator.processSessionToken)
         outState.putString(
             STATE_DOWNLOAD_PROCESS_SESSION_TOKEN,
@@ -207,17 +203,11 @@ class ModelManagerActivity : ConfiguredActivity() {
                 data?.data?.let { uri -> importModel(uri, data.flags) }
             }
             REQUEST_CHOOSE_LITERT_MODEL -> if (resultCode == RESULT_OK) {
-                data?.getStringExtra(LiteRtModelCatalogActivity.EXTRA_MODEL_ID)
+                val model = data?.getStringExtra(LiteRtModelCatalogActivity.EXTRA_MODEL_ID)
                     ?.let(RecommendedModelCatalog::find)
-                    ?.let(::confirmRecommendedModel)
-            }
-            REQUEST_CREATE_MODEL_DOWNLOAD -> {
-                val model = pendingDownloadModelId?.let(RecommendedModelCatalog::find)
-                pendingDownloadModelId = null
-                if (resultCode == RESULT_OK && model != null) {
+                if (model != null) {
                     data?.data?.let { uri -> downloadModel(model, uri, data.flags) }
                 }
-                updateDownloadButtonEnabled()
             }
         }
     }
@@ -374,62 +364,6 @@ class ModelManagerActivity : ConfiguredActivity() {
             Intent(this, LiteRtModelCatalogActivity::class.java),
             REQUEST_CHOOSE_LITERT_MODEL,
         )
-    }
-
-    private fun confirmRecommendedModel(model: RecommendedModel) {
-        materialDialog()
-            .setTitle(model.displayName)
-            .setMessage(
-                getString(
-                    R.string.download_confirm_message,
-                    Formatter.formatFileSize(this, model.expectedSizeBytes),
-                    model.expectedSha256,
-                    model.license,
-                ),
-            )
-            .setNegativeButton(android.R.string.cancel, null)
-            .setNeutralButton(R.string.button_view_model_source) { _, _ ->
-                openModelSource(model)
-            }
-            .setPositiveButton(R.string.button_choose_download_location) { _, _ ->
-                openDownloadDestinationPicker(model)
-            }
-            .show()
-            .also(::tintDialogButtons)
-    }
-
-    private fun openModelSource(model: RecommendedModel) {
-        runCatching {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(model.sourceUrl)))
-        }.onFailure {
-            showSnackbar(screenRoot, getString(R.string.download_source_unavailable), Snackbar.LENGTH_LONG)
-        }
-    }
-
-    @Suppress("DEPRECATION")
-    private fun openDownloadDestinationPicker(model: RecommendedModel) {
-        pendingDownloadModelId = model.id
-        updateDownloadButtonEnabled()
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/octet-stream"
-            putExtra(Intent.EXTRA_TITLE, model.fileName)
-            addFlags(
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION,
-            )
-        }
-        runCatching { startActivityForResult(intent, REQUEST_CREATE_MODEL_DOWNLOAD) }
-            .onFailure {
-                pendingDownloadModelId = null
-                updateDownloadButtonEnabled()
-                showSnackbar(
-                    screenRoot,
-                    getString(R.string.download_destination_unavailable),
-                    Snackbar.LENGTH_LONG,
-                )
-            }
     }
 
     private fun downloadModel(model: RecommendedModel, destination: Uri, grantedFlags: Int) {
@@ -921,10 +855,6 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun confirmModelDeletion(row: ModelManagerRow) {
-        if (row.selected) {
-            showSnackbar(screenRoot, getString(R.string.model_delete_selected_blocked), Snackbar.LENGTH_LONG)
-            return
-        }
         confirmDialog(
             title = getString(R.string.model_delete_confirm_title),
             message = getString(R.string.model_delete_confirm_message, row.displayName),
@@ -934,17 +864,11 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun deleteModel(modelId: String) {
-        val before = importCoordinator.managerState()
-        if (before.snapshot?.selectedModelId == modelId) {
-            renderManagerState(before)
-            showSnackbar(screenRoot, getString(R.string.model_delete_selected_blocked), Snackbar.LENGTH_LONG)
-            return
-        }
         val accepted = importCoordinator.beginDeletion(modelId)
         val after = importCoordinator.managerState()
         renderManagerState(after)
-        if (!accepted && after.snapshot?.selectedModelId == modelId) {
-            showSnackbar(screenRoot, getString(R.string.model_delete_selected_blocked), Snackbar.LENGTH_LONG)
+        if (!accepted) {
+            showSnackbar(screenRoot, getString(R.string.model_deletion_failed), Snackbar.LENGTH_LONG)
         }
     }
 
@@ -1067,7 +991,7 @@ class ModelManagerActivity : ConfiguredActivity() {
     private fun updateDownloadButtonEnabled() {
         if (!::downloadButton.isInitialized) return
         downloadButton.isEnabled = downloadStateAllowsStart &&
-            importStateAllowsPicker && !catalogMutationBlocksPicker && pendingDownloadModelId == null
+            importStateAllowsPicker && !catalogMutationBlocksPicker
     }
 
     private fun importFailureMessage(reason: ModelImportFailureReason): Int = when (reason) {
@@ -1123,7 +1047,6 @@ class ModelManagerActivity : ConfiguredActivity() {
 
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
-        const val REQUEST_CREATE_MODEL_DOWNLOAD = 1002
         const val REQUEST_CHOOSE_LITERT_MODEL = 1003
         const val MENU_CLEANUP_STORAGE = 2001
         const val ACTION_CHECK = 3001
@@ -1138,7 +1061,6 @@ class ModelManagerActivity : ConfiguredActivity() {
             "lastNotifiedStorageCleanupOperationId"
         const val STATE_LAST_NOTIFIED_HEALTH_CHECK_OPERATION_ID =
             "lastNotifiedHealthCheckOperationId"
-        const val STATE_PENDING_DOWNLOAD_MODEL_ID = "pendingDownloadModelId"
         const val STATE_PROCESS_SESSION_TOKEN = "processSessionToken"
         const val STATE_DOWNLOAD_PROCESS_SESSION_TOKEN = "downloadProcessSessionToken"
         const val PROGRESS_MAX = 10_000

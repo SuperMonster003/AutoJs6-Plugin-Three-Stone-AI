@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
@@ -494,7 +495,7 @@ class ChatActivity : ConfiguredActivity() {
         messagesColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipToPadding = false
-            setPaddingRelative(dp(16), dp(18), dp(16), dp(24))
+            setPaddingRelative(dp(12), dp(18), dp(12), dp(24))
             // Fade new messages in; keep size changes instant so streaming stays calm.
             layoutTransition = android.animation.LayoutTransition().apply {
                 disableTransitionType(android.animation.LayoutTransition.CHANGING)
@@ -672,10 +673,14 @@ class ChatActivity : ConfiguredActivity() {
 
             // The explicit Local/Cloud badge is a product invariant; keep it prominent.
             targetLocalityStatus = TextView(context).apply {
+                val mainColor = AppColorPolicy.readableAccent(
+                    appPalette.accent,
+                    appPalette.surfaceVariant,
+                )
                 textSize = 10.5f
                 typeface = Ui.mediumTypeface
-                setTextColor(appPalette.accent)
-                background = roundedFill(accentTone(appPalette.accent), Ui.RADIUS_BUBBLE)
+                setTextColor(mainColor)
+                background = roundedFill(Color.TRANSPARENT, Ui.RADIUS_BUBBLE, mainColor)
                 setPaddingRelative(dp(8), dp(2), dp(8), dp(2))
             }
             addView(
@@ -964,7 +969,6 @@ class ChatActivity : ConfiguredActivity() {
                 if (conversation.id != currentConversationId) switchConversation(conversation.id)
             }
             setOnLongClickListener {
-                drawerLayout.closeDrawer(GravityCompat.START)
                 showDrawerHistoryActions(conversation)
                 true
             }
@@ -1049,6 +1053,7 @@ class ChatActivity : ConfiguredActivity() {
                     messages.clear()
                     allowDeletedConversationRevival = false
                     startNewConversation()
+                    refreshDrawerHistory()
                 } else {
                     historyStore.delete(setOf(conversation.id))
                     refreshDrawerHistory()
@@ -1299,21 +1304,21 @@ class ChatActivity : ConfiguredActivity() {
                 },
             )
 
-            val onAccent = AppColorPolicy.onThemeColor(appPalette.accent, appPalette.isDark)
+            val onPrimary = appPalette.onPrimary
             sendButton = android.widget.ImageButton(context).apply {
                 scaleType = ImageView.ScaleType.CENTER
                 background = roundedRippleFill(
                     android.graphics.Color.WHITE,
-                    AppColorPolicy.withAlpha(onAccent, 0x33),
+                    AppColorPolicy.withAlpha(onPrimary, 0x33),
                     COMPOSER_CORNER_RADIUS_DP,
                 )
                 backgroundTintList = ColorStateList(
                     arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
-                    intArrayOf(appPalette.surfaceVariant, appPalette.accent),
+                    intArrayOf(appPalette.surfaceVariant, appPalette.primary),
                 )
                 imageTintList = ColorStateList(
                     arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
-                    intArrayOf(AppColorPolicy.withAlpha(appPalette.secondaryText, 0x99), onAccent),
+                    intArrayOf(AppColorPolicy.withAlpha(appPalette.secondaryText, 0x99), onPrimary),
                 )
                 setImageResource(R.drawable.ic_send_24)
                 contentDescription = getString(R.string.chat_send)
@@ -1578,7 +1583,11 @@ class ChatActivity : ConfiguredActivity() {
         // Typing stays available while a reply streams; only sending is deferred.
         input.isEnabled = targetReady
         input.hint = getString(
-            if (targetReady) R.string.chat_input_hint else R.string.chat_input_no_target_hint,
+            when {
+                targetReady -> R.string.chat_input_hint
+                isConversationLocalModelDeleted() -> R.string.chat_input_local_model_deleted_hint
+                else -> R.string.chat_input_no_target_hint
+            },
         )
         sendButton.setImageResource(
             if (isGenerating) R.drawable.ic_stop_24 else R.drawable.ic_send_24,
@@ -1715,9 +1724,9 @@ class ChatActivity : ConfiguredActivity() {
         val contentWidth = messagesColumn.width -
             messagesColumn.paddingStart - messagesColumn.paddingEnd
         return if (contentWidth > 0) {
-            (contentWidth * 0.78f).toInt()
+            contentWidth
         } else {
-            (resources.displayMetrics.widthPixels * 0.7f).toInt()
+            (resources.displayMetrics.widthPixels - dp(24)).coerceAtLeast(dp(1))
         }
     }
 
@@ -3097,6 +3106,13 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun isConversationTargetReady(): Boolean {
         return isTargetReady(resolvedConversationTarget())
+    }
+
+    private fun isConversationLocalModelDeleted(): Boolean {
+        val snapshot = conversationTarget ?: return false
+        return snapshot.locality == AiTargetLocality.LOCAL &&
+            targetCatalogAvailability == TargetCatalogAvailability.READY &&
+            resolvedConversationTarget() == null
     }
 
     private fun isTargetReady(target: AiTarget?): Boolean =

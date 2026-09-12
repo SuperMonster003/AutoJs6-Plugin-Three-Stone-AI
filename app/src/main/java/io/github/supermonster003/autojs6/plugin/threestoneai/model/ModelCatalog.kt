@@ -134,16 +134,25 @@ internal object ModelCatalogPolicy {
         return ModelCatalogUpdate(updated, selected, changed = true)
     }
 
-    /** Removes an existing immutable generation while preserving the selected model pointer. */
-    fun deleteUnselected(document: ModelCatalogDocument, modelId: String): ModelCatalogDeletion {
+    /**
+     * Removes an existing immutable generation. Deleting the selected generation atomically moves
+     * the pointer to the first remaining catalog row, or clears it when the catalog becomes empty.
+     */
+    fun delete(document: ModelCatalogDocument, modelId: String): ModelCatalogDeletion {
         val current = normalize(document)
         val target = current.entries.singleOrNull { it.modelId == modelId }
             ?: throw IllegalArgumentException("Deleted model is not present in the catalog")
-        require(current.selectedModelId != modelId) { "The selected model cannot be deleted" }
+        val remaining = current.entries.filterNot { it.modelId == modelId }
+        val selectedModelId = if (current.selectedModelId == modelId) {
+            remaining.firstOrNull()?.modelId
+        } else {
+            current.selectedModelId
+        }
         val updated = normalize(
             current.copy(
                 revision = Math.addExact(current.revision, 1L),
-                entries = current.entries.filterNot { it.modelId == modelId },
+                selectedModelId = selectedModelId,
+                entries = remaining,
             ),
         )
         return ModelCatalogDeletion(updated, target)

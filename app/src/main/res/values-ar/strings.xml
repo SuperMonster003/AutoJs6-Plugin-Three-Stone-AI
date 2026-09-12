@@ -59,7 +59,6 @@
     <string name="model_none">لا يوجد نموذج مهيأ</string>
     <string name="model_delete_confirm_title">حذف النموذج?</string>
     <string name="model_delete_confirm_message">هل تريد حذف النموذج "%1$s"? لا يمكن التراجع عن هذا الإجراء.</string>
-    <string name="model_delete_selected_blocked">لا يمكن حذف النموذج المحدد. اختر نموذجا آخر أولا.</string>
     <string name="model_deletion_failed">فشل حذف النموذج</string>
     <string name="model_deletion_succeeded">تم حذف النموذج</string>
     <string name="model_health_available">متاح</string>
@@ -115,6 +114,8 @@
     <string name="chat_suggestion_plan">حول فكرة إلى خطة خطوة بخطوة</string>
     <string name="chat_input_hint">إرسال رسالة إلى الهدف المحدد</string>
     <string name="chat_input_no_target_hint">اختر هدفا قبل المحادثة</string>
+    <string name="chat_input_local_model_deleted_hint">تم حذف النموذج المحلي المستخدم في هذه المحادثة</string>
+    <string name="litert_catalog_imported">تم الاستيراد</string>
     <string name="chat_send">إرسال</string>
     <string name="chat_stop">إيقاف</string>
     <string name="chat_thinking">في انتظار الهدف...</string>
@@ -219,6 +220,7 @@
     <string name="app_settings_custom_color_title">لون سمة مخصص</string>
     <string name="app_settings_dark_mode">الوضع الداكن</string>
     <string name="app_settings_follow_autojs6">اتباع AutoJs6</string>
+    <string name="app_settings_follow_autojs6_summary">اتباع AutoJs6 · %1$s</string>
     <string name="app_settings_follow_system">اتباع النظام</string>
     <string name="app_settings_information">المعلومات</string>
     <string name="app_settings_language">اللغة</string>
@@ -226,7 +228,6 @@
     <string name="app_settings_theme_blue">أزرق</string>
     <string name="app_settings_theme_color">لون السمة</string>
     <string name="app_settings_theme_custom">مخصص</string>
-    <string name="app_settings_theme_follow_summary">اتباع AutoJs6 (%1$s)</string>
     <string name="app_settings_theme_green">أخضر</string>
     <string name="app_settings_theme_three_stone_ai">برتقالي</string>
     <string name="app_settings_theme_purple">أرجواني</string>

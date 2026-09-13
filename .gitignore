@@ -51,3 +51,5 @@ __pycache__/
 app/build/
 build-logic/build/
 build-logic/*/build/
+*.keystore
+*.pre-platform-versions.bak

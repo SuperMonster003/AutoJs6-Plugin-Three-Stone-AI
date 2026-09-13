@@ -1,10 +1,19 @@
 {
-  "changelog_label_hint": "Conseil",
-  "changelog_label_feature": "Fonction",
-  "changelog_label_fix": "Correction",
+  "changelog_label_hint": "Note",
+  "changelog_label_feature": "Fonctionnalité",
+  "changelog_label_fix": "Correctif",
   "changelog_label_improvement": "Amélioration",
   "changelog_label_dependency": "Dépendance",
   "$data": {
+    "v1.1.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "Ressources traduites cohérentes, activation explicite du plugin et validation des paquets de publication"
+      ],
+      "fix": [
+        "Conserver la date de version du plugin en anglais quelle que soit la langue de la machine de compilation"
+      ]
+    },
     "v1.1.1": {
       "released_date": "2026/09/12",
       "feature": [

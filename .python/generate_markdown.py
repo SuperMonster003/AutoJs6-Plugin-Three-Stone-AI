@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import argparse
 import json
 import re
 from pathlib import Path
@@ -132,7 +133,15 @@ def build_readme_values(code, languages, changelogs):
     return content
 
 
+CHECK_MODE = False
+CHECK_DIFFERENCES = []
+
+
 def write_text(path: Path, content: str):
+    if CHECK_MODE:
+        if not path.is_file() or path.read_bytes() != content.encode("utf-8"):
+            CHECK_DIFFERENCES.append(str(path.relative_to(ROOT)))
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8", newline="\n")
     print(f"Generated {path.relative_to(ROOT)}")
@@ -159,12 +168,22 @@ def generate_changelogs(languages, changelogs):
             write_text(ANDROID_CHANGELOG_DIR / "CHANGELOG.md", output)
 
 
-def main():
+def main(argv=None):
+    global CHECK_MODE
+    parser = argparse.ArgumentParser(description="Generate or verify localized documentation")
+    parser.add_argument("--check", action="store_true", help="check generated files without writing")
+    CHECK_MODE = parser.parse_args(argv).check
+    CHECK_DIFFERENCES.clear()
     if LANGUAGE_CODE_DEFAULT not in LANGUAGE_CODES:
         raise ValueError(f"Default language code {LANGUAGE_CODE_DEFAULT!r} is not supported")
     languages, changelogs = load_languages()
     generate_changelogs(languages, changelogs)
     generate_readmes(languages, changelogs)
+
+    if CHECK_DIFFERENCES:
+        raise SystemExit("Generated documentation drift: " + ", ".join(CHECK_DIFFERENCES))
+    if CHECK_MODE:
+        print("Markdown check passed; no files written")
 
 
 if __name__ == "__main__":

@@ -169,6 +169,13 @@ AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 cat
 
 ******
 
+# v1.1.2
+
+###### 2026/09/13
+
+* `수정` 빌드 환경의 언어와 관계없이 플러그인 버전 날짜를 영어로 유지
+* `개선` 다국어 리소스 통일, 명시적인 플러그인 활성화 및 릴리스 산출물 검증
+
 # v1.1.1
 
 ###### 2026/09/12
@@ -217,21 +224,6 @@ AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 cat
 * `개선` 로컬 `local:*` 및 온라인 `profile:*` target을 Application 수준의 단일 catalog와 dispatcher로 통합하고 AI Provider V2에서 둘 다 직접 공개; 현재 catalog에서 provider locality, credential mode, HTTPS origins를 동적으로 도출하며 자격 증명 byte는 공개하지 않음
 * `개선` README 레이아웃과 Gradle 플랫폼 버전 관리 방식을 통일
 * `개선` 업데이트 대화상자의 릴리스 기록 버튼에서 내장 릴리스 기록 페이지를 열도록 변경
-
-# v1.0.0
-
-###### 2026/08/08
-
-* `기능` 플러그인 ID 및 엔진 `three-stone-ai`, provider ID `autojs6.three-stone-ai`, 변형 `default`인 기기 내 AI Provider 기반
-* `기능` System, user 및 assistant 기록과 credit 제어 스트리밍을 지원하는 CPU-only LiteRT-LM 일반 텍스트 생성
-* `기능` 8 GiB 상한, 여유 공간 예약, SHA-256, fsync 및 원자적 활성화를 포함한 `.litertlm`의 앱 전용 저장소 SAF 가져오기
-* `기능` 단일 활성 세션, 제한된 I/O, descriptor quota, 취소, timeout, 단일 종료 상태 및 동일 서명 AutoJs6 호출자 검증
-* `기능` Reasoning, tools, structured JSON, usage, 네트워크 및 credential 기능의 명시적 미지원
-* `기능` arm64-v8a, x86_64 및 universal APK와 10개 언어 README, changelog, Android UI 및 플러그인 안내
-* `기능` 전체 모델 카탈로그와 앱 전용 저장소 사용량을 확인하고 모델 파일을 복사하지 않은 채 현재 모델을 원자적으로 전환하는 모델 관리 화면
-* `개선` `:provider`와의 프로세스 간 경쟁을 피하기 위해 교체 가져오기 후에도 이전 SHA-256 hash 이름 모델 세대를 보존하며 보존 파일은 앱 전용 저장소를 계속 사용
-* `개선` Activity 재생성 연속성, 콜드 스타트 복구, stale 임시 파일 cleanup 및 현재 시도가 만들고 게시하지 않은 destination으로 제한된 삭제를 위해 application scope 단일 가져오기 coordinator와 fsync된 pending journal을 추가하고 게시됨, current 및 이전 hash 세대를 보존
-* `의존성` 기기 내 CPU 텍스트 생성을 위해 LiteRT-LM 0.15.0 추가
 
 ##### 추가 릴리스
 

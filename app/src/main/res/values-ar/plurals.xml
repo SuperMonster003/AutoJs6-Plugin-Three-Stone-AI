@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="app_update_ignored_count">
+        <item quantity="zero">لا إصدارات متجاهلة</item>
+        <item quantity="one">إصدار واحد متجاهل</item>
+        <item quantity="two">إصداران متجاهلان</item>
+        <item quantity="few">%1$d إصدارات متجاهلة</item>
+        <item quantity="many">%1$d إصدارا متجاهلا</item>
+        <item quantity="other">%1$d إصدار متجاهل</item>
+    </plurals>
+</resources>

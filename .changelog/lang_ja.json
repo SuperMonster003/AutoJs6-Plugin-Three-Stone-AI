@@ -5,6 +5,15 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.1.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "多言語リソースの統一, プラグイン有効化の明確化, リリース成果物の検証"
+      ],
+      "fix": [
+        "ビルド環境の言語にかかわらずプラグインのバージョン日付を英語で表示"
+      ]
+    },
     "v1.1.1": {
       "released_date": "2026/09/12",
       "feature": [

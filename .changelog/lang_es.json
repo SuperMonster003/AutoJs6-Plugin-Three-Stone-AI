@@ -1,10 +1,19 @@
 {
-  "changelog_label_hint": "Consejo",
+  "changelog_label_hint": "Aviso",
   "changelog_label_feature": "Función",
   "changelog_label_fix": "Corrección",
   "changelog_label_improvement": "Mejora",
   "changelog_label_dependency": "Dependencia",
   "$data": {
+    "v1.1.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "Recursos traducidos coherentes, activación explícita del complemento y validación de los paquetes de publicación"
+      ],
+      "fix": [
+        "Mantener la fecha de versión del complemento en inglés sin depender del idioma del equipo de compilación"
+      ]
+    },
     "v1.1.1": {
       "released_date": "2026/09/12",
       "feature": [

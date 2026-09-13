@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="navigation_open_drawer">打开导航抽屉</string>
-    <string name="drawer_restart">重启</string>
     <string name="drawer_exit">退出</string>
+    <string name="drawer_restart">重启</string>
+    <string name="navigation_open_drawer">打开导航抽屉</string>
 </resources>

@@ -5,6 +5,15 @@
   "changelog_label_improvement": "개선",
   "changelog_label_dependency": "의존성",
   "$data": {
+    "v1.1.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "다국어 리소스 통일, 명시적인 플러그인 활성화 및 릴리스 산출물 검증"
+      ],
+      "fix": [
+        "빌드 환경의 언어와 관계없이 플러그인 버전 날짜를 영어로 유지"
+      ]
+    },
     "v1.1.1": {
       "released_date": "2026/09/12",
       "feature": [

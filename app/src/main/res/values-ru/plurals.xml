@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="app_update_ignored_count">
+        <item quantity="one">Игнорируется %1$d выпуск</item>
+        <item quantity="few">Игнорируется %1$d выпуска</item>
+        <item quantity="many">Игнорируется %1$d выпусков</item>
+        <item quantity="other">Игнорируется %1$d выпуска</item>
+    </plurals>
+</resources>

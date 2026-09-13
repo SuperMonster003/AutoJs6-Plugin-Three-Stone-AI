@@ -38,18 +38,67 @@ jobs:
       - name: Unit tests, debug APKs and lint
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --stacktrace
+          ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug :app:verifyDebugNativePageAlignment --stacktrace
+      - name: Preserve APKs and native alignment evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: stone-debug-apks
+          path: app/build/outputs/apk
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: stone-native-alignment
+          path: app/build/reports/native-alignment
+          if-no-files-found: error
+
+  abi:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, x86_64]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: stone-debug-apks
+          path: ci-apks
+      - name: Verify each actual native split
+        run: python3 .github/scripts/verify_apk_contract.py --apk-dir ci-apks --abi '${{ matrix.abi }}'
+
+  binder:
+    name: Discovery on ${{ matrix.page_size }} byte pages
+    needs: [verify, abi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: google_apis
+            page_size: 4096
+          - target: google_apis_ps16k
+            page_size: 16384
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: stone-debug-apks
+          path: ci-apks
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      # The discovery test does not substitute for model, OEM or 16 KB acceptance.
+      # This executes discovery on the real page size; model inference and OEM acceptance remain separate.
       - name: Execute permission, discovery and Binder contract tests
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
           api-level: 35
           arch: x86_64
-          target: google_apis
+          target: ${{ matrix.target }}
           disable-animations: true
-          script: ./gradlew --no-daemon --max-workers=2 :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=io.github.supermonster003.autojs6.plugin.threestoneai.PluginDiscoveryAndroidTest --stacktrace
+          script: python3 .github/scripts/verify_apk_contract.py --apk-dir ci-apks --abi x86_64 --pagesize ${{ matrix.page_size }}

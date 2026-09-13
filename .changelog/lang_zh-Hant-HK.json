@@ -5,6 +5,15 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "依賴",
   "$data": {
+    "v1.1.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "統一多語言資源, 明確插件啟用契約並驗證發佈產物"
+      ],
+      "fix": [
+        "外掛版本日期固定使用英文, 不隨建置機器的語言變化"
+      ]
+    },
     "v1.1.1": {
       "released_date": "2026/09/12",
       "feature": [

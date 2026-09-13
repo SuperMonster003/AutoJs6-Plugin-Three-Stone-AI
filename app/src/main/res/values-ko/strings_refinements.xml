@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="navigation_open_drawer">탐색 창 열기</string>
-    <string name="drawer_restart">다시 시작</string>
     <string name="drawer_exit">종료</string>
+    <string name="drawer_restart">다시 시작</string>
+    <string name="navigation_open_drawer">탐색 창 열기</string>
 </resources>

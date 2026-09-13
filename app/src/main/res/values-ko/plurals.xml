@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="app_update_ignored_count">
+        <item quantity="other">무시한 릴리스 %1$d개</item>
+    </plurals>
+</resources>

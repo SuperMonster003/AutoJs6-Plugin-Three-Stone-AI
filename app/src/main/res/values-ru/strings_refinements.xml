@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="navigation_open_drawer">Открыть панель навигации</string>
-    <string name="drawer_restart">Перезапустить</string>
     <string name="drawer_exit">Выйти</string>
+    <string name="drawer_restart">Перезапустить</string>
+    <string name="navigation_open_drawer">Открыть панель навигации</string>
 </resources>

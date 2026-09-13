@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="app_update_ignored_count">
+        <item quantity="one">%1$d version ignorée</item>
+        <item quantity="many">%1$d versions ignorées</item>
+        <item quantity="other">%1$d versions ignorées</item>
+    </plurals>
+</resources>

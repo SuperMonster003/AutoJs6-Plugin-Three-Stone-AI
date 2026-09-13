@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="model_item_actions">모델 작업</string>
     <string name="chat_scroll_to_bottom">맨 아래로 스크롤</string>
+    <string name="model_item_actions">모델 작업</string>
 </resources>

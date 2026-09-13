@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="model_item_actions">Actions du modèle</string>
     <string name="chat_scroll_to_bottom">Faire défiler vers le bas</string>
+    <string name="model_item_actions">Actions du modèle</string>
 </resources>

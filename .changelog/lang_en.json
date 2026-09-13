@@ -5,6 +5,15 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.1.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "Consistent localized resources, explicit plugin activation and validated release preparation"
+      ],
+      "fix": [
+        "Keep the plugin version date in English regardless of the build machine locale"
+      ]
+    },
     "v1.1.1": {
       "released_date": "2026/09/12",
       "feature": [

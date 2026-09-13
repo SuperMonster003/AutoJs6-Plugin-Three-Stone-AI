@@ -169,6 +169,13 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.1.2
+
+###### 2026/09/13
+
+* `Fix` Keep the plugin version date in English regardless of the build machine locale
+* `Improvement` Consistent localized resources, explicit plugin activation and validated release preparation
+
 # v1.1.1
 
 ###### 2026/09/12
@@ -217,21 +224,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Improvement` Merged local `local:*` and online `profile:*` targets into one application-level catalog and dispatcher, exposed both directly through AI Provider V2, and derived provider locality, credential mode, and allowed HTTPS origins from the current catalog without exposing credential bytes
 * `Improvement` Standardize the README layout and Gradle platform version management
 * `Improvement` Open the built-in release history page from the release history button in the update dialog
-
-# v1.0.0
-
-###### 2026/08/08
-
-* `Feature` AI Provider foundation with plugin ID and engine `three-stone-ai`, provider ID `autojs6.three-stone-ai`, and variant `default`
-* `Feature` CPU-only LiteRT-LM plain-text generation with system, user, and assistant history plus credit-backed streaming
-* `Feature` SAF import of `.litertlm` into app-private storage with an 8 GiB limit, free-space reserve, SHA-256, fsync, and atomic activation
-* `Feature` One active session, bounded I/O, descriptor quotas, cancellation, timeout, one terminal state, and same-signature AutoJs6 caller verification
-* `Feature` Explicit omission of reasoning, tools, structured JSON, usage, network, and credential capabilities
-* `Feature` arm64-v8a, x86_64, and universal APKs plus README, changelog, Android UI, and plugin instructions in 10 languages
-* `Feature` A model management screen for viewing the complete model catalog and private-storage usage, with atomic current-model selection that does not copy model files
-* `Improvement` Retained previous model generations named by SHA-256 hash after replacement imports to avoid cross-process `:provider` races, with retained files continuing to occupy app-private storage
-* `Improvement` Added an application-scoped single-import coordinator and fsynced pending journal for Activity-recreation continuity, cold-start recovery, stale temp cleanup, and deletion restricted to destinations created by the current attempt and never published, while preserving published, current, and historical hash generations
-* `Dependency` Added LiteRT-LM 0.15.0 for on-device CPU text generation
 
 ##### For more releases
 

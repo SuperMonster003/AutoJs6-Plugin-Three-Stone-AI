@@ -169,6 +169,13 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 ******
 
+# v1.1.2
+
+###### 2026/09/13
+
+* `修复` 插件版本日期固定使用英文, 不随构建机器的语言变化
+* `优化` 统一多语言资源, 明确插件激活契约并校验发布产物
+
 # v1.1.1
 
 ###### 2026/09/12
@@ -217,21 +224,6 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 * `优化` 将本地 `local:*` 与在线 `profile:*` 目标合入 Application 级统一目录及分发层, 通过 AI Provider V2 直接公开二者, 并从当前目录动态推导 provider locality, credential mode 和 HTTPS origins, 不公开凭据字节
 * `优化` 统一 README 版式与 Gradle 平台版本管理方式
 * `优化` 插件更新对话框的发行历史按钮改为打开内置发行历史页面
-
-# v1.0.0
-
-###### 2026/08/08
-
-* `新增` 设备端 AI Provider 基础实现, 插件 ID 和引擎为 `three-stone-ai`, provider ID 为 `autojs6.three-stone-ai`, 变体为 `default`
-* `新增` CPU-only LiteRT-LM 纯文本生成, 支持 system, user 和 assistant 历史及 credit 背压流式输出
-* `新增` 通过 SAF 导入 `.litertlm` 到应用私有存储, 包含 8 GiB 上限, 空间预留, SHA-256, fsync 和原子激活
-* `新增` 单活动会话, 有界 I/O, descriptor 配额, 取消, 超时, 唯一终态及同签名 AutoJs6 调用方核验
-* `新增` 明确不声明 reasoning, tools, structured JSON, usage, 网络或 credential 能力
-* `新增` arm64-v8a, x86_64 和 universal APK, 以及 10 种语言的 README, 更新日志, Android 界面和插件说明
-* `新增` 模型管理界面可查看完整模型目录和私有存储占用, 并在不复制模型文件的前提下原子切换当前模型
-* `优化` 为避免独立 `:provider` 进程竞态, 替换导入后保留先前以 SHA-256 hash 命名的模型代际, 保留文件会继续占用应用私有存储
-* `优化` 增加应用级单导入协调器和 fsync pending journal, 在 Activity 重建时保持导入, 支持冷启动恢复和 stale 临时文件清理, 删除仅限本次新建而从未发布的 destination, 并保留已发布, current 和历史 hash 代际
-* `依赖` 附加 LiteRT-LM 0.15.0, 用于设备端 CPU 文本生成
 
 ##### 更多版本
 

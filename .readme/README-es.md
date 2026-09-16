@@ -169,6 +169,12 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ******
 
+# v1.1.4
+
+###### 2026/09/16
+
+* `Mejora` Tras compileSdk, targetSdk sube a 37 (Android 17); el comportamiento del plugin no depende del nuevo objetivo
+
 # v1.1.3
 
 ###### 2026/09/15
@@ -181,15 +187,6 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 * `Corrección` Mantener la fecha de versión del complemento en inglés sin depender del idioma del equipo de compilación
 * `Mejora` Recursos traducidos coherentes, activación explícita del complemento y validación de los paquetes de publicación
-
-# v1.1.1
-
-###### 2026/09/12
-
-* `Función` Eliminar el modelo local seleccionado con selección automática de otro disponible y un aviso claro en las conversaciones que usan el modelo eliminado
-* `Mejora` Marcar los modelos importados en el catálogo y ofrecer directamente la confirmación de descarga y la selección del destino
-* `Mejora` Mejorar los resúmenes de ajustes que siguen AutoJs6, el contraste del tema y las acciones del historial de conversaciones
-* `Mejora` Verificación de compilación de la alineación de páginas de 16 KB en bibliotecas nativas de 64 bits, con controles del contrato manifest e informes JSON
 
 ##### Más versiones
 

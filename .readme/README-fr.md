@@ -169,6 +169,12 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 ******
 
+# v1.1.4
+
+###### 2026/09/16
+
+* `Amélioration` Après compileSdk, targetSdk passe à 37 (Android 17) ; le comportement du plugin ne dépend pas de la nouvelle cible
+
 # v1.1.3
 
 ###### 2026/09/15
@@ -181,15 +187,6 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 * `Correctif` Conserver la date de version du plugin en anglais quelle que soit la langue de la machine de compilation
 * `Amélioration` Ressources traduites cohérentes, activation explicite du plugin et validation des paquets de publication
-
-# v1.1.1
-
-###### 2026/09/12
-
-* `Fonctionnalité` Supprimer le modèle local sélectionné avec sélection automatique d'un modèle restant et un message clair dans les conversations utilisant le modèle supprimé
-* `Amélioration` Indiquer les modèles importés dans le catalogue et proposer directement la confirmation du téléchargement et le choix de l'emplacement de destination
-* `Amélioration` Améliorer les résumés des réglages suivant AutoJs6, le contraste des couleurs du thème et les actions de l'historique des conversations
-* `Amélioration` Vérification à la compilation de l'alignement des pages de 16 KB des bibliothèques natives 64 bits, avec contrôle du contrat manifest et rapports JSON
 
 ##### Autres versions
 

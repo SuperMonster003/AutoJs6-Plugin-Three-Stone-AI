@@ -169,6 +169,12 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.1.4
+
+###### 2026/09/16
+
+* `Improvement` Raise targetSdk to 37 (Android 17) after compileSdk; the plugin's behavior does not depend on the new target
+
 # v1.1.3
 
 ###### 2026/09/15
@@ -181,15 +187,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 * `Fix` Keep the plugin version date in English regardless of the build machine locale
 * `Improvement` Consistent localized resources, explicit plugin activation and validated release preparation
-
-# v1.1.1
-
-###### 2026/09/12
-
-* `Feature` Delete the selected local model with automatic selection of a remaining model and a clear notice in conversations that use the deleted model
-* `Improvement` Mark imported models in the catalog and provide download confirmation and destination selection directly from their cards
-* `Improvement` Improve settings summaries when following AutoJs6, theme color contrast, and chat history actions
-* `Improvement` Build verification of 16 KB page alignment for 64-bit native libraries, including manifest contract checks and JSON reports
 
 ##### For more releases
 

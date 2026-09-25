@@ -323,6 +323,9 @@
     <string name="online_ai_test_success">Prueba de conexión correcta</string>
     <string name="online_ai_test_timed_out">La prueba de conexión agotó el tiempo</string>
     <string name="online_ai_test_title">Probar la conexión?</string>
+    <string name="online_ai_vision_help">Seleccione solo modelos que admitan imágenes en este servicio. Las imágenes solicitadas por el anfitrión se enviarán al servicio seleccionado. Los modelos existentes permanecen desactivados hasta seleccionarlos.</string>
+    <string name="online_ai_vision_models">Modelos con entrada de imágenes</string>
+    <string name="online_ai_vision_none">Desactivado</string>
     <string name="online_ai_yes">Sí</string>
     <string name="plugin_description">Generación de texto con IA mediante modelos locales privados y servicios en línea configurados por el usuario</string>
     <string name="release_history_load_failed">No se pudo cargar el historial de versiones local</string>

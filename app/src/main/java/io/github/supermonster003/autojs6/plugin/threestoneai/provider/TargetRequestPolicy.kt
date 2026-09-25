@@ -76,6 +76,7 @@ internal object TargetRequestPolicy {
 
     private fun requiredCapabilities(request: AiProviderRequest): Set<String> = buildSet {
         addAll(request.options.requiredCapabilityIds)
+        if (request.messages.any { message -> message.parts.any { it.isImage } }) add(AiProviderCapabilityId.VISION)
         if (request.options.stream) add(AiProviderCapabilityId.STREAMING)
         if (request.options.includeReasoning) add(AiProviderCapabilityId.REASONING)
         if (request.options.structuredJson) add(AiProviderCapabilityId.STRUCTURED_JSON)

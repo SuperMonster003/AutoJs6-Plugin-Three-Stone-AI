@@ -24,7 +24,8 @@ internal object OnlineAiProfileCodec {
         "baseUrl",
         "modelId",
     )
-    private val PROFILE_KEYS = LEGACY_PROFILE_KEYS + "modelIds"
+    private val MULTI_MODEL_KEYS = LEGACY_PROFILE_KEYS + "modelIds"
+    private val PROFILE_KEYS = MULTI_MODEL_KEYS + "visionModelIds"
 
     fun encode(document: OnlineAiProfileDocument): ByteArray {
         val normalized = OnlineAiProfilePolicy.normalize(document)
@@ -35,7 +36,8 @@ internal object OnlineAiProfileCodec {
                 "\"providerId\":${quote(profile.provider.providerId)}," +
                 "\"baseUrl\":${quote(profile.baseUrl)}," +
                 "\"modelId\":${quote(profile.modelId)}," +
-                "\"modelIds\":${profile.modelIds.joinToString(",", "[", "]", transform = ::quote)}" +
+                "\"modelIds\":${profile.modelIds.joinToString(",", "[", "]", transform = ::quote)}," +
+                "\"visionModelIds\":${profile.visionModelIds.joinToString(",", "[", "]", transform = ::quote)}" +
                 "}"
         }
         return ("{" +
@@ -85,15 +87,18 @@ internal object OnlineAiProfileCodec {
         val decodedProfiles = requireNotNull(profiles)
         require(
             keys == DOCUMENT_KEYS &&
-                schema in setOf(OnlineAiProfilePolicy.LEGACY_SCHEMA, OnlineAiProfilePolicy.SCHEMA) &&
+                schema in setOf(OnlineAiProfilePolicy.LEGACY_SCHEMA, OnlineAiProfilePolicy.MULTI_MODEL_SCHEMA, OnlineAiProfilePolicy.SCHEMA) &&
                 defaultProfileIdRead,
         ) {
             "Online AI profile document is incomplete"
         }
-        if (schema == OnlineAiProfilePolicy.SCHEMA) {
+        if (schema != OnlineAiProfilePolicy.LEGACY_SCHEMA) {
             require(decodedProfiles.all(DecodedProfile::hasModelIds)) {
                 "Online AI profile model IDs are incomplete"
             }
+        }
+        require(decodedProfiles.all { it.hasVisionModelIds == (schema == OnlineAiProfilePolicy.SCHEMA) }) {
+            "Online AI image capabilities do not match the document schema"
         }
         return OnlineAiProfilePolicy.normalize(
             OnlineAiProfileDocument(
@@ -127,6 +132,7 @@ internal object OnlineAiProfileCodec {
         var baseUrl: String? = null
         var modelId: String? = null
         var modelIds: List<String>? = null
+        var visionModelIds: List<String>? = null
         val keys = linkedSetOf<String>()
         beginObject()
         while (hasNext()) {
@@ -139,10 +145,11 @@ internal object OnlineAiProfileCodec {
                 "baseUrl" -> baseUrl = nextStrictString("Online AI base URL")
                 "modelId" -> modelId = nextStrictString("Online AI model ID")
                 "modelIds" -> modelIds = readModelIds()
+                "visionModelIds" -> visionModelIds = readModelIds()
             }
         }
         endObject()
-        require(keys == LEGACY_PROFILE_KEYS || keys == PROFILE_KEYS) {
+        require(keys == LEGACY_PROFILE_KEYS || keys == MULTI_MODEL_KEYS || keys == PROFILE_KEYS) {
             "Online AI profile is incomplete"
         }
         val requiredModelId = requireNotNull(modelId)
@@ -154,8 +161,10 @@ internal object OnlineAiProfileCodec {
                 baseUrl = requireNotNull(baseUrl),
                 modelId = requiredModelId,
                 modelIds = modelIds ?: listOf(requiredModelId),
+                visionModelIds = visionModelIds ?: emptyList(),
             ),
             hasModelIds = modelIds != null,
+            hasVisionModelIds = visionModelIds != null,
         )
     }
 
@@ -212,7 +221,8 @@ internal object OnlineAiProfileCodec {
         val schema = nextStrictLong("Online AI profile schema")
         require(
             schema == OnlineAiProfilePolicy.LEGACY_SCHEMA.toLong() ||
-                schema == OnlineAiProfilePolicy.SCHEMA.toLong(),
+                schema == OnlineAiProfilePolicy.SCHEMA.toLong() ||
+                schema == OnlineAiProfilePolicy.MULTI_MODEL_SCHEMA.toLong(),
         ) { "Online AI profile schema is unsupported" }
         return schema.toInt()
     }
@@ -237,5 +247,6 @@ internal object OnlineAiProfileCodec {
     private data class DecodedProfile(
         val profile: OnlineAiProfile,
         val hasModelIds: Boolean,
+        val hasVisionModelIds: Boolean,
     )
 }

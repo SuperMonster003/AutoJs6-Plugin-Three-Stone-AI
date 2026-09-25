@@ -60,6 +60,8 @@ internal data class OnlineAiProfile(
     val modelId: String,
     /** Every model exposed by this credential destination, in user-defined display order. */
     val modelIds: List<String> = listOf(modelId),
+    /** Exact model IDs explicitly enabled by the user; never inferred from a protocol/name. */
+    val visionModelIds: List<String> = emptyList(),
 ) {
     val declaredHttpsOrigin: String
         get() = OnlineAiProfileUrls.origin(baseUrl)
@@ -71,6 +73,7 @@ internal data class OnlineAiProfile(
             baseUrl: String,
             modelId: String,
             modelIds: List<String> = listOf(modelId),
+            visionModelIds: List<String> = emptyList(),
         ): OnlineAiProfile = OnlineAiProfilePolicy.normalizeProfile(
             OnlineAiProfile(
                 profileId = UUID.randomUUID().toString(),
@@ -79,6 +82,7 @@ internal data class OnlineAiProfile(
                 baseUrl = baseUrl,
                 modelId = modelId,
                 modelIds = modelIds,
+                visionModelIds = visionModelIds,
             ),
         )
     }
@@ -109,7 +113,8 @@ internal data class OnlineAiProfileDeletion(
 )
 
 internal object OnlineAiProfilePolicy {
-    const val SCHEMA = 3
+    const val SCHEMA = 4
+    const val MULTI_MODEL_SCHEMA = 3
     const val LEGACY_SCHEMA = 2
     const val MAXIMUM_PROFILES = 100
     const val MAXIMUM_MODEL_ID_BYTES = 256
@@ -151,6 +156,10 @@ internal object OnlineAiProfilePolicy {
         require(modelIds.size <= MAXIMUM_MODELS_PER_PROFILE) {
             "An online AI profile has too many model IDs"
         }
+        val visionModelIds = profile.visionModelIds.map(::normalizeModelId)
+        require(visionModelIds.size == visionModelIds.distinct().size && visionModelIds.all { it in modelIds }) {
+            "Vision model IDs must be unique selected models"
+        }
         require(modelId in modelIds) { "The default online AI model ID must be selected" }
         return profile.copy(
             profileId = profileId,
@@ -158,6 +167,7 @@ internal object OnlineAiProfilePolicy {
             baseUrl = OnlineAiProfileUrls.normalize(profile.baseUrl),
             modelId = modelId,
             modelIds = modelIds,
+            visionModelIds = modelIds.filter { it in visionModelIds },
         )
     }
 

@@ -25,6 +25,7 @@ internal object OnlineAiTransportLimits {
     const val MAXIMUM_CONTEXT_BYTES = ThreeStoneAiPlugin.MAXIMUM_CONTEXT_BYTES
     const val MAXIMUM_OUTPUT_BYTES = ThreeStoneAiPlugin.MAXIMUM_OUTPUT_BYTES
     const val MAXIMUM_REQUEST_BYTES = 512L * 1024L
+    const val MAXIMUM_IMAGE_REQUEST_BYTES = 48L * 1024L * 1024L
     const val MAXIMUM_JSON_RESPONSE_BYTES = 8L * 1024L * 1024L
     const val MAXIMUM_ERROR_RESPONSE_BYTES = 64L * 1024L
     const val MAXIMUM_SSE_EVENT_BYTES = 1024L * 1024L
@@ -58,10 +59,11 @@ internal object OnlineAiRequestSupport {
         credential: ByteArray,
         credentialHeader: OnlineAiCredentialHeader,
         fixedHeaders: Map<String, String> = emptyMap(),
+        withImages: Boolean = false,
     ): PreparedOnlineAiRequest {
         requireCredential(credential)
         val content = json.toString().toByteArray(Charsets.UTF_8)
-        if (content.size.toLong() > OnlineAiTransportLimits.MAXIMUM_REQUEST_BYTES) {
+        if (content.size.toLong() > if (withImages) OnlineAiTransportLimits.MAXIMUM_IMAGE_REQUEST_BYTES else OnlineAiTransportLimits.MAXIMUM_REQUEST_BYTES) {
             content.fill(0)
             throw IllegalArgumentException("Online AI request body is too large")
         }
@@ -101,7 +103,7 @@ internal object OnlineAiRequestSupport {
         }
         var totalBytes = 0L
         messages.forEach { message ->
-            require(message.textParts.isNotEmpty() || message.nativeToolMessage != null) { "Online AI messages must contain content" }
+            require(message.textParts.isNotEmpty() || message.images.isNotEmpty() || message.nativeToolMessage != null) { "Online AI messages must contain content" }
             (message.textParts + listOfNotNull(message.nativeToolMessage?.json)).forEach { part ->
                 totalBytes = try {
                     Math.addExact(totalBytes, part.toByteArray(Charsets.UTF_8).size.toLong())
@@ -138,7 +140,7 @@ internal object OnlineAiRequestSupport {
     }
 
     fun text(message: GenerationMessage): String {
-        require(message.textParts.isNotEmpty()) { "Online AI messages must contain text" }
+        require(message.textParts.isNotEmpty() || message.images.isNotEmpty()) { "Online AI messages must contain text" }
         return message.textParts.joinToString(separator = "")
     }
 
@@ -167,6 +169,7 @@ internal object OpenAiCompatibleRequestFactory {
         require(normalized.provider.protocol == OnlineAiProtocol.OPENAI_COMPATIBLE) {
             "Online AI profile does not use the OpenAI-compatible protocol"
         }
+        OnlineAiImages.requireSupported(normalized, messages)
         val messageBytes = OnlineAiTools.requireRequest(turn, OnlineAiRequestSupport.requireConversation(messages))
 
         val json = JsonObject().apply {
@@ -177,7 +180,7 @@ internal object OpenAiCompatibleRequestFactory {
                     if (native == null) add(message.toOpenAiJson()) else {
                         require(native.protocol == normalized.provider.protocol)
                         if (message.role == GenerationRole.ASSISTANT) add(OnlineAiResponseSupport.parseObject(native.json))
-                        else OnlineAiResponseSupport.parseArray(native.json).forEach(::add)
+                        else OnlineAiImages.replay(native).forEach(::add)
                     }
                 }
             })
@@ -216,6 +219,7 @@ internal object OpenAiCompatibleRequestFactory {
             url = endpoint(normalized.baseUrl),
             json = json,
             credential = credential,
+            withImages = messages.any { it.images.isNotEmpty() || it.nativeToolMessage?.imageResults.orEmpty().isNotEmpty() },
             credentialHeader = OnlineAiCredentialHeader.BEARER,
         )
     }
@@ -241,7 +245,8 @@ internal object OpenAiCompatibleRequestFactory {
                     GenerationRole.ASSISTANT -> "assistant"
                 },
             )
-            addProperty("content", OnlineAiRequestSupport.text(this@toOpenAiJson))
+            if (images.isEmpty()) addProperty("content", OnlineAiRequestSupport.text(this@toOpenAiJson))
+            else add("content", OnlineAiImages.content(OnlineAiRequestSupport.text(this@toOpenAiJson), images, OnlineAiProtocol.OPENAI_COMPATIBLE))
         }
     }
 

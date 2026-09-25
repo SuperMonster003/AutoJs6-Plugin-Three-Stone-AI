@@ -134,7 +134,7 @@ class OnlineAiProfilePolicyTest {
         }
         assertThrows(IllegalArgumentException::class.java) {
             OnlineAiProfileCodec.decode(
-                text.replace("\"schema\":3", "\"schema\":1").toByteArray(),
+                text.replace("\"schema\":4", "\"schema\":1").toByteArray(),
             )
         }
     }
@@ -154,8 +154,9 @@ class OnlineAiProfilePolicyTest {
         assertEquals(listOf("model-a", "model-b", "model-c"), decoded.profiles.single().modelIds)
 
         val legacy = encoded.toString(Charsets.UTF_8)
-            .replace("\"schema\":3", "\"schema\":2")
+            .replace("\"schema\":4", "\"schema\":2")
             .replace(",\"modelIds\":[\"model-a\",\"model-b\",\"model-c\"]", "")
+            .replace(",\"visionModelIds\":[]", "")
             .toByteArray()
         val migrated = OnlineAiProfileCodec.decode(legacy).profiles.single()
 
@@ -178,7 +179,7 @@ class OnlineAiProfilePolicyTest {
         ).toString(Charsets.UTF_8)
         assertThrows(IllegalArgumentException::class.java) {
             OnlineAiProfileCodec.decode(
-                encoded.replace("\"schema\":3", "\"schema\":4294967299").toByteArray(),
+                encoded.replace("\"schema\":4", "\"schema\":4294967299").toByteArray(),
             )
         }
     }

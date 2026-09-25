@@ -25,10 +25,11 @@
     "Bind each launcher conversation to one local or online target snapshot; changing a populated conversation recommends a new conversation, while continuing requires explicit confirmation and records the change.",
     "Record the actual target, provider, model, and locality on every assistant response; regeneration reuses that recorded target, rejects identity drift or unavailability, and never silently falls back to the conversation default.",
     "Keep local and cloud generation failures on their selected boundary: launcher chat appends a bounded non-secret reason, states that no cross-boundary fallback occurred, and exposes an explicit manual target switch without discarding partial output.",
-    "Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation."
+    "Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation.",
+    "Online JPEG/PNG image input and image tool results through negotiated AI Provider 2.1, with explicit per-model settings."
   ],
   "h3_formats": "Model and data formats",
-  "p_formats": "Version 1 declares only the following model and text scope",
+  "p_formats": "Supported model and input formats",
   "h3_plugin_interface": "Plugin interface",
   "p_plugin_interface": "The host discovers and calls the plugin with the following identities",
   "p_plugin_scope": "AI Provider V2 exposes one paged catalog of `local:*` and `profile:*` targets. Each target independently declares provider, model, locality, configuration and availability, capabilities, limits, controls, and HTTPS origins. A local-only catalog declares ON_DEVICE/NONE; the presence of online profiles declares HYBRID/PLUGIN_MANAGED and the exact union of their HTTPS origins. Local backend profiles remain an optional target control, and unavailable profiles or targets never fall back silently.",
@@ -52,7 +53,8 @@
     "Streaming uses finite credits and bounded chunks to prevent unbounded buffering or callbacks without backpressure.",
     "Usage token counts come from LiteRT-LM's conversation KV-cache and decode counters, without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, model listing, and dispatch time.",
     "A persistent `ai.session` permits one active turn, retains its native Conversation after normal completion, and must be recreated after cancellation, timeout, generation failure, or explicit close.",
-    "Cancellation, session close, and timeout stop result publication and finish the request through one terminal state."
+    "Cancellation, session close, and timeout stop result publication and finish the request through one terminal state.",
+    "In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshot tasks require the remaining P9.2 Agent integration."
   ],
   "h3_unsupported": "Undeclared capabilities",
   "unsupported_capabilities": [

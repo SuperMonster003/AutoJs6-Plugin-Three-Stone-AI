@@ -68,6 +68,7 @@
 - 為每則助手回覆儲存實際 target/provider/model/locality 快照; 重新產生預設精確沿用原回覆目標, 目標身分變更或無法使用時明確失敗, 不會靜默回退到目前對話目標.
 - 本機與雲端生成失敗會始終停留在所選邊界: 啟動器聊天會附加有界且不含敏感資訊的失敗原因, 明確說明未發生跨邊界自動回退, 並在保留部分輸出的同時提供明確的手動目標切換入口.
 - 線上 OpenAI 相容, Anthropic Messages 與 Gemini GenerateContent 目標支援原生工具呼叫, 包含串流參數, 並行呼叫與結果續輪.
+- 線上模型透過協商 AI Provider 2.1 接收 JPEG/PNG 圖片及工具結果圖片, 支援依個別模型啟用.
 
 ******
 
@@ -75,11 +76,11 @@
 
 ******
 
-版本 1 僅宣告以下模型和文字範圍:
+支援的模型與輸入格式:
 
 ```text
 model package: .litertlm
-input: text/plain message history plus application/json response schema
+input: text/plain history + application/json schema; negotiated 2.1: image/jpeg and image/png descriptors
 output: streamed text/plain or application/json text chunks
 runtime: LiteRT-LM 0.15.0
 ```
@@ -98,7 +99,7 @@ plugin id: three-stone-ai
 protocol provider id: autojs6.three-stone-ai
 engine: three-stone-ai
 variant: default
-protocol: V2
+protocol: V2 (2.0 / 2.1)
 required host build: 5276
 ```
 
@@ -142,6 +143,7 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 - Usage token 數直接來自 LiteRT-LM Conversation 的 KV cache 與 decode 計數, 不使用字元數估算. `durationMillis` 只測量外掛生成呼叫, 不包含宿主探索, 綁定, 模型列舉和分派時間.
 - 持久 `ai.session` 只允許一個活動輪次, 正常完成後保留原生 Conversation; 取消, 逾時, 生成失敗或顯式關閉後必須重新建立工作階段.
 - 取消, 工作階段關閉和逾時會停止結果發布, 並透過唯一終態結束請求.
+- 在 設定 > 線上 AI 中編輯設定並選擇支援圖片輸入的模型. 既有設定預設關閉. 圖片僅傳送至所選設定的服務. LiteRT 與持久 ai.session 仍僅支援文字; Agent 截圖任務需等待 P9.2 的 Agent 整合完成.
 
 ******
 
@@ -172,10 +174,13 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 
 # v1.2.0
 
-###### 2026/09/25
+###### 2026/09/26
 
 * `提示` 開發候選版本, 尚未發布. 線上工具呼叫經 AI Provider V2 提供; Agent 整合需要 build 5297+ 的宿主原生工具代理及支援此能力的 Agent 版本. 外掛向宿主傳回呼叫, 自身不執行裝置操作.
+* `提示` 在 設定 > 線上 AI 中編輯設定並選擇支援圖片輸入的模型. 既有設定預設關閉. 圖片僅傳送至所選設定的服務. LiteRT 與持久 ai.session 仍僅支援文字; Agent 截圖任務需等待 P9.2 的 Agent 整合完成.
 * `新增` 線上 OpenAI 相容, Anthropic Messages 與 Gemini GenerateContent 目標支援原生工具呼叫, 包含串流參數, 並行呼叫與結果續輪
+* `新增` 線上模型透過協商 AI Provider 2.1 接收 JPEG/PNG 圖片及工具結果圖片, 支援依個別模型啟用
+* `修復` 描述符讀取在取消或逾時後釋放工作執行緒, 並保留可靠管道的產生端錯誤
 
 # v1.1.4
 

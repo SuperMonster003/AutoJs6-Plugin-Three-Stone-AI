@@ -299,14 +299,16 @@ internal class RemoteThreeStoneAiSession(
         val options = request.options
         if (
             options.includeReasoning ||
-            (options.persistentSession && request.tools.isNotEmpty()) ||
+            (options.persistentSession && (request.tools.isNotEmpty() ||
+                AiProviderCapabilityId.VISION in options.requiredCapabilityIds || request.messages.any { message -> message.parts.any { it.isImage } })) ||
             (!options.structuredJson && options.responseMimeType != AiProviderMimeType.PLAIN) ||
             options.requiredCapabilityIds.any {
                 it != AiProviderCapabilityId.STREAMING &&
                     it != AiProviderCapabilityId.USAGE &&
                     it != AiProviderCapabilityId.PERSISTENT_SESSION &&
                     it != AiProviderCapabilityId.TOOLS &&
-                    it != AiProviderCapabilityId.STRUCTURED_JSON
+                    it != AiProviderCapabilityId.STRUCTURED_JSON &&
+                    it != AiProviderCapabilityId.VISION
             } ||
             request.messages.any { it.name != null }
         ) {
@@ -540,7 +542,9 @@ internal class RemoteThreeStoneAiSession(
         private val generationStatistics = AtomicReference<GenerationStatistics?>()
         private val terminalCause = AtomicReference(TerminalCause.NONE)
         private val contextPlan = AtomicReference<PreparedPersistentTurn?>()
-        private val toolPolicy = AiToolTurnPolicy(requestHint?.options?.maximumToolRounds ?: 0)
+        private val initialImages = requestHint?.messages.orEmpty().flatMap { it.parts }.filter { it.isImage }
+        private val toolPolicy = AiToolTurnPolicy(requestHint?.options?.maximumToolRounds ?: 0,
+            initialImageCount = initialImages.size, initialImageBytes = initialImages.sumOf { it.payload.declaredLengthBytes })
         private val pendingToolCallback = AtomicReference<ByteArray?>()
         private val acceptingToolResults = AtomicBoolean(false)
         private val toolResultDescriptors = AtomicReference<OwnedParcelFileDescriptors?>()
@@ -700,12 +704,13 @@ internal class RemoteThreeStoneAiSession(
                 try {
                     ensureActive()
                     val batch = AiProviderCodec.decodeToolResultBatch(safeMetadata)
-                    AiProviderQuotaPolicy.validateToolResults(batch, owned.count, ThreeStoneAiPlugin.MAXIMUM_SESSION_DESCRIPTORS)
+                    AiProviderQuotaPolicy.validateToolResults(batch, owned.count, ThreeStoneAiPlugin.MAXIMUM_SESSION_DESCRIPTORS,
+                        decodedRequest.getOrThrow(), ThreeStoneAiPlugin.capabilities)
                     toolPolicy.submit(batch) // Reject IDs and declared quotas before a descriptor can block.
                     val results = batch.results.map { result ->
                         GenerationToolResult(result.callId, AiProviderPayloadPolicy.materializeAndValidateBounded(
                             result.output, AiProviderLimits.MAX_TOOL_ARGUMENT_OR_RESULT_BYTES, owned::readDeclaredBytes,
-                        ), result.isError)
+                        ), result.isError, result.imageParts.map { ProviderImageDecoder.materialize(it, owned::readDeclaredBytes) })
                     }
                     owned.close()
                     toolResultDescriptors.compareAndSet(owned, null)

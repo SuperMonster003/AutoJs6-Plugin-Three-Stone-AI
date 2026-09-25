@@ -229,6 +229,26 @@ class OnlineAiNativeToolsTest {
         assertTrue(exhausted.listener.calls.isEmpty())
     }
 
+    @Test
+    fun allOnlineSessionsRetainInitialAndToolImagesAcrossRealHttpAdapterTurns() {
+        val image = GenerationImage(byteArrayOf(1, 2, 3), "image/png", org.autojs.plugin.ai.provider.api.AiImageMetadata(32, 24))
+        for ((provider, pair) in fixtures) {
+            val harness = Harness(provider, json(pair.first), json(pair.second), visionEnabled = true)
+            harness.start(images = listOf(image))
+            assertNull(harness.listener.failure)
+            assertEquals(1, harness.listener.calls.size)
+            harness.session.submitToolResults(harness.listener.calls.map { GenerationToolResult(it.callId, "seen", images = listOf(image)) })
+            assertNull(harness.listener.failure)
+            assertTrue(harness.listener.completed)
+            assertEquals(2, harness.requests.size)
+            assertEquals(1, Regex("AQID").findAll(harness.requests[0].toString()).count())
+            assertEquals(2, Regex("AQID").findAll(harness.requests[1].toString()).count())
+            assertEquals(2, harness.networkChecks)
+            assertEquals(2, harness.credentialReads)
+            harness.session.close()
+        }
+    }
+
     private class Listener : GenerationListener {
         val text = mutableListOf<String>()
         var calls = emptyList<GenerationToolCall>()
@@ -246,7 +266,7 @@ class OnlineAiNativeToolsTest {
         override fun onFailed(error: Throwable, statistics: GenerationStatistics?) { failure = error }
     }
 
-    private class Harness(provider: OnlineAiProvider, vararg responses: Pair<String, String>) {
+    private class Harness(provider: OnlineAiProvider, vararg responses: Pair<String, String>, visionEnabled: Boolean = false) {
         val requests = mutableListOf<JsonObject>()
         private val responses = ArrayDeque(responses.toList())
         var credentialReads = 0
@@ -254,7 +274,7 @@ class OnlineAiNativeToolsTest {
         var networkAllowed = true
         val retiredSecrets = mutableListOf<ByteArray>()
         val listener = Listener()
-        private val profile = OnlineAiProfile("11111111-1111-4111-8111-111111111111", "Tools", provider, "https://example.com/v1", "test-model")
+        private val profile = OnlineAiProfile("11111111-1111-4111-8111-111111111111", "Tools", provider, "https://example.com/v1", "test-model", visionModelIds = if (visionEnabled) listOf("test-model") else emptyList())
         private val execution = OnlineAiHttpExecution(Call.Factory { error("Capabilities only") })
         val session = OnlineAiSession(
             target = AiTarget(AiTargetIds.profile(profile.profileId), OnlineAiBackend.BACKEND_ID,
@@ -296,8 +316,8 @@ class OnlineAiNativeToolsTest {
             }
         }
 
-        fun start(rounds: Int = 1, withTools: Boolean = true, prompt: String = "Inspect", maxTokens: Int? = null) = session.stream(request().copy(
-            prompt = GenerationMessage(GenerationRole.USER, listOf(prompt)),
+        fun start(rounds: Int = 1, withTools: Boolean = true, prompt: String = "Inspect", maxTokens: Int? = null, images: List<GenerationImage> = emptyList()) = session.stream(request().copy(
+            prompt = GenerationMessage(GenerationRole.USER, listOf(prompt), images = images),
             maximumOutputTokens = maxTokens,
             tools = if (withTools) listOf(GenerationToolDefinition("observe", "Inspect", "{\"type\":\"object\"}")) else emptyList(),
             maximumToolRounds = if (withTools) rounds else 0,

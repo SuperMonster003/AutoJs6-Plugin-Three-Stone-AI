@@ -43,12 +43,14 @@ private fun toolJsonPayload(json: String): AiPayloadReference = json.toByteArray
     AiPayloadReference(AiProviderMimeType.JSON, bytes.size.toLong(), inlineBytes = bytes, charset = "utf-8")
 }
 
-internal data class GenerationToolResult(val callId: String, val output: String, val isError: Boolean = false) {
+internal data class GenerationToolResult(val callId: String, val output: String, val isError: Boolean = false,
+    val images: List<GenerationImage> = emptyList()) {
     override fun toString() = "GenerationToolResult(isError=$isError)"
 }
 
 /** Private, bounded replay data. Signed provider content never becomes tool arguments or logs. */
-internal class NativeToolMessage(val protocol: OnlineAiProtocol, val json: String) {
+internal class NativeToolMessage(val protocol: OnlineAiProtocol, val json: String, imageResults: List<NativeToolImages> = emptyList()) {
+    val imageResults: List<NativeToolImages> = java.util.Collections.unmodifiableList(ArrayList(imageResults))
     init {
         require(json.toByteArray(Charsets.UTF_8).size <= OnlineAiTransportLimits.MAXIMUM_CONTEXT_BYTES)
     }
@@ -120,6 +122,11 @@ internal object OnlineAiTools {
                 })
             }
         }
-        return GenerationMessage(GenerationRole.USER, emptyList(), NativeToolMessage(protocol, content.toString()))
+        val attachments = calls.mapIndexedNotNull { index, call ->
+            byId.getValue(call.callId).images.takeIf { it.isNotEmpty() }?.let { NativeToolImages(index, call.callId, it) }
+        }
+        require(attachments.sumOf { it.images.size } <= AiProviderLimits.MAX_IMAGES)
+        require(attachments.sumOf { result -> result.images.sumOf { it.byteCount } } <= AiProviderLimits.MAX_TOTAL_IMAGE_BYTES)
+        return GenerationMessage(GenerationRole.USER, emptyList(), NativeToolMessage(protocol, content.toString(), attachments))
     }
 }

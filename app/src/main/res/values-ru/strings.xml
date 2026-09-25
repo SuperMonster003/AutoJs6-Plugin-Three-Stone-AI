@@ -323,6 +323,9 @@
     <string name="online_ai_test_success">Проверка подключения выполнена</string>
     <string name="online_ai_test_timed_out">Время проверки подключения истекло</string>
     <string name="online_ai_test_title">Проверить подключение?</string>
+    <string name="online_ai_vision_help">Выбирайте только модели, поддерживающие изображения в этом сервисе. Запрошенные хостом изображения будут отправлены выбранному сервису. Существующие модели отключены до явного выбора.</string>
+    <string name="online_ai_vision_models">Модели с вводом изображений</string>
+    <string name="online_ai_vision_none">Отключено</string>
     <string name="online_ai_yes">Да</string>
     <string name="plugin_description">Генерация текста ИИ с закрытыми локальными моделями и настроенными пользователем онлайн-сервисами</string>
     <string name="release_history_load_failed">Не удалось загрузить локальную историю версий</string>

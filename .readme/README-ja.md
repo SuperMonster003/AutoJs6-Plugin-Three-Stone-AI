@@ -68,6 +68,7 @@
 - 各アシスタント応答に実際の target/provider/model/locality スナップショットを保存します. 再生成は記録された元のターゲットを厳密に再利用し, ID 情報の変更や利用不可時には明示的に失敗し, 現在の会話ターゲットへ暗黙にフォールバックしません.
 - ローカルとクラウドの生成失敗を選択済みの境界内に維持します. ランチャーチャットは機密情報を含まない限定的な失敗理由を追記し, 境界をまたぐ自動フォールバックがなかったことを明示し, 部分出力を保持したまま手動ターゲット切り替えを提供します.
 - オンラインの OpenAI 互換, Anthropic Messages, Gemini GenerateContent でネイティブツール呼び出しに対応. ストリーミング引数, 並列呼び出し, 結果送信後の継続をサポート.
+- モデルごとの設定と協商した AI Provider 2.1 によるオンライン JPEG/PNG 入力および画像付きツール結果.
 
 ******
 
@@ -75,11 +76,11 @@
 
 ******
 
-バージョン 1 は次のモデルとテキスト範囲だけを宣言します:
+対応するモデルと入力形式:
 
 ```text
 model package: .litertlm
-input: text/plain message history plus application/json response schema
+input: text/plain history + application/json schema; negotiated 2.1: image/jpeg and image/png descriptors
 output: streamed text/plain or application/json text chunks
 runtime: LiteRT-LM 0.15.0
 ```
@@ -98,7 +99,7 @@ plugin id: three-stone-ai
 protocol provider id: autojs6.three-stone-ai
 engine: three-stone-ai
 variant: default
-protocol: V2
+protocol: V2 (2.0 / 2.1)
 required host build: 5276
 ```
 
@@ -142,6 +143,7 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 - Usage token 数は LiteRT-LM Conversation の KV cache と decode カウンターから直接取得し, 文字数による推定は行いません. `durationMillis` はプラグイン生成呼び出しのみを測定し, ホストの探索, バインド, モデル列挙, ディスパッチ時間を含みません.
 - 永続的な `ai.session` は 1 つのアクティブターンだけを許可し, 正常完了後もネイティブ Conversation を保持します. キャンセル, timeout, 生成失敗, 明示的な終了の後は再作成が必要です.
 - キャンセル, セッション終了, timeout は結果公開を停止し, 1 つの終端状態でリクエストを終了します.
+- 設定 > オンライン AI で構成を編集し, 画像入力に対応するモデルを選択します. 既存の構成は既定で無効です. 画像は選択したサービスにのみ送信されます. LiteRT と永続 ai.session は引き続きテキストのみです. Agent の画面撮影には P9.2 の Agent 統合完了が必要です.
 
 ******
 
@@ -172,10 +174,13 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 
 # v1.2.0
 
-###### 2026/09/25
+###### 2026/09/26
 
 * `ヒント` 未公開の開発候補版です. オンラインツールは AI Provider V2 を使用します. Agent 連携には build 5297+ のホストのネイティブツール仲介機能と対応する Agent が必要です. プラグインは呼び出しをホストへ返し, デバイス操作を直接実行しません.
+* `ヒント` 設定 > オンライン AI で構成を編集し, 画像入力に対応するモデルを選択します. 既存の構成は既定で無効です. 画像は選択したサービスにのみ送信されます. LiteRT と永続 ai.session は引き続きテキストのみです. Agent の画面撮影には P9.2 の Agent 統合完了が必要です.
 * `機能` オンラインの OpenAI 互換, Anthropic Messages, Gemini GenerateContent でネイティブツール呼び出しに対応. ストリーミング引数, 並列呼び出し, 結果送信後の継続をサポート
+* `機能` モデルごとの設定と協商した AI Provider 2.1 によるオンライン JPEG/PNG 入力および画像付きツール結果
+* `修正` キャンセルやタイムアウト時に記述子読み取りのスレッドを解放し, 信頼性のあるパイプの生成側エラーを保持
 
 # v1.1.4
 

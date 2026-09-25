@@ -20,6 +20,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         require(normalized.provider.protocol == OnlineAiProtocol.GEMINI_GENERATE_CONTENT) {
             "Online AI profile does not use the Gemini GenerateContent protocol"
         }
+        OnlineAiImages.requireSupported(normalized, messages)
         val messageBytes = OnlineAiTools.requireRequest(turn, OnlineAiRequestSupport.requireConversation(messages))
         val body = JsonObject().apply {
             if (turn.tools.isNotEmpty()) add("tools", JsonArray().apply {
@@ -54,12 +55,8 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
                             )
                             if (message.nativeToolMessage != null) {
                                 require(message.nativeToolMessage.protocol == normalized.provider.protocol)
-                                add("parts", OnlineAiResponseSupport.parseArray(message.nativeToolMessage.json))
-                            } else add("parts", JsonArray().apply {
-                                add(JsonObject().apply {
-                                    addProperty("text", OnlineAiRequestSupport.text(message))
-                                })
-                            })
+                                add("parts", OnlineAiImages.replay(message.nativeToolMessage))
+                            } else add("parts", OnlineAiImages.content(OnlineAiRequestSupport.text(message), message.images, normalized.provider.protocol))
                         })
                     }
             })
@@ -86,6 +83,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
             url = endpoint(normalized.baseUrl, normalized.modelId),
             json = body,
             credential = credential,
+            withImages = messages.any { it.images.isNotEmpty() || it.nativeToolMessage?.imageResults.orEmpty().isNotEmpty() },
             credentialHeader = OnlineAiCredentialHeader.GEMINI_API_KEY,
         )
     }

@@ -68,6 +68,7 @@ The current README.md supports the following languages:
 - Record the actual target, provider, model, and locality on every assistant response; regeneration reuses that recorded target, rejects identity drift or unavailability, and never silently falls back to the conversation default.
 - Keep local and cloud generation failures on their selected boundary: launcher chat appends a bounded non-secret reason, states that no cross-boundary fallback occurred, and exposes an explicit manual target switch without discarding partial output.
 - Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation.
+- Online JPEG/PNG image input and image tool results through negotiated AI Provider 2.1, with explicit per-model settings.
 
 ******
 
@@ -75,11 +76,11 @@ The current README.md supports the following languages:
 
 ******
 
-Version 1 declares only the following model and text scope:
+Supported model and input formats:
 
 ```text
 model package: .litertlm
-input: text/plain message history plus application/json response schema
+input: text/plain history + application/json schema; negotiated 2.1: image/jpeg and image/png descriptors
 output: streamed text/plain or application/json text chunks
 runtime: LiteRT-LM 0.15.0
 ```
@@ -98,7 +99,7 @@ plugin id: three-stone-ai
 protocol provider id: autojs6.three-stone-ai
 engine: three-stone-ai
 variant: default
-protocol: V2
+protocol: V2 (2.0 / 2.1)
 required host build: 5276
 ```
 
@@ -142,6 +143,7 @@ The plugin requests `INTERNET` for user-triggered recommended-model downloads an
 - Usage token counts come from LiteRT-LM's conversation KV-cache and decode counters, without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, model listing, and dispatch time.
 - A persistent `ai.session` permits one active turn, retains its native Conversation after normal completion, and must be recreated after cancellation, timeout, generation failure, or explicit close.
 - Cancellation, session close, and timeout stop result publication and finish the request through one terminal state.
+- In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshot tasks require the remaining P9.2 Agent integration.
 
 ******
 
@@ -172,10 +174,13 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 # v1.2.0
 
-###### 2026/09/25
+###### 2026/09/26
 
 * `Hint` Development candidate, not published. Online tool calling uses AI Provider V2; Agent integration requires the host native-tool broker in build 5297+ and an Agent version that supports it. The plugin returns calls to the host and does not execute device actions itself.
+* `Hint` In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshot tasks require the remaining P9.2 Agent integration.
 * `Feature` Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation
+* `Feature` Online JPEG/PNG image input and image tool results through negotiated AI Provider 2.1, with explicit per-model settings
+* `Fix` Descriptor reads release workers on cancellation or timeout and preserve reliable-pipe producer errors
 
 # v1.1.4
 

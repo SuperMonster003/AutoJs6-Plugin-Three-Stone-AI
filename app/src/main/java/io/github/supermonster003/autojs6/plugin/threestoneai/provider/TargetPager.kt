@@ -50,7 +50,8 @@ internal class TargetPager(
         val catalogGeneration: String
         try {
             targets = catalog.targets.map { target ->
-                target.toProviderTarget(isDefault = target.targetId == catalog.defaultTargetId)
+                org.autojs.plugin.ai.provider.api.AiTargetCatalogPolicy.forProtocol(
+                    target.toProviderTarget(isDefault = target.targetId == catalog.defaultTargetId), request.protocolVersion)
             }
             catalogGeneration = catalog.generation
         } catch (error: Throwable) {

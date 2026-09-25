@@ -2,6 +2,7 @@ import com.android.build.api.variant.FilterConfiguration
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.RelativePath
 import org.gradle.api.provider.Property
+import java.security.MessageDigest
 
 plugins {
     id("io.github.supermonster003.autojs6-native-alignment")
@@ -10,6 +11,22 @@ plugins {
     id("org.autojs.build.signs")
     id("org.autojs.build.jvm-convention")
     id("com.android.application")
+}
+
+// Local host SDK inputs are audited as one release build, independent of sibling repositories.
+val hostApiNames = setOf("common-plugin-api.aar", "protocol-wire-api.aar", "ai-common-api.aar", "ai-provider-api.aar")
+val hostApiChecksums = rootProject.file("libs/SHA256SUMS").readLines().filter { it.isNotBlank() }.associate { line ->
+    val fields = line.trim().split(Regex("\\s+"))
+    check(fields.size == 2 && fields[0].matches(Regex("[0-9a-f]{64}"))) { "Invalid host API checksum record" }
+    fields[1] to fields[0]
+}
+check(hostApiChecksums.keys == hostApiNames) { "Host API checksum set is incomplete" }
+hostApiNames.forEach { name ->
+    val artifact = rootProject.file("libs/$name")
+    check(artifact.isFile) { "Missing host API artifact: $name" }
+    val actual = MessageDigest.getInstance("SHA-256").digest(artifact.readBytes())
+        .joinToString("") { "%02x".format(it.toInt() and 255) }
+    check(actual == hostApiChecksums.getValue(name)) { "Host API artifact checksum changed: $name" }
 }
 
 val globalApplicationId = "io.github.supermonster003.autojs6.plugin.threestoneai"

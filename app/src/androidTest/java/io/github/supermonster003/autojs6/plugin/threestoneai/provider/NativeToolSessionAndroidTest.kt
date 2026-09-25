@@ -50,9 +50,12 @@ class NativeToolSessionAndroidTest {
         val pipe = ParcelFileDescriptor.createReliablePipe()
         ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { it.write("result".toByteArray()) }
         val result = AiToolResult("call-a", AiPayloadReference(AiProviderMimeType.PLAIN, 6, descriptorIndex = 0, charset = "utf-8"))
-        fixture.remote.submitToolResults(AiProviderCodec.encodeToolResultBatch(AiToolResultBatch(listOf(result))), arrayOf(pipe[0]))
-        pipe[0].close()
-        fixture.awaitTerminal()
+        try {
+            fixture.remote.submitToolResults(AiProviderCodec.encodeToolResultBatch(AiToolResultBatch(listOf(result))), arrayOf(pipe[0]))
+            // Reliable-pipe copies share the status socket. Keep the sending read endpoint
+            // until completion so its close cannot consume the receiving endpoint's status.
+            fixture.awaitTerminal()
+        } finally { pipe[0].close() }
         assertTrue(fixture.failures.isEmpty())
         assertEquals("result", fixture.backend.received.single().output)
     }

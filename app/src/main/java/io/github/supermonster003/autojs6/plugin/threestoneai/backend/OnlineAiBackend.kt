@@ -130,6 +130,7 @@ internal class OnlineAiBackend(
                 output.writeBoolean(target.capabilities.usage)
                 output.writeBoolean(target.capabilities.reasoning)
                 output.writeBoolean(target.capabilities.tools)
+                output.writeBoolean(target.capabilities.vision)
                 output.writeNullableLong(target.limits.maximumContextBytes)
                 output.writeNullableLong(target.limits.maximumOutputBytes)
                 output.writeNullableInt(target.limits.maximumOutputTokens)
@@ -160,7 +161,7 @@ internal class OnlineAiBackend(
 
     companion object {
         const val BACKEND_ID = "online"
-        private const val CATALOG_GENERATION_SCHEMA = 2
+        private const val CATALOG_GENERATION_SCHEMA = 3
 
         private val UNIMPLEMENTED_CAPABILITIES = AiTargetCapabilities(
             streaming = false,

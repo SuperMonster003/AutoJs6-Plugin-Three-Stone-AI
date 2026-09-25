@@ -104,7 +104,7 @@ OpenAI-compatible baseUrl 未以 `/chat/completions` 结束时追加该 endpoint
 - OpenAI-compatible 解析 `choices[0].delta.content`, text/refusal part 与 provider usage; 正常流式完成必须收到 `[DONE]`.
 - Anthropic 解析 `message_start`, `content_block_start`, `content_block_delta`, `message_delta` 与 `message_stop`; `[DONE]` 不属于该协议. `stop_reason=refusal` 与 error event 固定映射为 provider error, 不提交历史也不触发其他 provider fallback.
 - Gemini 解析 `candidates[0].content.parts[].text`, 忽略标记为 thought 的 part, 并以 `STOP` 或 `MAX_TOKENS` finishReason 结束. Safety/block/recitation 等终止原因固定映射为 provider error.
-- JSON fallback 使用各自协议的非流式响应形状. Reasoning 与 tools 当前不解析也不声明 capability.
+- JSON fallback 使用各自协议的非流式响应形状. Reasoning 输出仍不声明. 自 1.2.0 开发候选版起, 三协议支持原生 tools; 续轮和验证范围见 [P9.1 Provider 验收](p91-native-tools-evidence-2026-09-25.md).
 - Usage 只接受非负整数. OpenAI-compatible 的 `total_tokens` 必须等于 input + output; Gemini 的 `totalTokenCount` 可包含 thoughts 等额外计数, 因此保留 provider 校验语义而不强行套用 OpenAI 等式. Anthropic 分散在多个 event 的 input/output 会在同一轮合并.
 - 只有收到正常终态的 turn 才把 user prompt 与完整 assistant 文本提交到 session 历史. 失败或取消的 partial output 不进入下一轮上下文.
 - `cancel()` 取消活动 Call, 停止后续 delta 并抑制 completed/failed callback. `close()` 同时封闭 callback gate; listener 可在 completed/failed callback 中同步启动下一轮或关闭 session.

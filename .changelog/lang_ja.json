@@ -5,6 +5,15 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.2.0": {
+      "released_date": "2026/09/25",
+      "hint": [
+        "未公開の開発候補版です. オンラインツールは AI Provider V2 を使用します. Agent 連携には build 5297+ のホストのネイティブツール仲介機能と対応する Agent が必要です. プラグインは呼び出しをホストへ返し, デバイス操作を直接実行しません."
+      ],
+      "feature": [
+        "オンラインの OpenAI 互換, Anthropic Messages, Gemini GenerateContent でネイティブツール呼び出しに対応. ストリーミング引数, 並列呼び出し, 結果送信後の継続をサポート"
+      ]
+    },
     "v1.1.4": {
       "released_date": "2026/09/19",
       "improvement": [

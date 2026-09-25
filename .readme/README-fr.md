@@ -67,6 +67,7 @@ Le fichier README.md actuel prend en charge les langues suivantes:
 - Associer chaque conversation du lanceur à un instantané de cible locale ou en ligne; un nouveau chat est recommandé lors du changement d'une conversation remplie, et continuer exige une confirmation explicite enregistrée.
 - Enregistrer la cible, le fournisseur, le modèle et la localité réellement utilisés pour chaque réponse de l'assistant; la régénération réutilise exactement cette cible, échoue explicitement si son identité change ou si elle devient indisponible, sans repli silencieux sur la cible actuelle.
 - Maintenir les échecs de génération locale et cloud dans la cible sélectionnée: le chat du lanceur ajoute une raison bornée sans données sensibles, indique qu'aucun repli entre frontières n'a eu lieu et propose un changement manuel explicite de cible sans supprimer la sortie partielle.
+- Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats.
 
 ******
 
@@ -148,8 +149,8 @@ Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés
 
 ******
 
-- Reasoning et tools ne sont pas déclarés.
-- Les messages de rôle tool, les schemas d'outils, les tool calls et les tool results ne sont pas acceptés.
+- La sortie reasoning n'est pas déclarée. Les cibles LiteRT-LM locales ne déclarent toujours pas tools.
+- Les outils natifs autorisent 16 tours et 32 appels en attente au maximum. Les résultats doivent correspondre exactement au lot attendu; limites de contexte/sortie, annulation et délai initial restent actifs. Les outils natifs ne se combinent pas avec les tours persistants ai.session; l'historique initial refuse le rôle tool.
 - Aucune découverte réseau de modèles ni aucun téléchargement depuis une URL arbitraire. Le catalogue de cibles ne présente que les modèles locaux importés et les profils en ligne explicitement configurés; seul le catalogue de recommandations intégré et épinglé est téléchargeable.
 - L'inférence NPU n'est pas déclarée: le profil reste visible comme `unavailable` avec `npu-runtime-not-packaged`. GPU n'est déclaré que si `libOpenCL.so` est chargeable, et l'extension `.litertlm` ne garantit toujours pas l'initialisation du modèle.
 
@@ -169,6 +170,13 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 ******
 
+# v1.2.0
+
+###### 2026/09/25
+
+* `Note` Version de développement non publiée. Les outils en ligne utilisent AI Provider V2; leur intégration Agent nécessite le courtier natif de l'hôte build 5297+ et une version Agent compatible. Le plugin transmet les appels à l'hôte sans exécuter lui-même les actions sur l'appareil.
+* `Fonctionnalité` Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats
+
 # v1.1.4
 
 ###### 2026/09/19
@@ -181,13 +189,6 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 ###### 2026/09/15
 
 * `Amélioration` compileSdk passe à 37 (Android 17) ; targetSdk reste à 36 jusqu'à la vérification du comportement dépendant de la cible
-
-# v1.1.2
-
-###### 2026/09/13
-
-* `Correctif` Conserver la date de version du plugin en anglais quelle que soit la langue de la machine de compilation
-* `Amélioration` Ressources traduites cohérentes, activation explicite du plugin et validation des paquets de publication
 
 ##### Autres versions
 

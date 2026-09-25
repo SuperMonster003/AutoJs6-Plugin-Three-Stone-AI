@@ -37,7 +37,7 @@ internal class OnlineAiHttpExecution private constructor(
         structuredJson = true,
         usage = true,
         reasoning = false,
-        tools = false,
+        tools = true,
     )
 
     private val transportLimits = AiTargetLimits(
@@ -136,6 +136,15 @@ internal class OnlineAiSession(
     private val closed = AtomicBoolean(false)
     private val activeCall = AtomicReference<Call?>()
     private val conversation = mutableListOf<GenerationMessage>()
+    private var pendingTools: PendingTools? = null
+    private var toolRounds = 0
+    private val seenToolIds = mutableSetOf<String>()
+
+    private class PendingTools(
+        val request: GenerationRequest,
+        val calls: List<GenerationToolCall>,
+        val listener: GenerationListener,
+    )
 
     override fun stream(request: GenerationRequest, listener: GenerationListener) {
         check(started.compareAndSet(false, true)) { "Online AI session was already started" }
@@ -147,11 +156,24 @@ internal class OnlineAiSession(
 
     override fun streamNext(request: GenerationRequest, listener: GenerationListener) {
         check(started.get()) { "Online AI session has not been started" }
+        synchronized(stateLock) { check(pendingTools == null) { "An online AI tool turn is outstanding" } }
         check(request.history.isEmpty()) { "A continued online AI turn must not resend history" }
         check(request.prompt.role == GenerationRole.USER) {
             "A continued online AI prompt must be a user message"
         }
         runTurn(request, listener, firstTurn = false)
+    }
+
+    override fun submitToolResults(results: List<GenerationToolResult>) {
+        val (pending, prompt) = synchronized(stateLock) {
+            check(!isStopped()) { "Online AI session is closed" }
+            check(!turnActive.get()) { "Online AI generation is still active" }
+            val pending = checkNotNull(pendingTools) { "No online AI tool turn is outstanding" }
+            val prompt = OnlineAiTools.resultsMessage(profile.provider.protocol, pending.calls, results.toList())
+            pendingTools = null
+            pending to prompt
+        }
+        runTurn(pending.request.copy(history = emptyList(), prompt = prompt), pending.listener, firstTurn = false)
     }
 
     private fun runTurn(
@@ -170,7 +192,7 @@ internal class OnlineAiSession(
             }
         }
         val startedNanos = System.nanoTime()
-        val progress = TurnProgress()
+        val progress = TurnProgress(OnlineAiToolCollector(profile.provider.protocol, rawRequest.tools))
         val delivery = TurnDelivery(listener)
         try {
             if (isStopped()) return
@@ -211,15 +233,31 @@ internal class OnlineAiSession(
             }
             if (isStopped()) return
 
+            val (calls, nativeMessage) = progress.tools.finish(progress.text())
+            val nextRequest = if (calls.isNotEmpty() && request.maximumOutputTokens != null) {
+                val used = progress.statistics(true, startedNanos)?.outputTokens
+                    ?: throw OnlineAiFailureException(OnlineAiFailureReason.INVALID_RESPONSE)
+                val remaining = request.maximumOutputTokens.toLong() - used
+                check(remaining > 0L) { "Online AI tool output-token budget is exhausted" }
+                request.copy(maximumOutputTokens = remaining.toInt())
+            } else request
             val committed = synchronized(stateLock) {
                 if (isStopped()) {
                     false
                 } else {
+                    if (calls.isNotEmpty()) {
+                        check(toolRounds < request.maximumToolRounds) { "Online AI tool round limit exceeded" }
+                        check(calls.none { it.callId in seenToolIds }) { "Online AI tool call ID was replayed" }
+                        toolRounds += 1
+                        seenToolIds.addAll(calls.map { it.callId })
+                        pendingTools = PendingTools(nextRequest, calls, listener)
+                    }
                     conversation.add(request.prompt.snapshot())
                     conversation.add(
                         GenerationMessage(
                             role = GenerationRole.ASSISTANT,
                             textParts = listOf(progress.text()),
+                            nativeToolMessage = nativeMessage,
                         ),
                     )
                     true
@@ -227,7 +265,8 @@ internal class OnlineAiSession(
             }
             if (!committed) return
             releaseTurn()
-            delivery.complete(progress.statistics(rawRequest.reportUsage, startedNanos))
+            val statistics = progress.statistics(rawRequest.reportUsage, startedNanos)
+            if (calls.isEmpty()) delivery.complete(statistics) else delivery.tools(calls, statistics)
         } catch (error: Exception) {
             if (!isStopped()) {
                 releaseTurn()
@@ -271,7 +310,7 @@ internal class OnlineAiSession(
         OnlineAiSseReader(body.source()).use { reader ->
             while (!isStopped()) {
                 val event = reader.readEvent() ?: break
-                val chunk = adapter.parseEvent(event)
+                val chunk = adapter.parseEvent(event, progress.tools)
                 if (chunk.contentSeen) progress.recordContent()
                 chunk.usage?.let(progress::recordUsage)
                 if (chunk.text.isNotEmpty()) {
@@ -292,7 +331,7 @@ internal class OnlineAiSession(
         progress: TurnProgress,
         delivery: TurnDelivery,
     ) {
-        val response = adapter.parseJson(body)
+        val response = adapter.parseJson(body, progress.tools)
         response.usage?.let(progress::recordUsage)
         if (response.text.isNotEmpty()) {
             progress.append(response.text)
@@ -303,6 +342,8 @@ internal class OnlineAiSession(
     override fun cancel() {
         synchronized(stateLock) {
             cancelled.set(true)
+            pendingTools = null
+            conversation.clear()
         }
         activeCall.get()?.cancel()
     }
@@ -344,6 +385,7 @@ internal class OnlineAiSession(
     private fun GenerationRequest.snapshot() = copy(
         history = history.map { message -> message.snapshot() },
         prompt = prompt.snapshot(),
+        tools = tools.toList(),
     )
 
     private fun GenerationMessage.snapshot() = copy(textParts = textParts.toList())
@@ -384,6 +426,13 @@ internal class OnlineAiSession(
             }
         }
 
+        fun tools(calls: List<GenerationToolCall>, statistics: GenerationStatistics?) {
+            if (!terminal.compareAndSet(false, true)) return
+            callbackGate.runCallback {
+                if (!isStopped()) listener.onToolCalls(calls, statistics)
+            }
+        }
+
         fun fail(error: Throwable, statistics: GenerationStatistics?) {
             if (!terminal.compareAndSet(false, true)) return
             callbackGate.runCallback {
@@ -392,7 +441,7 @@ internal class OnlineAiSession(
         }
     }
 
-    private class TurnProgress {
+    private class TurnProgress(val tools: OnlineAiToolCollector) {
         private val output = StringBuilder()
         private var outputBytes = 0L
         private var inputTokens: Long? = null

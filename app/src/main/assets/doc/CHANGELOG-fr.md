@@ -4,6 +4,13 @@
 
 ******
 
+# v1.2.0
+
+###### 2026/09/25
+
+* `Note` Version de développement non publiée. Les outils en ligne utilisent AI Provider V2; leur intégration Agent nécessite le courtier natif de l'hôte build 5297+ et une version Agent compatible. Le plugin transmet les appels à l'hôte sans exécuter lui-même les actions sur l'appareil.
+* `Fonctionnalité` Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats
+
 # v1.1.4
 
 ###### 2026/09/19

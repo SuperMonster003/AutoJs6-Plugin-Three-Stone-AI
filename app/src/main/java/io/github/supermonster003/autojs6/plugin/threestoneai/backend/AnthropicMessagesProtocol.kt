@@ -22,13 +22,14 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         require(normalized.provider.protocol == OnlineAiProtocol.ANTHROPIC_MESSAGES) {
             "Online AI profile does not use the Anthropic Messages protocol"
         }
-        val messageBytes = OnlineAiRequestSupport.requireConversation(messages)
+        val messageBytes = OnlineAiTools.requireRequest(turn, OnlineAiRequestSupport.requireConversation(messages))
         val maximumOutputTokens = turn.maximumOutputTokens ?: DEFAULT_MAXIMUM_OUTPUT_TOKENS
         require(maximumOutputTokens > 0) { "Online AI maximum output tokens must be positive" }
         val body = JsonObject().apply {
             addProperty("model", normalized.modelId)
             addProperty("stream", true)
             addProperty("max_tokens", maximumOutputTokens)
+            if (turn.tools.isNotEmpty()) add("tools", OnlineAiTools.definitions(turn.tools, normalized.provider.protocol))
             val systemMessages = messages.filter { message -> message.role == GenerationRole.SYSTEM }
             if (systemMessages.isNotEmpty()) {
                 // Keep invariant L0/L1/L2 bytes ahead of the append-only raw message array.
@@ -53,7 +54,10 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
                                     GenerationRole.SYSTEM -> error("System messages are top-level")
                                 },
                             )
-                            addProperty("content", OnlineAiRequestSupport.text(message))
+                            if (message.nativeToolMessage != null) {
+                                require(message.nativeToolMessage.protocol == normalized.provider.protocol)
+                                add("content", OnlineAiResponseSupport.parseArray(message.nativeToolMessage.json))
+                            } else addProperty("content", OnlineAiRequestSupport.text(message))
                         })
                     }
             })
@@ -80,7 +84,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         )
     }
 
-    override fun parseEvent(event: OnlineAiSseEvent): OnlineAiStreamChunk {
+    override fun parseEvent(event: OnlineAiSseEvent, tools: OnlineAiToolCollector?): OnlineAiStreamChunk {
         if (event.isDone) OnlineAiResponseSupport.invalidResponse()
         val root = OnlineAiResponseSupport.parseObject(event.data)
         if (event.event == "error" || OnlineAiResponseSupport.hasProviderError(root)) {
@@ -91,6 +95,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
             ?: OnlineAiResponseSupport.invalidResponse()
         if (event.event != null && event.event != type) OnlineAiResponseSupport.invalidResponse()
         if (type == "error") OnlineAiResponseSupport.providerError()
+        tools?.event(root)
         return when (type) {
             "message_start" -> {
                 val message = OnlineAiResponseSupport.objectOrNull(root, "message")
@@ -107,7 +112,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
                         contentSeen = true,
                     )
                 } else {
-                    OnlineAiStreamChunk()
+                    OnlineAiStreamChunk(contentSeen = OnlineAiResponseSupport.stringOrNull(block, "type") == "tool_use")
                 }
             }
             "content_block_delta" -> {
@@ -137,8 +142,9 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         }
     }
 
-    override fun parseJson(body: ResponseBody): OnlineAiJsonResponse {
+    override fun parseJson(body: ResponseBody, tools: OnlineAiToolCollector?): OnlineAiJsonResponse {
         val root = OnlineAiResponseSupport.readObject(body)
+        tools?.json(root)
         if (
             OnlineAiResponseSupport.stringOrNull(root, "type") == "error" ||
             OnlineAiResponseSupport.hasProviderError(root)
@@ -164,7 +170,9 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
                 }
             }
         }
-        if (!textBlockSeen) OnlineAiResponseSupport.invalidResponse()
+        if (!textBlockSeen && content.none { it.asJsonObject.get("type")?.asString == "tool_use" }) {
+            OnlineAiResponseSupport.invalidResponse()
+        }
         return OnlineAiJsonResponse(
             text = text,
             usage = usage(OnlineAiResponseSupport.objectOrNull(root, "usage")),

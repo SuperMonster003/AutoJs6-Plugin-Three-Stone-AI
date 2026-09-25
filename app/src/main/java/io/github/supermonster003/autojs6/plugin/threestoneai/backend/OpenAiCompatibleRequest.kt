@@ -101,8 +101,8 @@ internal object OnlineAiRequestSupport {
         }
         var totalBytes = 0L
         messages.forEach { message ->
-            require(message.textParts.isNotEmpty()) { "Online AI messages must contain text" }
-            message.textParts.forEach { part ->
+            require(message.textParts.isNotEmpty() || message.nativeToolMessage != null) { "Online AI messages must contain content" }
+            (message.textParts + listOfNotNull(message.nativeToolMessage?.json)).forEach { part ->
                 totalBytes = try {
                     Math.addExact(totalBytes, part.toByteArray(Charsets.UTF_8).size.toLong())
                 } catch (_: ArithmeticException) {
@@ -167,13 +167,21 @@ internal object OpenAiCompatibleRequestFactory {
         require(normalized.provider.protocol == OnlineAiProtocol.OPENAI_COMPATIBLE) {
             "Online AI profile does not use the OpenAI-compatible protocol"
         }
-        val messageBytes = OnlineAiRequestSupport.requireConversation(messages)
+        val messageBytes = OnlineAiTools.requireRequest(turn, OnlineAiRequestSupport.requireConversation(messages))
 
         val json = JsonObject().apply {
             addProperty("model", normalized.modelId)
             add("messages", JsonArray().apply {
-                messages.forEach { message -> add(message.toOpenAiJson()) }
+                messages.forEach { message ->
+                    val native = message.nativeToolMessage
+                    if (native == null) add(message.toOpenAiJson()) else {
+                        require(native.protocol == normalized.provider.protocol)
+                        if (message.role == GenerationRole.ASSISTANT) add(OnlineAiResponseSupport.parseObject(native.json))
+                        else OnlineAiResponseSupport.parseArray(native.json).forEach(::add)
+                    }
+                }
             })
+            if (turn.tools.isNotEmpty()) add("tools", OnlineAiTools.definitions(turn.tools, normalized.provider.protocol))
             addProperty("stream", true)
             turn.maximumOutputTokens?.let { maximumOutputTokens ->
                 require(maximumOutputTokens > 0) { "Online AI maximum output tokens must be positive" }
@@ -189,7 +197,7 @@ internal object OpenAiCompatibleRequestFactory {
                     addProperty("top_k", sampling.topK)
                 }
             }
-            if (turn.reportUsage) {
+            if (turn.reportUsage || turn.tools.isNotEmpty()) {
                 add("stream_options", JsonObject().apply {
                     addProperty("include_usage", true)
                 })

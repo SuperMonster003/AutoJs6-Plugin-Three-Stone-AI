@@ -76,6 +76,9 @@ internal class StreamingOutputBuffer(
     fun isReadyForCompletion(): Boolean = backendDone && pendingChunks.isEmpty()
 
     @Synchronized
+    fun hasPendingChunks(): Boolean = pendingChunks.isNotEmpty()
+
+    @Synchronized
     fun hasDrainWork(): Boolean =
         (streaming && credits > 0 && pendingChunks.isNotEmpty()) || isReadyForCompletion()
 

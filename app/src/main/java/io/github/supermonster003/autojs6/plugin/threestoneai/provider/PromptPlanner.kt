@@ -45,6 +45,8 @@ internal object PromptPlanner {
             maximumOutputTokens = maximumTokens,
             samplingOptions = samplingOptions,
             reportUsage = options.reportUsage,
+            tools = materialized.tools,
+            maximumToolRounds = options.maximumToolRounds,
             responseJsonSchema = if (options.structuredJson) {
                 materialized.responseSchemaJson ?: DEFAULT_RESPONSE_SCHEMA_JSON
             } else {

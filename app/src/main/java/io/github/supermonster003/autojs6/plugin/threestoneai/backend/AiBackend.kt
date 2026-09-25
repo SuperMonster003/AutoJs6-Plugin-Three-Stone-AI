@@ -160,6 +160,11 @@ internal interface AiBackendSession : Closeable {
         throw UnsupportedOperationException("Persistent generation is not supported")
     }
 
+    /** Continues the active generation after the caller has executed every pending tool. */
+    fun submitToolResults(results: List<GenerationToolResult>) {
+        throw UnsupportedOperationException("Tool continuation is not supported")
+    }
+
     /** Replaces persistent state while retaining expensive implementation-specific resources. */
     fun streamRebuilt(request: GenerationRequest, listener: GenerationListener) {
         throw UnsupportedOperationException("In-place persistent rebuild is not supported")
@@ -239,6 +244,7 @@ internal enum class GenerationRole {
 internal data class GenerationMessage(
     val role: GenerationRole,
     val textParts: List<String>,
+    val nativeToolMessage: NativeToolMessage? = null,
 )
 
 internal data class GenerationSamplingOptions(
@@ -260,6 +266,8 @@ internal data class GenerationRequest(
     val samplingOptions: GenerationSamplingOptions?,
     val reportUsage: Boolean,
     val responseJsonSchema: String? = null,
+    val tools: List<GenerationToolDefinition> = emptyList(),
+    val maximumToolRounds: Int = 0,
 )
 
 /** Exact provider-side counters for one generation turn. */
@@ -312,6 +320,10 @@ internal data class GenerationStatistics(
  */
 internal interface GenerationListener {
     fun onTextDelta(text: String)
+    /** A pause, not a terminal event. Statistics cover this one model invocation. */
+    fun onToolCalls(calls: List<GenerationToolCall>, statistics: GenerationStatistics?) {
+        throw UnsupportedOperationException("This listener does not accept tool calls")
+    }
     fun onCompleted(statistics: GenerationStatistics?)
     fun onFailed(error: Throwable, statistics: GenerationStatistics?)
 }

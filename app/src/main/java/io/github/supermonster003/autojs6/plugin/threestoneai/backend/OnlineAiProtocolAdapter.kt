@@ -58,9 +58,9 @@ internal interface OnlineAiProtocolAdapter {
         credential: ByteArray,
     ): PreparedOnlineAiRequest
 
-    fun parseEvent(event: OnlineAiSseEvent): OnlineAiStreamChunk
+    fun parseEvent(event: OnlineAiSseEvent, tools: OnlineAiToolCollector? = null): OnlineAiStreamChunk
 
-    fun parseJson(body: ResponseBody): OnlineAiJsonResponse
+    fun parseJson(body: ResponseBody, tools: OnlineAiToolCollector? = null): OnlineAiJsonResponse
 }
 
 internal object OnlineAiProtocolAdapters {
@@ -85,9 +85,9 @@ private object OpenAiCompatibleProtocolAdapter : OnlineAiProtocolAdapter {
         credential = credential,
     )
 
-    override fun parseEvent(event: OnlineAiSseEvent): OnlineAiStreamChunk =
-        OpenAiCompatibleResponseParser.parseEvent(event)
+    override fun parseEvent(event: OnlineAiSseEvent, tools: OnlineAiToolCollector?): OnlineAiStreamChunk =
+        OpenAiCompatibleResponseParser.parseEvent(event, tools)
 
-    override fun parseJson(body: ResponseBody): OnlineAiJsonResponse =
-        OpenAiCompatibleResponseParser.parseJson(body)
+    override fun parseJson(body: ResponseBody, tools: OnlineAiToolCollector?): OnlineAiJsonResponse =
+        OpenAiCompatibleResponseParser.parseJson(body, tools)
 }

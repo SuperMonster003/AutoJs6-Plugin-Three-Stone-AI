@@ -20,8 +20,13 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         require(normalized.provider.protocol == OnlineAiProtocol.GEMINI_GENERATE_CONTENT) {
             "Online AI profile does not use the Gemini GenerateContent protocol"
         }
-        val messageBytes = OnlineAiRequestSupport.requireConversation(messages)
+        val messageBytes = OnlineAiTools.requireRequest(turn, OnlineAiRequestSupport.requireConversation(messages))
         val body = JsonObject().apply {
+            if (turn.tools.isNotEmpty()) add("tools", JsonArray().apply {
+                add(JsonObject().apply {
+                    add("functionDeclarations", OnlineAiTools.definitions(turn.tools, normalized.provider.protocol))
+                })
+            })
             val systemMessages = messages.filter { message -> message.role == GenerationRole.SYSTEM }
             if (systemMessages.isNotEmpty()) {
                 // Keep invariant L0/L1/L2 bytes ahead of the append-only raw content array.
@@ -47,7 +52,10 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
                                     GenerationRole.SYSTEM -> error("System messages are top-level")
                                 },
                             )
-                            add("parts", JsonArray().apply {
+                            if (message.nativeToolMessage != null) {
+                                require(message.nativeToolMessage.protocol == normalized.provider.protocol)
+                                add("parts", OnlineAiResponseSupport.parseArray(message.nativeToolMessage.json))
+                            } else add("parts", JsonArray().apply {
                                 add(JsonObject().apply {
                                     addProperty("text", OnlineAiRequestSupport.text(message))
                                 })
@@ -82,13 +90,16 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         )
     }
 
-    override fun parseEvent(event: OnlineAiSseEvent): OnlineAiStreamChunk {
+    override fun parseEvent(event: OnlineAiSseEvent, tools: OnlineAiToolCollector?): OnlineAiStreamChunk {
         if (event.isDone) OnlineAiResponseSupport.invalidResponse()
-        return parse(OnlineAiResponseSupport.parseObject(event.data), requireTerminal = false)
+        val root = OnlineAiResponseSupport.parseObject(event.data)
+        return parse(root, requireTerminal = false).also { tools?.event(root) }
     }
 
-    override fun parseJson(body: ResponseBody): OnlineAiJsonResponse {
-        val chunk = parse(OnlineAiResponseSupport.readObject(body), requireTerminal = true)
+    override fun parseJson(body: ResponseBody, tools: OnlineAiToolCollector?): OnlineAiJsonResponse {
+        val root = OnlineAiResponseSupport.readObject(body)
+        val chunk = parse(root, requireTerminal = true)
+        tools?.json(root)
         if (!chunk.contentSeen) OnlineAiResponseSupport.invalidResponse()
         return OnlineAiJsonResponse(text = chunk.text, usage = chunk.usage)
     }
@@ -127,6 +138,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
             parts.forEach { element ->
                 if (!element.isJsonObject) OnlineAiResponseSupport.invalidResponse()
                 val part = element.asJsonObject
+                if (part.has("functionCall")) textPartSeen = true
                 if (OnlineAiResponseSupport.booleanOrNull(part, "thought") == true) return@forEach
                 val partText = OnlineAiResponseSupport.stringOrNull(part, "text") ?: return@forEach
                 textPartSeen = true

@@ -11,6 +11,8 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSe
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetUnavailableException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationStatistics
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationToolCall
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationToolResult
 import org.autojs.plugin.ai.common.api.AiCommonCodec
 import org.autojs.plugin.ai.common.api.AiCommonLimits
 import org.autojs.plugin.ai.common.api.AiError
@@ -31,6 +33,10 @@ import org.autojs.plugin.ai.provider.api.AiProviderMimeType
 import org.autojs.plugin.ai.provider.api.AiProviderProtocol
 import org.autojs.plugin.ai.provider.api.AiProviderQuotaPolicy
 import org.autojs.plugin.ai.provider.api.AiProviderRequest
+import org.autojs.plugin.ai.provider.api.AiProviderPayloadPolicy
+import org.autojs.plugin.ai.provider.api.AiProviderLimits
+import org.autojs.plugin.ai.provider.api.AiToolCallBatch
+import org.autojs.plugin.ai.provider.api.AiToolTurnPolicy
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
@@ -51,7 +57,7 @@ internal class RemoteThreeStoneAiSession(
     requestMetadata: ByteArray,
     descriptors: OwnedParcelFileDescriptors,
     private val callback: IAiCallback,
-    private val callerVerifier: HostCallerVerifier,
+    private val callerVerifier: SessionOwnerVerifier,
     private val aiBackend: AiBackend,
     private val worker: ExecutorService,
     private val timeoutScheduler: ScheduledExecutorService,
@@ -91,11 +97,12 @@ internal class RemoteThreeStoneAiSession(
             OwnedParcelFileDescriptors.closeIncoming(resultDescriptors)
             throw error
         }
-        OwnedParcelFileDescriptors.closeIncoming(resultDescriptors)
-        activeTurn.get()?.fail(
-            AiErrorCode.UNSUPPORTED_CAPABILITY,
-            "Tool results are not supported",
-        )
+        val turn = activeTurn.get()
+        if (turn == null || !turn.isActive) {
+            OwnedParcelFileDescriptors.closeIncoming(resultDescriptors)
+            return
+        }
+        turn.submitToolResults(results, resultDescriptors)
     }
 
     override fun generateNext(
@@ -245,6 +252,8 @@ internal class RemoteThreeStoneAiSession(
             turn.ensureActive()
             val listener = object : GenerationListener {
                 override fun onTextDelta(text: String) = turn.backendTextDelta(text)
+                override fun onToolCalls(calls: List<GenerationToolCall>, statistics: GenerationStatistics?) =
+                    turn.backendToolCalls(calls, statistics)
                 override fun onCompleted(statistics: GenerationStatistics?) =
                     turn.backendCompleted(statistics)
 
@@ -290,19 +299,20 @@ internal class RemoteThreeStoneAiSession(
         val options = request.options
         if (
             options.includeReasoning ||
-            options.maximumToolRounds != 0 ||
+            (options.persistentSession && request.tools.isNotEmpty()) ||
             (!options.structuredJson && options.responseMimeType != AiProviderMimeType.PLAIN) ||
-            request.tools.isNotEmpty() ||
             options.requiredCapabilityIds.any {
                 it != AiProviderCapabilityId.STREAMING &&
                     it != AiProviderCapabilityId.USAGE &&
                     it != AiProviderCapabilityId.PERSISTENT_SESSION &&
+                    it != AiProviderCapabilityId.TOOLS &&
                     it != AiProviderCapabilityId.STRUCTURED_JSON
             } ||
             request.messages.any { it.name != null }
         ) {
             throw UnsupportedSurface()
         }
+        require(if (request.tools.isEmpty()) options.maximumToolRounds == 0 else options.maximumToolRounds > 0)
     }
 
     private fun requireTurnConfiguration(
@@ -530,6 +540,11 @@ internal class RemoteThreeStoneAiSession(
         private val generationStatistics = AtomicReference<GenerationStatistics?>()
         private val terminalCause = AtomicReference(TerminalCause.NONE)
         private val contextPlan = AtomicReference<PreparedPersistentTurn?>()
+        private val toolPolicy = AiToolTurnPolicy(requestHint?.options?.maximumToolRounds ?: 0)
+        private val pendingToolCallback = AtomicReference<ByteArray?>()
+        private val acceptingToolResults = AtomicBoolean(false)
+        private val toolResultDescriptors = AtomicReference<OwnedParcelFileDescriptors?>()
+        private val usageAccumulator = ToolGenerationUsage()
         val futures = ConcurrentLinkedQueue<Future<*>>()
 
         val isActive: Boolean
@@ -574,7 +589,7 @@ internal class RemoteThreeStoneAiSession(
                 targetId = request.targetId,
                 firstChunkSequence = 0L,
                 effectiveMaximumOutputBytes = request.options.maximumOutputBytes,
-                effectiveMaximumToolRounds = 0,
+                effectiveMaximumToolRounds = request.options.maximumToolRounds,
             )
             dispatchCallback { callback.onStarted(AiProviderCodec.encodeSessionStarted(metadata)) }
         }
@@ -585,6 +600,10 @@ internal class RemoteThreeStoneAiSession(
 
         fun backendTextDelta(text: String) {
             if (!isActive || terminalCause.get() != TerminalCause.NONE) return
+            if (toolPolicy.hasOutstandingTurn) {
+                fail(AiErrorCode.PROTOCOL_VIOLATION, "AI output arrived while waiting for tool results")
+                return
+            }
             val hitLimit = try {
                 output.append(text)
             } catch (_: Throwable) {
@@ -599,11 +618,15 @@ internal class RemoteThreeStoneAiSession(
 
         fun backendCompleted(statistics: GenerationStatistics?) {
             if (!isActive) return
+            if (toolPolicy.hasOutstandingTurn) {
+                fail(AiErrorCode.PROTOCOL_VIOLATION, "AI completion arrived while waiting for tool results")
+                return
+            }
             when (terminalCause.get()) {
                 TerminalCause.NONE,
                 TerminalCause.OUTPUT_LIMIT,
                 -> {
-                    generationStatistics.set(statistics)
+                    if (!recordStatistics(statistics)) return
                     output.markBackendDone()
                     scheduleDrain()
                 }
@@ -614,15 +637,92 @@ internal class RemoteThreeStoneAiSession(
         fun backendFailed(statistics: GenerationStatistics?) {
             when (terminalCause.get()) {
                 TerminalCause.OUTPUT_LIMIT -> {
-                    generationStatistics.set(statistics)
+                    if (!recordStatistics(statistics)) return
                     output.markBackendDone()
                     scheduleDrain()
                 }
                 TerminalCause.NONE -> fail(
                     AiErrorCode.PROVIDER_FAILED,
-                    "LiteRT-LM generation failed",
+                    "AI generation failed",
                 )
                 else -> Unit
+            }
+        }
+
+        private fun recordStatistics(statistics: GenerationStatistics?): Boolean = try {
+            val accumulated = usageAccumulator.add(statistics)
+            if (requestHint?.options?.reportUsage == true) requireNotNull(accumulated)
+            generationStatistics.set(accumulated)
+            true
+        } catch (_: Throwable) {
+            fail(AiErrorCode.PROVIDER_FAILED, "AI usage is unavailable or invalid")
+            false
+        }
+
+        fun backendToolCalls(calls: List<GenerationToolCall>, statistics: GenerationStatistics?) {
+            if (!isActive || terminalCause.get() != TerminalCause.NONE) return
+            try {
+                val batch = AiToolCallBatch(calls.map(GenerationToolCall::toProviderCall))
+                AiProviderQuotaPolicy.validateToolCalls(requireNotNull(requestHint), batch, 0,
+                    ThreeStoneAiPlugin.MAXIMUM_SESSION_DESCRIPTORS)
+                val encoded = AiProviderCodec.encodeToolCallBatch(batch)
+                BinderInputPolicy.requireEnvelopeSize(encoded.size)
+                toolPolicy.open(batch)
+                if (!recordStatistics(statistics)) return
+                check(pendingToolCallback.compareAndSet(null, encoded))
+                scheduleDrain()
+            } catch (_: Throwable) {
+                fail(AiErrorCode.PROTOCOL_VIOLATION, "AI tool calls are invalid")
+            }
+        }
+
+        fun submitToolResults(metadata: ByteArray?, incoming: Array<out ParcelFileDescriptor>?) {
+            val owned: OwnedParcelFileDescriptors
+            val safeMetadata: ByteArray
+            try {
+                check(isActive && acceptingToolResults.compareAndSet(true, false))
+                safeMetadata = requireNotNull(metadata).also { BinderInputPolicy.requireEnvelopeSize(it.size) }.copyOf()
+                val safeIncoming = requireNotNull(incoming)
+                BinderInputPolicy.requireSessionDescriptorCount(safeIncoming.size, ThreeStoneAiPlugin.MAXIMUM_SESSION_DESCRIPTORS)
+                owned = OwnedParcelFileDescriptors.duplicateBeforeAsync(safeIncoming)
+            } catch (_: Throwable) {
+                OwnedParcelFileDescriptors.closeIncoming(incoming)
+                fail(AiErrorCode.PROTOCOL_VIOLATION, "AI tool results are invalid or unexpected")
+                return
+            }
+            check(toolResultDescriptors.compareAndSet(null, owned))
+            if (!isActive) {
+                toolResultDescriptors.compareAndSet(owned, null)
+                owned.close()
+                return
+            }
+            val accepted = submitWork(this) {
+                try {
+                    ensureActive()
+                    val batch = AiProviderCodec.decodeToolResultBatch(safeMetadata)
+                    AiProviderQuotaPolicy.validateToolResults(batch, owned.count, ThreeStoneAiPlugin.MAXIMUM_SESSION_DESCRIPTORS)
+                    toolPolicy.submit(batch) // Reject IDs and declared quotas before a descriptor can block.
+                    val results = batch.results.map { result ->
+                        GenerationToolResult(result.callId, AiProviderPayloadPolicy.materializeAndValidateBounded(
+                            result.output, AiProviderLimits.MAX_TOOL_ARGUMENT_OR_RESULT_BYTES, owned::readDeclaredBytes,
+                        ), result.isError)
+                    }
+                    owned.close()
+                    toolResultDescriptors.compareAndSet(owned, null)
+                    ensureActive()
+                    requireNotNull(backendSession.get()).submitToolResults(results)
+                } catch (_: SessionStopped) {
+                    Unit
+                } catch (_: Throwable) {
+                    fail(AiErrorCode.PROTOCOL_VIOLATION, "AI tool continuation failed")
+                } finally {
+                    toolResultDescriptors.compareAndSet(owned, null)
+                    owned.close()
+                }
+            }
+            if (!accepted) {
+                toolResultDescriptors.compareAndSet(owned, null)
+                owned.close()
             }
         }
 
@@ -639,6 +739,9 @@ internal class RemoteThreeStoneAiSession(
         fun dispose(cancelWorkers: Boolean) {
             timeoutFuture.getAndSet(null)?.cancel(false)
             descriptors.close()
+            acceptingToolResults.set(false)
+            pendingToolCallback.set(null)
+            toolResultDescriptors.getAndSet(null)?.close()
             contextPlan.getAndSet(null)?.let(persistentContext::abandon)
             if (cancelWorkers) futures.forEach { it.cancel(true) }
             futures.clear()
@@ -649,18 +752,21 @@ internal class RemoteThreeStoneAiSession(
         }
 
         private fun scheduleDrain() {
-            if (!isActive || !output.hasDrainWork()) return
+            if (!isActive || !hasDrainWork()) return
             if (!drainScheduled.compareAndSet(false, true)) return
             val accepted = submitWork(this) {
                 try {
                     drainOutput()
                 } finally {
                     drainScheduled.set(false)
-                    if (isActive && output.hasDrainWork()) scheduleDrain()
+                    if (isActive && hasDrainWork()) scheduleDrain()
                 }
             }
             if (!accepted) drainScheduled.set(false)
         }
+
+        private fun hasDrainWork(): Boolean = output.hasDrainWork() ||
+            (pendingToolCallback.get() != null && !output.hasPendingChunks())
 
         private fun drainOutput() {
             while (isActive) {
@@ -671,6 +777,19 @@ internal class RemoteThreeStoneAiSession(
                             AiProviderChunk(sequence = chunk.sequence, textDelta = chunk.text),
                         ),
                     )
+                }
+            }
+            if (isActive && !output.hasPendingChunks()) {
+                pendingToolCallback.getAndSet(null)?.let { encoded ->
+                    val usage = generationStatistics.get()?.takeIf { requestHint?.options?.reportUsage == true }
+                        ?.toAiUsage()?.let(AiCommonCodec::encodeUsage)
+                    dispatchCallback {
+                        if (isActive) {
+                            usage?.let(callback::onUsage)
+                            acceptingToolResults.set(true)
+                            callback.onToolCalls(encoded, emptyArray())
+                        }
+                    }
                 }
             }
             if (isActive && output.isReadyForCompletion()) finishCompleted()

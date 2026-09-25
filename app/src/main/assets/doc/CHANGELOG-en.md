@@ -4,6 +4,13 @@
 
 ******
 
+# v1.2.0
+
+###### 2026/09/25
+
+* `Hint` Development candidate, not published. Online tool calling uses AI Provider V2; Agent integration requires the host native-tool broker in build 5297+ and an Agent version that supports it. The plugin returns calls to the host and does not execute device actions itself.
+* `Feature` Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation
+
 # v1.1.4
 
 ###### 2026/09/19

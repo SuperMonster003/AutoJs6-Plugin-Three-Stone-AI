@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai.backend
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.Strictness
 import okhttp3.ResponseBody
@@ -24,6 +25,13 @@ internal object OnlineAiResponseSupport {
         }
         if (parsed == null || !parsed.isJsonObject) invalidResponse()
         return parsed.asJsonObject
+    }
+
+    fun parseArray(value: String): JsonArray {
+        val parsed = try { STRICT_GSON.fromJson(value, JsonElement::class.java) }
+        catch (_: RuntimeException) { invalidResponse() }
+        if (parsed == null || !parsed.isJsonArray) invalidResponse()
+        return parsed.asJsonArray
     }
 
     fun readObject(body: ResponseBody): JsonObject {

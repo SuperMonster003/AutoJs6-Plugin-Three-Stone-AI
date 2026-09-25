@@ -67,6 +67,7 @@ El README.md actual admite los siguientes idiomas:
 - Vincular cada conversación del iniciador a una instantánea de destino local o en línea; al cambiar una conversación con mensajes se recomienda una nueva, y continuar exige confirmación explícita y registra el cambio.
 - Guardar una instantánea del destino, proveedor, modelo y ubicación reales en cada respuesta del asistente; la regeneración reutiliza exactamente el destino registrado, falla explícitamente si cambia o deja de estar disponible y nunca recurre silenciosamente al destino actual de la conversación.
 - Mantener los fallos de generación local y en la nube dentro del destino seleccionado: el chat del iniciador añade una causa acotada sin datos sensibles, indica que no hubo fallback entre límites y ofrece un cambio manual explícito de destino sin descartar la salida parcial.
+- Llamadas nativas a herramientas para destinos en línea compatibles con OpenAI, Anthropic Messages y Gemini GenerateContent, con argumentos en streaming, llamadas paralelas y continuación tras resultados.
 
 ******
 
@@ -148,8 +149,8 @@ El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas p
 
 ******
 
-- No se declaran reasoning ni tools.
-- No se aceptan mensajes con rol tool, schemas de herramientas, tool calls ni tool results.
+- No se declara la salida reasoning. Los destinos locales LiteRT-LM siguen sin declarar tools.
+- Las herramientas nativas admiten hasta 16 rondas y 32 llamadas pendientes. Los resultados deben coincidir exactamente con el lote pendiente; siguen vigentes los límites de contexto/salida, la cancelación y el plazo original. No se combinan con turnos persistentes ai.session; el historial inicial no acepta el rol tool.
 - No hay descubrimiento de modelos por red ni descargas desde URL arbitrarias. El catálogo de destinos solo expone modelos locales importados y perfiles en línea configurados explícitamente; únicamente puede descargarse el catálogo de recomendaciones integrado y fijado.
 - No se declara inferencia NPU: el perfil es visible como `unavailable` con `npu-runtime-not-packaged`. GPU solo se declara si `libOpenCL.so` puede cargarse y la extensión `.litertlm` aún no garantiza que el modelo se inicialice.
 
@@ -169,6 +170,13 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ******
 
+# v1.2.0
+
+###### 2026/09/25
+
+* `Aviso` Versión de desarrollo no publicada. Las herramientas en línea usan AI Provider V2; su integración con Agent requiere el intermediario nativo del host build 5297+ y una versión compatible de Agent. El plugin devuelve llamadas al host y no ejecuta acciones del dispositivo por sí mismo.
+* `Función` Llamadas nativas a herramientas para destinos en línea compatibles con OpenAI, Anthropic Messages y Gemini GenerateContent, con argumentos en streaming, llamadas paralelas y continuación tras resultados
+
 # v1.1.4
 
 ###### 2026/09/19
@@ -181,13 +189,6 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 ###### 2026/09/15
 
 * `Mejora` compileSdk sube a 37 (Android 17); targetSdk se mantiene en 36 hasta verificar el comportamiento que depende del objetivo
-
-# v1.1.2
-
-###### 2026/09/13
-
-* `Corrección` Mantener la fecha de versión del complemento en inglés sin depender del idioma del equipo de compilación
-* `Mejora` Recursos traducidos coherentes, activación explícita del complemento y validación de los paquetes de publicación
 
 ##### Más versiones
 

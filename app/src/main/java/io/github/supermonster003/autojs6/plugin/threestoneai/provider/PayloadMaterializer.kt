@@ -4,6 +4,7 @@ import org.autojs.plugin.ai.common.api.AiPayloadReference
 import org.autojs.plugin.ai.common.api.AiValidation
 import org.autojs.plugin.ai.provider.api.AiProviderPayloadPolicy
 import org.autojs.plugin.ai.provider.api.AiProviderRequest
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationToolDefinition
 
 internal data class MaterializedMessage(
     val role: Int,
@@ -14,6 +15,7 @@ internal data class MaterializedRequest(
     val messages: List<MaterializedMessage>,
     val inputBytes: Long,
     val responseSchemaJson: String? = null,
+    val tools: List<GenerationToolDefinition> = emptyList(),
 )
 
 internal object PayloadMaterializer {
@@ -45,6 +47,10 @@ internal object PayloadMaterializer {
             messages = messages,
             inputBytes = inputBytes,
             responseSchemaJson = responseSchemaJson,
+            tools = request.tools.map { tool ->
+                GenerationToolDefinition(tool.name, tool.description,
+                    AiValidation.decodeUtf8(materialize(tool.inputSchema, readDescriptor)))
+            },
         )
     }
 

@@ -24,7 +24,8 @@
     "Gérer les profils en ligne intégrés et personnalisés, les identifiants Android Keystore, la cible en ligne par défaut, les réseaux facturés et les tests de connexion explicites et limités dans les réglages.",
     "Associer chaque conversation du lanceur à un instantané de cible locale ou en ligne; un nouveau chat est recommandé lors du changement d'une conversation remplie, et continuer exige une confirmation explicite enregistrée.",
     "Enregistrer la cible, le fournisseur, le modèle et la localité réellement utilisés pour chaque réponse de l'assistant; la régénération réutilise exactement cette cible, échoue explicitement si son identité change ou si elle devient indisponible, sans repli silencieux sur la cible actuelle.",
-    "Maintenir les échecs de génération locale et cloud dans la cible sélectionnée: le chat du lanceur ajoute une raison bornée sans données sensibles, indique qu'aucun repli entre frontières n'a eu lieu et propose un changement manuel explicite de cible sans supprimer la sortie partielle."
+    "Maintenir les échecs de génération locale et cloud dans la cible sélectionnée: le chat du lanceur ajoute une raison bornée sans données sensibles, indique qu'aucun repli entre frontières n'a eu lieu et propose un changement manuel explicite de cible sans supprimer la sortie partielle.",
+    "Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats."
   ],
   "h3_formats": "Formats du modèle et des données",
   "p_formats": "La version 1 déclare uniquement le périmètre suivant",
@@ -55,8 +56,8 @@
   ],
   "h3_unsupported": "Capacités non déclarées",
   "unsupported_capabilities": [
-    "Reasoning et tools ne sont pas déclarés.",
-    "Les messages de rôle tool, les schemas d'outils, les tool calls et les tool results ne sont pas acceptés.",
+    "La sortie reasoning n'est pas déclarée. Les cibles LiteRT-LM locales ne déclarent toujours pas tools.",
+    "Les outils natifs autorisent 16 tours et 32 appels en attente au maximum. Les résultats doivent correspondre exactement au lot attendu; limites de contexte/sortie, annulation et délai initial restent actifs. Les outils natifs ne se combinent pas avec les tours persistants ai.session; l'historique initial refuse le rôle tool.",
     "Aucune découverte réseau de modèles ni aucun téléchargement depuis une URL arbitraire. Le catalogue de cibles ne présente que les modèles locaux importés et les profils en ligne explicitement configurés; seul le catalogue de recommandations intégré et épinglé est téléchargeable.",
     "L'inférence NPU n'est pas déclarée: le profil reste visible comme `unavailable` avec `npu-runtime-not-packaged`. GPU n'est déclaré que si `libOpenCL.so` est chargeable, et l'extension `.litertlm` ne garantit toujours pas l'initialisation du modèle."
   ],

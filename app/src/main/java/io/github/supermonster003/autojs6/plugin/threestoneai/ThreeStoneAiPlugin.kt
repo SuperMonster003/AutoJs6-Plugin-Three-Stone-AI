@@ -11,6 +11,7 @@ import org.autojs.plugin.ai.common.api.AiProviderInfo
 import org.autojs.plugin.ai.provider.api.AiProviderCapabilities
 import org.autojs.plugin.ai.provider.api.AiProviderMimeType
 import org.autojs.plugin.ai.provider.api.AiProviderProtocol
+import org.autojs.plugin.ai.provider.api.AiProviderLimits
 import org.autojs.plugin.common.api.PluginCapabilityKeys
 import org.autojs.plugin.common.api.PluginInfo
 
@@ -33,17 +34,17 @@ internal object ThreeStoneAiPlugin {
     val capabilities = AiProviderCapabilities(
         supportsStreaming = true,
         supportsReasoning = false,
-        supportsTools = false,
+        supportsTools = true,
         supportsStructuredJson = true,
         supportsUsage = true,
         supportsPersistentSessions = true,
         maximumMessages = MAXIMUM_MESSAGES,
         maximumContentParts = MAXIMUM_CONTENT_PARTS,
-        maximumToolDefinitions = 0,
+        maximumToolDefinitions = AiProviderLimits.MAX_TOOL_DEFINITIONS,
         maximumContextBytes = MAXIMUM_CONTEXT_BYTES,
         maximumOutputBytes = MAXIMUM_OUTPUT_BYTES,
-        maximumToolRounds = 0,
-        maximumOutstandingToolCalls = 0,
+        maximumToolRounds = AiProviderLimits.MAX_TOOL_ROUNDS,
+        maximumOutstandingToolCalls = AiProviderLimits.MAX_OUTSTANDING_TOOL_CALLS,
         maximumRequestDescriptors = MAXIMUM_REQUEST_DESCRIPTORS,
         maximumSessionDescriptors = MAXIMUM_SESSION_DESCRIPTORS,
         acceptedTextMimeTypes = listOf(AiProviderMimeType.PLAIN, AiProviderMimeType.JSON),

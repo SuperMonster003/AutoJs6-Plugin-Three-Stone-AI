@@ -67,6 +67,7 @@
 - 将每个启动器会话绑定到一个本地或在线目标快照; 更改有消息的会话时默认建议新建会话, 继续当前会话必须明确确认并记录变更.
 - 为每条助手回复记录实际 target/provider/model/locality 快照; 重新生成沿用该已记录目标, 身份变化或不可用时明确拒绝, 绝不静默回退到会话默认目标.
 - 本地和云端生成失败始终停留在所选边界: 启动器聊天追加有界且不含敏感信息的失败原因, 明确说明未发生跨边界自动回退, 并在保留部分输出的同时提供显式手动目标切换入口.
+- 在线 OpenAI 兼容, Anthropic Messages 与 Gemini GenerateContent 目标支持原生工具调用, 包含流式参数, 并行调用与结果续轮.
 
 ******
 
@@ -148,8 +149,8 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 ******
 
-- 不声明 reasoning 或 tools 能力.
-- 不接受 tool 角色消息, tool schema, tool call 或 tool result.
+- 不声明 reasoning 输出能力. 本地 LiteRT-LM 目标仍不声明 tools 能力.
+- 原生工具最多 16 轮, 同时最多 32 个调用. 结果必须完整匹配待处理批次; 上下文/输出限制, 取消与原始截止时间仍生效. 原生工具暂不与持久 ai.session 轮次组合, 初始历史不接受 tool 角色.
 - 不提供联网模型发现或任意 URL 模型下载. 启动器聊天与 AI Provider V2 只公开已导入本地模型及用户明确配置的在线 profile, 且只能下载内置目录中固定版本的推荐模型.
 - 不声明 NPU 推理可用: profile 可发现但以 `npu-runtime-not-packaged` 标记为 `unavailable`. GPU 仅在 `libOpenCL.so` 可加载时声明, 且 `.litertlm` 扩展名本身仍不保证模型初始化成功.
 
@@ -169,6 +170,13 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 ******
 
+# v1.2.0
+
+###### 2026/09/25
+
+* `提示` 开发候选版本, 尚未发布. 在线工具调用经 AI Provider V2 提供; Agent 集成需要 build 5297+ 的宿主原生工具代理及支持此能力的 Agent 版本. 插件向宿主返回调用, 自身不执行设备操作.
+* `新增` 在线 OpenAI 兼容, Anthropic Messages 与 Gemini GenerateContent 目标支持原生工具调用, 包含流式参数, 并行调用与结果续轮
+
 # v1.1.4
 
 ###### 2026/09/19
@@ -181,13 +189,6 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 ###### 2026/09/15
 
 * `优化` compileSdk 升级至 37 (Android 17), targetSdk 保持 36
-
-# v1.1.2
-
-###### 2026/09/13
-
-* `修复` 插件版本日期受构建环境语言影响, 未统一使用英文格式的问题
-* `优化` 统一多语言资源, 明确插件激活契约并校验发布产物
 
 ##### 更多版本
 

@@ -157,7 +157,7 @@ class OnlineAiBackendTest {
         assertTrue(target.capabilities.structuredJson)
         assertTrue(target.capabilities.usage)
         assertFalse(target.capabilities.reasoning)
-        assertFalse(target.capabilities.tools)
+        assertTrue(target.capabilities.tools)
         assertEquals(
             OnlineAiTransportLimits.MAXIMUM_CONTEXT_BYTES,
             target.limits.maximumContextBytes,

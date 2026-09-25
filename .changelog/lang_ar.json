@@ -5,6 +5,15 @@
   "changelog_label_improvement": "تحسين",
   "changelog_label_dependency": "تبعية",
   "$data": {
+    "v1.2.0": {
+      "released_date": "2026/09/25",
+      "hint": [
+        "نسخة مرشحة للتطوير لم تنشر بعد. تستخدم الأدوات المتصلة AI Provider V2; ويتطلب تكامل Agent وسيط الأدوات الأصلي في المضيف build 5297+ وإصدار Agent متوافقا. تعيد الإضافة الاستدعاءات إلى المضيف ولا تنفذ إجراءات الجهاز بنفسها."
+      ],
+      "feature": [
+        "استدعاء أدوات أصلي للأهداف المتصلة المتوافقة مع OpenAI و Anthropic Messages و Gemini GenerateContent, مع معاملات متدفقة واستدعاءات متوازية ومتابعة بعد النتائج"
+      ]
+    },
     "v1.1.4": {
       "released_date": "2026/09/19",
       "improvement": [

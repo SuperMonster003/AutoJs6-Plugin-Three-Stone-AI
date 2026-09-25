@@ -5,13 +5,17 @@ import android.content.pm.PackageManager
 import android.os.Binder
 import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
 
-internal class HostCallerVerifier(context: Context) {
+internal fun interface SessionOwnerVerifier {
+    fun enforceSessionOwner(expectedUid: Int)
+}
+
+internal class HostCallerVerifier(context: Context) : SessionOwnerVerifier {
     private val packageManager = context.applicationContext.packageManager
     private val providerPackageName = context.applicationContext.packageName
 
     fun enforceAllowedCaller(): Int = Binder.getCallingUid().also(::enforceAllowedUid)
 
-    fun enforceSessionOwner(expectedUid: Int) {
+    override fun enforceSessionOwner(expectedUid: Int) {
         val callingUid = Binder.getCallingUid()
         if (callingUid != expectedUid) throw SecurityException("local AI session UID does not match its owner")
         enforceAllowedUid(callingUid)

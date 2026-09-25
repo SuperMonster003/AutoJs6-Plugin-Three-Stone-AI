@@ -24,7 +24,8 @@
     "Manage built-in and custom online profiles, Android Keystore credentials, the default online target, metered-network access, and explicit bounded connection tests in the app settings.",
     "Bind each launcher conversation to one local or online target snapshot; changing a populated conversation recommends a new conversation, while continuing requires explicit confirmation and records the change.",
     "Record the actual target, provider, model, and locality on every assistant response; regeneration reuses that recorded target, rejects identity drift or unavailability, and never silently falls back to the conversation default.",
-    "Keep local and cloud generation failures on their selected boundary: launcher chat appends a bounded non-secret reason, states that no cross-boundary fallback occurred, and exposes an explicit manual target switch without discarding partial output."
+    "Keep local and cloud generation failures on their selected boundary: launcher chat appends a bounded non-secret reason, states that no cross-boundary fallback occurred, and exposes an explicit manual target switch without discarding partial output.",
+    "Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation."
   ],
   "h3_formats": "Model and data formats",
   "p_formats": "Version 1 declares only the following model and text scope",
@@ -55,8 +56,8 @@
   ],
   "h3_unsupported": "Undeclared capabilities",
   "unsupported_capabilities": [
-    "Reasoning and tools are not declared.",
-    "Tool-role messages, tool schemas, tool calls, and tool results are not accepted.",
+    "Reasoning output is not declared. Local LiteRT-LM targets still do not declare tools.",
+    "Native tools allow at most 16 rounds and 32 outstanding calls. Results must exactly match the pending batch; context/output limits, cancellation and the original deadline still apply. Native tools cannot be combined with persistent ai.session turns; initial tool-role history is not accepted.",
     "There is no network model discovery or arbitrary-URL model download. Launcher chat and AI Provider V2 expose only imported local models and explicitly configured online profiles, and only the pinned built-in recommendation catalog can be downloaded.",
     "NPU inference is not declared: the profile is discoverable as `unavailable` with `npu-runtime-not-packaged`. GPU is declared only when `libOpenCL.so` is loadable, and a `.litertlm` extension alone still does not guarantee model initialization."
   ],

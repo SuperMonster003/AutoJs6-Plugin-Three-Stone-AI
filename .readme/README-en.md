@@ -67,6 +67,7 @@ The current README.md supports the following languages:
 - Bind each launcher conversation to one local or online target snapshot; changing a populated conversation recommends a new conversation, while continuing requires explicit confirmation and records the change.
 - Record the actual target, provider, model, and locality on every assistant response; regeneration reuses that recorded target, rejects identity drift or unavailability, and never silently falls back to the conversation default.
 - Keep local and cloud generation failures on their selected boundary: launcher chat appends a bounded non-secret reason, states that no cross-boundary fallback occurred, and exposes an explicit manual target switch without discarding partial output.
+- Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation.
 
 ******
 
@@ -148,8 +149,8 @@ The plugin requests `INTERNET` for user-triggered recommended-model downloads an
 
 ******
 
-- Reasoning and tools are not declared.
-- Tool-role messages, tool schemas, tool calls, and tool results are not accepted.
+- Reasoning output is not declared. Local LiteRT-LM targets still do not declare tools.
+- Native tools allow at most 16 rounds and 32 outstanding calls. Results must exactly match the pending batch; context/output limits, cancellation and the original deadline still apply. Native tools cannot be combined with persistent ai.session turns; initial tool-role history is not accepted.
 - There is no network model discovery or arbitrary-URL model download. Launcher chat and AI Provider V2 expose only imported local models and explicitly configured online profiles, and only the pinned built-in recommendation catalog can be downloaded.
 - NPU inference is not declared: the profile is discoverable as `unavailable` with `npu-runtime-not-packaged`. GPU is declared only when `libOpenCL.so` is loadable, and a `.litertlm` extension alone still does not guarantee model initialization.
 
@@ -169,6 +170,13 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.2.0
+
+###### 2026/09/25
+
+* `Hint` Development candidate, not published. Online tool calling uses AI Provider V2; Agent integration requires the host native-tool broker in build 5297+ and an Agent version that supports it. The plugin returns calls to the host and does not execute device actions itself.
+* `Feature` Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation
+
 # v1.1.4
 
 ###### 2026/09/19
@@ -181,13 +189,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 ###### 2026/09/15
 
 * `Improvement` Raise compileSdk to 37 (Android 17); targetSdk stays at 36 until the behavior that depends on the target is verified
-
-# v1.1.2
-
-###### 2026/09/13
-
-* `Fix` Keep the plugin version date in English regardless of the build machine locale
-* `Improvement` Consistent localized resources, explicit plugin activation and validated release preparation
 
 ##### For more releases
 

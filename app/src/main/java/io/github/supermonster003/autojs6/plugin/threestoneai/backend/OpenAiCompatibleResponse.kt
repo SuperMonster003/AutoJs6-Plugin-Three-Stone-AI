@@ -7,10 +7,11 @@ import java.math.BigDecimal
 
 /** Parses only the text and exact usage surface declared by the unified backend. */
 internal object OpenAiCompatibleResponseParser {
-    fun parseEvent(event: OnlineAiSseEvent): OnlineAiStreamChunk {
+    fun parseEvent(event: OnlineAiSseEvent, tools: OnlineAiToolCollector? = null): OnlineAiStreamChunk {
         if (event.isDone) return OnlineAiStreamChunk(done = true)
         val root = OnlineAiResponseSupport.parseObject(event.data)
         if (event.event == "error" || root.isTypedError() || root.hasProviderError()) providerError()
+        tools?.event(root)
 
         val choice = root.firstChoice()
         val delta = choice?.get("delta")?.let { element ->
@@ -29,9 +30,10 @@ internal object OpenAiCompatibleResponseParser {
         )
     }
 
-    fun parseJson(body: ResponseBody): OnlineAiJsonResponse {
+    fun parseJson(body: ResponseBody, tools: OnlineAiToolCollector? = null): OnlineAiJsonResponse {
         val root = OnlineAiResponseSupport.readObject(body)
         if (root.isTypedError() || root.hasProviderError()) providerError()
+        tools?.json(root)
         val choice = root.firstChoice() ?: invalidResponse()
         val message = choice.get("message")?.let { element ->
             if (!element.isJsonObject) invalidResponse()

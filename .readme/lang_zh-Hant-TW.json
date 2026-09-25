@@ -25,10 +25,11 @@
     "將每個啟動器對話綁定到一個本機或線上目標快照; 變更已有訊息的對話時預設建議新增對話, 繼續目前對話必須明確確認並記錄變更.",
     "為每則助手回覆儲存實際 target/provider/model/locality 快照; 重新產生預設精確沿用原回覆目標, 目標身分變更或無法使用時明確失敗, 不會靜默回退到目前對話目標.",
     "本機與雲端生成失敗會始終停留在所選邊界: 啟動器聊天會附加有界且不含敏感資訊的失敗原因, 明確說明未發生跨邊界自動回退, 並在保留部分輸出的同時提供明確的手動目標切換入口.",
-    "線上 OpenAI 相容, Anthropic Messages 與 Gemini GenerateContent 目標支援原生工具呼叫, 包含串流參數, 並行呼叫與結果續輪."
+    "線上 OpenAI 相容, Anthropic Messages 與 Gemini GenerateContent 目標支援原生工具呼叫, 包含串流參數, 並行呼叫與結果續輪.",
+    "線上模型透過協商 AI Provider 2.1 接收 JPEG/PNG 圖片及工具結果圖片, 支援依個別模型啟用."
   ],
   "h3_formats": "模型和資料格式",
-  "p_formats": "版本 1 僅宣告以下模型和文字範圍",
+  "p_formats": "支援的模型與輸入格式",
   "h3_plugin_interface": "外掛介面",
   "p_plugin_interface": "主程式透過以下識別發現並呼叫外掛",
   "p_plugin_scope": "AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 每個目標分別宣告 provider, model, locality, 設定及可用狀態, 能力, 限制, 控制項與 HTTPS origins. 目錄僅含本機目標時宣告 ON_DEVICE/NONE; 存在線上 profile 時宣告 HYBRID/PLUGIN_MANAGED 及其 HTTPS origins 精確聯集. 本機 backend profile 是可選目標控制項, 不可用 profile 或目標絕不靜默回退.",
@@ -52,7 +53,8 @@
     "串流輸出使用有限 credit 和有界 chunk, 防止無限制緩衝或無背壓回呼.",
     "Usage token 數直接來自 LiteRT-LM Conversation 的 KV cache 與 decode 計數, 不使用字元數估算. `durationMillis` 只測量外掛生成呼叫, 不包含宿主探索, 綁定, 模型列舉和分派時間.",
     "持久 `ai.session` 只允許一個活動輪次, 正常完成後保留原生 Conversation; 取消, 逾時, 生成失敗或顯式關閉後必須重新建立工作階段.",
-    "取消, 工作階段關閉和逾時會停止結果發布, 並透過唯一終態結束請求."
+    "取消, 工作階段關閉和逾時會停止結果發布, 並透過唯一終態結束請求.",
+    "在 設定 > 線上 AI 中編輯設定並選擇支援圖片輸入的模型. 既有設定預設關閉. 圖片僅傳送至所選設定的服務. LiteRT 與持久 ai.session 仍僅支援文字; Agent 截圖任務需等待 P9.2 的 Agent 整合完成."
   ],
   "h3_unsupported": "未宣告的能力",
   "unsupported_capabilities": [

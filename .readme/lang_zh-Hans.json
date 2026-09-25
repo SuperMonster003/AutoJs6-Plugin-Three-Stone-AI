@@ -25,10 +25,11 @@
     "将每个启动器会话绑定到一个本地或在线目标快照; 更改有消息的会话时默认建议新建会话, 继续当前会话必须明确确认并记录变更.",
     "为每条助手回复记录实际 target/provider/model/locality 快照; 重新生成沿用该已记录目标, 身份变化或不可用时明确拒绝, 绝不静默回退到会话默认目标.",
     "本地和云端生成失败始终停留在所选边界: 启动器聊天追加有界且不含敏感信息的失败原因, 明确说明未发生跨边界自动回退, 并在保留部分输出的同时提供显式手动目标切换入口.",
-    "在线 OpenAI 兼容, Anthropic Messages 与 Gemini GenerateContent 目标支持原生工具调用, 包含流式参数, 并行调用与结果续轮."
+    "在线 OpenAI 兼容, Anthropic Messages 与 Gemini GenerateContent 目标支持原生工具调用, 包含流式参数, 并行调用与结果续轮.",
+    "在线模型通过协商 AI Provider 2.1 接收 JPEG/PNG 图片及工具结果图片, 支持按具体模型启用."
   ],
   "h3_formats": "模型和数据格式",
-  "p_formats": "版本 1 仅声明以下模型和文本范围",
+  "p_formats": "支持的模型与输入格式",
   "h3_plugin_interface": "插件接口",
   "p_plugin_interface": "宿主通过以下标识发现并调用插件",
   "p_plugin_scope": "AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 每个目标分别声明 provider, model, locality, 配置及可用状态, 能力, 限制, 控件与 HTTPS origins. 目录仅含本地目标时声明 ON_DEVICE/NONE; 存在在线 profile 时声明 HYBRID/PLUGIN_MANAGED 及其 HTTPS origins 精确并集. 本地 backend profile 是可选目标控件, 不可用 profile 或目标绝不静默回退.",
@@ -52,7 +53,8 @@
     "流式输出使用有限 credit 和有界 chunk, 防止无限制缓冲或无背压回调.",
     "Usage token 数直接来自 LiteRT-LM Conversation 的 KV cache 与 decode 计数, 不做字符数估算. `durationMillis` 只测量插件生成调用, 不包含宿主发现, 绑定, 模型枚举和分发时间.",
     "持久 `ai.session` 只允许一个活动轮次, 正常完成后保留原生 Conversation; 取消, 超时, 生成失败或显式关闭后必须重新创建会话.",
-    "取消, 会话关闭和超时会停止结果发布, 并通过唯一终态结束请求."
+    "取消, 会话关闭和超时会停止结果发布, 并通过唯一终态结束请求.",
+    "在 设置 > 在线 AI 中编辑配置并选择支持图片输入的模型. 已有配置默认关闭. 图片仅发送给所选配置的服务. LiteRT 与持久 ai.session 仍仅支持文本; Agent 截图任务需等待 P9.2 的 Agent 接入完成."
   ],
   "h3_unsupported": "未声明的能力",
   "unsupported_capabilities": [

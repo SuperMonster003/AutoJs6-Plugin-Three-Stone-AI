@@ -421,16 +421,22 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         var selectedModelIds = existing?.profile?.modelIds
             ?: OnlineAiModelPresetCatalog.forProvider(initialProvider).take(1)
         var selectedDefaultModelId = existing?.profile?.modelId ?: selectedModelIds.first()
+        var selectedVisionModelIds = existing?.profile?.visionModelIds.orEmpty()
 
         var onProviderClick: () -> Unit = {}
         var onModelsClick: () -> Unit = {}
         var onDefaultModelClick: () -> Unit = {}
+        var onVisionModelsClick: () -> Unit = {}
         val providerField = pickerField(providerLabel(initialProvider)) { onProviderClick() }
         val modelsField = pickerField("") { onModelsClick() }
         val defaultModelField = pickerField("") { onDefaultModelClick() }
+        val visionModelsField = pickerField("") { onVisionModelsClick() }
+        visionModelsField.first.contentDescription = getString(R.string.online_ai_vision_models)
 
         fun refreshModelControls() {
             modelsField.second.text = selectedModelIds.joinToString("\n")
+            selectedVisionModelIds = selectedVisionModelIds.filter { it in selectedModelIds }
+            visionModelsField.second.text = selectedVisionModelIds.joinToString("\n").ifEmpty { getString(R.string.online_ai_vision_none) }
             if (selectedDefaultModelId !in selectedModelIds) {
                 selectedDefaultModelId = selectedModelIds.first()
             }
@@ -440,6 +446,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         fun applyProvider(provider: OnlineAiProvider) {
             if (provider == selectedProvider) return
             selectedProvider = provider
+            selectedVisionModelIds = emptyList()
+            refreshModelControls()
             baseUrlInput.setText(
                 OnlineAiProviderCatalog.templateFor(provider).defaultBaseUrl
                     ?: OnlineAiBaseUrlHistoryPolicy.HTTPS_PREFIX,
@@ -470,6 +478,29 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 refreshModelControls()
             }
         }
+        onVisionModelsClick = {
+            val boxes = selectedModelIds.map { modelId ->
+                MaterialCheckBox(this).apply {
+                    text = modelId
+                    isChecked = modelId in selectedVisionModelIds
+                    minimumHeight = uiDp(48)
+                    buttonTintList = controlTintList()
+                    setTextColor(appPalette.primaryText)
+                }
+            }
+            val content = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPaddingRelative(uiDp(Ui.SPACE_XXL), 0, uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM))
+                addView(secondaryText(getString(R.string.online_ai_vision_help), 12.5f))
+                boxes.forEach(::addView)
+            }
+            formBottomSheet(title = getString(R.string.online_ai_vision_models), content = content,
+                positiveResource = R.string.chat_settings_save, onPositive = {
+                    selectedVisionModelIds = selectedModelIds.filterIndexed { index, _ -> boxes[index].isChecked }
+                    refreshModelControls()
+                    true
+                })
+        }
         onDefaultModelClick = {
             singleChoiceDialog(
                 title = getString(R.string.online_ai_default_model),
@@ -493,6 +524,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             addView(modelsField.first)
             addView(formLabel(R.string.online_ai_default_model))
             addView(defaultModelField.first)
+            addView(formLabel(R.string.online_ai_vision_models))
+            addView(visionModelsField.first)
             addView(fieldParamsWrap(credentialField))
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -510,6 +543,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                     nameInput = nameInput,
                     baseUrlInput = baseUrlInput,
                     modelIds = selectedModelIds,
+                    visionModelIds = selectedVisionModelIds,
                     defaultModelId = selectedDefaultModelId,
                     credentialField = credentialField,
                     credentialInput = credentialInput,
@@ -649,6 +683,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         nameInput: android.widget.EditText,
         baseUrlInput: android.widget.EditText,
         modelIds: List<String>,
+        visionModelIds: List<String>,
         defaultModelId: String,
         credentialField: TextInputLayout,
         credentialInput: android.widget.EditText,
@@ -660,12 +695,14 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 baseUrl = baseUrlInput.text.toString(),
                 modelId = defaultModelId,
                 modelIds = modelIds,
+                visionModelIds = visionModelIds,
             ) ?: OnlineAiProfile.create(
                 displayName = nameInput.text.toString(),
                 provider = provider,
                 baseUrl = baseUrlInput.text.toString(),
                 modelId = defaultModelId,
                 modelIds = modelIds,
+                visionModelIds = visionModelIds,
             )
             OnlineAiProfilePolicy.normalizeProfile(raw)
         }.getOrElse {
@@ -797,6 +834,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 baseUrl = profile.baseUrl,
                 modelId = profile.modelId,
                 modelIds = profile.modelIds,
+                visionModelIds = profile.visionModelIds,
             )
         }.getOrElse {
             showSnackbar(screenRoot, getString(R.string.online_ai_profile_clone_failed), Snackbar.LENGTH_LONG)
@@ -866,6 +904,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                         baseUrl = source.baseUrl,
                         modelId = source.modelId,
                         modelIds = source.modelIds,
+                        visionModelIds = source.visionModelIds,
                     ),
                     OnlineAiCredentialUpdate.Clear,
                 )

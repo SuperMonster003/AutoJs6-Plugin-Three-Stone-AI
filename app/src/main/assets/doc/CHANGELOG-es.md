@@ -6,10 +6,13 @@
 
 # v1.2.0
 
-###### 2026/09/25
+###### 2026/09/26
 
 * `Aviso` Versión de desarrollo no publicada. Las herramientas en línea usan AI Provider V2; su integración con Agent requiere el intermediario nativo del host build 5297+ y una versión compatible de Agent. El plugin devuelve llamadas al host y no ejecuta acciones del dispositivo por sí mismo.
+* `Aviso` En Ajustes > IA en línea, edite un perfil y seleccione sus modelos con entrada de imágenes. Los perfiles existentes quedan desactivados por defecto. Las imágenes solo se envían a ese servicio. LiteRT y ai.session persistente siguen siendo de texto; las capturas de Agent requieren completar su integración P9.2.
 * `Función` Llamadas nativas a herramientas para destinos en línea compatibles con OpenAI, Anthropic Messages y Gemini GenerateContent, con argumentos en streaming, llamadas paralelas y continuación tras resultados
+* `Función` Entrada JPEG/PNG y resultados de herramientas con imágenes mediante AI Provider 2.1 negociado, con ajustes por modelo
+* `Corrección` Las lecturas de descriptores liberan hilos al cancelar o agotar el plazo y conservan los errores del productor de tuberías fiables
 
 # v1.1.4
 

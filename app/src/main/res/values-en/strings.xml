@@ -323,6 +323,9 @@
     <string name="online_ai_test_success">Connection test succeeded</string>
     <string name="online_ai_test_timed_out">Connection test timed out</string>
     <string name="online_ai_test_title">Test connection?</string>
+    <string name="online_ai_vision_help">Select only models that support image input at this service. Images requested by the host will be sent to the selected service. Existing models remain disabled until selected.</string>
+    <string name="online_ai_vision_models">Models with image input</string>
+    <string name="online_ai_vision_none">Disabled</string>
     <string name="online_ai_yes">Yes</string>
     <string name="plugin_description">AI text generation with private local models and user-configured online services</string>
     <string name="release_history_load_failed">Unable to load local version history</string>

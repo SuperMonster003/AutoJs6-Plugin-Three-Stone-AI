@@ -20,6 +20,7 @@ internal object PromptPlanner {
                     else -> throw IllegalArgumentException("Tool messages are not supported")
                 },
                 textParts = message.textParts,
+                images = message.images,
             )
         }
         require(messages.last().role == GenerationRole.USER) { "The final AI message must be a user message" }

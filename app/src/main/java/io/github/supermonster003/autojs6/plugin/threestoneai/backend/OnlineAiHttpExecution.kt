@@ -64,6 +64,7 @@ internal class OnlineAiHttpExecution private constructor(
         OnlineAiProtocolAdapters.forProfile(normalized)
         return baseCapabilities.copy(
             structuredJson = OnlineAiProviderCatalog.templateFor(normalized.provider).structuredJson,
+            vision = normalized.modelId in normalized.visionModelIds,
         )
     }
 
@@ -388,7 +389,7 @@ internal class OnlineAiSession(
         tools = tools.toList(),
     )
 
-    private fun GenerationMessage.snapshot() = copy(textParts = textParts.toList())
+    private fun GenerationMessage.snapshot() = copy(textParts = textParts.toList(), images = images.toList())
 
     private fun ResponseBody.isEventStream(): Boolean = contentType()?.let { type ->
         type.type.equals("text", ignoreCase = true) &&

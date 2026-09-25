@@ -49,6 +49,7 @@ internal object ThreeStoneAiPlugin {
         maximumSessionDescriptors = MAXIMUM_SESSION_DESCRIPTORS,
         acceptedTextMimeTypes = listOf(AiProviderMimeType.PLAIN, AiProviderMimeType.JSON),
         acceptedSchemaMimeTypes = listOf(AiProviderMimeType.JSON),
+        vision = org.autojs.plugin.ai.provider.api.AiVisionCapabilities(),
     )
 }
 

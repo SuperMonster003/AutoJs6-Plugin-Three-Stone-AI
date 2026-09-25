@@ -25,10 +25,11 @@
     "Associer chaque conversation du lanceur à un instantané de cible locale ou en ligne; un nouveau chat est recommandé lors du changement d'une conversation remplie, et continuer exige une confirmation explicite enregistrée.",
     "Enregistrer la cible, le fournisseur, le modèle et la localité réellement utilisés pour chaque réponse de l'assistant; la régénération réutilise exactement cette cible, échoue explicitement si son identité change ou si elle devient indisponible, sans repli silencieux sur la cible actuelle.",
     "Maintenir les échecs de génération locale et cloud dans la cible sélectionnée: le chat du lanceur ajoute une raison bornée sans données sensibles, indique qu'aucun repli entre frontières n'a eu lieu et propose un changement manuel explicite de cible sans supprimer la sortie partielle.",
-    "Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats."
+    "Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats.",
+    "Entrée JPEG/PNG et résultats visuels des outils via AI Provider 2.1 négocié, avec réglage par modèle."
   ],
   "h3_formats": "Formats du modèle et des données",
-  "p_formats": "La version 1 déclare uniquement le périmètre suivant",
+  "p_formats": "Formats de modèles et entrées pris en charge",
   "h3_plugin_interface": "Interface du plugin",
   "p_plugin_interface": "L'hôte découvre et appelle le plugin avec les identités suivantes",
   "p_plugin_scope": "AI Provider V2 expose un catalogue paginé unique de cibles `local:*` et `profile:*`. Chaque cible déclare séparément son provider, son modèle, sa localité, sa configuration et sa disponibilité, ses capacités, ses limites, ses contrôles et ses origines HTTPS. Un catalogue uniquement local déclare ON_DEVICE/NONE; la présence de profils en ligne déclare HYBRID/PLUGIN_MANAGED et l'union exacte de leurs origines HTTPS. Le profil backend local reste un contrôle facultatif de la cible, et aucune cible ni aucun profil indisponible ne fait l'objet d'un repli silencieux.",
@@ -52,7 +53,8 @@
     "Le streaming utilise des credits finis et des chunks bornés pour éviter les tampons illimités ou les callbacks sans contre-pression.",
     "Les tokens de usage proviennent directement des compteurs de cache KV et decode de Conversation dans LiteRT-LM, sans estimation par caractères. `durationMillis` mesure uniquement la génération du plugin et exclut la découverte, la liaison, la liste des modèles et la distribution de l'hôte.",
     "Une `ai.session` persistante autorise un seul tour actif et conserve sa Conversation native après une fin normale; elle doit être recréée après une annulation, un timeout, un échec de génération ou une fermeture explicite.",
-    "L'annulation, la fermeture de session et le timeout arrêtent la publication et terminent la requête avec un seul état terminal."
+    "L'annulation, la fermeture de session et le timeout arrêtent la publication et terminent la requête avec un seul état terminal.",
+    "Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent son intégration P9.2."
   ],
   "h3_unsupported": "Capacités non déclarées",
   "unsupported_capabilities": [

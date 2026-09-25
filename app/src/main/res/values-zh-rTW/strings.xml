@@ -323,6 +323,9 @@
     <string name="online_ai_test_success">連線測試成功</string>
     <string name="online_ai_test_timed_out">連線測試逾時</string>
     <string name="online_ai_test_title">測試連線?</string>
+    <string name="online_ai_vision_help">僅選擇此服務中支援圖片輸入的模型. 宿主請求使用的圖片會傳送至所選服務. 既有模型預設關閉, 需在此選取後啟用.</string>
+    <string name="online_ai_vision_models">支援圖片輸入的模型</string>
+    <string name="online_ai_vision_none">未啟用</string>
     <string name="online_ai_yes">是</string>
     <string name="plugin_description">使用私有本機模型與使用者設定線上服務的 AI 文字生成</string>
     <string name="release_history_load_failed">無法載入本機版本記錄</string>

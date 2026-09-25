@@ -6,12 +6,17 @@
   "changelog_label_dependency": "Dépendance",
   "$data": {
     "v1.2.0": {
-      "released_date": "2026/09/25",
+      "released_date": "2026/09/26",
       "hint": [
-        "Version de développement non publiée. Les outils en ligne utilisent AI Provider V2; leur intégration Agent nécessite le courtier natif de l'hôte build 5297+ et une version Agent compatible. Le plugin transmet les appels à l'hôte sans exécuter lui-même les actions sur l'appareil."
+        "Version de développement non publiée. Les outils en ligne utilisent AI Provider V2; leur intégration Agent nécessite le courtier natif de l'hôte build 5297+ et une version Agent compatible. Le plugin transmet les appels à l'hôte sans exécuter lui-même les actions sur l'appareil.",
+        "Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent son intégration P9.2."
       ],
       "feature": [
-        "Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats"
+        "Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats",
+        "Entrée JPEG/PNG et résultats visuels des outils via AI Provider 2.1 négocié, avec réglage par modèle"
+      ],
+      "fix": [
+        "Les lectures de descripteurs libèrent les threads après annulation ou expiration et conservent les erreurs du producteur des canaux fiables"
       ]
     },
     "v1.1.4": {

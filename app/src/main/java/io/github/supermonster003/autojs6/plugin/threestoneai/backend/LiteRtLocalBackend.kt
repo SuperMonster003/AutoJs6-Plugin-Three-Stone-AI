@@ -147,6 +147,7 @@ internal fun AiTargetCapabilities.toProviderCapabilityIds(): List<String> = buil
     if (persistentSession) add(AiProviderCapabilityId.PERSISTENT_SESSION)
     if (reasoning) add(AiProviderCapabilityId.REASONING)
     if (tools) add(AiProviderCapabilityId.TOOLS)
+    if (vision) add(AiProviderCapabilityId.VISION)
 }
 
 internal fun AiBackendProfileInfo.toExecutionProfile() = AiExecutionProfile(

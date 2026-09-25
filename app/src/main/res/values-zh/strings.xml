@@ -433,6 +433,9 @@
     <string name="online_ai_test_success">连接测试成功</string>
     <string name="online_ai_test_timed_out">连接测试超时</string>
     <string name="online_ai_test_title">测试连接?</string>
+    <string name="online_ai_vision_help">仅选择此服务中支持图片输入的模型. 宿主请求使用的图片会发送给所选服务. 已有模型默认关闭, 需在此选中后启用.</string>
+    <string name="online_ai_vision_models">支持图片输入的模型</string>
+    <string name="online_ai_vision_none">未启用</string>
     <string name="online_ai_yes">是</string>
     <string name="plugin_description">使用私有本地模型与用户配置在线服务的 AI 文本生成</string>
     <string name="release_history_load_failed">无法加载本地版本历史</string>

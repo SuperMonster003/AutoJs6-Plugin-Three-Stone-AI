@@ -22,6 +22,7 @@ internal data class AiTargetCapabilities(
     val usage: Boolean,
     val reasoning: Boolean,
     val tools: Boolean,
+    val vision: Boolean = false,
 )
 
 internal data class AiTargetLimits(
@@ -245,6 +246,7 @@ internal data class GenerationMessage(
     val role: GenerationRole,
     val textParts: List<String>,
     val nativeToolMessage: NativeToolMessage? = null,
+    val images: List<GenerationImage> = emptyList(),
 )
 
 internal data class GenerationSamplingOptions(

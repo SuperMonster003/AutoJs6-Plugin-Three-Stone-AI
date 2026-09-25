@@ -28,8 +28,9 @@
 - 清除 Key 与删除档案均要求二次确认. 清除默认档案的 Key 时同时清除默认选择; 删除会先清除 Keystore 密文, 再原子发布不含该档案的元数据, 并在同一文档事务中清除默认值.
 - 默认在线目标只能从已配置档案中选择. 统一目录保留本地 target 排序, 但显式选择的在线默认值优先于本地 backend 默认值; 目标不可用时明确失败, 不自动回退本地.
 - "允许移动网络和按流量计费网络" 默认关闭. 设置只影响在线请求, 不影响本地推理或模型下载.
+- "支持图片输入的模型" 按当前档案中的精确模型 ID 显式启用, 默认全部关闭. 主动选择之前不会声明视觉能力; 配置界面说明图片会发往该在线服务, 不根据协议或模型名称猜测支持情况.
 
-非敏感 profile 文档直接采用 schema 2, 将 `defaultProfileId` 与 `allowMeteredNetwork` 和档案列表放在同一个跨进程锁, fsync 与原子 rename 事务内. 本项目尚未发布, 因此不提供 schema 1 读取或迁移分支; 不支持的文档会 fail closed. 凭据仍完全独立保存在 Android Keystore 保护的密文仓库中.
+非敏感 profile 文档当前采用 schema 4, 在 schema 3 的多模型列表上增加 `visionModelIds`. schema 2/3 仍可读取, 旧档案的图片输入默认关闭; 不支持 schema 1. `defaultProfileId`, `allowMeteredNetwork` 和档案列表保留在同一个跨进程锁, fsync 与原子 rename 事务内. 不支持的文档会 fail closed. 凭据仍完全独立保存在 Android Keystore 保护的密文仓库中.
 
 "测试连接" 是一次用户确认后才会执行的真实生成: 固定发送 `Reply with OK.`, 最多请求 8 个输出 token, 不保存或显示响应文本, 可随时取消, UI 在 120 秒后主动取消活动 Call. 测试调用统一 `OnlineAiBackend` 和协议适配器, 因而同时验证 profile, Key, 网络策略, 请求认证, 协议解析及正常终态. 120 秒上限覆盖了 G8441 上维护者早期观测到约 64 秒才完成的宿主在线调用, 同时保持测试有界; 同一设备随后在插件端配置 PoloAPI OpenAI-compatible profile 后, 连接测试实测成功且耗时不足 10 秒.
 
@@ -114,7 +115,8 @@ OpenAI-compatible baseUrl 未以 `/chat/completions` 结束时追加该 endpoint
 | 对象 | 上限 |
 |---|---:|
 | 消息文本 + response schema | 256 KiB UTF-8 |
-| JSON request body | 512 KiB |
+| 纯文本 JSON request body | 512 KiB |
+| 含图片 JSON request body | 48 MiB, 包括有界图片历史的 base64 展开 |
 | 输出文本 | 64 KiB UTF-8 |
 | 单个 SSE event | 1 MiB |
 | SSE stream 总量 | 32 MiB |
@@ -123,6 +125,14 @@ OpenAI-compatible baseUrl 未以 `/chat/completions` 结束时追加该 endpoint
 | 认证凭据 | 8 KiB visible ASCII |
 
 超过任何响应或输出上限均返回 `RESPONSE_TOO_LARGE`; 不向 listener 交付导致越界的 delta.
+
+## V2.1 图片输入
+
+1.2.0 开发候选在协商 V2.1 后支持 JPEG/PNG 初始图片与原生工具结果图片, V2.0 继续使用原文本契约. 图片限额与文本独立: 单张 4 MiB, 单批 4 张 / 8 MiB, 每边 4096, 初始和续轮合计 16 张 / 32 MiB. 目标与配额先于 FD 读取检查, 之后独立核对长度, SHA-256, MIME, 尺寸和解码.
+
+OpenAI-compatible 使用 user `image_url`, 工具结果保持文本并在完整结果批次之后附带有 callId 标签的 user 图片观察; Anthropic 使用 image source 与 tool_result content; Gemini 使用 user inlineData 和 functionResponse 后的同级图片部分. 原始截止时间, 累计用量与调用失败边界保持不变. 图片只作为输入, 不生成图片或视频; LiteRT 与持久 ai.session 暂不支持图片.
+
+Provider 实现与确定性回归已完成, 真实在线视觉验收尚未通过. Model8 / Fable 5.1 的三次合成图片相关调用均为空文本, 不能据此判断根因或冒充成功; 用户确认当前无适合继续验收的在线目标后暂停调用, 未调用 PoloAPI. Agent 截图工具和视觉预算仍待后续原 P9.2 条目. 完整映射, FD 生命周期, 失败记录与验收范围见 [P9.2 Provider 图片输入证据](p92-online-vision-evidence-2026-09-26.md).
 
 ## 错误分类
 
@@ -150,4 +160,4 @@ OpenAI-compatible baseUrl 未以 `/chat/completions` 结束时追加该 endpoint
 .\gradlew.bat --offline :app:testDebugUnitTest
 ```
 
-测试使用无网络的 fake `Call.Factory`, 覆盖六种 profile 模板, schema 2 设置状态与默认档案删除, 统一目录默认值优先级, 每轮凭据读取前的网络门禁, 有界连接测试, 三个协议的 request mapping, one-shot body 清零, SSE/JSON response parser, partial/cumulative usage, persistent history, callback 重入, cancellation, redirect refusal, HTTP/provider/network error redaction 及全部 byte limit. 真机 endpoint 验证单独保留在 Roadmap, 不使用个人或生产凭据进入自动化测试.
+测试使用无网络的 fake `Call.Factory`, 覆盖六种 profile 模板, schema 4 与 schema 2/3 迁移, 设置状态与默认档案删除, 统一目录默认值优先级, 每轮凭据读取前的网络门禁, 有界连接测试, 三个协议的 request mapping, one-shot body 清零, SSE/JSON response parser, partial/cumulative usage, persistent history, callback 重入, cancellation, redirect refusal, HTTP/provider/network error redaction 及全部 byte limit. 真机 endpoint 验证单独保留在 Roadmap. 普通自动化测试不使用个人或生产凭据; P9.2 的真实模型探针要求显式指定目标, 默认跳过.

@@ -68,6 +68,7 @@
 - 각 어시스턴트 응답에 실제 target/provider/model/locality 스냅샷을 저장합니다. 다시 생성은 기록된 원래 대상을 정확히 재사용하며 대상 정체성이 바뀌거나 사용할 수 없으면 명확히 실패하고 현재 대화 대상으로 자동 대체하지 않습니다.
 - 로컬 및 클라우드 생성 실패를 선택된 경계에 유지합니다. 런처 chat은 민감한 정보가 없는 제한된 실패 원인을 추가하고 경계를 넘는 자동 대체가 없었음을 명시하며 부분 출력을 유지한 채 명시적인 수동 대상 전환을 제공합니다.
 - 온라인 OpenAI 호환, Anthropic Messages, Gemini GenerateContent 대상에서 네이티브 도구 호출 지원. 스트리밍 인수, 병렬 호출, 결과 제출 후 이어서 생성 포함.
+- 모델별 설정과 협상된 AI Provider 2.1을 통한 온라인 JPEG/PNG 입력 및 이미지 도구 결과.
 
 ******
 
@@ -75,11 +76,11 @@
 
 ******
 
-버전 1은 다음 모델 및 텍스트 범위만 선언합니다:
+지원되는 모델 및 입력 형식:
 
 ```text
 model package: .litertlm
-input: text/plain message history plus application/json response schema
+input: text/plain history + application/json schema; negotiated 2.1: image/jpeg and image/png descriptors
 output: streamed text/plain or application/json text chunks
 runtime: LiteRT-LM 0.15.0
 ```
@@ -98,7 +99,7 @@ plugin id: three-stone-ai
 protocol provider id: autojs6.three-stone-ai
 engine: three-stone-ai
 variant: default
-protocol: V2
+protocol: V2 (2.0 / 2.1)
 required host build: 5276
 ```
 
@@ -142,6 +143,7 @@ AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 cat
 - Usage token 수는 LiteRT-LM Conversation의 KV cache 및 decode 카운터에서 직접 가져오며 문자 수로 추정하지 않습니다. `durationMillis`는 플러그인 생성 호출만 측정하고 호스트 탐색, 바인딩, 모델 열거 및 디스패치 시간은 제외합니다.
 - 영구적인 `ai.session`은 하나의 활성 턴만 허용하고 정상 완료 후 네이티브 Conversation을 유지합니다. 취소, timeout, 생성 실패 또는 명시적 닫기 후에는 다시 만들어야 합니다.
 - 취소, 세션 닫기 및 timeout은 결과 게시를 중단하고 하나의 종료 상태로 요청을 끝냅니다.
+- 설정 > 온라인 AI에서 프로필을 편집하고 이미지 입력을 지원하는 모델을 선택하세요. 기존 프로필은 기본적으로 비활성화됩니다. 이미지는 선택한 서비스로만 전송됩니다. LiteRT와 영구 ai.session은 텍스트 전용입니다. Agent 화면 캡처 작업에는 P9.2 Agent 통합 완료가 필요합니다.
 
 ******
 
@@ -172,10 +174,13 @@ AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 cat
 
 # v1.2.0
 
-###### 2026/09/25
+###### 2026/09/26
 
 * `힌트` 아직 배포하지 않은 개발 후보 버전입니다. 온라인 도구는 AI Provider V2를 사용하며, Agent 연동에는 호스트 build 5297+의 네이티브 도구 중계와 이를 지원하는 Agent가 필요합니다. 플러그인은 호출을 호스트에 반환하며 기기 작업을 직접 실행하지 않습니다.
+* `힌트` 설정 > 온라인 AI에서 프로필을 편집하고 이미지 입력을 지원하는 모델을 선택하세요. 기존 프로필은 기본적으로 비활성화됩니다. 이미지는 선택한 서비스로만 전송됩니다. LiteRT와 영구 ai.session은 텍스트 전용입니다. Agent 화면 캡처 작업에는 P9.2 Agent 통합 완료가 필요합니다.
 * `기능` 온라인 OpenAI 호환, Anthropic Messages, Gemini GenerateContent 대상에서 네이티브 도구 호출 지원. 스트리밍 인수, 병렬 호출, 결과 제출 후 이어서 생성 포함
+* `기능` 모델별 설정과 협상된 AI Provider 2.1을 통한 온라인 JPEG/PNG 입력 및 이미지 도구 결과
+* `수정` 취소 또는 시간 초과 시 설명자 읽기 스레드를 해제하고 신뢰성 있는 파이프의 생산자 오류 유지
 
 # v1.1.4
 

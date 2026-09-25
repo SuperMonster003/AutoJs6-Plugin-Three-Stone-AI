@@ -25,10 +25,11 @@
     "各ランチャー会話をローカルまたはオンラインターゲットのスナップショットへ固定します. メッセージのある会話で変更すると新規会話を推奨し, 続行には明示確認と変更記録が必要です.",
     "各アシスタント応答に実際の target/provider/model/locality スナップショットを保存します. 再生成は記録された元のターゲットを厳密に再利用し, ID 情報の変更や利用不可時には明示的に失敗し, 現在の会話ターゲットへ暗黙にフォールバックしません.",
     "ローカルとクラウドの生成失敗を選択済みの境界内に維持します. ランチャーチャットは機密情報を含まない限定的な失敗理由を追記し, 境界をまたぐ自動フォールバックがなかったことを明示し, 部分出力を保持したまま手動ターゲット切り替えを提供します.",
-    "オンラインの OpenAI 互換, Anthropic Messages, Gemini GenerateContent でネイティブツール呼び出しに対応. ストリーミング引数, 並列呼び出し, 結果送信後の継続をサポート."
+    "オンラインの OpenAI 互換, Anthropic Messages, Gemini GenerateContent でネイティブツール呼び出しに対応. ストリーミング引数, 並列呼び出し, 結果送信後の継続をサポート.",
+    "モデルごとの設定と協商した AI Provider 2.1 によるオンライン JPEG/PNG 入力および画像付きツール結果."
   ],
   "h3_formats": "モデルとデータ形式",
-  "p_formats": "バージョン 1 は次のモデルとテキスト範囲だけを宣言します",
+  "p_formats": "対応するモデルと入力形式",
   "h3_plugin_interface": "プラグインインターフェース",
   "p_plugin_interface": "ホストは次の識別情報でプラグインを検出して呼び出します",
   "p_plugin_scope": "AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのページ化 catalog で公開します. 各ターゲットは provider, model, locality, 設定/可用性, capabilities, limits, controls, HTTPS origins を個別に宣言します. ローカル専用 catalog は ON_DEVICE/NONE を宣言し, online profile が存在する場合は HYBRID/PLUGIN_MANAGED と HTTPS origins の正確な和集合を宣言します. ローカル backend profile は任意の target control であり, 使用不可 profile やターゲットへ暗黙にフォールバックしません.",
@@ -52,7 +53,8 @@
     "ストリーミングは有限の credit と制限付き chunk を使い, 無制限なバッファやバックプレッシャーなしの callback を防ぎます.",
     "Usage token 数は LiteRT-LM Conversation の KV cache と decode カウンターから直接取得し, 文字数による推定は行いません. `durationMillis` はプラグイン生成呼び出しのみを測定し, ホストの探索, バインド, モデル列挙, ディスパッチ時間を含みません.",
     "永続的な `ai.session` は 1 つのアクティブターンだけを許可し, 正常完了後もネイティブ Conversation を保持します. キャンセル, timeout, 生成失敗, 明示的な終了の後は再作成が必要です.",
-    "キャンセル, セッション終了, timeout は結果公開を停止し, 1 つの終端状態でリクエストを終了します."
+    "キャンセル, セッション終了, timeout は結果公開を停止し, 1 つの終端状態でリクエストを終了します.",
+    "設定 > オンライン AI で構成を編集し, 画像入力に対応するモデルを選択します. 既存の構成は既定で無効です. 画像は選択したサービスにのみ送信されます. LiteRT と永続 ai.session は引き続きテキストのみです. Agent の画面撮影には P9.2 の Agent 統合完了が必要です."
   ],
   "h3_unsupported": "宣言しない機能",
   "unsupported_capabilities": [

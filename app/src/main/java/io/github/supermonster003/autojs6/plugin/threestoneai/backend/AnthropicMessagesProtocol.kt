@@ -22,6 +22,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         require(normalized.provider.protocol == OnlineAiProtocol.ANTHROPIC_MESSAGES) {
             "Online AI profile does not use the Anthropic Messages protocol"
         }
+        OnlineAiImages.requireSupported(normalized, messages)
         val messageBytes = OnlineAiTools.requireRequest(turn, OnlineAiRequestSupport.requireConversation(messages))
         val maximumOutputTokens = turn.maximumOutputTokens ?: DEFAULT_MAXIMUM_OUTPUT_TOKENS
         require(maximumOutputTokens > 0) { "Online AI maximum output tokens must be positive" }
@@ -56,8 +57,9 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
                             )
                             if (message.nativeToolMessage != null) {
                                 require(message.nativeToolMessage.protocol == normalized.provider.protocol)
-                                add("content", OnlineAiResponseSupport.parseArray(message.nativeToolMessage.json))
-                            } else addProperty("content", OnlineAiRequestSupport.text(message))
+                                add("content", OnlineAiImages.replay(message.nativeToolMessage))
+                            } else if (message.images.isEmpty()) addProperty("content", OnlineAiRequestSupport.text(message))
+                            else add("content", OnlineAiImages.content(OnlineAiRequestSupport.text(message), message.images, normalized.provider.protocol))
                         })
                     }
             })
@@ -79,6 +81,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
             url = endpoint(normalized.baseUrl),
             json = body,
             credential = credential,
+            withImages = messages.any { it.images.isNotEmpty() || it.nativeToolMessage?.imageResults.orEmpty().isNotEmpty() },
             credentialHeader = OnlineAiCredentialHeader.ANTHROPIC_API_KEY,
             fixedHeaders = mapOf("anthropic-version" to ANTHROPIC_VERSION),
         )

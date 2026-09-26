@@ -13,6 +13,7 @@
 * `Feature` Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation
 * `Feature` Online JPEG/PNG image input and image tool results through negotiated AI Provider 2.1, with explicit per-model settings
 * `Fix` Descriptor reads release workers on cancellation or timeout and preserve reliable-pipe producer errors
+* `Improvement` Refresh online model presets from official catalogs, including Claude Fable 5.1 and other current models, and remove retired model IDs while preserving existing profiles and custom models
 
 # v1.1.4
 

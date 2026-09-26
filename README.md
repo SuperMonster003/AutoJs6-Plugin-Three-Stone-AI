@@ -181,6 +181,7 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 * `新增` 在线 OpenAI 兼容, Anthropic Messages 与 Gemini GenerateContent 目标支持原生工具调用, 包含流式参数, 并行调用与结果续轮
 * `新增` 在线模型通过协商 AI Provider 2.1 接收 JPEG/PNG 图片及工具结果图片, 支持按具体模型启用
 * `修复` 描述符读取在取消或超时后释放工作线程, 并保留可靠管道的生产者错误
+* `优化` 根据官方目录更新在线预置模型, 包含 Claude Fable 5.1 等当前模型并移除已停用的模型 ID, 保留已有配置与自定义模型
 
 # v1.1.4
 

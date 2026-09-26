@@ -1,4 +1,6 @@
+import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.variant.FilterConfiguration
+import org.autojs.build.alignment.VerifyNativePageAlignment
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.RelativePath
 import org.gradle.api.provider.Property
@@ -134,6 +136,17 @@ android {
 
 androidComponents {
     onVariants { variant ->
+        // IDE builds can place APKs under intermediates instead of outputs/apk.
+        // Follow AGP's variant artifact while preserving metadata-based APK selection.
+        val variantApkDirectory = variant.artifacts.get(SingleArtifact.APK)
+        val verificationTaskName = "verify${variant.name.replaceFirstChar { it.uppercaseChar() }}NativePageAlignment"
+        // Alignment plugin 1.8.3 registers and configures these tasks after evaluation.
+        afterEvaluate {
+            tasks.named<VerifyNativePageAlignment>(verificationTaskName) {
+                apkDirectory.set(variantApkDirectory)
+            }
+        }
+
         variant.outputs.forEach { output ->
             val architecture = output.filters.find {
                 it.filterType == FilterConfiguration.FilterType.ABI

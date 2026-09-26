@@ -23,7 +23,8 @@
       ],
       "fix": [
         "Les lectures de descripteurs libèrent les threads après annulation ou expiration et conservent les erreurs du producteur des canaux fiables",
-        "Conserver les catégories fixes des échecs en ligne dans les rappels AI Provider, sans exposer les requêtes ou réponses ni ajouter de nouvelles tentatives automatiques"
+        "Conserver les catégories fixes des échecs en ligne dans les rappels AI Provider, sans exposer les requêtes ou réponses ni ajouter de nouvelles tentatives automatiques",
+        "Corriger l'échec No APK found lors du lancement par F10 dans IntelliJ IDEA en utilisant le répertoire APK réel d'AGP pour chaque variante, tout en conservant les contrôles d'alignement de 16 Ko"
       ]
     },
     "v1.1.4": {

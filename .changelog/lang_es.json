@@ -23,7 +23,8 @@
       ],
       "fix": [
         "Las lecturas de descriptores liberan hilos al cancelar o agotar el plazo y conservan los errores del productor de tuberías fiables",
-        "Conservar categorías fijas de errores en línea en las devoluciones AI Provider, sin exponer solicitudes o respuestas ni añadir reintentos automáticos"
+        "Conservar categorías fijas de errores en línea en las devoluciones AI Provider, sin exponer solicitudes o respuestas ni añadir reintentos automáticos",
+        "Corregir el fallo No APK found al ejecutar con F10 en IntelliJ IDEA usando el directorio APK real de AGP para cada variante y conservando las comprobaciones de alineación de 16 KB"
       ]
     },
     "v1.1.4": {

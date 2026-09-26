@@ -194,4 +194,4 @@ app/src/main/res/values-*/strings.xml
 - {{ text_link_upstream }}: {{ upstream_url }}
 
 
-[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)
+[16 KB page alignment and build verification]({{ repo_url }}/blob/master/docs/16kb.md)

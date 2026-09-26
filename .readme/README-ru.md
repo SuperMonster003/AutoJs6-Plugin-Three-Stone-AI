@@ -189,6 +189,7 @@ AI Provider V2 публикует единый постраничный ката
 * `Функция` Сгруппировать модели по поставщикам и расширить выбор OpenRouter моделями Qwen, Kimi, GLM, Grok, Meta и MiniMax, сохраняя точные ID
 * `Исправление` Чтение дескрипторов освобождает потоки при отмене или тайм-ауте и сохраняет ошибки отправителя надежных каналов
 * `Исправление` Сохранены фиксированные категории сетевых генераций в обратных вызовах AI Provider без раскрытия запросов и ответов или добавления автоматических повторов
+* `Исправление` Исправлен сбой No APK found при запуске через F10 в IntelliJ IDEA: используется фактический каталог APK из AGP для каждого варианта сборки с сохранением проверок выравнивания 16 КБ
 * `Улучшение` Обновление предустановленных онлайн-моделей по официальным каталогам, включая Claude Fable 5.1 и другие актуальные модели, и удаление идентификаторов снятых с поддержки моделей с сохранением существующих профилей и пользовательских моделей
 
 # v1.1.4
@@ -271,4 +272,4 @@ app/src/main/res/values-*/strings.xml
 - Проект LiteRT-LM: https://github.com/google-ai-edge/LiteRT-LM
 
 
-[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/docs/16kb.md)

@@ -13,7 +13,9 @@
       ],
       "feature": [
         "線上 OpenAI 相容, Anthropic Messages 與 Gemini GenerateContent 目標支援原生工具呼叫, 包含串流參數, 並行呼叫與結果續輪",
-        "線上模型透過協商 AI Provider 2.1 接收 JPEG/PNG 圖片及工具結果圖片, 支援依個別模型啟用"
+        "線上模型透過協商 AI Provider 2.1 接收 JPEG/PNG 圖片及工具結果圖片, 支援依個別模型啟用",
+        "新增線上預設模型自動更新與手動重新整理, 支援本機快取及離線備援清單, 保留已儲存設定與自訂模型 ID",
+        "依廠商分組瀏覽預設模型, 並擴充 OpenRouter 中的 Qwen, Kimi, GLM, Grok, Meta, MiniMax 等模型選擇, 保留正確的模型 ID"
       ],
       "improvement": [
         "依據官方目錄更新線上預設模型, 包含 Claude Fable 5.1 等現行模型並移除已停用的模型 ID, 保留既有設定與自訂模型"

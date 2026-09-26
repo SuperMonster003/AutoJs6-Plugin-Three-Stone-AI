@@ -12,6 +12,8 @@
 * `Note` Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent son intégration P9.2.
 * `Fonctionnalité` Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats
 * `Fonctionnalité` Entrée JPEG/PNG et résultats visuels des outils via AI Provider 2.1 négocié, avec réglage par modèle
+* `Fonctionnalité` Ajouter la mise à jour automatique et manuelle des modèles prédéfinis en ligne avec cache local et liste disponible hors ligne, en conservant les profils enregistrés et les ID personnalisés
+* `Fonctionnalité` Regrouper les modèles prédéfinis par fournisseur et élargir le choix OpenRouter avec Qwen, Kimi, GLM, Grok, Meta et MiniMax, en conservant les ID exacts
 * `Correctif` Les lectures de descripteurs libèrent les threads après annulation ou expiration et conservent les erreurs du producteur des canaux fiables
 * `Amélioration` Actualiser les modèles en ligne prédéfinis selon les catalogues officiels, dont Claude Fable 5.1 et les autres modèles actuels, et retirer les identifiants obsolètes en conservant les profils existants et les modèles personnalisés
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="online_ai_catalog_automatic">Автоматически обновлять список моделей</string>
+    <string name="online_ai_catalog_automatic_summary">Проверять раз в 24 часа при открытии настроек онлайн-ИИ</string>
+    <string name="online_ai_catalog_builtin">Используется каталог из приложения</string>
+    <string name="online_ai_catalog_cached">Используется загруженный каталог, обновлен %1$s</string>
+    <string name="online_ai_catalog_checking">Проверка обновлений списка моделей</string>
+    <string name="online_ai_catalog_collapsed">Свернуто</string>
+    <string name="online_ai_catalog_current">Список моделей актуален</string>
+    <string name="online_ai_catalog_expanded">Развернуто</string>
+    <string name="online_ai_catalog_failed">Не удалось обновить список моделей. Текущий список остается доступным.</string>
+    <string name="online_ai_catalog_help">Загрузить публичный каталог проекта с GitHub. Существующие профили и пользовательские ID моделей останутся без изменений.</string>
+    <string name="online_ai_catalog_metered">Обновления списка моделей запрещены в сетях с тарификацией</string>
+    <string name="online_ai_catalog_other_models">Другие модели</string>
+    <string name="online_ai_catalog_refresh">Обновить список моделей</string>
+    <string name="online_ai_catalog_section">Предустановленные модели</string>
+    <string name="online_ai_catalog_updated">Список моделей обновлен</string>
+</resources>

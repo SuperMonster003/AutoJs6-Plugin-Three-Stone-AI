@@ -5,7 +5,7 @@
   "h3_languages_with_ascii": "語言",
   "p_languages_all_supported_for_readme": "目前 README.md 支援以下語言",
   "h3_introduction": "簡介",
-  "p_introduction": "3-Stone AI 係 AutoJs6 嘅官方 AI 文本生成插件. 佢可以喺顯式選擇嘅 CPU 或相容 GPU backend 上運行用戶導入嘅 LiteRT-LM 模型, 並且只連接用戶設定嘅網上 profile. 本機同網上執行位置共用一個 AI Provider V2 目標目錄, 受控串流管線同明確選擇邊界. 本機目標絕不聯網或上傳數據; 網上目標只會喺用戶明確選擇後執行, 並始終綁定插件管理嘅憑證同聲明嘅 HTTPS origin.",
+  "p_introduction": "3-Stone AI 係 AutoJs6 嘅官方 AI 文本生成插件. 佢可以喺顯式選擇嘅 CPU 或相容 GPU backend 上運行用戶導入嘅 LiteRT-LM 模型, 網上生成就使用用戶設定嘅 profile. 本機同網上執行位置共用一個 AI Provider V2 目標目錄, 受控串流管線同明確選擇邊界. 本機目標絕不聯網或上傳數據; 網上目標只會喺用戶明確選擇後執行, 並始終綁定插件管理嘅憑證同聲明嘅 HTTPS origin.",
   "h3_functions": "功能",
   "features": [
     "透過 Android 系統檔案選擇器匯入 `.litertlm` 模型套件, 並將驗證後的副本儲存到應用程式私人儲存空間.",
@@ -26,7 +26,9 @@
     "為每則助手回覆儲存實際 target/provider/model/locality 快照; 重新產生預設精確沿用原回覆目標, 目標身份更改或不可用時明確失敗, 唔會靜默回退到目前對話目標.",
     "本機同雲端生成失敗會一直留喺所選邊界: 啟動器聊天會附加有界且不含敏感資料嘅失敗原因, 明確說明未發生跨邊界自動回退, 並喺保留部分輸出嘅同時提供顯式手動目標切換入口.",
     "線上 OpenAI 相容, Anthropic Messages 與 Gemini GenerateContent 目標支援原生工具呼叫, 包含串流參數, 並行呼叫與結果續輪.",
-    "線上模型透過協商 AI Provider 2.1 接收 JPEG/PNG 圖片及工具結果圖片, 支援按個別模型啟用."
+    "線上模型透過協商 AI Provider 2.1 接收 JPEG/PNG 圖片及工具結果圖片, 支援按個別模型啟用.",
+    "從 GitHub 專案公開目錄更新網上預設模型. 自動更新預設開啟, 只會喺開啟網上 AI 設定時每 24 小時檢查一次, 亦可以關閉自動更新或手動重新整理. 更新會遵守計量網絡設定, 離線或更新失敗時繼續使用快取或內置清單, 唔會改動已儲存設定同自訂模型 ID.",
+    "按廠商分組瀏覽預設模型, 並擴充 OpenRouter 中嘅 Qwen, Kimi, GLM, Grok, Meta, MiniMax 等模型選擇, 保留準確嘅模型 ID."
   ],
   "h3_formats": "模型和資料格式",
   "p_formats": "支援的模型與輸入格式",
@@ -37,7 +39,7 @@
   "h3_host_integration_status": "主程式整合狀態",
   "p_host_integration_status": "喺 AutoJs6 (構建 5276 及以上) 中, `ai.catalog()` 將全部已導入本機模型同已設定在線 profile 作為統一目標目錄返回, 包含精確 ID, 提供方, 模型, 本機/在線屬性, 設定同可用狀態, 能力, 控制項, 限制, 來源及本機 backend profile. 向 `ai.ask`, `ai.chat`, `ai.stream` 或 `ai.session` 傳入精確 `target`; 只傳 `target` 會選擇官方 3-Stone AI 插件, `plugin: true` 就使用其聲明嘅預設目標. 本機目標可提供 `cpu`, `gpu` 同不可用嘅 `npu`, 在線目標冇本機執行 profile. backend 或目標不可用時會直接失敗且唔回退, 本機同在線路由亦絕唔自動切換. 完成同串流回應公開 target, plugin, profile, reasoning, finish reason, 完整 usage 同提供端實測耗時. 穩定錯誤碼可區分提供方缺失或停用, 目標未知, 未設定, 不可用或能力唔匹配, 以及 backend 不可用. `responseSchema` 會隱式啟用結構化輸出; 只設定 `structuredJson: true` 時使用預設物件根 schema, 持久會話喺所有輪次固定同一 target, schema 同可選 backend.",
   "h3_security": "安全性和私隱",
-  "p_security": "插件為用戶主動發起嘅建議模型下載及用戶設定嘅網上目標請求 `INTERNET` 權限; 本機生成唔使用網絡. 插件唔要求廣泛儲存權限. 目錄下載使用不可變 HTTPS 版本及固定字節數同 SHA-256, 只寫入用戶選擇嘅 SAF 位置; LiteRT-LM 檔案頭, 大小, 摘要, flush 同 fsync 全部通過後先算完成. 匯入仍只讀取系統選擇器授予嘅 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. Provider 服務亦會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬, 雙方簽名, 目標元數據同聲明來源邊界.",
+  "p_security": "插件為用戶主動發起嘅建議模型下載, 用戶設定嘅網上目標請求, 同網上 AI 設定中從 GitHub 更新公開預設模型目錄使用 `INTERNET` 權限. 目錄更新唔需要 API Key, 唔會呼叫推理服務, 插件啟用同本機生成唔會觸發目錄連網. 插件唔要求廣泛儲存權限. 建議模型檔案下載使用不可變 HTTPS 版本及固定字節數同 SHA-256, 只寫入用戶選擇嘅 SAF 位置; LiteRT-LM 檔案頭, 大小, 摘要, flush 同 fsync 全部通過後先算完成. 匯入仍只讀取系統選擇器授予嘅 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. Provider 服務亦會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬, 雙方簽名, 目標元數據同聲明來源邊界.",
   "h3_security_limits": "執行限制",
   "security_limits": [
     "模型匯入硬上限為 8 GiB, 且匯入後至少保留 256 MiB 可用空間.",
@@ -60,7 +62,7 @@
   "unsupported_capabilities": [
     "不宣告 reasoning 輸出能力. 本地 LiteRT-LM 目標仍不宣告 tools 能力.",
     "原生工具最多 16 輪, 同時最多 32 個呼叫. 結果必須完整匹配待處理批次; 上下文/輸出限制, 取消與原始截止時間仍生效. 原生工具暫不與持久 ai.session 輪次組合, 初始歷史不接受 tool 角色.",
-    "不提供連網模型發現或任意 URL 模型下載. 啟動器聊天同 AI Provider V2 只公開已導入本機模型及用戶明確設定嘅網上 profile, 而且只可下載內置目錄中固定版本嘅建議模型.",
+    "唔支援從任意 URL 下載模型檔案. 網上預設模型可以從專案公開目錄重新整理, 但唔會因此建立設定或查詢帳戶權限. 啟動器聊天同 AI Provider V2 只公開已導入本機模型及用戶明確設定嘅網上 profile, 本機模型下載仍限於內置目錄中固定版本嘅建議模型.",
     "不宣告 NPU 推理可用: profile 可發現但以 `npu-runtime-not-packaged` 標記為 `unavailable`. GPU 只喺 `libOpenCL.so` 可載入時宣告, 而 `.litertlm` 副檔名本身仍不保證模型初始化成功."
   ],
   "h3_roadmap": "路線圖",

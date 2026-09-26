@@ -1,0 +1,88 @@
+name: Online model catalog
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+  push:
+    branches-ignore: [model-catalog]
+    paths:
+      - '.github/workflows/model-catalog.yml'
+      - '.github/model-catalog-policy.json'
+      - '.python/*model_catalog*.py'
+      - '.python/fixtures/model-catalog/**'
+      - 'app/src/main/assets/online-models.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: online-model-catalog
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    if: github.repository == 'SuperMonster003/AutoJs6-Plugin-Three-Stone-AI' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Test catalog collection and publication
+        run: python -m unittest discover -s .python -p 'test_model_catalog*.py'
+      - name: Read the published catalog or bundled initial snapshot
+        run: python .python/publish_model_catalog.py --prepare --directory '${{ runner.temp }}/model-catalog'
+      - name: Collect and validate public model metadata
+        run: >-
+          python .python/update_model_catalog.py
+          --previous '${{ runner.temp }}/model-catalog/previous.json'
+          --output '${{ runner.temp }}/model-catalog/online-models.json'
+          --report '${{ runner.temp }}/model-catalog/report.json'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: online-model-catalog
+          path: '${{ runner.temp }}/model-catalog'
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: collect
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v8
+        with:
+          name: online-model-catalog
+          path: '${{ runner.temp }}/model-catalog'
+      - name: Publish changed JSON to the independent data branch
+        run: python .python/publish_model_catalog.py --publish --directory '${{ runner.temp }}/model-catalog'
+      - name: Report retained providers and fail visibly on source errors
+        if: always()
+        env:
+          CATALOG_REPORT: '${{ runner.temp }}/model-catalog/report.json'
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads(Path(os.environ['CATALOG_REPORT']).read_text(encoding='utf-8'))
+          lines = ['## Online model catalog', '', '| Provider | Result | Models |', '| --- | --- | --- |']
+          for provider, result in report['providers'].items():
+              lines.append(f"| {provider} | {result['status']} | {result['count']} |")
+          if report['errors']:
+              lines += ['', 'Source checks failed. The previous valid entries for those providers were retained.']
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as output:
+              output.write('\n'.join(lines) + '\n')
+          for failure in report['errors']:
+              print(f"::error::Model source failed: {failure['provider']}. See the catalog report artifact.")
+          raise SystemExit(bool(report['errors']))
+          PY

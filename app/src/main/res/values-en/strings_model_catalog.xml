@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="online_ai_catalog_automatic">Update model presets automatically</string>
+    <string name="online_ai_catalog_automatic_summary">Check once every 24 hours when Online AI settings are opened</string>
+    <string name="online_ai_catalog_builtin">Using the catalog included with this app</string>
+    <string name="online_ai_catalog_cached">Using downloaded catalog, updated %1$s</string>
+    <string name="online_ai_catalog_checking">Checking for model preset updates</string>
+    <string name="online_ai_catalog_collapsed">Collapsed</string>
+    <string name="online_ai_catalog_current">Model presets are up to date</string>
+    <string name="online_ai_catalog_expanded">Expanded</string>
+    <string name="online_ai_catalog_failed">Could not update model presets. The current list is still available.</string>
+    <string name="online_ai_catalog_help">Fetch the public catalog from the project on GitHub. Existing profiles and custom model IDs stay unchanged.</string>
+    <string name="online_ai_catalog_metered">Model preset updates are blocked on metered networks</string>
+    <string name="online_ai_catalog_other_models">Other models</string>
+    <string name="online_ai_catalog_refresh">Refresh model presets</string>
+    <string name="online_ai_catalog_section">Model presets</string>
+    <string name="online_ai_catalog_updated">Model presets updated</string>
+</resources>

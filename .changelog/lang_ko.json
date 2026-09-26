@@ -13,7 +13,9 @@
       ],
       "feature": [
         "온라인 OpenAI 호환, Anthropic Messages, Gemini GenerateContent 대상에서 네이티브 도구 호출 지원. 스트리밍 인수, 병렬 호출, 결과 제출 후 이어서 생성 포함",
-        "모델별 설정과 협상된 AI Provider 2.1을 통한 온라인 JPEG/PNG 입력 및 이미지 도구 결과"
+        "모델별 설정과 협상된 AI Provider 2.1을 통한 온라인 JPEG/PNG 입력 및 이미지 도구 결과",
+        "온라인 사전 설정 모델의 자동 및 수동 업데이트, 로컬 캐시와 오프라인 대체 목록을 추가하고 저장된 프로필과 사용자 지정 모델 ID 유지",
+        "사전 설정 모델을 공급업체별로 분류하고 OpenRouter 선택 항목에 Qwen, Kimi, GLM, Grok, Meta, MiniMax 등을 추가하며 정확한 모델 ID를 유지합니다"
       ],
       "improvement": [
         "공식 카탈로그에 따라 온라인 모델 프리셋을 Claude Fable 5.1 등 최신 모델로 갱신하고, 서비스가 종료된 모델 ID 를 제거. 기존 설정과 사용자 지정 모델은 유지"

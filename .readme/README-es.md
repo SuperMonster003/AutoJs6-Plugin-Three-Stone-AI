@@ -69,6 +69,8 @@ El README.md actual admite los siguientes idiomas:
 - Mantener los fallos de generación local y en la nube dentro del destino seleccionado: el chat del iniciador añade una causa acotada sin datos sensibles, indica que no hubo fallback entre límites y ofrece un cambio manual explícito de destino sin descartar la salida parcial.
 - Llamadas nativas a herramientas para destinos en línea compatibles con OpenAI, Anthropic Messages y Gemini GenerateContent, con argumentos en streaming, llamadas paralelas y continuación tras resultados.
 - Entrada JPEG/PNG y resultados de herramientas con imágenes mediante AI Provider 2.1 negociado, con ajustes por modelo.
+- Mantener al día los modelos predefinidos en línea con el catálogo público del proyecto en GitHub. La actualización automática está activada por defecto y comprueba una vez cada 24 horas al abrir los ajustes de IA en línea; se puede desactivar o actualizar manualmente. Respeta el ajuste de redes medidas, conserva la lista almacenada o integrada sin conexión o ante errores y no cambia los perfiles guardados ni los ID personalizados.
+- Agrupar los modelos predefinidos por proveedor y ampliar las opciones de OpenRouter con Qwen, Kimi, GLM, Grok, Meta y MiniMax, conservando los ID exactos.
 
 ******
 
@@ -121,7 +123,7 @@ Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes
 
 ******
 
-El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario y solicitudes a un destino en línea configurado explícitamente; los destinos locales no usan la red. Las credenciales permanecen en el almacenamiento privado cifrado del plugin y nunca cruzan Binder ni el catálogo de destinos. No solicita ningún permiso general de almacenamiento. Las descargas usan revisiones HTTPS inmutables, tamaño y SHA-256 fijados, y solo escriben en la ubicación SAF elegida; deben superar cabecera LiteRT-LM, tamaño, resumen, flush y fsync. Los servicios también verifican el paquete AutoJs6, el UID y las firmas.
+El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario, solicitudes a un destino en línea configurado por el usuario y actualizaciones del catálogo público de modelos predefinidos desde GitHub en los ajustes de IA en línea. Estas actualizaciones no requieren una clave API ni realizan inferencia, y no se inician al activar el plugin ni durante la generación local. Las credenciales permanecen en el almacenamiento privado cifrado del plugin y nunca cruzan Binder ni el catálogo de destinos. No solicita ningún permiso general de almacenamiento. Las descargas de archivos de modelos usan revisiones HTTPS inmutables, tamaño y SHA-256 fijados, y solo escriben en la ubicación SAF elegida; deben superar cabecera LiteRT-LM, tamaño, resumen, flush y fsync. Los servicios también verifican el paquete AutoJs6, el UID y las firmas.
 
 ******
 
@@ -153,7 +155,7 @@ El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas p
 
 - No se declara la salida reasoning. Los destinos locales LiteRT-LM siguen sin declarar tools.
 - Las herramientas nativas admiten hasta 16 rondas y 32 llamadas pendientes. Los resultados deben coincidir exactamente con el lote pendiente; siguen vigentes los límites de contexto/salida, la cancelación y el plazo original. No se combinan con turnos persistentes ai.session; el historial inicial no acepta el rol tool.
-- No hay descubrimiento de modelos por red ni descargas desde URL arbitrarias. El catálogo de destinos solo expone modelos locales importados y perfiles en línea configurados explícitamente; únicamente puede descargarse el catálogo de recomendaciones integrado y fijado.
+- No se admite descargar archivos de modelos desde URL arbitrarias. Los modelos predefinidos se pueden actualizar desde el catálogo público del proyecto, pero no crean perfiles ni consultan el acceso de la cuenta. El catálogo de destinos solo expone modelos locales importados y perfiles en línea configurados explícitamente; las descargas locales se limitan a las recomendaciones integradas y fijadas.
 - No se declara inferencia NPU: el perfil es visible como `unavailable` con `npu-runtime-not-packaged`. GPU solo se declara si `libOpenCL.so` puede cargarse y la extensión `.litertlm` aún no garantiza que el modelo se inicialice.
 
 ******
@@ -180,6 +182,8 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Aviso` En Ajustes > IA en línea, edite un perfil y seleccione sus modelos con entrada de imágenes. Los perfiles existentes quedan desactivados por defecto. Las imágenes solo se envían a ese servicio. LiteRT y ai.session persistente siguen siendo de texto; las capturas de Agent requieren completar su integración P9.2.
 * `Función` Llamadas nativas a herramientas para destinos en línea compatibles con OpenAI, Anthropic Messages y Gemini GenerateContent, con argumentos en streaming, llamadas paralelas y continuación tras resultados
 * `Función` Entrada JPEG/PNG y resultados de herramientas con imágenes mediante AI Provider 2.1 negociado, con ajustes por modelo
+* `Función` Añadir actualización automática y manual de modelos predefinidos en línea con caché local y lista disponible sin conexión, conservando los perfiles guardados y los ID personalizados
+* `Función` Agrupar los modelos predefinidos por proveedor y ampliar las opciones de OpenRouter con Qwen, Kimi, GLM, Grok, Meta y MiniMax, conservando los ID exactos
 * `Corrección` Las lecturas de descriptores liberan hilos al cancelar o agotar el plazo y conservan los errores del productor de tuberías fiables
 * `Mejora` Actualizar los modelos en línea predefinidos según los catálogos oficiales, incluidos Claude Fable 5.1 y otros modelos actuales, y eliminar los identificadores retirados conservando los perfiles existentes y los modelos personalizados
 

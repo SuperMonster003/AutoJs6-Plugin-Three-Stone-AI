@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "minimumCountRatio": 0.5,
+  "openRouter": {
+    "maxModelsPerVendor": 5,
+    "vendorNamespaces": {
+      "openai": ["openai"],
+      "anthropic": ["anthropic"],
+      "google": ["google"],
+      "deepseek": ["deepseek"],
+      "x-ai": ["x-ai"],
+      "meta": ["meta", "meta-llama"],
+      "mistralai": ["mistralai"],
+      "qwen": ["qwen"],
+      "moonshotai": ["moonshotai"],
+      "z-ai": ["z-ai"],
+      "minimax": ["minimax"],
+      "bytedance-seed": ["bytedance-seed"],
+      "tencent": ["tencent"],
+      "baidu": ["baidu"],
+      "cohere": ["cohere"],
+      "amazon": ["amazon"],
+      "microsoft": ["microsoft"],
+      "nvidia": ["nvidia"],
+      "ai21": ["ai21"],
+      "ibm": ["ibm-granite"],
+      "perplexity": ["perplexity"]
+    }
+  },
+  "providers": {
+    "openai": {
+      "maxModels": 24,
+      "pinnedModelIds": ["gpt-5.6-sol", "gpt-4.1"],
+      "fallbackDefaultModelIds": ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.4", "gpt-4.1"]
+    },
+    "anthropic": {
+      "maxModels": 16,
+      "pinnedModelIds": [],
+      "fallbackDefaultModelIds": ["claude-opus-5-5", "claude-sonnet-5", "claude-haiku-4-5"]
+    },
+    "gemini": {
+      "maxModels": 16,
+      "pinnedModelIds": [],
+      "fallbackDefaultModelIds": ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview"]
+    },
+    "deepseek": {
+      "maxModels": 12,
+      "pinnedModelIds": [],
+      "fallbackDefaultModelIds": ["deepseek-flash", "deepseek-v4-pro"]
+    },
+    "openrouter": {
+      "maxModels": 128,
+      "pinnedModelIds": ["openai/gpt-5.6-sol", "openai/gpt-6-astra", "anthropic/claude-opus-5.5", "anthropic/claude-haiku-4.5", "google/gemini-3.8-flash", "google/gemini-3.1-pro-preview", "deepseek/deepseek-v4.1-flash", "meta-llama/llama-4-maverick"],
+      "fallbackDefaultModelIds": ["openai/gpt-5.6-sol", "anthropic/claude-opus-5.5", "google/gemini-3.8-flash", "deepseek/deepseek-v4.1-flash"]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="online_ai_catalog_automatic">プリセットモデルを自動更新</string>
+    <string name="online_ai_catalog_automatic_summary">オンライン AI 設定を開く際に 24 時間に 1 回確認</string>
+    <string name="online_ai_catalog_builtin">アプリに付属のカタログを使用中</string>
+    <string name="online_ai_catalog_cached">ダウンロードしたカタログを使用中, 更新日時: %1$s</string>
+    <string name="online_ai_catalog_checking">プリセットモデルの更新を確認中</string>
+    <string name="online_ai_catalog_collapsed">折りたたみ済み</string>
+    <string name="online_ai_catalog_current">プリセットモデルは最新です</string>
+    <string name="online_ai_catalog_expanded">展開済み</string>
+    <string name="online_ai_catalog_failed">プリセットモデルを更新できませんでした. 現在の一覧は引き続き使用できます.</string>
+    <string name="online_ai_catalog_help">GitHub のプロジェクトから公開カタログを取得します. 既存の設定とカスタムモデル ID は変更されません.</string>
+    <string name="online_ai_catalog_metered">従量制ネットワークではプリセットモデルの更新が制限されています</string>
+    <string name="online_ai_catalog_other_models">その他のモデル</string>
+    <string name="online_ai_catalog_refresh">プリセットモデルを更新</string>
+    <string name="online_ai_catalog_section">プリセットモデル</string>
+    <string name="online_ai_catalog_updated">プリセットモデルを更新しました</string>
+</resources>

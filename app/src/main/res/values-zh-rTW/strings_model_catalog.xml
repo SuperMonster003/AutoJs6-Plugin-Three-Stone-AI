@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="online_ai_catalog_automatic">自動更新預設模型</string>
+    <string name="online_ai_catalog_automatic_summary">開啟線上 AI 設定時每 24 小時檢查一次</string>
+    <string name="online_ai_catalog_builtin">正在使用應用程式內建目錄</string>
+    <string name="online_ai_catalog_cached">正在使用已下載目錄, 更新時間: %1$s</string>
+    <string name="online_ai_catalog_checking">正在檢查預設模型更新</string>
+    <string name="online_ai_catalog_collapsed">已摺疊</string>
+    <string name="online_ai_catalog_current">預設模型已是最新</string>
+    <string name="online_ai_catalog_expanded">已展開</string>
+    <string name="online_ai_catalog_failed">無法更新預設模型. 目前清單仍然可用.</string>
+    <string name="online_ai_catalog_help">從 GitHub 上的專案取得公開目錄. 現有設定與自訂模型 ID 保持不變.</string>
+    <string name="online_ai_catalog_metered">計量付費網路下已禁止更新預設模型</string>
+    <string name="online_ai_catalog_other_models">其他模型</string>
+    <string name="online_ai_catalog_refresh">重新整理預設模型</string>
+    <string name="online_ai_catalog_section">預設模型</string>
+    <string name="online_ai_catalog_updated">預設模型已更新</string>
+</resources>

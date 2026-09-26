@@ -56,7 +56,8 @@
     "Usage token 數直接來自 LiteRT-LM Conversation 的 KV cache 與 decode 計數, 不使用字元數估算. `durationMillis` 只測量外掛生成呼叫, 不包含宿主探索, 綁定, 模型列舉和分派時間.",
     "持久 `ai.session` 只允許一個活動輪次, 正常完成後保留原生 Conversation; 取消, 逾時, 生成失敗或顯式關閉後必須重新建立工作階段.",
     "取消, 工作階段關閉和逾時會停止結果發布, 並透過唯一終態結束請求.",
-    "在 設定 > 線上 AI 中編輯設定並選擇支援圖片輸入的模型. 既有設定預設關閉. 圖片僅傳送至所選設定的服務. LiteRT 與持久 ai.session 仍僅支援文字; Agent 截圖任務需等待 P9.2 的 Agent 整合完成.",
+    "在 設定 > 線上 AI 中編輯設定並選擇支援圖片輸入的模型. 既有設定預設關閉. 圖片僅傳送至所選設定的服務. LiteRT 與持久 ai.session 仍僅支援文字; Agent 截圖要求 Android 11+, 相容的 AutoJs6 與 AI Agent, observe 工具組及為所選精確模型啟用圖片輸入.",
+    "AiGoCode gpt-5.6-sol 已在 Provider 1.2.0 / build 218 通過真實初始圖片及工具結果圖片測試. 合成圖片測試不代表其他目標也支援圖片或已通過完整 Agent 視覺任務.",
     "線上失敗僅透過選用的 `providerCode` 欄位提供固定的 `ONLINE_*` 分類. 未知例外不提供分類; 不包含 URL, 憑證, 服務回應或原始例外文字. 失敗代碼與重試策略維持不變."
   ],
   "h3_unsupported": "未宣告的能力",

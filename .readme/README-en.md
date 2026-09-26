@@ -145,7 +145,8 @@ The plugin requests `INTERNET` for user-triggered recommended-model downloads, r
 - Usage token counts come from LiteRT-LM's conversation KV-cache and decode counters, without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, model listing, and dispatch time.
 - A persistent `ai.session` permits one active turn, retains its native Conversation after normal completion, and must be recreated after cancellation, timeout, generation failure, or explicit close.
 - Cancellation, session close, and timeout stop result publication and finish the request through one terminal state.
-- In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshot tasks require the remaining P9.2 Agent integration.
+- In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshots require Android 11+, compatible AutoJs6 and AI Agent versions, the observe group, and image input enabled for the exact selected model.
+- AiGoCode gpt-5.6-sol passed real initial-image and tool-result-image probes on Provider 1.2.0 / build 218. These synthetic-image probes do not establish support for other targets or a complete Agent visual task.
 - Online failures expose only fixed `ONLINE_*` categories in the optional `providerCode` field. Unknown exceptions have no category; URLs, credentials, provider responses and original exception text are never included. The failure code and retry policy remain unchanged.
 
 ******
@@ -180,7 +181,8 @@ The roadmap is organized around deliverable user-facing features, each independe
 ###### 2026/09/26
 
 * `Hint` Development candidate, not published. Online tool calling uses AI Provider V2; Agent integration requires the host native-tool broker in build 5297+ and an Agent version that supports it. The plugin returns calls to the host and does not execute device actions itself.
-* `Hint` In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshot tasks require the remaining P9.2 Agent integration.
+* `Hint` In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshots require Android 11+, compatible AutoJs6 and AI Agent versions, the observe group, and image input enabled for the exact selected model.
+* `Hint` AiGoCode gpt-5.6-sol passed real initial-image and tool-result-image probes on Provider 1.2.0 / build 218. These synthetic-image probes do not establish support for other targets or a complete Agent visual task.
 * `Feature` Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation
 * `Feature` Online JPEG/PNG image input and image tool results through negotiated AI Provider 2.1, with explicit per-model settings
 * `Feature` Add automatic and manual online model-preset updates with local caching and offline fallback, preserving saved profiles and custom model IDs

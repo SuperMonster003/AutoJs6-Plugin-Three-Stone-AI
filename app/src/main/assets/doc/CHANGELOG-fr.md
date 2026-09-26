@@ -9,7 +9,8 @@
 ###### 2026/09/26
 
 * `Note` Version de développement non publiée. Les outils en ligne utilisent AI Provider V2; leur intégration Agent nécessite le courtier natif de l'hôte build 5297+ et une version Agent compatible. Le plugin transmet les appels à l'hôte sans exécuter lui-même les actions sur l'appareil.
-* `Note` Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent son intégration P9.2.
+* `Note` Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent Android 11+, des versions compatibles de AutoJs6 et AI Agent, le groupe observe et l'entrée d'images activée pour le modèle exact sélectionné.
+* `Note` AiGoCode gpt-5.6-sol a réussi les tests réels avec image initiale et image dans un résultat d'outil sur Provider 1.2.0 / build 218. Ces images synthétiques ne prouvent ni la compatibilité des autres cibles ni la réussite d'une tâche visuelle Agent complète.
 * `Fonctionnalité` Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats
 * `Fonctionnalité` Entrée JPEG/PNG et résultats visuels des outils via AI Provider 2.1 négocié, avec réglage par modèle
 * `Fonctionnalité` Ajouter la mise à jour automatique et manuelle des modèles prédéfinis en ligne avec cache local et liste disponible hors ligne, en conservant les profils enregistrés et les ID personnalisés

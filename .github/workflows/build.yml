@@ -2,6 +2,7 @@ name: Build and plugin contract
 
 on:
   push:
+    branches-ignore: [model-catalog]
   pull_request:
   workflow_dispatch:
 

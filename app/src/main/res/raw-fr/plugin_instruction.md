@@ -6,7 +6,7 @@ Le plugin exige la build hôte AutoJs6 5276 ou ultérieure et Android API 24 ou 
 
 ## Obtenir un modèle
 
-Dans la page des modèles, touchez **Parcourir les modèles LiteRT-LM** pour consulter le catalogue disponible et les informations utiles d'exécution. Les entrées marquées **Téléchargement vérifié** peuvent être enregistrées dans tout emplacement SAF accessible en écriture. La progression est affichée et l'en-tête LiteRT-LM, le nombre exact d'octets et le SHA-256 sont vérifiés avant d'activer **Importer le modèle téléchargé**. L'inférence n'utilise jamais le réseau. Le fichier externe et sa copie privée importée occupent chacun de l'espace; si Android arrête le processus pendant le téléchargement, supprimez manuellement tout document externe partiel.
+Dans la page des modèles, touchez **Parcourir les modèles LiteRT-LM** pour consulter le catalogue disponible et les informations utiles d'exécution. Les entrées marquées **Téléchargement vérifié** peuvent être enregistrées dans tout emplacement SAF accessible en écriture. La progression est affichée et l'en-tête LiteRT-LM, le nombre exact d'octets et le SHA-256 sont vérifiés avant d'activer **Importer le modèle téléchargé**. L'inférence locale n'utilise jamais le réseau. Le fichier externe et sa copie privée importée occupent chacun de l'espace; si Android arrête le processus pendant le téléchargement, supprimez manuellement tout document externe partiel.
 
 ## Démarrage rapide (recommandé)
 
@@ -484,6 +484,6 @@ Sécurité et limites opérationnelles:
 - Streaming, usage, les sessions persistantes, structured JSON, `text/plain` et `application/json` sont déclarés. Reasoning et tools ne sont pas pris en charge.
 - Le schema de réponse doit être un objet JSON de 64 KiB au maximum; les mots-clés acceptés sont ceux implémentés par le runtime LiteRT-LM/LLGuidance intégré. La sortie structurée complète est analysée et validée strictement, il faut donc réserver assez de `maxTokens` pour la valeur JSON entière.
 - Les tokens de usage proviennent des compteurs de cache KV et decode de Conversation dans LiteRT-LM, sans estimation par caractères. `durationMillis` mesure la génération du fournisseur et exclut la découverte, la liaison, la liste des modèles et la distribution de l'hôte.
-- Le plugin demande `INTERNET` uniquement pour les téléchargements explicites de modèles vérifiés et aucune permission générale de stockage. L'inférence n'utilise jamais le réseau; SAF limite l'accès à la source ou destination choisie.
+- Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés déclenchés par l'utilisateur, les requêtes vers une cible en ligne configurée et les mises à jour du catalogue public de modèles prédéfinis depuis GitHub dans les paramètres IA en ligne. Ces mises à jour ne nécessitent aucune clé API, ne lancent aucune inférence et ne démarrent ni à l'activation du plugin ni pendant la génération locale. L'inférence locale n'utilise jamais le réseau. Aucune permission générale de stockage n'est demandée; SAF limite l'accès à la source ou destination choisie.
 - Seul le client AutoJs6 avec la même signature peut lier le service provider.
 - Les générations précédentes nommées par hash SHA-256 sont conservées pour la sécurité interprocessus et continuent d'occuper le stockage privé.

@@ -1,41 +1,79 @@
-# 在线模型预置目录
+# 在线模型目录更新
 
-最近核对日期: 2026-09-26.
+预置模型采用公开 JSON 目录, 不依赖 APK 发版更新. 目录用于在线配置编辑器的候选项, 不代表账户可用性或各模型协议能力已完成在线验收.
 
-`OnlineAiModelPresetCatalog` 为在线配置编辑器提供模型 ID 快捷选项. 它不是账户可用模型查询结果, 也不代表每个模型的工具调用, 图片输入或自定义采样参数均已完成适配和真机验收.
+## 数据流
 
-## 当前选择与来源
+1. 默认分支保存采集器, 筛选策略和 app/src/main/assets/online-models.json 内置快照.
+2. Online model catalog GitHub Actions 每天 UTC 03:17 检查公开来源, 支持手动运行. 相关采集器, 策略或快照推送到默认分支后也会触发.
+3. 模型内容有变化时, CI 将 online-models.json 发布到独立的 model-catalog 数据分支. 首次发布创建不继承代码历史的分支, 后续只做快进推送.
+4. App 打开在线 AI 设置时先读取有效缓存, 没有缓存则使用 APK 内置快照. 自动更新默认开启, 最近成功检查超过 24 小时才后台联网; 可以关闭自动更新或手动刷新.
+5. 下载结果完整校验后才原子替换本地缓存. 无网络, 禁止计费网络, 请求失败或损坏内容均保留现有列表. 网络失败后自动检查退避 1 小时, 手动刷新可绕过节流.
 
-| 提供方 | 本次更新 | 官方来源 |
-| --- | --- | --- |
-| OpenAI | 加入 `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini`, `gpt-5.4-nano`; 保留 `gpt-5.6-sol`, `gpt-5.4`, `gpt-4.1` | [模型目录](https://developers.openai.com/api/docs/models/all), [GPT-5.6 Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol), [o4-mini](https://developers.openai.com/api/docs/models/o4-mini) |
-| Anthropic | 优先列出 `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5`, `claude-haiku-4-5`; 保留仍 Active 的 Opus 5, Fable 5, Opus 4.8 和 Sonnet 4.6 | [模型目录](https://platform.claude.com/docs/en/models/overview), [退役表](https://platform.claude.com/docs/en/about-claude/model-deprecations) |
-| Gemini | 加入稳定版 `gemini-3.8-flash` 和 `gemini-3.5-flash-lite`; 保留仍在列的 `gemini-3.1-pro-preview` 和 `gemini-3-flash-preview` | [模型目录](https://ai.google.dev/gemini-api/docs/models), [退役安排](https://ai.google.dev/gemini-api/docs/deprecations) |
-| DeepSeek | 使用当前推荐的 `deepseek-flash` (V4.1 Flash) 与 `deepseek-v4-pro` | [接入说明](https://api-docs.deepseek.com/), [当前模型规格](https://api-docs.deepseek.com/quick_start/pricing/), [更新日志](https://api-docs.deepseek.com/updates/) |
-| OpenRouter | 按其公开目录单独核实上述厂商的路由 ID, 不从原生 ID 自动拼接 | [公开 Models API](https://openrouter.ai/api/v1/models) |
+[公开目录地址](https://raw.githubusercontent.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/model-catalog/online-models.json).
 
-OpenRouter 当前补充的路由 ID:
+数据分支不合并回代码分支, 不执行 Android 构建工作流, 不增加代码分支的 VERSION_BUILD. 发布通过独立 Git index 创建提交, 不切换工作目录. 采集任务仅有仓库读取权限, 发布任务才具有 contents: write.
 
-- `openai/gpt-6-astra`, `openai/gpt-6-sol`, `openai/gpt-6-luna`.
-- `anthropic/claude-opus-5.5`, `anthropic/claude-fable-5.1`, `anthropic/claude-sonnet-5`, `anthropic/claude-haiku-4.5`.
-- `google/gemini-3.8-flash`, `google/gemini-3.5-flash-lite`.
-- `deepseek/deepseek-v4.1-flash`, `deepseek/deepseek-v4-pro-0813`.
+## JSON 契约
 
-保留原有 OpenRouter GPT-5.6 Sol, Opus 5 和 Gemini 3.1 Pro Preview 路由. Anthropic 在 OpenRouter 的版本号使用点号, 原生 API 使用连字符. OpenRouter 的 `deepseek/deepseek-v4-pro` 当前指向 0423 版本, 本次使用目录中标为 GA 的 0813 版本.
+- 顶层字段: schemaVersion (当前为 1), revision (正整数), updatedAtEpochMillis (正整数), providers (对象).
+- providers 必须包含且仅包含 openai, anthropic, gemini, deepseek, openrouter. 每项包含 defaultModelId 和 models 字符串数组.
+- 每家 1..128 个唯一 ID. 默认 ID 必须在数组中. ID 仅包含 ASCII 字母, 数字及 ._:/-, 首字符为字母或数字, 最长 256 字符.
+- 完整文档不超过 256 KiB. App 和 CI 拒绝未知字段, 未知 schema, 重复字段, 错误类型和尾部垃圾.
+- 仅模型内容变化时 revision 加 1; 相同内容保留原字节, 版本和时间, 不产生每日空提交.
+- updatedAtEpochMillis 表示内容更新时间, 不表示所有厂商最近访问成功. 各厂商本轮采集状态在 CI report artifact 和 Actions 摘要中查看.
+- OpenAI-compatible 由 App 合并四家直连列表并去重, 默认候选继承 OpenAI. 单配置仍最多选择 32 个模型, 候选目录可多于 32 项.
+- 默认候选与显示排序分离. 原默认仍有效时保留, 失效时按维护策略选择; 发现新型号不会直接把它设为默认.
+- JSON 无法改变 API 地址, 凭据, 请求参数, 工具能力, 图片开关或用户默认目标.
 
-## 移出的快捷选项
+## 无密钥来源与分组
 
-- OpenAI `gpt-5.6` 是 `gpt-5.6-sol` 的别名, 移除重复入口; `o4-mini` 的快照已标记 Deprecated, 当前轻量模型由 GPT-6 Luna 和 GPT-5.6 Luna 等覆盖.
-- Gemini 2.5 Pro/Flash 当前限制为既有使用者访问, 因此移出面向新配置的预置. 这不表示这两个模型已经停用.
-- DeepSeek 直连 `deepseek-chat` 与 `deepseek-reasoner` 已于 2026-07-24 停用, 见[官方公告](https://api-docs.deepseek.com/news/news260424/). OpenRouter 的 `deepseek/deepseek-chat` 仍是其旧 V3 路由, 本次改列 V4 系列, 不将直连停用状态套用于 OpenRouter.
+| 提供方 | 来源与筛选 |
+| --- | --- |
+| OpenAI | 从[模型目录](https://developers.openai.com/api/docs/models/all.md)发现详情页, 验证实际 Model ID, 文本输出, Chat Completions 和 streaming, 结合[退役说明](https://developers.openai.com/api/docs/deprecations.md)排除明确停用项 |
+| Anthropic | 从[模型对照表](https://platform.claude.com/docs/en/models/overview.md)提取原生 ID/alias, 结合[生命周期表](https://platform.claude.com/docs/en/about-claude/model-deprecations.md)的 Active 项, 排除受限型号 |
+| Gemini | 从[官方模型表](https://ai.google.dev/gemini-api/docs/models.md.txt)的 Endpoint 列提取并验证文本输出, 排除旧用户限定和非聊天章节; 最早可能退役日不能当作实际停用日 |
+| DeepSeek | 解析[官方模型规格](https://api-docs.deepseek.com/quick_start/pricing/)的 MODEL 表格行, 不从脚注或历史示例猜 ID |
+| OpenRouter | 使用[公开 Models API](https://openrouter.ai/api/v1/models)的真实路由 ID 和模态信息, 排除媒体生成, batch 和已过期项 |
 
-## 配置与协议边界
+OpenRouter 扩充 OpenAI, Anthropic, Google, DeepSeek, xAI, Meta, Mistral, Alibaba/Qwen, Moonshot/Kimi, Z.ai/GLM, MiniMax, ByteDance/Seed, Tencent, Baidu, Cohere, Amazon, Microsoft, NVIDIA, AI21, IBM 和 Perplexity 的候选范围. 实际只收录公开接口中存在的文本模型; 某厂商没有可用项时不生成虚构 ID. 每个厂商限制为少量当前型号, 防止整个目录被单一厂商占满.
 
-- 首项会用于新建配置的默认选择. OpenAI 及 OpenRouter 保留原先的 GPT-5.6 Sol 首项, 避免仅更新目录就将新配置默认切到有工具协议限制的 GPT-6. Anthropic 改为 Opus 5.5, Gemini 改为 3.8 Flash, DeepSeek 改为当前 Flash.
-- 已保存的模型列表, 默认模型和图片开关不会随预置更新而迁移. 编辑器会将不再属于预置的旧 ID 放入自定义输入区域, 继续允许显式编辑或删除. 旧 DeepSeek 直连配置需由用户选择新模型.
-- OpenAI-compatible 继续合并四家直连列表并去重, 不混入 OpenRouter 的命名空间. 当前合并 25 项, 未超过单配置 32 个模型的限制.
-- GPT-6 普通聊天支持 Chat Completions, 但 Astra 的工具调用要求 Responses API; Sol/Luna 在 Chat Completions 中仅在 `reasoning_effort: "none"` 时支持工具. 当前插件没有该参数配置或 Responses 适配, 因此这些预置不能视为原生 Agent 工具可用认证. 见 [OpenAI 模型指南](https://developers.openai.com/api/docs/guides/latest-model).
-- DeepSeek 新模型默认开启 thinking, 工具续轮要求回传 `reasoning_content`. 当前 OpenAI-compatible collector 尚未保留该字段, 本次目录更新未改变此行为, 因此 DeepSeek 思考模式的工具续轮仍需单独适配. 见 [DeepSeek Thinking Mode](https://api-docs.deepseek.com/guides/thinking_mode/).
-- Opus 5.5/Fable 5.1 使用始终开启的 adaptive thinking, 新代 Claude 不接受非默认采样参数. 默认聊天设置不发送这些参数, 本次也未增加 `thinking` 或强制 `tool_choice`. 如需自定义采样或其他能力, 应按具体模型另行验收. 见 [Opus 5.5](https://platform.claude.com/docs/en/models/opus-5-5/overview) 和上述 Anthropic 退役表.
+模型选择器按厂商/系列分组, 显示具体模型 ID 和各组数量, 支持展开/收起. 含已选模型的组默认展开, 未知命名空间保留原名而不丢弃. 聚合平台的路由 ID 与原生 ID 不混用, 不通过去掉前缀来猜直连型号.
 
-此次核对仅访问官方公开文档和无鉴权模型目录, 未使用用户 API Key, 未执行收费推理或宣称逐模型在线验收通过.
+筛选策略位于 .github/model-catalog-policy.json, 负责默认候选, 特殊排除和数量边界, 不需要手动填写每个新型号. 文档结构变化仍可能需要修复采集器, 不能承诺永远零维护.
+
+各厂商独立校验. 超时, 格式变化, 空列表或异常锐减会保留该厂商上次目录. 部分失败时可以发布其他厂商的有效更新, 工作流最后仍明确失败并保留报告; 全部失败不生成新版本. 采集器仅执行公开 GET, 无厂商密钥, 无推理调用.
+
+## App 缓存与编辑行为
+
+- 仅在线 AI 设置页面触发检查; Application 初始化, Wake 激活, Provider 查询和本地生成不触发目录请求.
+- 独立无凭据 HTTPS 客户端, 固定项目地址, 禁止重定向, 限制超时和响应体, 遵守计费网络设置.
+- ETag 与已校验 JSON 一起保存; 304 仅在对应缓存有效时接受. 损坏缓存或过旧缓存不会发送遗留 ETag.
+- 缓存与用户配置文件分开, 使用私有目录和原子写入. 网络期间不持文件锁; 发布前重新核对版本, 晚到旧响应不能覆盖新版本.
+- APK 内置快照升级时忽略版本更低或同版本冲突的缓存. 远程版本也不能低于已生效版本或在相同 revision 下改变内容.
+- Activity 销毁时取消请求, 完成回调不操作已销毁界面.
+- 每次打开选择器固定目录快照, 后台更新不重置未保存勾选或输入. 下次打开时显示新目录.
+- 已保存的模型列表, 默认模型, 凭据和图片开关不迁移. 被移出的旧 ID 仍显示为自定义项, 用户可显式删除或替换.
+
+## 启用与维护
+
+代码推送至默认分支后, Online model catalog 工作流会自动采集并首次发布; 也可在 Actions 手动运行. 默认 GITHUB_TOKEN 即可, 不需要 PAT 或厂商密钥. 仓库规则需允许此工作流写入 model-catalog 分支.
+
+本地确定性检查:
+
+    py -m unittest discover -s .python -p 'test_model_catalog*.py'
+    py .python/update_model_catalog.py --validate-only app/src/main/assets/online-models.json
+
+只读采集示例 (结果写入指定临时目录, 不发布):
+
+    py .python/update_model_catalog.py --previous app/src/main/assets/online-models.json --output C:/temp/stone-online-models.json --report C:/temp/stone-online-models-report.json
+
+修复已发布目录时生成新的 revision, 不回退版本. APK 发版时可将审查后的远程快照同步为内置兜底, 日常更新不依赖此操作. CI 以已发布目录和内置快照中 revision 较高者为采集基准; 如果内置快照领先, 即使本轮来源内容不变也会同步到数据分支. 两者同版本但内容冲突时停止发布, 要求先修正版本号.
+
+GitHub 定时任务可能排队延迟, 长期不活跃的公开仓库可能停用定时工作流. 通过 Actions 状态和通知关注失败, App 继续使用缓存. 见 [GitHub schedule 说明](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+## 协议边界
+
+目录更新不会自动完成新模型协议适配. GPT-6 的部分 Chat Completions 工具调用仍需要额外接口/参数支持; DeepSeek 思考工具续轮仍需 reasoning_content 回传; 新代 Claude 可能拒绝非默认采样参数. 相关依据见 [OpenAI 模型指南](https://developers.openai.com/api/docs/guides/latest-model), [DeepSeek Thinking Mode](https://api-docs.deepseek.com/guides/thinking_mode/), [Claude Opus 5.5](https://platform.claude.com/docs/en/models/opus-5-5/overview).
+
+公开目录查询成功不等于使用用户账户完成逐模型推理验证.

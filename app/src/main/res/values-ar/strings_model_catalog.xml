@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="online_ai_catalog_automatic">تحديث النماذج المعدة مسبقا تلقائيا</string>
+    <string name="online_ai_catalog_automatic_summary">التحقق مرة كل 24 ساعة عند فتح إعدادات الذكاء الاصطناعي عبر الإنترنت</string>
+    <string name="online_ai_catalog_builtin">يتم استخدام الدليل المرفق بهذا التطبيق</string>
+    <string name="online_ai_catalog_cached">يتم استخدام الدليل المنزل, المحدث في %1$s</string>
+    <string name="online_ai_catalog_checking">جار التحقق من تحديثات قائمة النماذج</string>
+    <string name="online_ai_catalog_collapsed">مطوي</string>
+    <string name="online_ai_catalog_current">قائمة النماذج محدثة</string>
+    <string name="online_ai_catalog_expanded">موسع</string>
+    <string name="online_ai_catalog_failed">تعذر تحديث قائمة النماذج. تظل القائمة الحالية متاحة.</string>
+    <string name="online_ai_catalog_help">جلب الدليل العام من المشروع على GitHub. تبقى ملفات الإعداد الحالية ومعرفات النماذج المخصصة دون تغيير.</string>
+    <string name="online_ai_catalog_metered">تحديثات قائمة النماذج محظورة على الشبكات المحسوبة</string>
+    <string name="online_ai_catalog_other_models">نماذج أخرى</string>
+    <string name="online_ai_catalog_refresh">تحديث قائمة النماذج</string>
+    <string name="online_ai_catalog_section">النماذج المعدة مسبقا</string>
+    <string name="online_ai_catalog_updated">تم تحديث قائمة النماذج</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="online_ai_catalog_automatic">自动更新预置模型</string>
+    <string name="online_ai_catalog_automatic_summary">打开在线 AI 设置时每 24 小时检查一次</string>
+    <string name="online_ai_catalog_builtin">正在使用应用内置目录</string>
+    <string name="online_ai_catalog_cached">正在使用已下载目录, 更新时间: %1$s</string>
+    <string name="online_ai_catalog_checking">正在检查预置模型更新</string>
+    <string name="online_ai_catalog_collapsed">已折叠</string>
+    <string name="online_ai_catalog_current">预置模型已是最新</string>
+    <string name="online_ai_catalog_expanded">已展开</string>
+    <string name="online_ai_catalog_failed">无法更新预置模型. 当前列表仍然可用.</string>
+    <string name="online_ai_catalog_help">从 GitHub 上的项目获取公开目录. 已有配置与自定义模型 ID 保持不变.</string>
+    <string name="online_ai_catalog_metered">计量网络下已禁止更新预置模型</string>
+    <string name="online_ai_catalog_other_models">其他模型</string>
+    <string name="online_ai_catalog_refresh">刷新预置模型</string>
+    <string name="online_ai_catalog_section">预置模型</string>
+    <string name="online_ai_catalog_updated">预置模型已更新</string>
+</resources>

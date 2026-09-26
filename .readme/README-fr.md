@@ -69,6 +69,8 @@ Le fichier README.md actuel prend en charge les langues suivantes:
 - Maintenir les échecs de génération locale et cloud dans la cible sélectionnée: le chat du lanceur ajoute une raison bornée sans données sensibles, indique qu'aucun repli entre frontières n'a eu lieu et propose un changement manuel explicite de cible sans supprimer la sortie partielle.
 - Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats.
 - Entrée JPEG/PNG et résultats visuels des outils via AI Provider 2.1 négocié, avec réglage par modèle.
+- Actualiser les modèles prédéfinis en ligne depuis le catalogue public du projet sur GitHub. La mise à jour automatique est activée par défaut et vérifie une fois toutes les 24 heures à l'ouverture des paramètres IA en ligne; un interrupteur et une actualisation manuelle sont disponibles. Elle respecte le réglage des réseaux facturés, conserve la liste en cache ou intégrée hors ligne ou en cas d'échec, et laisse les profils enregistrés et les ID personnalisés inchangés.
+- Regrouper les modèles prédéfinis par fournisseur et élargir le choix OpenRouter avec Qwen, Kimi, GLM, Grok, Meta et MiniMax, en conservant les ID exacts.
 
 ******
 
@@ -121,7 +123,7 @@ La build hôte 5276 ou ultérieure est requise. Les versions incluent les varian
 
 ******
 
-Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés déclenchés par l'utilisateur et les requêtes vers une cible en ligne explicitement configurée; les cibles locales n'utilisent pas le réseau. Les identifiants restent dans le stockage privé chiffré du plugin et ne traversent jamais Binder ni le catalogue de cibles. Le plugin ne demande aucune permission générale de stockage. Les téléchargements utilisent des révisions HTTPS immuables, une taille et un SHA-256 épinglés, et n'écrivent que dans l'emplacement SAF choisi; en-tête LiteRT-LM, taille, empreinte, flush et fsync doivent tous réussir. Les services vérifient aussi le paquet AutoJs6, l'UID appelant et les signatures.
+Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés déclenchés par l'utilisateur, les requêtes vers une cible en ligne configurée et les mises à jour du catalogue public de modèles prédéfinis depuis GitHub dans les paramètres IA en ligne. Ces mises à jour ne nécessitent aucune clé API, ne lancent aucune inférence et ne démarrent ni à l'activation du plugin ni pendant la génération locale. Les identifiants restent dans le stockage privé chiffré du plugin et ne traversent jamais Binder ni le catalogue de cibles. Le plugin ne demande aucune permission générale de stockage. Les téléchargements de fichiers de modèles utilisent des révisions HTTPS immuables, une taille et un SHA-256 épinglés, et n'écrivent que dans l'emplacement SAF choisi; en-tête LiteRT-LM, taille, empreinte, flush et fsync doivent tous réussir. Les services vérifient aussi le paquet AutoJs6, l'UID appelant et les signatures.
 
 ******
 
@@ -153,7 +155,7 @@ Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés
 
 - La sortie reasoning n'est pas déclarée. Les cibles LiteRT-LM locales ne déclarent toujours pas tools.
 - Les outils natifs autorisent 16 tours et 32 appels en attente au maximum. Les résultats doivent correspondre exactement au lot attendu; limites de contexte/sortie, annulation et délai initial restent actifs. Les outils natifs ne se combinent pas avec les tours persistants ai.session; l'historique initial refuse le rôle tool.
-- Aucune découverte réseau de modèles ni aucun téléchargement depuis une URL arbitraire. Le catalogue de cibles ne présente que les modèles locaux importés et les profils en ligne explicitement configurés; seul le catalogue de recommandations intégré et épinglé est téléchargeable.
+- Le téléchargement de fichiers de modèles depuis une URL arbitraire n'est pas pris en charge. Les modèles prédéfinis peuvent être actualisés depuis le catalogue public du projet, sans créer de profils ni vérifier les droits du compte. Le catalogue de cibles ne présente que les modèles locaux importés et les profils en ligne explicitement configurés; les téléchargements locaux restent limités aux recommandations intégrées et épinglées.
 - L'inférence NPU n'est pas déclarée: le profil reste visible comme `unavailable` avec `npu-runtime-not-packaged`. GPU n'est déclaré que si `libOpenCL.so` est chargeable, et l'extension `.litertlm` ne garantit toujours pas l'initialisation du modèle.
 
 ******
@@ -180,6 +182,8 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Note` Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent son intégration P9.2.
 * `Fonctionnalité` Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats
 * `Fonctionnalité` Entrée JPEG/PNG et résultats visuels des outils via AI Provider 2.1 négocié, avec réglage par modèle
+* `Fonctionnalité` Ajouter la mise à jour automatique et manuelle des modèles prédéfinis en ligne avec cache local et liste disponible hors ligne, en conservant les profils enregistrés et les ID personnalisés
+* `Fonctionnalité` Regrouper les modèles prédéfinis par fournisseur et élargir le choix OpenRouter avec Qwen, Kimi, GLM, Grok, Meta et MiniMax, en conservant les ID exacts
 * `Correctif` Les lectures de descripteurs libèrent les threads après annulation ou expiration et conservent les erreurs du producteur des canaux fiables
 * `Amélioration` Actualiser les modèles en ligne prédéfinis selon les catalogues officiels, dont Claude Fable 5.1 et les autres modèles actuels, et retirer les identifiants obsolètes en conservant les profils existants et les modèles personnalisés
 

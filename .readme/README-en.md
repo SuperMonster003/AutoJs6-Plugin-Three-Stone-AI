@@ -42,7 +42,7 @@ The current README.md supports the following languages:
 
 ******
 
-3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend and connects only to user-configured online profiles. Local and online destinations share one AI Provider V2 target catalog, controlled streaming pipeline, and explicit selection boundary. Local targets never access the network or upload data; online targets run only after the user selects one and remain bound to its plugin-managed credential and declared HTTPS origin.
+3-Stone AI is the official AI text-generation plugin for AutoJs6. It runs user-imported LiteRT-LM models on an explicitly selected CPU or compatible GPU backend and uses user-configured profiles for online generation. Local and online destinations share one AI Provider V2 target catalog, controlled streaming pipeline, and explicit selection boundary. Local targets never access the network or upload data; online targets run only after the user selects one and remain bound to its plugin-managed credential and declared HTTPS origin.
 
 ******
 
@@ -69,6 +69,8 @@ The current README.md supports the following languages:
 - Keep local and cloud generation failures on their selected boundary: launcher chat appends a bounded non-secret reason, states that no cross-boundary fallback occurred, and exposes an explicit manual target switch without discarding partial output.
 - Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation.
 - Online JPEG/PNG image input and image tool results through negotiated AI Provider 2.1, with explicit per-model settings.
+- Keep online model presets current with a public catalog from the project on GitHub. Automatic updates are enabled by default and check once every 24 hours when Online AI settings are opened; a switch and manual refresh are available. Updates respect the metered-network setting, keep the cached or built-in list available offline or on failure, and leave saved profiles and custom model IDs unchanged.
+- Group model presets by vendor and expand OpenRouter choices to include Qwen, Kimi, GLM, Grok, Meta and MiniMax, while preserving exact model IDs.
 
 ******
 
@@ -121,7 +123,7 @@ Host build 5276 or later is required. Releases include arm64-v8a, x86_64, univer
 
 ******
 
-The plugin requests `INTERNET` for user-triggered recommended-model downloads and requests to a user-configured online target; local generation does not use the network. It requests no broad storage permission. Catalog downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, matching signatures, target metadata, and declared origin boundaries.
+The plugin requests `INTERNET` for user-triggered recommended-model downloads, requests to a user-configured online target, and public model-preset catalog updates from GitHub in Online AI settings. Catalog updates need no API key, make no inference calls, and never start during plugin activation or local generation. It requests no broad storage permission. Recommended model downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, matching signatures, target metadata, and declared origin boundaries.
 
 ******
 
@@ -153,7 +155,7 @@ The plugin requests `INTERNET` for user-triggered recommended-model downloads an
 
 - Reasoning output is not declared. Local LiteRT-LM targets still do not declare tools.
 - Native tools allow at most 16 rounds and 32 outstanding calls. Results must exactly match the pending batch; context/output limits, cancellation and the original deadline still apply. Native tools cannot be combined with persistent ai.session turns; initial tool-role history is not accepted.
-- There is no network model discovery or arbitrary-URL model download. Launcher chat and AI Provider V2 expose only imported local models and explicitly configured online profiles, and only the pinned built-in recommendation catalog can be downloaded.
+- Downloading model files from arbitrary URLs is unsupported. Online model presets can be refreshed from the public project catalog, but do not create profiles or query account access. Launcher chat and AI Provider V2 expose only imported local models and explicitly configured online profiles; downloadable local models remain limited to the pinned built-in recommendations.
 - NPU inference is not declared: the profile is discoverable as `unavailable` with `npu-runtime-not-packaged`. GPU is declared only when `libOpenCL.so` is loadable, and a `.litertlm` extension alone still does not guarantee model initialization.
 
 ******
@@ -180,6 +182,8 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Hint` In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshot tasks require the remaining P9.2 Agent integration.
 * `Feature` Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation
 * `Feature` Online JPEG/PNG image input and image tool results through negotiated AI Provider 2.1, with explicit per-model settings
+* `Feature` Add automatic and manual online model-preset updates with local caching and offline fallback, preserving saved profiles and custom model IDs
+* `Feature` Group model presets by vendor and expand OpenRouter choices to include Qwen, Kimi, GLM, Grok, Meta and MiniMax, while preserving exact model IDs
 * `Fix` Descriptor reads release workers on cancellation or timeout and preserve reliable-pipe producer errors
 * `Improvement` Refresh online model presets from official catalogs, including Claude Fable 5.1 and other current models, and remove retired model IDs while preserving existing profiles and custom models
 

@@ -6,7 +6,7 @@ El plugin requiere la build 5276 o posterior del host AutoJs6 y Android API 24 o
 
 ## Obtener un modelo
 
-En la página de modelos, pulse **Explorar modelos LiteRT-LM** para consultar el catálogo disponible y datos útiles de ejecución. Las entradas marcadas como **Descarga verificada** se pueden guardar en cualquier ubicación SAF escribible. Se muestra el progreso y se verifican la cabecera LiteRT-LM, el número exacto de bytes y SHA-256 antes de habilitar **Importar modelo descargado**. La inferencia nunca usa la red. El archivo externo y su copia privada importada ocupan espacio por separado; si Android termina el proceso durante la descarga, elimine manualmente cualquier documento externo parcial.
+En la página de modelos, pulse **Explorar modelos LiteRT-LM** para consultar el catálogo disponible y datos útiles de ejecución. Las entradas marcadas como **Descarga verificada** se pueden guardar en cualquier ubicación SAF escribible. Se muestra el progreso y se verifican la cabecera LiteRT-LM, el número exacto de bytes y SHA-256 antes de habilitar **Importar modelo descargado**. La inferencia local nunca usa la red. El archivo externo y su copia privada importada ocupan espacio por separado; si Android termina el proceso durante la descarga, elimine manualmente cualquier documento externo parcial.
 
 ## Inicio rápido (recomendado)
 
@@ -484,6 +484,6 @@ Seguridad y límites operativos:
 - Se declaran streaming, usage, sesiones persistentes, structured JSON, `text/plain` y `application/json`. No se admiten reasoning ni tools.
 - El schema de respuesta debe ser un objeto JSON de no más de 64 KiB; las palabras clave admitidas son las implementadas por el runtime LiteRT-LM/LLGuidance incluido. La salida estructurada completa se analiza y valida estrictamente, por lo que debe reservarse suficiente `maxTokens` para todo el valor JSON.
 - Los tokens de usage proceden de los contadores de caché KV y decode de Conversation en LiteRT-LM, sin estimaciones por caracteres. `durationMillis` mide la generación del proveedor y excluye descubrimiento, enlace, listado de modelos y despacho del host.
-- El plugin solicita `INTERNET` solo para descargas explícitas de modelos verificados y ningún permiso general de almacenamiento. La inferencia nunca usa la red; SAF limita el acceso al origen o destino elegido.
+- El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario, solicitudes a un destino en línea configurado por el usuario y actualizaciones del catálogo público de modelos predefinidos desde GitHub en los ajustes de IA en línea. Estas actualizaciones no requieren una clave API ni realizan inferencia, y no se inician al activar el plugin ni durante la generación local. La inferencia local nunca usa la red. No se solicita ningún permiso general de almacenamiento; SAF limita el acceso al origen o destino elegido.
 - Solo el host AutoJs6 con la misma firma puede enlazar el servicio provider.
 - Las generaciones anteriores con nombre de hash SHA-256 se conservan por seguridad entre procesos y siguen ocupando almacenamiento privado.

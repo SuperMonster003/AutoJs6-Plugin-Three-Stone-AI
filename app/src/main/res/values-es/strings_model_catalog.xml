@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="online_ai_catalog_automatic">Actualizar los modelos predefinidos automáticamente</string>
+    <string name="online_ai_catalog_automatic_summary">Comprobar una vez cada 24 horas al abrir los ajustes de IA en línea</string>
+    <string name="online_ai_catalog_builtin">Se usa el catálogo incluido con esta aplicación</string>
+    <string name="online_ai_catalog_cached">Se usa el catálogo descargado, actualizado el %1$s</string>
+    <string name="online_ai_catalog_checking">Buscando actualizaciones de modelos predefinidos</string>
+    <string name="online_ai_catalog_collapsed">Contraído</string>
+    <string name="online_ai_catalog_current">Los modelos predefinidos están al día</string>
+    <string name="online_ai_catalog_expanded">Expandido</string>
+    <string name="online_ai_catalog_failed">No se pudieron actualizar los modelos predefinidos. La lista actual sigue disponible.</string>
+    <string name="online_ai_catalog_help">Obtener el catálogo público del proyecto en GitHub. Los perfiles existentes y los ID de modelos personalizados no cambian.</string>
+    <string name="online_ai_catalog_metered">Las actualizaciones de modelos están bloqueadas en redes medidas</string>
+    <string name="online_ai_catalog_other_models">Otros modelos</string>
+    <string name="online_ai_catalog_refresh">Actualizar modelos predefinidos</string>
+    <string name="online_ai_catalog_section">Modelos predefinidos</string>
+    <string name="online_ai_catalog_updated">Modelos predefinidos actualizados</string>
+</resources>

@@ -16,6 +16,7 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.ViewCompat
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.progressindicator.CircularProgressIndicator
@@ -47,7 +48,10 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.ConfiguredO
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiBaseUrlHistoryPolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiBaseUrlHistoryStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiCredentialUpdate
-import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelPresetCatalog
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogRepository
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogRefreshResult
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogGroups
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.createOnlineAiModelCatalogRepository
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfile
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileCodec
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfilePolicy
@@ -58,6 +62,8 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiPro
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
 import java.io.ByteArrayOutputStream
+import java.text.DateFormat
+import java.util.Date
 import java.util.Locale
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutorService
@@ -68,6 +74,15 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
     private lateinit var applicationState: ThreeStoneAiApplication
     private lateinit var registry: OnlineAiProfileRegistry
     private lateinit var baseUrlHistoryStore: OnlineAiBaseUrlHistoryStore
+    private lateinit var modelCatalog: OnlineAiModelCatalogRepository
+    private val catalogSettings by lazy {
+        getSharedPreferences("online-model-catalog-settings", MODE_PRIVATE)
+    }
+    private val catalogExecutor = Executors.newSingleThreadExecutor { action ->
+        Thread(action, "three-stone-ai-model-catalog").apply { isDaemon = true }
+    }
+    private var catalogRefresh: Future<*>? = null
+    private var catalogRefreshing = false
     private lateinit var settingsContent: LinearLayout
     private lateinit var screenRoot: View
     private var snapshot: OnlineAiProfileRegistrySnapshot? = null
@@ -89,6 +104,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         applicationState = application as ThreeStoneAiApplication
         registry = applicationState.onlineProfileRegistry
         baseUrlHistoryStore = OnlineAiBaseUrlHistoryStore(applicationContext)
+        modelCatalog = createOnlineAiModelCatalogRepository(applicationContext)
         setContentView(createContentView())
         reloadSnapshot()
         if (savedInstanceState == null && intent.getBooleanExtra(EXTRA_ADD_PROFILE, false)) {
@@ -120,9 +136,15 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
     override fun onResume() {
         super.onResume()
         if (::settingsContent.isInitialized) reloadSnapshot()
+        if (::modelCatalog.isInitialized && catalogSettings.getBoolean(KEY_AUTOMATIC_CATALOG, true)) {
+            refreshModelCatalog(manual = false)
+        }
     }
 
     override fun onDestroy() {
+        if (::modelCatalog.isInitialized) modelCatalog.cancelRefresh()
+        catalogRefresh?.cancel(true)
+        catalogExecutor.shutdownNow()
         cancelConnectionTest(activeTest, showFeedback = false)
         testExecutor.shutdownNow()
         super.onDestroy()
@@ -168,6 +190,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         )
         settingsContent.addView(hairline())
 
+        renderModelCatalogSettings()
+
         settingsContent.addView(sectionHeader(R.string.online_ai_profiles_section))
         settingsContent.addView(
             settingRow(
@@ -193,6 +217,74 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             profiles.forEach { state -> settingsContent.addView(profileCard(state, current)) }
         }
         applyThemeToControls(settingsContent)
+    }
+
+    private fun renderModelCatalogSettings() {
+        settingsContent.addView(sectionHeader(R.string.online_ai_catalog_section))
+        settingsContent.addView(
+            switchRow(
+                title = getString(R.string.online_ai_catalog_automatic),
+                summary = getString(R.string.online_ai_catalog_automatic_summary),
+                iconResource = R.drawable.ic_cloud_24,
+                checked = catalogSettings.getBoolean(KEY_AUTOMATIC_CATALOG, true),
+            ) { checked ->
+                catalogSettings.edit().putBoolean(KEY_AUTOMATIC_CATALOG, checked).apply()
+                if (checked) refreshModelCatalog(manual = false)
+            }.view,
+        )
+        val catalogSnapshot = modelCatalog.snapshot()
+        val summary = when {
+            catalogRefreshing -> getString(R.string.online_ai_catalog_checking)
+            catalogSnapshot.isCached -> getString(
+                R.string.online_ai_catalog_cached,
+                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                    .format(Date(catalogSnapshot.catalog.updatedAtEpochMillis)),
+            )
+            else -> getString(R.string.online_ai_catalog_builtin)
+        }
+        settingsContent.addView(
+            settingRow(
+                title = getString(R.string.online_ai_catalog_refresh),
+                summary = summary,
+                iconResource = R.drawable.ic_cloud_24,
+                onClick = { refreshModelCatalog(manual = true) },
+            ).view.apply { isEnabled = !catalogRefreshing },
+        )
+        settingsContent.addView(
+            secondaryText(getString(R.string.online_ai_catalog_help), Ui.TEXT_SECONDARY).apply {
+                setPaddingRelative(uiDp(20), 0, uiDp(20), uiDp(16))
+            },
+        )
+        settingsContent.addView(hairline())
+    }
+
+    private fun refreshModelCatalog(manual: Boolean) {
+        if (catalogRefreshing || isFinishing || isDestroyed) return
+        catalogRefreshing = true
+        renderSettings()
+        catalogRefresh = catalogExecutor.submit {
+            val result = runCatching { modelCatalog.refresh(force = manual) }
+            mainHandler.post {
+                if (isFinishing || isDestroyed) return@post
+                catalogRefreshing = false
+                catalogRefresh = null
+                // Only rebuild the settings page. An open editor keeps its unsaved selection.
+                renderSettings()
+                if (manual) {
+                    val failure = result.exceptionOrNull()
+                    val message = when {
+                        failure is OnlineAiFailureException &&
+                            failure.reason == OnlineAiFailureReason.METERED_NETWORK_DISALLOWED ->
+                            R.string.online_ai_catalog_metered
+                        failure != null -> R.string.online_ai_catalog_failed
+                        result.getOrNull() == OnlineAiModelCatalogRefreshResult.UPDATED ->
+                            R.string.online_ai_catalog_updated
+                        else -> R.string.online_ai_catalog_current
+                    }
+                    showSnackbar(screenRoot, getString(message), Snackbar.LENGTH_LONG)
+                }
+            }
+        }
     }
 
     private fun profileCard(
@@ -419,7 +511,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             credentialInput.setAutofillHints(null)
         }
         var selectedModelIds = existing?.profile?.modelIds
-            ?: OnlineAiModelPresetCatalog.forProvider(initialProvider).take(1)
+            ?: listOf(modelCatalog.snapshot().catalog.defaultForProvider(initialProvider))
         var selectedDefaultModelId = existing?.profile?.modelId ?: selectedModelIds.first()
         var selectedVisionModelIds = existing?.profile?.visionModelIds.orEmpty()
 
@@ -453,7 +545,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                     ?: OnlineAiBaseUrlHistoryPolicy.HTTPS_PREFIX,
             )
             if (existing == null) {
-                selectedModelIds = OnlineAiModelPresetCatalog.forProvider(provider).take(1)
+                selectedModelIds = listOf(modelCatalog.snapshot().catalog.defaultForProvider(provider))
                 selectedDefaultModelId = selectedModelIds.first()
                 refreshModelControls()
             }
@@ -611,7 +703,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         initial: List<String>,
         onSelected: (List<String>) -> Unit,
     ) {
-        val presets = OnlineAiModelPresetCatalog.forProvider(provider)
+        val presets = modelCatalog.snapshot().catalog.forProvider(provider)
         val presetBoxes = presets.map { modelId ->
             MaterialCheckBox(this).apply {
                 text = modelId
@@ -620,6 +712,43 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 minimumHeight = uiDp(46)
                 buttonTintList = controlTintList()
                 setTextColor(appPalette.primaryText)
+            }
+        }
+        val boxesById = presets.zip(presetBoxes).toMap()
+        val groups = OnlineAiModelCatalogGroups.group(
+            provider, presets, getString(R.string.online_ai_catalog_other_models),
+        )
+        val groupViews = groups.map { group ->
+            var expanded = groups.size == 1 || group.modelIds.any(initial::contains)
+            val models = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPaddingRelative(uiDp(12), 0, 0, uiDp(8))
+                group.modelIds.forEach { addView(boxesById.getValue(it)) }
+            }
+            var updateExpansion: () -> Unit = {}
+            val header = settingRow(
+                title = "${group.title} (${group.modelIds.size})",
+                onClick = {
+                    expanded = !expanded
+                    updateExpansion()
+                },
+            )
+            ViewCompat.setAccessibilityHeading(header.view, true)
+            updateExpansion = {
+                models.visibility = if (expanded) View.VISIBLE else View.GONE
+                ViewCompat.setStateDescription(
+                    header.view,
+                    getString(if (expanded) R.string.online_ai_catalog_expanded else R.string.online_ai_catalog_collapsed),
+                )
+                (header.view as? android.view.ViewGroup)?.let { row ->
+                    row.getChildAt(row.childCount - 1)?.rotation = if (expanded) 90f else 0f
+                }
+            }
+            updateExpansion()
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(header.view)
+                addView(models)
             }
         }
         val (customField, customInput) = formTextField(
@@ -641,7 +770,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 setLineSpacing(0f, 1.15f)
             })
             addView(formLabel(R.string.online_ai_model_presets))
-            presetBoxes.forEach(::addView)
+            groupViews.forEach(::addView)
             addView(fieldParamsWrap(customField))
         }
         formBottomSheet(
@@ -1162,5 +1291,6 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         private const val MENU_EXPORT = 2202
         private const val MIME_JSON = "application/json"
         private const val PROFILE_EXPORT_FILE_NAME = "3-stone-ai-online-profiles.json"
+        private const val KEY_AUTOMATIC_CATALOG = "automatic-checks"
     }
 }

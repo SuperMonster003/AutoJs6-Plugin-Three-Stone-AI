@@ -1,9 +1,14 @@
 # P9.2 Provider image input
 
-Date: 2026-09-26. Candidate: 3-Stone AI 1.2.0 / build 216, based on
-`4e887e8`. This implements the original AI Agent P9.2 model item at the
-Provider layer. Real online vision acceptance remains pending. No release,
-tag, push, new roadmap stage or public script API is part of this change.
+Date: 2026-09-26. Real image-input acceptance now passes for the explicitly
+selected AiGoCode / `gpt-5.6-sol` target on Provider `7138fd0` / 1.2.0 / 218,
+for both initial images and images returned by native tools. The final
+section records those measurements and their limits.
+
+The implementation receipt and earlier unsuccessful probes below are
+preserved as historical evidence from the build 216 candidate based on
+`4e887e8`, subsequently committed as `d0ad293`. No release, tag, push, new
+roadmap stage or public script API is part of this documentation update.
 
 ## Implemented boundary
 
@@ -126,9 +131,9 @@ APK crashed before the suite; it is not a product pass. The final production
 build/lint/archive run took 1m 37s. A later Android-test-only change added
 probe metrics before its assertion; it did not change production code.
 
-## Real online attempts and the remaining gate
+## Earlier real online attempts and the original pending gate
 
-XQ-DQ72 / API 35 used the configured Model8 target for `claude-fable-5-1`.
+The original receipt recorded XQ-DQ72 / API 35 with the configured Model8 target for `claude-fable-5-1`.
 The explicitly enabled probe uses the real credential repository, network
 policy, HTTP execution and Provider session, with a generated 512 x 192 JPEG
 containing six random digits. The prompt does not include the expected
@@ -155,11 +160,13 @@ target must pass both initial-image and tool-result-image acceptance before
 the original roadmap's model item is marked fully accepted. The gated probe
 never performs a paid request in ordinary CI/connected test runs.
 
-Agent `screen_capture`, its original longest-edge-1280/JPEG-70 conversion,
-visual prompts and image budgeting remain the next original P9.2 plugin
-item. P9.1 Wi-Fi comparison failures are independent and remain pending.
+At that time, Agent `screen_capture`, its original
+longest-edge-1280/JPEG-70 conversion, visual prompts and image budgeting were
+the next original P9.2 plugin item. That Agent integration was subsequently
+completed and is distinct from the selected-model probes recorded below.
+P9.1 Wi-Fi comparison failures are independent.
 
-## Candidate artifacts and environment
+## Initial candidate artifacts and environment
 
 The archive manifest correctly records pre-commit `4e887e8` and
 `sourceDirty=true`. These exact candidate files are local, not published:
@@ -188,3 +195,100 @@ directory belongs in Git.
 - [Gemini image input](https://ai.google.dev/gemini-api/docs/generate-content/image-understanding)
 - [Gemini GenerateContent](https://ai.google.dev/api/generate-content) and [Content/Part schema](https://ai.google.dev/api/caching#Content)
 - [AOSP ParcelFileDescriptor ownership and reliable status](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/core/java/android/os/ParcelFileDescriptor.java)
+
+## Accepted AiGoCode follow-up
+
+The maintainer explicitly authorized the newly configured AiGoCode /
+`gpt-5.6-sol` target for text comparison and an image-input trial. The public
+catalog confirmed that exact model before the probes. This device now
+reports serial QV770340J7, model XQ-DQ72, Android 13 / API 33. Earlier receipts
+labeled this device API 35; that historical value has not been reverified
+and is not evidence of an OS change. This follow-up uses the current API 33
+reading.
+
+Both probes used the matching officially signed Debug and androidTest
+builds of Provider `7138fd085660edfa0b8b7e918b5eb06c33982ffe` / 1.2.0 / 218.
+Each generated a 512 x 192 JPEG at quality 70 containing six random digits;
+the prompt did not contain the answer. The exact configured target was
+vision-enabled only in the test's in-memory profile. Saved profile data,
+credentials, default target and persistent image-input selection were not
+changed by the probes. No device screenshot or personal image was uploaded.
+
+| Probe | Result | Session time | Input / output tokens | Tool calls | Output |
+| --- | --- | --- | --- | --- | --- |
+| Initial image | Passed, instrumentation OK (1 test) | 17263 ms | 138 / 6 | 0 | Six characters, exact image match |
+| Native tool-result image | Passed, instrumentation OK (1 test) | 26480 ms | 308 / 39 | 1 | Six characters, exact image match |
+
+Both runs kept the 1024-token maximum and the existing bounded deadline.
+The second probe first requested `observe_image`, submitted the image as
+that call's result, then received the matching final answer. Its reported
+usage covers the native conversation; 39 output tokens are not claimed to
+be the length of the six-character final text. These are bounded real HTTP
+probes, not repeated samples selected for success.
+
+The probe uses the real credential repository, network policy, HTTP backend
+and Provider session, with a test-only same-UID owner verifier. It closes
+the existing P9.2 Provider model gate requiring both image paths. It is not
+a new real host-to-Agent cross-UID visual task, does not establish every
+protocol or every model's support, and does not turn on image input for
+future user tasks. The Agent integration and cross-UID deterministic tests
+were completed separately in the existing Agent implementation receipt.
+The original Model8 empty-response failures remain failures.
+
+The initial attempt to run the test against the previously installed R8
+build 216 crashed before a model probe. It is retained as an instrumentation
+setup failure, not counted as model acceptance or folded into the two
+successful 218 probe results.
+
+### Matched build and archive
+
+Debug, androidTest, R8 release and signed archive tasks completed successfully
+in 3m 3s, with 126 actionable tasks and 16 KiB native alignment verified for
+Debug and Release. The archive records the exact clean source above with
+`sourceDirty=false`. The tests and all app APKs use the official certificate
+SHA-256 `31a681fcfffb3e428420cae280ded89292b12a3b0f59e19b7a73e32a8ae4c213`.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Debug arm64 / 218 | `d44607b11f51eaf760397d03ed48fbf5be460f424bd7ac9d657263ad31e19cc7` |
+| Matching androidTest | `0261fcd30f98f562267e4272a5892f6f00b263f35954669949801301475fb927` |
+| R8 arm64 / 218, CRC32 A931BB09 | `cad1df45c6bcd79fc3de635a6eadada305689c809318484064e99a8dac071bc5` |
+
+An initial Windows command launch error, native filesystem-enumeration stall
+and resulting cache-lock failure are preserved in ignored build records.
+The successful build used a separate Gradle home and project cache with
+file watching and Gradle native services disabled; the native-service
+property was verified from the installed Gradle bytecode. No shared locks
+were deleted or unrelated build processes terminated. These setup failures
+are separate from the successful APK build and model probes.
+
+### Documentation follow-up and build identity
+
+The current documentation update prepares Provider 1.2.0 / build 220 after
+`40ac023` / build 219, which separately preserves fixed online failure
+categories. Neither build 219 nor the documentation build 220 is the build
+used for the successful vision probes; those results belong to build 218.
+This update changes no runtime or public API. Ten-language README and
+current changelog text now state the implemented Agent requirements and
+the verified exact target, without claiming universal visual support.
+
+Agent screenshots require Android 11+, a compatible AutoJs6 host and AI
+Agent, the observe tool group, and image input explicitly enabled for the
+exact selected model. The successful probes did not persist that opt-in.
+Existing profiles remain disabled for image input unless selected by the
+user; LiteRT and persistent `ai.session` remain text-only. The completed
+Provider model gate requires no additional device, SIM or full Agent
+screenshot task. The independent P9.1 Wi-Fi gate is recorded in the Agent
+roadmap.
+
+The build 220 documentation package passed generation, the read-only
+Markdown check and the pending-commit repository check. Its R8 release and
+signed three-ABI archive completed in 5m 33s (56 actionable tasks: 19 executed,
+37 up-to-date), including release native 16 KiB alignment. The arm64 archive
+has CRC32 `838FF3D1`, 24,658,606 bytes and SHA-256
+`408312dab105422949260e8b9aa3f6c322825d8b6b1024665ec481e0eae06db5`.
+The manifest correctly records parent `40ac023` with `sourceDirty=true` for
+this documentation/version update, not a clean build of the earlier commit.
+Runtime suites were not repeated for this documentation-only update; build
+219 runtime validation remains separately recorded. No device installation
+or online generation was performed as part of producing build 220.

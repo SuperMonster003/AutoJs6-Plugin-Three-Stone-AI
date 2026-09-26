@@ -145,7 +145,8 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 - Usage token 数直接来自 LiteRT-LM Conversation 的 KV cache 与 decode 计数, 不做字符数估算. `durationMillis` 只测量插件生成调用, 不包含宿主发现, 绑定, 模型枚举和分发时间.
 - 持久 `ai.session` 只允许一个活动轮次, 正常完成后保留原生 Conversation; 取消, 超时, 生成失败或显式关闭后必须重新创建会话.
 - 取消, 会话关闭和超时会停止结果发布, 并通过唯一终态结束请求.
-- 在 设置 > 在线 AI 中编辑配置并选择支持图片输入的模型. 已有配置默认关闭. 图片仅发送给所选配置的服务. LiteRT 与持久 ai.session 仍仅支持文本; Agent 截图任务需等待 P9.2 的 Agent 接入完成.
+- 在 设置 > 在线 AI 中编辑配置并选择支持图片输入的模型. 已有配置默认关闭. 图片仅发送给所选配置的服务. LiteRT 与持久 ai.session 仍仅支持文本; Agent 截图要求 Android 11+, 兼容的 AutoJs6 与 AI Agent, observe 工具组及为所选精确模型启用图片输入.
+- AiGoCode gpt-5.6-sol 已在 Provider 1.2.0 / build 218 通过真实初始图片与工具结果图片探针. 合成图片探针不代表其他目标也支持图片或已通过完整 Agent 视觉任务.
 - 在线失败仅通过可选的 `providerCode` 字段提供固定的 `ONLINE_*` 分类. 未知异常不提供分类; 不包含 URL, 凭据, 服务响应或原始异常文本. 失败代码与重试策略保持不变.
 
 ******
@@ -180,7 +181,8 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 ###### 2026/09/26
 
 * `提示` 开发候选版本, 尚未发布. 在线工具调用经 AI Provider V2 提供; Agent 集成需要 build 5297+ 的宿主原生工具代理及支持此能力的 Agent 版本. 插件向宿主返回调用, 自身不执行设备操作.
-* `提示` 在 设置 > 在线 AI 中编辑配置并选择支持图片输入的模型. 已有配置默认关闭. 图片仅发送给所选配置的服务. LiteRT 与持久 ai.session 仍仅支持文本; Agent 截图任务需等待 P9.2 的 Agent 接入完成.
+* `提示` 在 设置 > 在线 AI 中编辑配置并选择支持图片输入的模型. 已有配置默认关闭. 图片仅发送给所选配置的服务. LiteRT 与持久 ai.session 仍仅支持文本; Agent 截图要求 Android 11+, 兼容的 AutoJs6 与 AI Agent, observe 工具组及为所选精确模型启用图片输入.
+* `提示` AiGoCode gpt-5.6-sol 已在 Provider 1.2.0 / build 218 通过真实初始图片与工具结果图片探针. 合成图片探针不代表其他目标也支持图片或已通过完整 Agent 视觉任务.
 * `新增` 在线 OpenAI 兼容, Anthropic Messages 与 Gemini GenerateContent 目标支持原生工具调用, 包含流式参数, 并行调用与结果续轮
 * `新增` 在线模型通过协商 AI Provider 2.1 接收 JPEG/PNG 图片及工具结果图片, 支持按具体模型启用
 * `新增` 新增在线预置模型自动更新与手动刷新, 支持本地缓存及离线回退, 保留已保存配置与自定义模型 ID

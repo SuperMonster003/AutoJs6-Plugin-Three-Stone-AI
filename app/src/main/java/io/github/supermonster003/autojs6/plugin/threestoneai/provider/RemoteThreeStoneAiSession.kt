@@ -258,7 +258,7 @@ internal class RemoteThreeStoneAiSession(
                     turn.backendCompleted(statistics)
 
                 override fun onFailed(error: Throwable, statistics: GenerationStatistics?) =
-                    turn.backendFailed(statistics)
+                    turn.backendFailed(error, statistics)
             }
             if (contextPlan != null) {
                 activeBackend.streamPreparedPersistentTurn(contextPlan, listener)
@@ -638,17 +638,14 @@ internal class RemoteThreeStoneAiSession(
             }
         }
 
-        fun backendFailed(statistics: GenerationStatistics?) {
+        fun backendFailed(error: Throwable, statistics: GenerationStatistics?) {
             when (terminalCause.get()) {
                 TerminalCause.OUTPUT_LIMIT -> {
                     if (!recordStatistics(statistics)) return
                     output.markBackendDone()
                     scheduleDrain()
                 }
-                TerminalCause.NONE -> fail(
-                    AiErrorCode.PROVIDER_FAILED,
-                    "AI generation failed",
-                )
+                TerminalCause.NONE -> fail(BackendFailurePolicy.error(error))
                 else -> Unit
             }
         }
@@ -735,10 +732,12 @@ internal class RemoteThreeStoneAiSession(
             code: Int,
             message: String,
             retryDisposition: Int = AiRetryDisposition.NEVER,
-        ) {
+        ) = fail(AiError(code, message, retryDisposition))
+
+        private fun fail(error: AiError) {
             if (!terminal.compareAndSet(false, true)) return
             terminalCause.compareAndSet(TerminalCause.NONE, TerminalCause.FAILURE)
-            failTurn(this, AiError(code, message, retryDisposition))
+            failTurn(this, error)
         }
 
         fun dispose(cancelWorkers: Boolean) {

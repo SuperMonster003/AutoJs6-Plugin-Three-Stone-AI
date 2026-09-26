@@ -168,6 +168,34 @@ class NativeToolSessionAndroidTest {
         } finally { pipe.forEach { runCatching { it.close() } } }
     }
 
+    @Test
+    fun backendFailureCategorySurvivesAidlAfterToolResultsWithoutRetryOrDuplicateTerminal() {
+        val failures = listOf(
+            OnlineAiFailureException(OnlineAiFailureReason.NETWORK_UNAVAILABLE) to "ONLINE_NETWORK_UNAVAILABLE",
+            OnlineAiFailureException(OnlineAiFailureReason.REQUEST_REJECTED, 400) to "ONLINE_REQUEST_REJECTED",
+            IllegalStateException("private request and credential text") to null,
+        )
+        for (streaming in listOf(true, false)) {
+            for ((failure, expectedCode) in failures) Fixture(streaming = streaming, failureAfterResume = failure).use { fixture ->
+                fixture.start()
+                fixture.awaitTools()
+                fixture.submit()
+                fixture.awaitTerminal()
+                assertTrue(fixture.backend.failureCallbacksSent.await(5, TimeUnit.SECONDS))
+                assertTrue(fixture.backendClosed.await(5, TimeUnit.SECONDS))
+                val error = fixture.failures.single()
+                assertEquals(AiErrorCode.PROVIDER_FAILED, error.code)
+                assertEquals("AI generation failed", error.message)
+                assertEquals(AiRetryDisposition.NEVER, error.retryDisposition)
+                assertEquals(expectedCode, error.providerCode)
+                assertEquals(1, fixture.backend.opens.get())
+                assertEquals(1, fixture.backend.resumes.get())
+                assertEquals(0, fixture.cancelled.get())
+                assertTrue(fixture.completions.isEmpty())
+            }
+        }
+    }
+
     private class Fixture(
         streaming: Boolean = true,
         timeoutMillis: Long = 10_000,
@@ -175,6 +203,7 @@ class NativeToolSessionAndroidTest {
         persistent: Boolean = false,
         missingUsage: Boolean = false,
         invalidAfterPause: String? = null,
+        failureAfterResume: Throwable? = null,
     ) : Closeable {
         private val worker = Executors.newFixedThreadPool(3)
         private val timer = Executors.newSingleThreadScheduledExecutor()
@@ -189,7 +218,7 @@ class NativeToolSessionAndroidTest {
         val modelPaused = CountDownLatch(1)
         private val terminal = CountDownLatch(1)
         val backendClosed = CountDownLatch(1)
-        val backend = FakeBackend(backendClosed, modelPaused, missingUsage, invalidAfterPause)
+        val backend = FakeBackend(backendClosed, modelPaused, missingUsage, invalidAfterPause, failureAfterResume)
         private val callback = object : IAiCallback.Stub() {
             override fun onStarted(metadata: ByteArray) { started += AiProviderCodec.decodeSessionStarted(metadata) }
             override fun onChunk(chunk: ByteArray) { chunks += AiProviderCodec.decodeTextChunk(chunk).textDelta.orEmpty() }
@@ -244,6 +273,7 @@ class NativeToolSessionAndroidTest {
         private val paused: CountDownLatch,
         private val missingUsage: Boolean,
         private val invalidAfterPause: String?,
+        private val failureAfterResume: Throwable?,
     ) : AiBackend, AiBackendSession {
         override val backendId = "native-tool-test"
         override val target = AiTarget("profile:test", backendId, "openai-compatible", "test", "model", "Fixture",
@@ -251,6 +281,7 @@ class NativeToolSessionAndroidTest {
             AiTargetCapabilities(true, true, true, true, false, true), AiTargetLimits(262144, 65536), emptyList())
         val opens = AtomicInteger()
         val resumes = AtomicInteger()
+        val failureCallbacksSent = CountDownLatch(1)
         var received = emptyList<GenerationToolResult>()
         private lateinit var listener: GenerationListener
         override fun ownsTarget(targetId: String) = targetId == target.targetId
@@ -269,6 +300,13 @@ class NativeToolSessionAndroidTest {
         override fun submitToolResults(results: List<GenerationToolResult>) {
             received = results
             resumes.incrementAndGet()
+            failureAfterResume?.let { failure ->
+                listener.onFailed(failure, null)
+                listener.onFailed(failure, null)
+                listener.onCompleted(GenerationStatistics(8, 1, 11))
+                failureCallbacksSent.countDown()
+                return
+            }
             listener.onTextDelta("After.")
             listener.onCompleted(GenerationStatistics(8, 1, 11))
         }

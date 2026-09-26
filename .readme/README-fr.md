@@ -146,6 +146,7 @@ Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés
 - Une `ai.session` persistante autorise un seul tour actif et conserve sa Conversation native après une fin normale; elle doit être recréée après une annulation, un timeout, un échec de génération ou une fermeture explicite.
 - L'annulation, la fermeture de session et le timeout arrêtent la publication et terminent la requête avec un seul état terminal.
 - Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent son intégration P9.2.
+- Les échecs en ligne exposent uniquement des catégories fixes `ONLINE_*` dans le champ facultatif `providerCode`. Les exceptions inconnues restent sans catégorie; les URL, identifiants, réponses du service et textes originaux des exceptions sont exclus. Le code d'échec et la politique de nouvelle tentative restent inchangés.
 
 ******
 
@@ -185,6 +186,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Fonctionnalité` Ajouter la mise à jour automatique et manuelle des modèles prédéfinis en ligne avec cache local et liste disponible hors ligne, en conservant les profils enregistrés et les ID personnalisés
 * `Fonctionnalité` Regrouper les modèles prédéfinis par fournisseur et élargir le choix OpenRouter avec Qwen, Kimi, GLM, Grok, Meta et MiniMax, en conservant les ID exacts
 * `Correctif` Les lectures de descripteurs libèrent les threads après annulation ou expiration et conservent les erreurs du producteur des canaux fiables
+* `Correctif` Conserver les catégories fixes des échecs en ligne dans les rappels AI Provider, sans exposer les requêtes ou réponses ni ajouter de nouvelles tentatives automatiques
 * `Amélioration` Actualiser les modèles en ligne prédéfinis selon les catalogues officiels, dont Claude Fable 5.1 et les autres modèles actuels, et retirer les identifiants obsolètes en conservant les profils existants et les modèles personnalisés
 
 # v1.1.4

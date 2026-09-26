@@ -56,7 +56,8 @@
     "Usage token 数直接来自 LiteRT-LM Conversation 的 KV cache 与 decode 计数, 不做字符数估算. `durationMillis` 只测量插件生成调用, 不包含宿主发现, 绑定, 模型枚举和分发时间.",
     "持久 `ai.session` 只允许一个活动轮次, 正常完成后保留原生 Conversation; 取消, 超时, 生成失败或显式关闭后必须重新创建会话.",
     "取消, 会话关闭和超时会停止结果发布, 并通过唯一终态结束请求.",
-    "在 设置 > 在线 AI 中编辑配置并选择支持图片输入的模型. 已有配置默认关闭. 图片仅发送给所选配置的服务. LiteRT 与持久 ai.session 仍仅支持文本; Agent 截图任务需等待 P9.2 的 Agent 接入完成."
+    "在 设置 > 在线 AI 中编辑配置并选择支持图片输入的模型. 已有配置默认关闭. 图片仅发送给所选配置的服务. LiteRT 与持久 ai.session 仍仅支持文本; Agent 截图任务需等待 P9.2 的 Agent 接入完成.",
+    "在线失败仅通过可选的 `providerCode` 字段提供固定的 `ONLINE_*` 分类. 未知异常不提供分类; 不包含 URL, 凭据, 服务响应或原始异常文本. 失败代码与重试策略保持不变."
   ],
   "h3_unsupported": "未声明的能力",
   "unsupported_capabilities": [

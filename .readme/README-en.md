@@ -146,6 +146,7 @@ The plugin requests `INTERNET` for user-triggered recommended-model downloads, r
 - A persistent `ai.session` permits one active turn, retains its native Conversation after normal completion, and must be recreated after cancellation, timeout, generation failure, or explicit close.
 - Cancellation, session close, and timeout stop result publication and finish the request through one terminal state.
 - In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshot tasks require the remaining P9.2 Agent integration.
+- Online failures expose only fixed `ONLINE_*` categories in the optional `providerCode` field. Unknown exceptions have no category; URLs, credentials, provider responses and original exception text are never included. The failure code and retry policy remain unchanged.
 
 ******
 
@@ -185,6 +186,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Feature` Add automatic and manual online model-preset updates with local caching and offline fallback, preserving saved profiles and custom model IDs
 * `Feature` Group model presets by vendor and expand OpenRouter choices to include Qwen, Kimi, GLM, Grok, Meta and MiniMax, while preserving exact model IDs
 * `Fix` Descriptor reads release workers on cancellation or timeout and preserve reliable-pipe producer errors
+* `Fix` Preserve fixed online failure categories across AI Provider callbacks without exposing request or response contents or adding automatic retries
 * `Improvement` Refresh online model presets from official catalogs, including Claude Fable 5.1 and other current models, and remove retired model IDs while preserving existing profiles and custom models
 
 # v1.1.4

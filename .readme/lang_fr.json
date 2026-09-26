@@ -56,7 +56,8 @@
     "Les tokens de usage proviennent directement des compteurs de cache KV et decode de Conversation dans LiteRT-LM, sans estimation par caractères. `durationMillis` mesure uniquement la génération du plugin et exclut la découverte, la liaison, la liste des modèles et la distribution de l'hôte.",
     "Une `ai.session` persistante autorise un seul tour actif et conserve sa Conversation native après une fin normale; elle doit être recréée après une annulation, un timeout, un échec de génération ou une fermeture explicite.",
     "L'annulation, la fermeture de session et le timeout arrêtent la publication et terminent la requête avec un seul état terminal.",
-    "Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent son intégration P9.2."
+    "Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent son intégration P9.2.",
+    "Les échecs en ligne exposent uniquement des catégories fixes `ONLINE_*` dans le champ facultatif `providerCode`. Les exceptions inconnues restent sans catégorie; les URL, identifiants, réponses du service et textes originaux des exceptions sont exclus. Le code d'échec et la politique de nouvelle tentative restent inchangés."
   ],
   "h3_unsupported": "Capacités non déclarées",
   "unsupported_capabilities": [

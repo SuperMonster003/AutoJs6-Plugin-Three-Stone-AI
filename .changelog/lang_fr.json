@@ -21,7 +21,8 @@
         "Actualiser les modèles en ligne prédéfinis selon les catalogues officiels, dont Claude Fable 5.1 et les autres modèles actuels, et retirer les identifiants obsolètes en conservant les profils existants et les modèles personnalisés"
       ],
       "fix": [
-        "Les lectures de descripteurs libèrent les threads après annulation ou expiration et conservent les erreurs du producteur des canaux fiables"
+        "Les lectures de descripteurs libèrent les threads après annulation ou expiration et conservent les erreurs du producteur des canaux fiables",
+        "Conserver les catégories fixes des échecs en ligne dans les rappels AI Provider, sans exposer les requêtes ou réponses ni ajouter de nouvelles tentatives automatiques"
       ]
     },
     "v1.1.4": {

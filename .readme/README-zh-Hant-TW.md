@@ -189,6 +189,7 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 * `新增` 依廠商分組瀏覽預設模型, 並擴充 OpenRouter 中的 Qwen, Kimi, GLM, Grok, Meta, MiniMax 等模型選擇, 保留正確的模型 ID
 * `修復` 描述符讀取在取消或逾時後釋放工作執行緒, 並保留可靠管道的產生端錯誤
 * `修復` 透過 AI Provider 回呼保留固定的線上失敗分類, 不揭露請求或回應內容, 不新增自動重試
+* `修復` 修復 IntelliJ IDEA F10 執行時 No APK found 錯誤, 按建置變體讀取 AGP 實際 APK 目錄, 保留 16 KB 對齊檢查
 * `優化` 依據官方目錄更新線上預設模型, 包含 Claude Fable 5.1 等現行模型並移除已停用的模型 ID, 保留既有設定與自訂模型
 
 # v1.1.4
@@ -271,4 +272,4 @@ app/src/main/res/values-*/strings.xml
 - LiteRT-LM 專案: https://github.com/google-ai-edge/LiteRT-LM
 
 
-[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/docs/16kb.md)

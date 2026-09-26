@@ -23,7 +23,8 @@
       ],
       "fix": [
         "Descriptor reads release workers on cancellation or timeout and preserve reliable-pipe producer errors",
-        "Preserve fixed online failure categories across AI Provider callbacks without exposing request or response contents or adding automatic retries"
+        "Preserve fixed online failure categories across AI Provider callbacks without exposing request or response contents or adding automatic retries",
+        "Fix IntelliJ IDEA F10 runs failing with No APK found by using the actual AGP APK directory for each build variant while retaining 16 KB alignment checks"
       ]
     },
     "v1.1.4": {

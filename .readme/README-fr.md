@@ -189,6 +189,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Fonctionnalité` Regrouper les modèles prédéfinis par fournisseur et élargir le choix OpenRouter avec Qwen, Kimi, GLM, Grok, Meta et MiniMax, en conservant les ID exacts
 * `Correctif` Les lectures de descripteurs libèrent les threads après annulation ou expiration et conservent les erreurs du producteur des canaux fiables
 * `Correctif` Conserver les catégories fixes des échecs en ligne dans les rappels AI Provider, sans exposer les requêtes ou réponses ni ajouter de nouvelles tentatives automatiques
+* `Correctif` Corriger l'échec No APK found lors du lancement par F10 dans IntelliJ IDEA en utilisant le répertoire APK réel d'AGP pour chaque variante, tout en conservant les contrôles d'alignement de 16 Ko
 * `Amélioration` Actualiser les modèles en ligne prédéfinis selon les catalogues officiels, dont Claude Fable 5.1 et les autres modèles actuels, et retirer les identifiants obsolètes en conservant les profils existants et les modèles personnalisés
 
 # v1.1.4
@@ -271,4 +272,4 @@ app/src/main/res/values-*/strings.xml
 - Projet LiteRT-LM: https://github.com/google-ai-edge/LiteRT-LM
 
 
-[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/docs/16kb.md)

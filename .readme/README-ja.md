@@ -189,6 +189,7 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 * `機能` プリセットモデルを提供元ごとに分類し, OpenRouter の選択肢を Qwen, Kimi, GLM, Grok, Meta, MiniMax などに拡充します. 正確なモデル ID は維持します
 * `修正` キャンセルやタイムアウト時に記述子読み取りのスレッドを解放し, 信頼性のあるパイプの生成側エラーを保持
 * `修正` AI Provider コールバックで固定のオンライン失敗分類を保持し, リクエストや応答の内容を公開せず, 自動再試行も追加しません
+* `修正` IntelliJ IDEA の F10 実行時に No APK found で失敗する問題を修正し, 各ビルドバリアントの実際の AGP APK ディレクトリを使用して 16 KB アラインメント検証を維持
 * `改善` 公式カタログに基づきオンラインモデルのプリセットを Claude Fable 5.1 などの現行モデルに更新し, 提供が終了したモデル ID を削除. 既存の設定とカスタムモデルは維持
 
 # v1.1.4
@@ -271,4 +272,4 @@ app/src/main/res/values-*/strings.xml
 - LiteRT-LM プロジェクト: https://github.com/google-ai-edge/LiteRT-LM
 
 
-[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/docs/16kb.md)

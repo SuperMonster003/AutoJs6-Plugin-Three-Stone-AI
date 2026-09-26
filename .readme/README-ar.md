@@ -189,6 +189,7 @@ required host build: 5276
 * `ميزة` تجميع النماذج المعدة مسبقا حسب الشركة وتوسيع خيارات OpenRouter لتشمل Qwen و Kimi و GLM و Grok و Meta و MiniMax, مع الحفاظ على معرفات النماذج الدقيقة
 * `إصلاح` تحرير خيوط قراءة الواصفات عند الإلغاء أو انتهاء المهلة مع الحفاظ على أخطاء منتج الأنابيب الموثوقة
 * `إصلاح` الاحتفاظ بفئات ثابتة لأخطاء التوليد عبر الإنترنت في استدعاءات AI Provider دون كشف الطلبات أو الردود أو إضافة إعادة محاولة تلقائية
+* `إصلاح` إصلاح فشل التشغيل عبر F10 في IntelliJ IDEA برسالة No APK found, باستخدام دليل APK الفعلي لكل متغير بناء من AGP مع الإبقاء على فحوص محاذاة 16 KB
 * `تحسين` تحديث النماذج المتصلة المعدة مسبقا وفقا للفهارس الرسمية, بما فيها Claude Fable 5.1 ونماذج حالية أخرى, وإزالة معرفات النماذج المتوقفة مع الحفاظ على الإعدادات الحالية والنماذج المخصصة
 
 # v1.1.4
@@ -271,4 +272,4 @@ app/src/main/res/values-*/strings.xml
 - مشروع LiteRT-LM: https://github.com/google-ai-edge/LiteRT-LM
 
 
-[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/ui-redesign/docs/16kb.md)
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/blob/master/docs/16kb.md)

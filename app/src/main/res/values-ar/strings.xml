@@ -223,6 +223,15 @@
     <string name="import_stage_publishing">جار نشر النموذج</string>
     <string name="import_stage_validating">جار التحقق من المصدر</string>
     <string name="import_succeeded">تم استيراد النموذج</string>
+    <string name="launcher_icon_applied_note">قد يستغرق تحديث المشغل بضع ثوان. قد تحتاج إلى إضافة بعض اختصارات الشاشة الرئيسية مرة أخرى.</string>
+    <string name="launcher_icon_auto">متكيف تلقائي</string>
+    <string name="launcher_icon_auto_note">يحاول اتباع سمة النظام. بعض المشغلات تخزن الرموز مؤقتا أو تستخدم نظام ألوان واحدا فقط.</string>
+    <string name="launcher_icon_dark">متكيف داكن</string>
+    <string name="launcher_icon_failed">تعذر تغيير رمز المشغل. يرجى المحاولة مرة أخرى.</string>
+    <string name="launcher_icon_light">متكيف فاتح</string>
+    <string name="launcher_icon_title">رمز المشغل</string>
+    <string name="launcher_icon_transparent">خلفية شفافة</string>
+    <string name="launcher_icon_transparent_note">قد تضيف بعض المشغلات خلفية أو قناعا, لذلك قد لا يتم الحفاظ على الشفافية.</string>
     <string name="litert_catalog_imported">تم الاستيراد</string>
     <string name="model_catalog_loading">جارٍ تحميل كتالوج النماذج</string>
     <string name="model_catalog_unavailable">كتالوج النماذج غير متاح</string>

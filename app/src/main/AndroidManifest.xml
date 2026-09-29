@@ -47,11 +47,36 @@
             android:name=".ChatActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity-alias android:name=".launcher.AdaptiveLightIconAlias" android:enabled="false" android:exported="true"
+            android:icon="@mipmap/ic_launcher_system_light" android:targetActivity=".ChatActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias android:name=".launcher.AdaptiveDarkIconAlias" android:enabled="true" android:exported="true"
+            android:icon="@mipmap/ic_launcher_system" android:targetActivity=".ChatActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".launcher.AdaptiveAutoIconAlias" android:enabled="false" android:exported="true"
+            android:icon="@mipmap/ic_launcher_system_auto" android:targetActivity=".ChatActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".launcher.TransparentIconAlias" android:enabled="false" android:exported="true"
+            android:icon="@mipmap/ic_launcher" android:targetActivity=".ChatActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <activity
             android:name=".ConversationHistoryActivity"

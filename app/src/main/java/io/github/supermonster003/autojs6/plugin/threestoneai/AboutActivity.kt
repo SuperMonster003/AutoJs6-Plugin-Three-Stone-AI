@@ -32,7 +32,8 @@ class AboutActivity : ConfiguredActivity() {
             addView(ImageView(context).apply {
                 setImageResource(R.mipmap.ic_launcher)
                 contentDescription = getString(R.string.app_name)
-                background = roundedFill(appPalette.surface, Ui.RADIUS_SHEET, appPalette.outline)
+                tag = "about-icon"
+                background = roundedFill(android.graphics.Color.TRANSPARENT, Ui.RADIUS_SHEET, appPalette.outline)
                 clipToOutline = true
             }, LinearLayout.LayoutParams(uiDp(88), uiDp(88)))
             addView(TextView(context).apply {

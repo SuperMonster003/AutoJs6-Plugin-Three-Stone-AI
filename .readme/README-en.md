@@ -71,6 +71,7 @@ The current README.md supports the following languages:
 - Online JPEG/PNG image input and image tool results through negotiated AI Provider 2.1, with explicit per-model settings.
 - Keep online model presets current with a public catalog from the project on GitHub. Automatic updates are enabled by default and check once every 24 hours when Online AI settings are opened; a switch and manual refresh are available. Updates respect the metered-network setting, keep the cached or built-in list available offline or on failure, and leave saved profiles and custom model IDs unchanged.
 - Group model presets by vendor and expand OpenRouter choices to include Qwen, Kimi, GLM, Grok, Meta and MiniMax, while preserving exact model IDs.
+- Launcher icon can be set to adaptive light, adaptive dark (default), adaptive automatic or transparent background. Automatic mode tries to follow the system theme, but launchers may cache a single color scheme; transparent icons may receive a launcher background or mask. Switching preserves the running app and may take a few seconds to appear.
 
 ******
 
@@ -176,6 +177,13 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.3.0
+
+###### 2026/09/29
+
+* `Feature` Launcher icon can be set to adaptive light, adaptive dark (default), adaptive automatic or transparent background. Automatic mode tries to follow the system theme, but launchers may cache a single color scheme; transparent icons may receive a launcher background or mask. Switching preserves the running app and may take a few seconds to appear.
+* `Improvement` Keep the About icon in a rounded frame while its transparent interior reveals the surrounding page background. Show the launcher icon choices from the top with smaller explanatory notes.
+
 # v1.2.1
 
 ###### 2026/09/29
@@ -201,13 +209,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Fix` Preserve fixed online failure categories across AI Provider callbacks without exposing request or response contents or adding automatic retries
 * `Fix` Fix IntelliJ IDEA F10 runs failing with No APK found by using the actual AGP APK directory for each build variant while retaining 16 KB alignment checks
 * `Improvement` Refresh online model presets from official catalogs, including Claude Fable 5.1 and other current models, and remove retired model IDs while preserving existing profiles and custom models
-
-# v1.1.4
-
-###### 2026/09/19
-
-* `Fix` SDK XML v4 parsing warnings with AGP 9.1 and APK native alignment checks incorrectly triggered by JVM unit-test assembly tasks, using shared build plugins 1.8.3
-* `Improvement` Raise targetSdk to 37 (Android 17) after compileSdk; the plugin's behavior does not depend on the new target
 
 ##### For more releases
 

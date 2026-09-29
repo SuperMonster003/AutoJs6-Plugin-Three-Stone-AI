@@ -4,6 +4,13 @@
 
 ******
 
+# v1.3.0
+
+###### 2026/09/29
+
+* `Función` El icono del lanzador admite adaptable claro, adaptable oscuro (predeterminado), adaptable automático y fondo transparente. El modo automático intenta seguir el tema del sistema, pero el lanzador puede guardar una sola paleta en caché; puede agregar un fondo o una máscara a los iconos transparentes. El cambio mantiene la aplicación en ejecución y puede tardar unos segundos.
+* `Mejora` Mantener el marco redondeado del icono de Acerca de con el interior transparente sobre el fondo de la página. Mostrar las opciones del lanzador desde arriba con notas más pequeñas.
+
 # v1.2.1
 
 ###### 2026/09/29

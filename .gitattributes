@@ -1,0 +1,4 @@
+
+# Generated launcher XML is compared byte for byte by the icon generator.
+app/src/main/res/**/ic_launcher_system*.xml text eol=lf
+app/src/main/res/**/ic_launcher_background*.xml text eol=lf

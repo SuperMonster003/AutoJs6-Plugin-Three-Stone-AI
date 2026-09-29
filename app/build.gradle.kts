@@ -34,7 +34,9 @@ hostApiNames.forEach { name ->
 val globalApplicationId = "io.github.supermonster003.autojs6.plugin.threestoneai"
 val buildTypeDebug = "debug"
 val buildTypeRelease = "release"
-val supportedAbis = setOf("arm64-v8a", "x86_64")
+val supportedAbis = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+// LiteRT-LM 0.15.0 ships only 64-bit JNI libraries. The 32-bit APKs run online AI.
+extra["nativeRuntimeAbis"] = setOf("arm64-v8a", "x86_64")
 
 android {
     namespace = globalApplicationId
@@ -50,7 +52,11 @@ android {
         resValue("string", "plugin_author", "SuperMonster003")
         resValue("string", "plugin_version_date", utils.getDateString("MMM d, yyyy", "GMT+08:00"))
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = if (providers.gradleProperty("releaseAbiSmoke").orNull == "true") {
+            "$globalApplicationId.ReleaseAbiSmokeInstrumentation"
+        } else {
+            "androidx.test.runner.AndroidJUnitRunner"
+        }
 
         ndk {
             abiFilters += supportedAbis

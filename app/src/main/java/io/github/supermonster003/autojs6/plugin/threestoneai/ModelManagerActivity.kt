@@ -18,6 +18,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.PopupMenu
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.ProgressPanel
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
@@ -58,6 +59,9 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelSelectio
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelStorageCleanupState
 
 class ModelManagerActivity : ConfiguredActivity() {
+    private val localRuntimeAvailable by lazy {
+        LiteRtLmBackendCompatibilityDetector().isRuntimeAvailable
+    }
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var downloadCoordinator: ModelDownloadCoordinator
     private lateinit var screenRoot: View
@@ -243,6 +247,9 @@ class ModelManagerActivity : ConfiguredActivity() {
         content.addView(hairline())
 
         content.addView(sectionHeader(R.string.download_section_title))
+        if (!localRuntimeAvailable) {
+            content.addView(paragraph(getString(R.string.model_local_runtime_unavailable)))
+        }
         content.addView(paragraph(getString(R.string.screen_description)))
         downloadStatus = paragraph().apply {
             text = getString(R.string.download_description)
@@ -359,6 +366,7 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun chooseRecommendedModel() {
+        if (!localRuntimeAvailable) return
         @Suppress("DEPRECATION")
         startActivityForResult(
             Intent(this, LiteRtModelCatalogActivity::class.java),
@@ -367,6 +375,7 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun downloadModel(model: RecommendedModel, destination: Uri, grantedFlags: Int) {
+        if (!localRuntimeAvailable) return
         val accepted = downloadCoordinator.beginDownload(model, destination, grantedFlags)
         renderDownloadState(downloadCoordinator.state())
         if (!accepted) {
@@ -530,6 +539,7 @@ class ModelManagerActivity : ConfiguredActivity() {
 
     @Suppress("DEPRECATION")
     private fun openModelPicker() {
+        if (!localRuntimeAvailable) return
         val preflight = refreshImportStoragePreflight()
         if (!preflight.canOpenPicker) {
             showSnackbar(
@@ -551,6 +561,7 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun importModel(uri: Uri, grantedFlags: Int) {
+        if (!localRuntimeAvailable) return
         importCoordinator.beginImport(uri, grantedFlags)
         renderManagerState(importCoordinator.managerState())
     }
@@ -786,7 +797,7 @@ class ModelManagerActivity : ConfiguredActivity() {
                 setPaddingRelative(0, uiDp(2), 0, 0)
             },
         )
-        if (row.selectionEnabled) {
+        if (localRuntimeAvailable && row.selectionEnabled) {
             card.setOnClickListener {
                 if (row.selected) return@setOnClickListener
                 renderedManagerView = null
@@ -802,7 +813,7 @@ class ModelManagerActivity : ConfiguredActivity() {
     private fun showModelActionsMenu(anchor: View, row: ModelManagerRow) {
         PopupMenu(this, anchor).apply {
             menu.add(0, ACTION_CHECK, 0, R.string.button_check_model).isEnabled =
-                row.healthCheckEnabled && !row.healthCheckInProgress
+                localRuntimeAvailable && row.healthCheckEnabled && !row.healthCheckInProgress
             menu.add(0, ACTION_RENAME, 1, R.string.button_rename_model).isEnabled = row.renameEnabled
             menu.add(0, ACTION_DELETE, 2, R.string.button_delete_model).isEnabled = row.deletionEnabled
             setOnMenuItemClickListener { item ->
@@ -818,6 +829,7 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun checkModel(modelId: String) {
+        if (!localRuntimeAvailable) return
         val accepted = importCoordinator.beginHealthCheck(modelId)
         renderManagerState(importCoordinator.managerState())
         if (!accepted) {
@@ -980,7 +992,7 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun updateImportButtonEnabled() {
-        val enabled = importStateAllowsPicker &&
+        val enabled = localRuntimeAvailable && importStateAllowsPicker &&
             !catalogMutationBlocksPicker && storageAllowsPicker && !downloadBlocksImport
         importButton.isEnabled = enabled
         if (::importDownloadedButton.isInitialized) {
@@ -990,7 +1002,7 @@ class ModelManagerActivity : ConfiguredActivity() {
 
     private fun updateDownloadButtonEnabled() {
         if (!::downloadButton.isInitialized) return
-        downloadButton.isEnabled = downloadStateAllowsStart &&
+        downloadButton.isEnabled = localRuntimeAvailable && downloadStateAllowsStart &&
             importStateAllowsPicker && !catalogMutationBlocksPicker
     }
 

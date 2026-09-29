@@ -107,7 +107,7 @@ required host build: 5276
 
 AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのページ化 catalog で公開します. 各ターゲットは provider, model, locality, 設定/可用性, capabilities, limits, controls, HTTPS origins を個別に宣言します. ローカル専用 catalog は ON_DEVICE/NONE を宣言し, online profile が存在する場合は HYBRID/PLUGIN_MANAGED と HTTPS origins の正確な和集合を宣言します. ローカル backend profile は任意の target control であり, 使用不可 profile やターゲットへ暗黙にフォールバックしません.
 
-ホスト build 5276 以降が必要です. リリースには arm64-v8a, x86_64, universal APK variant が含まれます.
+ホスト build 5276 以降と Android 7.0 以降が必要です. ビルド出力には armeabi-v7a, arm64-v8a, x86, x86_64, universal APK が含まれます. x86 と armeabi-v7a 端末では対応する個別 APK を使用してください. アプリ画面, オンライン AI, ホスト連携に対応します. LiteRT-LM のローカル推論には arm64-v8a または x86_64 と APK 内の対応ネイティブライブラリが必要です. universal APK は 64 ビットライブラリのみを含み, 32 ビット専用端末にはインストールできません.
 
 ******
 
@@ -180,8 +180,10 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 
 ###### 2026/09/29
 
+* `ヒント` 32 ビット互換性の変更は未公開の候補版です. 実行済みの検証と未検証の端末は docs/dev/32-bit-compatibility-2026-09-29.md を参照してください.
 * `修正` ホストがツール結果画像をホストの非公開キャッシュ内の通常ファイルのディスクリプタとして渡すと, Provider が /proc/self/fd 経由で再オープンする際にホストのディレクトリを辿る権限がなく EACCES で失敗し, ツール続行ラウンド全体が PROTOCOL_VIOLATION で中断していました. 通常ファイルではディスクリプタを複製して直接読むようにフォールバックし (通常ファイルの読み取りはブロックしません), パイプは従来どおり非公開の非ブロッキング再オープンを使います. 実機 (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0) では screen_capture の画像をネイティブツール結果として Codex / Gemini モデルへ送ると必ずこの失敗が起きていました
 * `修正` ネイティブツール結果のバッチが受け付けられるたびに, 生成のタイムアウトを計り直します. 以前はツールターン全体 (結果を待つ時間を含む) が最初のリクエストのタイムアウトを共有していたため, それを超える複数ラウンドのタスクは必ず TIMEOUT で終了していました. 今は結果を送らずに待ち続けた場合だけ元のタイムアウトで期限切れになります. AutoJs6 ホストと 3-Stove Agent の対応する変更と組み合わせて動作します
+* `修正` オンライン AI とホスト連携向けに x86 と armeabi-v7a APK を追加; プロセス ABI とインストール済みネイティブライブラリでローカル推論の可否を判定し, モデル管理画面に制限を表示
 
 # v1.2.0
 

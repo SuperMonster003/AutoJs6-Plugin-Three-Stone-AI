@@ -13,10 +13,8 @@ releaseComponents.onVariants(releaseComponents.selector().withBuildType('release
             def abi = output.filters.find { it.filterType.toString() == 'ABI' }?.identifier ?: 'universal'
             [abi: abi, versionCode: output.versionCode.get(), versionName: output.versionName.get()]
         }
-        def nativeAbis = releaseAndroid.defaultConfig.ndk.abiFilters.toList().sort()
-        if (nativeAbis.empty) {
-            nativeAbis = outputs.collect { it.abi }.findAll { it != 'universal' }.unique().sort()
-        }
+        // Application ABI support includes Java-only APKs; native payloads are a separate contract.
+        def nativeAbis = project.ext.get('nativeRuntimeAbis').toList().sort()
         [name: variant.name, applicationId: variant.applicationId.get(), nativeAbis: nativeAbis, outputs: outputs]
     }
 }

@@ -1,7 +1,8 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.backend
 
 import android.os.Build
-import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
+import android.os.Process
+import dalvik.system.BaseDexClassLoader
 import org.autojs.plugin.ai.provider.api.AiBackendProfileInfo
 import org.autojs.plugin.ai.provider.api.AiProviderBackendAvailability
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
@@ -53,16 +54,27 @@ internal object LiteRtLmBackendCompatibilityPolicy {
     )
 }
 
-/** Process-cached loader probe verifies both system presence and linker-namespace visibility. */
+/** Checks the installed payload without loading JNI; OpenCL is probed only for local profiles. */
 internal class LiteRtLmBackendCompatibilityDetector(
-    private val supportedAbis: List<String> = Build.SUPPORTED_ABIS.toList(),
+    private val processAbis: List<String> = (
+        if (Process.is64Bit()) Build.SUPPORTED_64_BIT_ABIS else Build.SUPPORTED_32_BIT_ABIS
+    ).toList(),
+    private val findLiteRtLibrary: () -> String? = {
+        (LiteRtLmBackendCompatibilityDetector::class.java.classLoader as? BaseDexClassLoader)
+            ?.findLibrary("litertlm_jni")
+    },
     private val loadOpenClLibrary: () -> Unit = { System.loadLibrary(OPENCL_LIBRARY_NAME) },
 ) {
+    // A Java-only 32-bit APK can also be installed on a 64-bit device. Device ABIs alone
+    // must not enable local inference when that installed APK has no LiteRT-LM library.
+    val isRuntimeAvailable: Boolean by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        processAbis.any(NATIVE_ABIS::contains) && findLiteRtLibrary() != null
+    }
+
     val profiles: List<AiBackendProfileInfo> by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        val supportedAbi = supportedAbis.any(ThreeStoneAiPlugin.SUPPORTED_ABIS::contains)
         LiteRtLmBackendCompatibilityPolicy.evaluate(
-            supportedAbi = supportedAbi,
-            openClLibraryAvailable = supportedAbi && canLoadOpenCl(),
+            supportedAbi = isRuntimeAvailable,
+            openClLibraryAvailable = isRuntimeAvailable && canLoadOpenCl(),
         )
     }
 
@@ -85,6 +97,7 @@ internal class LiteRtLmBackendCompatibilityDetector(
     }
 
     private companion object {
+        val NATIVE_ABIS = setOf("arm64-v8a", "x86_64")
         const val OPENCL_LIBRARY_NAME = "OpenCL"
     }
 }

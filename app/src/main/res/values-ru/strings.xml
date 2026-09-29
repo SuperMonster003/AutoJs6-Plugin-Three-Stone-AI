@@ -242,6 +242,7 @@
     <string name="model_health_not_checked">Не проверена</string>
     <string name="model_id_clipboard_label">ID модели генерации текста ИИ</string>
     <string name="model_id_copied">ID модели скопирован</string>
+    <string name="model_local_runtime_unavailable">Локальный вывод недоступен на этом устройстве или в этом APK. Можно использовать онлайн-ИИ.</string>
     <string name="model_manager_title">Модели</string>
     <string name="model_none">Модель не настроена</string>
     <string name="model_rename_failed">Не удалось переименовать модель</string>

@@ -29,7 +29,7 @@ internal object ThreeStoneAiPlugin {
     const val MAXIMUM_REQUEST_DESCRIPTORS = 16
     const val MAXIMUM_SESSION_DESCRIPTORS = 16
 
-    val SUPPORTED_ABIS = listOf("arm64-v8a", "x86_64")
+    val SUPPORTED_ABIS = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
 
     val capabilities = AiProviderCapabilities(
         supportsStreaming = true,

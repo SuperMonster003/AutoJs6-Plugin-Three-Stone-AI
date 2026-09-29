@@ -107,7 +107,7 @@ required host build: 5276
 
 AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 每个目标分别声明 provider, model, locality, 配置及可用状态, 能力, 限制, 控件与 HTTPS origins. 目录仅含本地目标时声明 ON_DEVICE/NONE; 存在在线 profile 时声明 HYBRID/PLUGIN_MANAGED 及其 HTTPS origins 精确并集. 本地 backend profile 是可选目标控件, 不可用 profile 或目标绝不静默回退.
 
-需要宿主构建版本 5276 或更高版本. 发布产物包含 arm64-v8a, x86_64, universal APK.
+需要宿主构建版本 5276 或更高版本及 Android 7.0 或更高版本. 构建产物包含 armeabi-v7a, arm64-v8a, x86, x86_64, universal APK. x86 和 armeabi-v7a 设备请使用对应的独立 APK, 支持应用界面, 在线 AI 和宿主插件集成. LiteRT-LM 本地推理需要 arm64-v8a 或 x86_64 及安装包中的对应原生库. universal APK 仅包含 64 位原生库, 无法安装到仅支持 32 位的设备.
 
 ******
 
@@ -180,8 +180,10 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 ###### 2026/09/29
 
+* `提示` 32 位兼容性修改为尚未发布的候选版本. 已执行的检查及未覆盖的设备见 docs/dev/32-bit-compatibility-2026-09-29.md.
 * `修复` 宿主传来的工具结果图片以宿主私有缓存中的普通文件描述符交付时, Provider 经 /proc/self/fd 重新打开会因无权遍历宿主目录而失败 (EACCES), 整轮工具续轮以 PROTOCOL_VIOLATION 中止; 现在对普通文件回退为复制描述符直接读取 (普通文件不会阻塞读取), 管道仍使用私有的非阻塞重开描述符. 真机 (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0) 上 screen_capture 图片经原生工具结果送入 Codex / Gemini 模型时曾必现此失败
 * `修复` 原生工具调用的每一轮工具结果被接受后, 该次生成的超时重新计时: 此前整个工具轮 (包括等待工具结果的时间) 共用首个请求的超时, 超过它的多轮任务一律以 TIMEOUT 结束; 现在只有在未提交结果时才按原超时到期. 与 AutoJs6 宿主和 3-Stove Agent 的同步改动配合
+* `修复` 新增 x86 和 armeabi-v7a 安装包以支持在线 AI 及宿主集成; 根据进程架构和已安装的原生库判断本地推理能力, 并在模型管理页说明不可用原因
 
 # v1.2.0
 

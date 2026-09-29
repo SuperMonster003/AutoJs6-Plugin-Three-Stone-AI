@@ -242,6 +242,7 @@
     <string name="model_health_not_checked">未チェック</string>
     <string name="model_id_clipboard_label">AI テキストモデル ID</string>
     <string name="model_id_copied">モデル ID をコピーしました</string>
+    <string name="model_local_runtime_unavailable">この端末または APK ではローカルモデル推論を利用できません. オンライン AI を使用できます.</string>
     <string name="model_manager_title">モデル</string>
     <string name="model_none">モデルが設定されていません</string>
     <string name="model_rename_failed">モデル名の変更に失敗しました</string>

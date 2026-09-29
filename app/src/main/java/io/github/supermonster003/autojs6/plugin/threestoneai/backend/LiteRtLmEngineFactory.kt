@@ -27,6 +27,9 @@ internal object LiteRtLmEngineFactory {
         cacheDirectory: File,
         backendProfile: LiteRtLmBackendProfile = LiteRtLmBackendProfile.CPU,
     ): Engine {
+        require(LiteRtLmBackendCompatibilityDetector().isRuntimeAvailable) {
+            "Local inference is unavailable for this process and installed APK"
+        }
         // LiteRT-LM snapshots this process-wide flag while constructing the native engine.
         ExperimentalFlags.enableBenchmark = true
         return Engine(

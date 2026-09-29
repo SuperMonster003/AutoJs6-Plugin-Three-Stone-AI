@@ -34,7 +34,7 @@ class ThreeStoneAiApplication : Application() {
         LiteRtLocalBackend(
             repository = ModelRepository(this),
             compatibilityDetector = LiteRtLmBackendCompatibilityDetector(),
-            engineRuntime = engineRuntime,
+            engineRuntime = { engineRuntime },
         )
     }
 

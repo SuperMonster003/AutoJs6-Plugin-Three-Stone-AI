@@ -107,7 +107,7 @@ required host build: 5276
 
 AI Provider V2 expone un único catálogo paginado de destinos `local:*` y `profile:*`. Cada destino declara por separado provider, modelo, localidad, configuración y disponibilidad, capacidades, límites, controles y orígenes HTTPS. Un catálogo solo local declara ON_DEVICE/NONE; la presencia de perfiles en línea declara HYBRID/PLUGIN_MANAGED y la unión exacta de sus orígenes HTTPS. El perfil backend local sigue siendo un control opcional del destino y nunca hay retorno silencioso desde perfiles o destinos no disponibles.
 
-Se requiere la build 5276 o posterior del host. Las versiones incluyen variantes APK arm64-v8a, x86_64, universal.
+Se requiere la build 5276 o posterior del host y Android 7.0 o posterior. Las compilaciones generan APK armeabi-v7a, arm64-v8a, x86, x86_64, universal. En x86 y armeabi-v7a, usa el APK individual correspondiente para la aplicación, la IA en línea y la integración con el host. La inferencia local LiteRT-LM requiere arm64-v8a o x86_64 y su biblioteca nativa incluida en el APK. El APK universal solo contiene bibliotecas de 64 bits y no se puede instalar en dispositivos exclusivamente de 32 bits.
 
 ******
 
@@ -180,8 +180,10 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ###### 2026/09/29
 
+* `Aviso` Los cambios de compatibilidad de 32 bits son una versión candidata sin publicar. Consulta docs/dev/32-bit-compatibility-2026-09-29.md para las comprobaciones ejecutadas y los dispositivos pendientes.
 * `Corrección` Cuando el host entrega una imagen de resultado de herramienta como descriptor de un archivo regular de su caché privada, reabrirlo mediante /proc/self/fd fallaba con EACCES porque el Provider no puede recorrer el directorio del host, y toda la continuación de herramientas se abortaba con PROTOCOL_VIOLATION; los archivos regulares ahora se leen mediante un descriptor duplicado (la lectura de un archivo regular nunca bloquea), mientras que las tuberías conservan la reapertura privada no bloqueante. En un dispositivo real (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0), cada imagen de screen_capture enviada a los modelos Codex / Gemini como resultado de herramienta nativa sufría este fallo
 * `Corrección` Tras cada lote aceptado de resultados de herramientas nativas, el tiempo límite de generación vuelve a empezar: antes todo el turno de herramientas, incluido el tiempo de espera de los resultados, compartía el tiempo límite de la primera solicitud, de modo que las tareas de varias rondas más largas siempre terminaban con TIMEOUT; ahora solo la espera sin enviar resultados sigue caducando con el tiempo límite original. Coherente con los cambios correspondientes del host AutoJs6 y de 3-Stove Agent
+* `Corrección` Añadir APK x86 y armeabi-v7a para IA en línea e integración con el host; comprobar la ABI del proceso y las bibliotecas instaladas antes de habilitar la inferencia local, con un aviso en el gestor de modelos
 
 # v1.2.0
 

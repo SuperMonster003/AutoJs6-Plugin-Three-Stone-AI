@@ -35,7 +35,7 @@
   "h3_plugin_interface": "插件接口",
   "p_plugin_interface": "宿主通过以下标识发现并调用插件",
   "p_plugin_scope": "AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 每个目标分别声明 provider, model, locality, 配置及可用状态, 能力, 限制, 控件与 HTTPS origins. 目录仅含本地目标时声明 ON_DEVICE/NONE; 存在在线 profile 时声明 HYBRID/PLUGIN_MANAGED 及其 HTTPS origins 精确并集. 本地 backend profile 是可选目标控件, 不可用 profile 或目标绝不静默回退.",
-  "p_plugin_packaging": "需要宿主构建版本 {{ required_host_build }} 或更高版本. 发布产物包含 {{ supported_abis }} APK.",
+  "p_plugin_packaging": "需要宿主构建版本 {{ required_host_build }} 或更高版本及 Android 7.0 或更高版本. 构建产物包含 {{ supported_abis }} APK. x86 和 armeabi-v7a 设备请使用对应的独立 APK, 支持应用界面, 在线 AI 和宿主插件集成. LiteRT-LM 本地推理需要 arm64-v8a 或 x86_64 及安装包中的对应原生库. universal APK 仅包含 64 位原生库, 无法安装到仅支持 32 位的设备.",
   "h3_host_integration_status": "宿主集成状态",
   "p_host_integration_status": "在 AutoJs6 (构建 5276 及以上) 中, `ai.catalog()` 将全部已导入本机模型与已配置在线 profile 作为统一目标目录返回, 包含精确 ID, 提供方, 模型, 本机/在线属性, 配置与可用状态, 能力, 控制项, 限制, 来源及本机 backend profile. 向 `ai.ask`, `ai.chat`, `ai.stream` 或 `ai.session` 传入精确 `target`; 仅传 `target` 会选择官方 3-Stone AI 插件, `plugin: true` 则使用其声明的默认目标. 本机目标可提供 `cpu`, `gpu` 与不可用的 `npu`, 在线目标没有本机执行 profile. backend 或目标不可用时会直接失败且不回退, 本机与在线路由也绝不自动切换. 完成及流式响应公开 target, plugin, profile, reasoning, finish reason, 完整 usage 和提供端实测耗时. 稳定错误码可区分提供方缺失或停用, 目标未知, 未配置, 不可用或能力不匹配, 以及 backend 不可用. `responseSchema` 会隐式启用结构化输出; 仅设置 `structuredJson: true` 时使用默认对象根 schema, 持久会话在所有轮次固定同一 target, schema 与可选 backend.",
   "h3_security": "安全性和隐私",

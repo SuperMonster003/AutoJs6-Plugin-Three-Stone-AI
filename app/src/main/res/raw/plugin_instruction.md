@@ -4,6 +4,8 @@ This plugin imports one local `.litertlm` model package through the Android Stor
 
 The plugin requires AutoJs6 host build 5276 or later and Android API 24 or later.
 
+Host build 5276 or later and Android 7.0 or later are required. Build outputs include armeabi-v7a, arm64-v8a, x86, x86_64, universal APK variants. On x86 and armeabi-v7a devices, use the matching standalone APK for the app, online AI and host plugin integration. LiteRT-LM local inference requires arm64-v8a or x86_64 and its packaged native library. The universal APK contains only 64-bit native libraries and cannot be installed on 32-bit-only devices.
+
 ## Get a model
 
 Open the plugin model manager and tap **Browse LiteRT-LM models** to inspect the available catalog and useful runtime details. Entries marked **Verified download** can be saved to any writable SAF location. The plugin shows progress and verifies the LiteRT-LM header, exact byte count, and SHA-256 before enabling **Import downloaded model**. Local inference never uses the network. The downloaded external file and its imported app-private copy occupy space separately; if Android terminates the process mid-download, delete any partial external document manually.

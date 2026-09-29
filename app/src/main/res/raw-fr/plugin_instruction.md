@@ -4,6 +4,8 @@ Ce plugin importe un paquet de modèle `.litertlm` local via Android Storage Acc
 
 Le plugin exige la build hôte AutoJs6 5276 ou ultérieure et Android API 24 ou ultérieur.
 
+La build hôte 5276 ou ultérieure et Android 7.0 ou ultérieur sont requis. Les builds produisent les APK armeabi-v7a, arm64-v8a, x86, x86_64, universal. Sur x86 et armeabi-v7a, utilisez l'APK individuel correspondant pour l'application, l'IA en ligne et l'intégration hôte. L'inférence locale LiteRT-LM nécessite arm64-v8a ou x86_64 et la bibliothèque native correspondante dans l'APK. L'APK universal contient uniquement des bibliothèques 64 bits et ne peut pas être installé sur un appareil exclusivement 32 bits.
+
 ## Obtenir un modèle
 
 Dans la page des modèles, touchez **Parcourir les modèles LiteRT-LM** pour consulter le catalogue disponible et les informations utiles d'exécution. Les entrées marquées **Téléchargement vérifié** peuvent être enregistrées dans tout emplacement SAF accessible en écriture. La progression est affichée et l'en-tête LiteRT-LM, le nombre exact d'octets et le SHA-256 sont vérifiés avant d'activer **Importer le modèle téléchargé**. L'inférence locale n'utilise jamais le réseau. Le fichier externe et sa copie privée importée occupent chacun de l'espace; si Android arrête le processus pendant le téléchargement, supprimez manuellement tout document externe partiel.

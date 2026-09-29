@@ -86,6 +86,17 @@ class NativeToolSessionAndroidTest {
     }
 
     @Test
+    fun acceptedToolResultsStartAFreshTimeoutForTheNextRound() = Fixture(timeoutMillis = 1_500).use { fixture ->
+        fixture.start()
+        fixture.awaitTools()
+        Thread.sleep(1_200)
+        fixture.submit()
+        fixture.awaitTerminal()
+        assertTrue("Round after re-arm failed: ${fixture.failures}", fixture.failures.isEmpty())
+        assertEquals(1, fixture.completions.size)
+    }
+
+    @Test
     fun waitingForToolResultsDoesNotResetOriginalDeadline() = Fixture(timeoutMillis = 1_000).use { fixture ->
         fixture.start()
         fixture.awaitTools()

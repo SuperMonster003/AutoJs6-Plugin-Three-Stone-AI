@@ -8,7 +8,8 @@
     "v1.2.1": {
       "released_date": "2026/09/29",
       "fix": [
-        "宿主传来的工具结果图片以宿主私有缓存中的普通文件描述符交付时, Provider 经 /proc/self/fd 重新打开会因无权遍历宿主目录而失败 (EACCES), 整轮工具续轮以 PROTOCOL_VIOLATION 中止; 现在对普通文件回退为复制描述符直接读取 (普通文件不会阻塞读取), 管道仍使用私有的非阻塞重开描述符. 真机 (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0) 上 screen_capture 图片经原生工具结果送入 Codex / Gemini 模型时曾必现此失败"
+        "宿主传来的工具结果图片以宿主私有缓存中的普通文件描述符交付时, Provider 经 /proc/self/fd 重新打开会因无权遍历宿主目录而失败 (EACCES), 整轮工具续轮以 PROTOCOL_VIOLATION 中止; 现在对普通文件回退为复制描述符直接读取 (普通文件不会阻塞读取), 管道仍使用私有的非阻塞重开描述符. 真机 (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0) 上 screen_capture 图片经原生工具结果送入 Codex / Gemini 模型时曾必现此失败",
+        "原生工具调用的每一轮工具结果被接受后, 该次生成的超时重新计时: 此前整个工具轮 (包括等待工具结果的时间) 共用首个请求的超时, 超过它的多轮任务一律以 TIMEOUT 结束; 现在只有在未提交结果时才按原超时到期. 与 AutoJs6 宿主和 3-Stove Agent 的同步改动配合"
       ]
     },
     "v1.2.0": {

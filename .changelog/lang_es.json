@@ -14,6 +14,9 @@
       ],
       "hint": [
         "Los cambios de compatibilidad de 32 bits son una versión candidata sin publicar. Consulta docs/dev/32-bit-compatibility-2026-09-29.md para las comprobaciones ejecutadas y los dispositivos pendientes."
+      ],
+      "improvement": [
+        "Unificar los iconos del lanzador de la serie Three con dibujos claros sobre un fondo oscuro fijo, mantener transparentes los del centro de complementos y de la aplicación según su tema y evitar fondos superpuestos en algunos dispositivos"
       ]
     },
     "v1.2.0": {

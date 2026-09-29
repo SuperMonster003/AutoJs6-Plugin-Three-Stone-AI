@@ -14,6 +14,9 @@
       ],
       "hint": [
         "Les changements de compatibilité 32 bits constituent une version candidate non publiée. Voir docs/dev/32-bit-compatibility-2026-09-29.md pour les vérifications exécutées et les appareils restant à tester."
+      ],
+      "improvement": [
+        "Uniformiser les icônes du lanceur de la série Three avec un dessin clair sur fond sombre fixe, conserver la transparence et le thème des icônes dans le centre des plugins et dans l'application, et éviter les fonds imbriqués sur certains appareils"
       ]
     },
     "v1.2.0": {

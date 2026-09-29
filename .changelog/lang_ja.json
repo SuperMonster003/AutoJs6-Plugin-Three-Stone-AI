@@ -5,6 +5,12 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.2.1": {
+      "released_date": "2026/09/29",
+      "fix": [
+        "ホストがツール結果画像をホストの非公開キャッシュ内の通常ファイルのディスクリプタとして渡すと, Provider が /proc/self/fd 経由で再オープンする際にホストのディレクトリを辿る権限がなく EACCES で失敗し, ツール続行ラウンド全体が PROTOCOL_VIOLATION で中断していました. 通常ファイルではディスクリプタを複製して直接読むようにフォールバックし (通常ファイルの読み取りはブロックしません), パイプは従来どおり非公開の非ブロッキング再オープンを使います. 実機 (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0) では screen_capture の画像をネイティブツール結果として Codex / Gemini モデルへ送ると必ずこの失敗が起きていました"
+      ]
+    },
     "v1.2.0": {
       "released_date": "2026/09/26",
       "hint": [

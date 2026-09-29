@@ -4,6 +4,12 @@
 
 ******
 
+# v1.2.1
+
+###### 2026/09/29
+
+* `Corrección` Cuando el host entrega una imagen de resultado de herramienta como descriptor de un archivo regular de su caché privada, reabrirlo mediante /proc/self/fd fallaba con EACCES porque el Provider no puede recorrer el directorio del host, y toda la continuación de herramientas se abortaba con PROTOCOL_VIOLATION; los archivos regulares ahora se leen mediante un descriptor duplicado (la lectura de un archivo regular nunca bloquea), mientras que las tuberías conservan la reapertura privada no bloqueante. En un dispositivo real (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0), cada imagen de screen_capture enviada a los modelos Codex / Gemini como resultado de herramienta nativa sufría este fallo
+
 # v1.2.0
 
 ###### 2026/09/26

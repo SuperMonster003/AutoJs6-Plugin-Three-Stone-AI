@@ -28,7 +28,7 @@ internal fun ConfiguredActivity.emptyStateView(
     if (useBrandMark) {
         addView(
             ImageView(context).apply {
-                setImageResource(R.mipmap.ic_launcher_foreground)
+                setImageResource(R.mipmap.ic_launcher)
                 layoutParams = LinearLayout.LayoutParams(uiDp(96), uiDp(96))
             },
         )

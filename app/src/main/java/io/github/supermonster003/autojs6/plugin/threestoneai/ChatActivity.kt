@@ -1111,7 +1111,7 @@ class ChatActivity : ConfiguredActivity() {
 
             addView(
                 ImageView(context).apply {
-                    setImageResource(R.mipmap.ic_launcher_foreground)
+                    setImageResource(R.mipmap.ic_launcher)
                     contentDescription = null
                 },
                 LinearLayout.LayoutParams(dp(96), dp(96)),

@@ -14,6 +14,9 @@
       ],
       "hint": [
         "The 32-bit compatibility changes are an unpublished candidate. See docs/dev/32-bit-compatibility-2026-09-29.md for executed checks and remaining device coverage."
+      ],
+      "improvement": [
+        "Unify Three series launcher icons with light artwork on a stable dark background, while plugin-center and in-app icons remain transparent and follow the application theme; prevent nested launcher backgrounds on some devices"
       ]
     },
     "v1.2.0": {

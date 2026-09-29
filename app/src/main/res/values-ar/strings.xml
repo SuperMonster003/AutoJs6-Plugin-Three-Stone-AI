@@ -242,6 +242,7 @@
     <string name="model_health_not_checked">لم يتم فحصه</string>
     <string name="model_id_clipboard_label">معرف نموذج النص بالذكاء الاصطناعي</string>
     <string name="model_id_copied">تم نسخ معرف النموذج</string>
+    <string name="model_local_runtime_unavailable">الاستدلال المحلي غير متاح على هذا الجهاز أو في ملف APK هذا. يمكنك استخدام الذكاء الاصطناعي عبر الإنترنت.</string>
     <string name="model_manager_title">النماذج</string>
     <string name="model_none">لا يوجد نموذج مهيأ</string>
     <string name="model_rename_failed">فشل تغيير اسم النموذج</string>

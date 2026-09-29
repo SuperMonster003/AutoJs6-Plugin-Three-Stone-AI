@@ -23,14 +23,14 @@ internal class LiteRtLocalBackend(
     constructor(
         repository: ModelRepository,
         compatibilityDetector: LiteRtLmBackendCompatibilityDetector,
-        engineRuntime: LiteRtLmEngineRuntime,
+        engineRuntime: () -> LiteRtLmEngineRuntime,
     ) : this(
         catalogSnapshot = repository::catalogSnapshot,
         findModelById = repository::findByModelId,
         backendProfiles = { compatibilityDetector.profiles },
         requireBackendProfile = compatibilityDetector::requireAvailable,
         sessionFactory = { target, model, profile ->
-            engineRuntime.createSession(
+            engineRuntime().createSession(
                 target = target,
                 modelSha256 = model.sha256,
                 modelPath = model.file.absolutePath,

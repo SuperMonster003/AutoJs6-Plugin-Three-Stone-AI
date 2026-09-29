@@ -242,6 +242,7 @@
     <string name="model_health_not_checked">未檢查</string>
     <string name="model_id_clipboard_label">AI 文字模型 ID</string>
     <string name="model_id_copied">模型 ID 已複製</string>
+    <string name="model_local_runtime_unavailable">此裝置或安裝包不支援本地模型推理. 可以使用線上 AI.</string>
     <string name="model_manager_title">模型</string>
     <string name="model_none">尚未設定模型</string>
     <string name="model_rename_failed">模型重新命名失敗</string>

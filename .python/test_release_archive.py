@@ -2,9 +2,10 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
-from release_archive import ReleaseError, archive_release, collect
+from release_archive import ReleaseError, archive_release, collect, verify_native
 
 
 class ReleaseMatrixTest(unittest.TestCase):
@@ -27,6 +28,24 @@ class ReleaseMatrixTest(unittest.TestCase):
 
     def test_exact_matrix(self):
         self.assertEqual(1, len(collect(self.manifest)))
+
+    def test_java_only_32_bit_apks_are_valid_but_missing_64_bit_payload_is_not(self):
+        with zipfile.ZipFile(self.apk, "w") as archive:
+            archive.writestr("classes.dex", b"fixture")
+        native_abis = ["arm64-v8a", "x86_64"]
+        for abi in ["armeabi-v7a", "x86"]:
+            with self.subTest(abi=abi):
+                self.assertEqual([], verify_native(self.apk, abi, native_abis))
+        for abi in ["arm64-v8a", "x86_64", "universal"]:
+            with self.subTest(abi=abi), self.assertRaisesRegex(ReleaseError, "Native ABIs differ"):
+                verify_native(self.apk, abi, native_abis)
+
+    def test_32_bit_apk_rejects_stray_64_bit_libraries(self):
+        with zipfile.ZipFile(self.apk, "w") as archive:
+            archive.writestr("lib/x86_64/liblitertlm_jni.so", b"fixture")
+        for abi in ["armeabi-v7a", "x86"]:
+            with self.subTest(abi=abi), self.assertRaisesRegex(ReleaseError, "Native ABIs differ"):
+                verify_native(self.apk, abi, ["arm64-v8a", "x86_64"])
 
     def test_missing_variant(self):
         self.manifest["variants"].append({**self.expected, "name": "serverRelease"})

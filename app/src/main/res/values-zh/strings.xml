@@ -322,6 +322,7 @@
     <string name="model_health_not_checked">未检查</string>
     <string name="model_id_clipboard_label">AI 文本模型 ID</string>
     <string name="model_id_copied">模型 ID 已复制</string>
+    <string name="model_local_runtime_unavailable">此设备或安装包不支持本地模型推理. 可以使用在线 AI.</string>
     <string name="model_manager_title">模型</string>
     <string name="model_none">未配置模型</string>
     <string name="model_online_empty">尚无在线档案. 添加后即可在 Chat 中使用远程模型.</string>

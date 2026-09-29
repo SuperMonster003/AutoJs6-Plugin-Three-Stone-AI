@@ -104,7 +104,7 @@ def verify_native(apk, abi, native_abis):
     with zipfile.ZipFile(apk) as archive:
         libraries = [item for item in archive.infolist() if re.fullmatch(r"lib/[^/]+/[^/]+\.so", item.filename)]
         actual_abis = {item.filename.split("/")[1] for item in libraries}
-        expected_abis = set(native_abis) if abi == "universal" else {abi}
+        expected_abis = set(native_abis) if abi == "universal" else {abi} & set(native_abis)
         require(actual_abis == expected_abis, f"Native ABIs differ in {apk.name}: expected {sorted(expected_abis)}, found {sorted(actual_abis)}")
         for item in libraries:
             verify_elf64(archive.read(item), f"{apk.name}:{item.filename}")

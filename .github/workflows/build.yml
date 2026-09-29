@@ -60,18 +60,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        abi: [arm64-v8a, x86_64]
+        abi: [armeabi-v7a, arm64-v8a, x86, x86_64, universal]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: stone-debug-apks
           path: ci-apks
-      - name: Verify each actual native split
+      - name: Verify each APK and its expected native payload
         run: python3 .github/scripts/verify_apk_contract.py --apk-dir ci-apks --abi '${{ matrix.abi }}'
 
   binder:
-    name: Discovery on ${{ matrix.page_size }} byte pages
+    name: Discovery and online AI on ${{ matrix.abi }} / ${{ matrix.page_size }} byte pages
     needs: [verify, abi]
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -79,9 +79,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - target: default
+            api: 24
+            arch: x86
+            abi: x86
+            page_size: 4096
           - target: google_apis
+            api: 35
+            arch: x86_64
+            abi: x86_64
             page_size: 4096
           - target: google_apis_ps16k
+            api: 35
+            arch: x86_64
+            abi: x86_64
             page_size: 16384
     steps:
       - uses: actions/checkout@v7
@@ -98,8 +109,8 @@ jobs:
       - name: Execute permission, discovery and Binder contract tests
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
-          api-level: 35
-          arch: x86_64
+          api-level: ${{ matrix.api }}
+          arch: ${{ matrix.arch }}
           target: ${{ matrix.target }}
           disable-animations: true
-          script: python3 .github/scripts/verify_apk_contract.py --apk-dir ci-apks --abi x86_64 --pagesize ${{ matrix.page_size }}
+          script: python3 .github/scripts/verify_apk_contract.py --apk-dir ci-apks --abi ${{ matrix.abi }} --pagesize ${{ matrix.page_size }}

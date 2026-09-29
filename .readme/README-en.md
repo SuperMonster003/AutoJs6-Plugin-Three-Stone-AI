@@ -107,7 +107,7 @@ required host build: 5276
 
 AI Provider V2 exposes one paged catalog of `local:*` and `profile:*` targets. Each target independently declares provider, model, locality, configuration and availability, capabilities, limits, controls, and HTTPS origins. A local-only catalog declares ON_DEVICE/NONE; the presence of online profiles declares HYBRID/PLUGIN_MANAGED and the exact union of their HTTPS origins. Local backend profiles remain an optional target control, and unavailable profiles or targets never fall back silently.
 
-Host build 5276 or later is required. Releases include arm64-v8a, x86_64, universal APK variants.
+Host build 5276 or later and Android 7.0 or later are required. Build outputs include armeabi-v7a, arm64-v8a, x86, x86_64, universal APK variants. On x86 and armeabi-v7a devices, use the matching standalone APK for the app, online AI and host plugin integration. LiteRT-LM local inference requires arm64-v8a or x86_64 and its packaged native library. The universal APK contains only 64-bit native libraries and cannot be installed on 32-bit-only devices.
 
 ******
 
@@ -180,8 +180,10 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ###### 2026/09/29
 
+* `Hint` The 32-bit compatibility changes are an unpublished candidate. See docs/dev/32-bit-compatibility-2026-09-29.md for executed checks and remaining device coverage.
 * `Fix` When the host delivers a tool-result image as a regular-file descriptor from its private cache, re-opening it through /proc/self/fd failed with EACCES because the Provider may not traverse the host directory, and the whole tool continuation aborted with PROTOCOL_VIOLATION; regular files now fall back to reading through a duplicated descriptor (a regular file never blocks a read) while pipes keep the private non-blocking re-open. On a real device (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0) every screen_capture image sent to Codex / Gemini models as a native tool result hit this failure
 * `Fix` After each accepted batch of native tool results, the generation timeout starts over: previously the whole tool turn, including the time spent waiting for results, shared the first request's timeout, so multi-round tasks longer than it always ended with TIMEOUT; now only waiting without submitting results still expires on the original timeout. Matches the corresponding AutoJs6 host and 3-Stove Agent changes
+* `Fix` Add x86 and armeabi-v7a APKs for online AI and host integration; check process ABI and the installed native payload before exposing local inference, and explain unavailable local models in the manager
 
 # v1.2.0
 

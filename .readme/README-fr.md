@@ -107,7 +107,7 @@ required host build: 5276
 
 AI Provider V2 expose un catalogue paginé unique de cibles `local:*` et `profile:*`. Chaque cible déclare séparément son provider, son modèle, sa localité, sa configuration et sa disponibilité, ses capacités, ses limites, ses contrôles et ses origines HTTPS. Un catalogue uniquement local déclare ON_DEVICE/NONE; la présence de profils en ligne déclare HYBRID/PLUGIN_MANAGED et l'union exacte de leurs origines HTTPS. Le profil backend local reste un contrôle facultatif de la cible, et aucune cible ni aucun profil indisponible ne fait l'objet d'un repli silencieux.
 
-La build hôte 5276 ou ultérieure est requise. Les versions incluent les variantes APK arm64-v8a, x86_64, universal.
+La build hôte 5276 ou ultérieure et Android 7.0 ou ultérieur sont requis. Les builds produisent les APK armeabi-v7a, arm64-v8a, x86, x86_64, universal. Sur x86 et armeabi-v7a, utilisez l'APK individuel correspondant pour l'application, l'IA en ligne et l'intégration hôte. L'inférence locale LiteRT-LM nécessite arm64-v8a ou x86_64 et la bibliothèque native correspondante dans l'APK. L'APK universal contient uniquement des bibliothèques 64 bits et ne peut pas être installé sur un appareil exclusivement 32 bits.
 
 ******
 
@@ -180,8 +180,10 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 ###### 2026/09/29
 
+* `Note` Les changements de compatibilité 32 bits constituent une version candidate non publiée. Voir docs/dev/32-bit-compatibility-2026-09-29.md pour les vérifications exécutées et les appareils restant à tester.
 * `Correctif` Lorsque l'hôte transmet une image de résultat d'outil sous forme de descripteur de fichier ordinaire issu de son cache privé, la réouverture via /proc/self/fd échouait avec EACCES car le Provider ne peut pas traverser le répertoire de l'hôte, et toute la continuation d'outils s'interrompait avec PROTOCOL_VIOLATION; les fichiers ordinaires sont désormais lus via un descripteur dupliqué (la lecture d'un fichier ordinaire ne bloque jamais), tandis que les tubes conservent la réouverture privée non bloquante. Sur un appareil réel (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0), chaque image screen_capture envoyée aux modèles Codex / Gemini comme résultat d'outil natif provoquait cet échec
 * `Correctif` Après chaque lot accepté de résultats d'outils natifs, le délai de génération repart de zéro: auparavant tout le tour d'outils, temps d'attente des résultats compris, partageait le délai de la première requête, si bien que les tâches multi-tours plus longues se terminaient toujours par TIMEOUT; désormais seule une attente sans soumission de résultats expire encore selon le délai initial. Cohérent avec les changements correspondants de l'hôte AutoJs6 et de 3-Stove Agent
+* `Correctif` Ajout des APK x86 et armeabi-v7a pour les services IA en ligne et l'intégration hôte; vérification de l'ABI du processus et des bibliothèques installées avant d'activer les modèles locaux, avec explication dans le gestionnaire
 
 # v1.2.0
 

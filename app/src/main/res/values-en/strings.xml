@@ -242,6 +242,7 @@
     <string name="model_health_not_checked">Not checked</string>
     <string name="model_id_clipboard_label">local AI model ID</string>
     <string name="model_id_copied">Model ID copied</string>
+    <string name="model_local_runtime_unavailable">Local model inference is unavailable on this device or in this APK. You can use Online AI.</string>
     <string name="model_manager_title">Models</string>
     <string name="model_none">No model is configured</string>
     <string name="model_rename_failed">Model rename failed</string>

@@ -242,6 +242,7 @@
     <string name="model_health_not_checked">Sin comprobar</string>
     <string name="model_id_clipboard_label">ID del modelo de texto con IA</string>
     <string name="model_id_copied">ID del modelo copiado</string>
+    <string name="model_local_runtime_unavailable">La inferencia local no está disponible en este dispositivo o APK. Puedes usar IA en línea.</string>
     <string name="model_manager_title">Modelos</string>
     <string name="model_none">No hay ningún modelo configurado</string>
     <string name="model_rename_failed">Error al renombrar el modelo</string>

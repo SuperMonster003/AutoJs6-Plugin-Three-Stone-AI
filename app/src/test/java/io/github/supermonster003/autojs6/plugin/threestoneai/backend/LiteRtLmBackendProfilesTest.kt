@@ -4,6 +4,7 @@ import org.autojs.plugin.ai.provider.api.AiProviderBackendAvailability
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import org.autojs.plugin.ai.provider.api.AiProviderBackendUnavailableReason
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -39,25 +40,45 @@ class LiteRtLmBackendProfilesTest {
     }
 
     @Test
-    fun unsupportedAbiFailsEveryProfileBeforeAnyOpenClProbe() {
-        var probeCount = 0
-        val detector = LiteRtLmBackendCompatibilityDetector(
-            supportedAbis = listOf("armeabi-v7a"),
-            loadOpenClLibrary = { probeCount += 1 },
-        )
-
-        detector.profiles.forEach { profile ->
-            assertEquals(AiProviderBackendAvailability.UNAVAILABLE, profile.availability)
-            assertEquals(AiProviderBackendUnavailableReason.ABI_UNSUPPORTED, profile.unavailableReason)
+    fun both32BitAbisFailEveryProfileBeforeAnyNativeProbe() {
+        listOf("armeabi-v7a", "x86").forEach { abi ->
+            val detector = LiteRtLmBackendCompatibilityDetector(
+                processAbis = listOf(abi),
+                findLiteRtLibrary = { throw AssertionError("32-bit process must not resolve JNI") },
+                loadOpenClLibrary = { throw AssertionError("32-bit process must not load OpenCL") },
+            )
+            assertFalse(detector.isRuntimeAvailable)
+            detector.profiles.forEach { profile ->
+                assertEquals(AiProviderBackendAvailability.UNAVAILABLE, profile.availability)
+                assertEquals(AiProviderBackendUnavailableReason.ABI_UNSUPPORTED, profile.unavailableReason)
+                assertThrows(IllegalArgumentException::class.java) {
+                    detector.requireAvailable(profile.profileId)
+                }
+            }
         }
-        assertEquals(0, probeCount)
+    }
+
+    @Test
+    fun javaOnlyApkOn64BitDeviceCannotAdvertiseLocalInference() {
+        listOf("arm64-v8a", "x86_64").forEach { abi ->
+            val detector = LiteRtLmBackendCompatibilityDetector(
+                processAbis = listOf(abi),
+                findLiteRtLibrary = { null },
+                loadOpenClLibrary = { throw AssertionError("No local runtime to probe") },
+            )
+            assertFalse(detector.isRuntimeAvailable)
+            detector.profiles.forEach { profile ->
+                assertEquals(AiProviderBackendUnavailableReason.ABI_UNSUPPORTED, profile.unavailableReason)
+            }
+        }
     }
 
     @Test
     fun detectorCachesTheNativeProbeAndRejectsUnavailableProfiles() {
         var probeCount = 0
         val detector = LiteRtLmBackendCompatibilityDetector(
-            supportedAbis = listOf("arm64-v8a"),
+            processAbis = listOf("arm64-v8a"),
+            findLiteRtLibrary = { "/apk!/lib/arm64-v8a/liblitertlm_jni.so" },
             loadOpenClLibrary = { probeCount += 1 },
         )
 

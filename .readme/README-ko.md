@@ -107,7 +107,7 @@ required host build: 5276
 
 AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 catalog로 공개합니다. 각 대상은 provider, model, locality, 구성/가용성, capabilities, limits, controls, HTTPS origins를 개별적으로 선언합니다. 로컬 전용 catalog는 ON_DEVICE/NONE을 선언하고 online profile이 있으면 HYBRID/PLUGIN_MANAGED와 HTTPS origins의 정확한 합집합을 선언합니다. 로컬 backend profile은 선택적 target control이며 사용할 수 없는 profile이나 대상으로 자동 전환하지 않습니다.
 
-호스트 build 5276 이상이 필요합니다. 릴리스에는 arm64-v8a, x86_64, universal APK 변형이 포함됩니다.
+호스트 build 5276 이상과 Android 7.0 이상이 필요합니다. 빌드에는 armeabi-v7a, arm64-v8a, x86, x86_64, universal APK가 포함됩니다. x86 및 armeabi-v7a 기기에서는 해당 개별 APK를 사용하세요. 앱 화면, 온라인 AI 및 호스트 플러그인 연동을 지원합니다. LiteRT-LM 로컬 추론에는 arm64-v8a 또는 x86_64와 APK의 해당 네이티브 라이브러리가 필요합니다. universal APK에는 64비트 라이브러리만 포함되어 32비트 전용 기기에 설치할 수 없습니다.
 
 ******
 
@@ -180,8 +180,10 @@ AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 cat
 
 ###### 2026/09/29
 
+* `힌트` 32비트 호환성 변경은 아직 게시되지 않은 후보 버전입니다. 실행한 검사와 미검증 기기는 docs/dev/32-bit-compatibility-2026-09-29.md를 참조하세요.
 * `수정` 호스트가 도구 결과 이미지를 호스트 비공개 캐시의 일반 파일 디스크립터로 전달하면 Provider가 /proc/self/fd로 다시 열 때 호스트 디렉터리를 탐색할 권한이 없어 EACCES로 실패했고, 도구 이어가기 전체가 PROTOCOL_VIOLATION으로 중단되었습니다. 이제 일반 파일은 디스크립터를 복제해 직접 읽는 방식으로 대체하고 (일반 파일 읽기는 블로킹되지 않음), 파이프는 여전히 비공개 논블로킹 재오픈을 사용합니다. 실제 기기 (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0)에서 screen_capture 이미지를 네이티브 도구 결과로 Codex / Gemini 모델에 보낼 때마다 이 실패가 발생했습니다
 * `수정` 네이티브 도구 결과 배치가 받아들여질 때마다 생성 시간 제한을 다시 셉니다. 이전에는 결과를 기다리는 시간을 포함한 도구 턴 전체가 첫 요청의 시간 제한을 공유해, 그보다 긴 다중 라운드 작업은 항상 TIMEOUT으로 끝났습니다. 이제는 결과를 제출하지 않고 기다리는 경우에만 원래 시간 제한으로 만료됩니다. AutoJs6 호스트와 3-Stove Agent의 대응 변경과 함께 동작합니다
+* `수정` 온라인 AI 및 호스트 연동을 위한 x86 및 armeabi-v7a APK 추가; 프로세스 ABI와 설치된 네이티브 라이브러리로 로컬 추론 지원 여부를 확인하고 모델 관리자에 제한 표시
 
 # v1.2.0
 

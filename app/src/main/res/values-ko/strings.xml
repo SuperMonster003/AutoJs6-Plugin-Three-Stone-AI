@@ -242,6 +242,7 @@
     <string name="model_health_not_checked">확인하지 않음</string>
     <string name="model_id_clipboard_label">AI 텍스트 모델 ID</string>
     <string name="model_id_copied">모델 ID를 복사했습니다</string>
+    <string name="model_local_runtime_unavailable">이 기기 또는 APK에서는 로컬 모델 추론을 사용할 수 없습니다. 온라인 AI를 사용할 수 있습니다.</string>
     <string name="model_manager_title">모델</string>
     <string name="model_none">설정된 모델이 없습니다</string>
     <string name="model_rename_failed">모델 이름 변경에 실패했습니다</string>

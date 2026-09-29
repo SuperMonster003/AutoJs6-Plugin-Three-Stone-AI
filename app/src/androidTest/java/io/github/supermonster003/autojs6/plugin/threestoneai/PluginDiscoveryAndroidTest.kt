@@ -10,6 +10,7 @@ import android.os.IBinder
 import androidx.test.platform.app.InstrumentationRegistry
 import org.autojs.plugin.common.api.IPluginInfoProvider
 import org.autojs.plugin.common.api.PluginCapabilityKeys
+import org.autojs.plugin.ai.provider.api.IAiProvider
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
@@ -73,9 +74,38 @@ class PluginDiscoveryAndroidTest {
             assertEquals("three-stone-ai", info.id)
             assertFalse(requireNotNull(info.engine).isBlank())
             assertFalse(requireNotNull(info.variant).isBlank())
-            assertEquals(setOf<String>("arm64-v8a", "x86_64"), requireNotNull(info.supportedAbis).toSet())
+            assertEquals(setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"), requireNotNull(info.supportedAbis).toSet())
             val capabilities = requireNotNull(info.capabilities)
             assertTrue(capabilities.getLong(PluginCapabilityKeys.REQUIRES_HOST_VERSION) > 0)
+        } finally {
+            context.unbindService(connection)
+        }
+    }
+
+    @Test
+    fun aiServiceStartsAndBindsWithoutNativeInferenceAndRejectsNonHostUid() {
+        val intent = Intent("org.autojs.plugin.AI_PROVIDER").setPackage(context.packageName)
+        val service = context.packageManager.queryIntentServices(intent, 0).single().serviceInfo
+        assertEquals("org.autojs.permission.PLUGIN", service.permission)
+        assertEquals(context.packageName + ":provider", service.processName)
+        intent.component = ComponentName(service.packageName, service.name)
+        val ready = CountDownLatch(1)
+        var remote: IBinder? = null
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+                remote = binder
+                ready.countDown()
+            }
+            override fun onServiceDisconnected(name: ComponentName) = Unit
+        }
+        assertTrue(context.bindService(intent, connection, Context.BIND_AUTO_CREATE))
+        try {
+            assertTrue("AI service did not bind", ready.await(10, TimeUnit.SECONDS))
+            assertEquals("org.autojs.plugin.ai.provider.api.IAiProvider", remote!!.interfaceDescriptor)
+            // Instrumentation has the plugin UID, not the host UID. Keep the real Binder guard.
+            assertThrows(SecurityException::class.java) {
+                IAiProvider.Stub.asInterface(remote).capabilities
+            }
         } finally {
             context.unbindService(connection)
         }

@@ -16,6 +16,6 @@
   "output_format": "streamed text/plain or application/json text chunks",
   "package_format": ".litertlm",
   "runtime_dependency": "LiteRT-LM 0.15.0",
-  "supported_abis": "arm64-v8a, x86_64, universal",
+  "supported_abis": "armeabi-v7a, arm64-v8a, x86, x86_64, universal",
   "local_aars": "common-plugin-api.aar\nprotocol-wire-api.aar\nai-common-api.aar\nai-provider-api.aar"
 }

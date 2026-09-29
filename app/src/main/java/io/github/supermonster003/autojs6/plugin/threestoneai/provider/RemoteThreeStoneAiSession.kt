@@ -712,6 +712,9 @@ internal class RemoteThreeStoneAiSession(
                     owned.close()
                     toolResultDescriptors.compareAndSet(owned, null)
                     ensureActive()
+                    // Each accepted batch starts a new model round, so the round gets the request's
+                    // full timeout again; waiting for results without submitting them still expires.
+                    rearmTimeout()
                     requireNotNull(backendSession.get()).submitToolResults(results)
                 } catch (_: SessionStopped) {
                     Unit
@@ -870,6 +873,11 @@ internal class RemoteThreeStoneAiSession(
             terminalCause.set(TerminalCause.FAILURE)
             contextPlan.getAndSet(null)?.let(persistentContext::abandon)
             failTurn(this, AiError(AiErrorCode.PROVIDER_FAILED, message))
+        }
+
+        private fun rearmTimeout() {
+            timeoutFuture.getAndSet(null)?.cancel(false)
+            scheduleTimeout()
         }
 
         private fun scheduleTimeout() {

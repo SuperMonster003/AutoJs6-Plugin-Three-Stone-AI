@@ -223,6 +223,15 @@
     <string name="import_stage_publishing">Publication du modèle</string>
     <string name="import_stage_validating">Validation de la source</string>
     <string name="import_succeeded">Modèle importé</string>
+    <string name="launcher_icon_applied_note">Le lanceur peut prendre quelques secondes pour se rafraîchir. Certains raccourcis peuvent devoir être ajoutés a nouveau.</string>
+    <string name="launcher_icon_auto">Adaptative automatique</string>
+    <string name="launcher_icon_auto_note">Tente de suivre le thème du système. Certains lanceurs gardent les icônes en cache ou utilisent une seule palette.</string>
+    <string name="launcher_icon_dark">Adaptative sombre</string>
+    <string name="launcher_icon_failed">Impossible de changer l\'icône du lanceur. Veuillez réessayer.</string>
+    <string name="launcher_icon_light">Adaptative claire</string>
+    <string name="launcher_icon_title">Icône du lanceur</string>
+    <string name="launcher_icon_transparent">Fond transparent</string>
+    <string name="launcher_icon_transparent_note">Certains lanceurs ajoutent un fond ou un masque. La transparence peut ne pas être conservée.</string>
     <string name="litert_catalog_imported">Importé</string>
     <string name="model_catalog_loading">Chargement du catalogue de modèles</string>
     <string name="model_catalog_unavailable">Catalogue de modèles indisponible</string>

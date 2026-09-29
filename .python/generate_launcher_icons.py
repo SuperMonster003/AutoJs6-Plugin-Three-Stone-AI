@@ -2,8 +2,8 @@
 
 The retained source alpha is the artwork. Colors and output geometry are generated,
 never inferred from antialiased source RGB. Run with --check to verify without writes.
-Launcher colors stay dark in every configuration because launchers can cache a day
-icon indefinitely. Only the transparent UI/README icons follow the application theme.
+Dark is the default launcher mode. Explicit light and best-effort automatic modes
+have independent resources; transparent UI/README icons follow the application theme.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ ADAPTIVE_GLYPH = 0.43
 DAY_GLYPH = (0x27, 0x27, 0x27)
 NIGHT_GLYPH = (0xD8, 0xD8, 0xD8)
 NIGHT_BACKGROUND = (0x21, 0x21, 0x21, 255)
+DAY_BACKGROUND = (0xFA, 0xFA, 0xFA, 255)
 
 
 def source_alpha() -> Image.Image:
@@ -66,6 +67,8 @@ def generated_files() -> dict[Path, bytes]:
         "mipmap-night/ic_launcher.png": render(alpha, UI_GLYPH, NIGHT_GLYPH),
         "mipmap/ic_launcher_system.png": render(alpha, UI_GLYPH, NIGHT_GLYPH, NIGHT_BACKGROUND),
         "mipmap/ic_launcher_system_foreground.png": render(alpha, ADAPTIVE_GLYPH, NIGHT_GLYPH),
+        "mipmap/ic_launcher_system_light.png": render(alpha, UI_GLYPH, DAY_GLYPH, DAY_BACKGROUND),
+        "mipmap/ic_launcher_system_light_foreground.png": render(alpha, ADAPTIVE_GLYPH, DAY_GLYPH),
         "mipmap/ic_launcher_monochrome.png": render(alpha, ADAPTIVE_GLYPH, (0, 0, 0)),
     }
     result = {}
@@ -73,27 +76,39 @@ def generated_files() -> dict[Path, bytes]:
         output = io.BytesIO()
         image.save(output, format="PNG", optimize=True)
         result[RES / name] = output.getvalue()
-    adaptive = '''<?xml version="1.0" encoding="utf-8"?>
+    def adaptive(foreground: str, background: str) -> bytes:
+        return f'''<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background"/>
-    <foreground android:drawable="@mipmap/ic_launcher_system_foreground"/>
+    <background android:drawable="@color/{background}"/>
+    <foreground android:drawable="@mipmap/{foreground}"/>
     <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
 </adaptive-icon>
-'''
-    for directory in ("mipmap-anydpi-v26",):
-        result[RES / directory / "ic_launcher_system.xml"] = adaptive.encode("utf-8")
-    for directory, color in (("values", "#212121"),):
-        result[RES / directory / "ic_launcher_background.xml"] = (
+'''.encode("utf-8")
+    for name, background in (("ic_launcher_system", "ic_launcher_background"), ("ic_launcher_system_light", "ic_launcher_background_light")):
+        result[RES / "mipmap-anydpi-v26" / f"{name}.xml"] = adaptive(f"{name}_foreground", background)
+    for name, color in (("ic_launcher_background", "#212121"), ("ic_launcher_background_light", "#FAFAFA")):
+        result[RES / "values" / f"{name}.xml"] = (
             '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
-            f'    <color name="ic_launcher_background">{color}</color>\n</resources>\n'
+            f'    <color name="{name}">{color}</color>\n</resources>\n'
         ).encode("utf-8")
+    # A real resource keeps its ID in the parsed Manifest. A values resource alias
+    # is eagerly resolved by PackageManager and freezes the install-time theme.
+    # Each legacy bitmap wrapper has a matching API 26 adaptive configuration.
+    for directory, target in (("mipmap", "ic_launcher_system"), ("mipmap-notnight", "ic_launcher_system_light")):
+        result[RES / directory / "ic_launcher_system_auto.xml"] = (
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            f'<bitmap xmlns:android="http://schemas.android.com/apk/res/android" android:src="@mipmap/{target}"/>\n'
+        ).encode("utf-8")
+    result[RES / "mipmap-anydpi-v26/ic_launcher_system_auto.xml"] = adaptive("ic_launcher_system_foreground", "ic_launcher_background")
+    result[RES / "mipmap-notnight-anydpi-v26/ic_launcher_system_auto.xml"] = adaptive("ic_launcher_system_light_foreground", "ic_launcher_background_light")
     return result
 
 
 def obsolete_files() -> list[Path]:
     # These exact former resources collided with the transparent UI resource or
     # duplicated launcher layers. Never remove arbitrary files/directories.
-    candidates = [RES / "values-night/ic_launcher_background.xml"]
+    candidates = [RES / "values-night/ic_launcher_background.xml",
+                  RES / "values/ic_launcher_system_auto.xml", RES / "values-notnight/ic_launcher_system_auto.xml"]
     for directory in RES.glob("mipmap*"):
         for name in ("ic_launcher.xml", "ic_launcher_round.xml", "ic_launcher_round.png", "ic_launcher_foreground.png"):
             candidates.append(directory / name)

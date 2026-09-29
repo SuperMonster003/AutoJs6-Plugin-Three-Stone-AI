@@ -275,6 +275,15 @@
     <string name="import_stage_publishing">Publishing model</string>
     <string name="import_stage_validating">Validating source</string>
     <string name="import_succeeded">Model imported</string>
+    <string name="launcher_icon_applied_note">The launcher may take a few seconds to refresh. Some home-screen shortcuts may need to be added again.</string>
+    <string name="launcher_icon_auto">Adaptive automatic</string>
+    <string name="launcher_icon_auto_note">Tries to follow the system theme. Some launchers cache icons or use only one color scheme.</string>
+    <string name="launcher_icon_dark">Adaptive dark</string>
+    <string name="launcher_icon_failed">Unable to change the launcher icon. Please try again.</string>
+    <string name="launcher_icon_light">Adaptive light</string>
+    <string name="launcher_icon_title">Launcher icon</string>
+    <string name="launcher_icon_transparent">Transparent background</string>
+    <string name="launcher_icon_transparent_note">Some launchers add their own background or mask, so transparency may not be preserved.</string>
     <string name="litert_capability_audio">Audio</string>
     <string name="litert_capability_image">Image</string>
     <string name="litert_capability_specialized">Specialized actions</string>

@@ -223,6 +223,15 @@
     <string name="import_stage_publishing">모델 게시 중</string>
     <string name="import_stage_validating">소스 확인 중</string>
     <string name="import_succeeded">모델을 가져왔습니다</string>
+    <string name="launcher_icon_applied_note">런처가 새로 고침되기까지 몇 초가 걸릴 수 있습니다. 일부 홈 화면 바로가기를 다시 추가해야 할 수 있습니다.</string>
+    <string name="launcher_icon_auto">적응형 자동</string>
+    <string name="launcher_icon_auto_note">시스템 테마를 따르려고 시도합니다. 일부 런처는 아이콘을 캐시하거나 한 가지 색상만 사용합니다.</string>
+    <string name="launcher_icon_dark">적응형 어둡게</string>
+    <string name="launcher_icon_failed">런처 아이콘을 변경할 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="launcher_icon_light">적응형 밝게</string>
+    <string name="launcher_icon_title">런처 아이콘</string>
+    <string name="launcher_icon_transparent">투명 배경</string>
+    <string name="launcher_icon_transparent_note">일부 런처는 배경이나 마스크를 추가하므로 투명도가 유지되지 않을 수 있습니다.</string>
     <string name="litert_catalog_imported">가져옴</string>
     <string name="model_catalog_loading">모델 카탈로그를 불러오는 중</string>
     <string name="model_catalog_unavailable">모델 카탈로그를 사용할 수 없습니다</string>

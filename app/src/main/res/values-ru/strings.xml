@@ -223,6 +223,15 @@
     <string name="import_stage_publishing">Публикация модели</string>
     <string name="import_stage_validating">Проверка источника</string>
     <string name="import_succeeded">Модель импортирована</string>
+    <string name="launcher_icon_applied_note">Обновление значка может занять несколько секунд. Некоторые ярлыки на главном экране может потребоваться добавить заново.</string>
+    <string name="launcher_icon_auto">Адаптивный автоматический</string>
+    <string name="launcher_icon_auto_note">Пытается следовать системной теме. Некоторые лаунчеры кешируют значки или используют только одну цветовую схему.</string>
+    <string name="launcher_icon_dark">Адаптивный темный</string>
+    <string name="launcher_icon_failed">Не удалось изменить значок запуска. Повторите попытку.</string>
+    <string name="launcher_icon_light">Адаптивный светлый</string>
+    <string name="launcher_icon_title">Значок запуска</string>
+    <string name="launcher_icon_transparent">Прозрачный фон</string>
+    <string name="launcher_icon_transparent_note">Некоторые лаунчеры добавляют фон или маску, поэтому прозрачность может не сохраниться.</string>
     <string name="litert_catalog_imported">Импортировано</string>
     <string name="model_catalog_loading">Загрузка каталога моделей</string>
     <string name="model_catalog_unavailable">Каталог моделей недоступен</string>

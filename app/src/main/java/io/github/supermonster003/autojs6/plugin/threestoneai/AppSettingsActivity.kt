@@ -30,6 +30,8 @@ import java.util.Locale
 import org.autojs.plugin.ai.provider.api.AiProviderSettingsContract
 
 class AppSettingsActivity : ConfiguredActivity() {
+    internal var launcherIconDialog: androidx.appcompat.app.AlertDialog? = null; private set
+    private var launcherIconRow: io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRow? = null
     private lateinit var settingsStore: ApplicationSettingsStore
     private lateinit var settings: ApplicationSettings
     private lateinit var hostResult: AutoJs6HostSettingsResult
@@ -55,6 +57,7 @@ class AppSettingsActivity : ConfiguredActivity() {
     }
 
     override fun onDestroy() {
+        launcherIconDialog?.dismiss()
         if (::updateController.isInitialized) updateController.cancel()
         super.onDestroy()
     }
@@ -94,6 +97,10 @@ class AppSettingsActivity : ConfiguredActivity() {
             iconResource = R.drawable.ic_palette_24,
             onClick = ::showThemeColorDialog,
         ).view)
+        launcherIconRow = settingRow(getString(R.string.launcher_icon_title),
+            getString(launcherIconLabels[LauncherIcons.current(this).ordinal]), R.drawable.ic_palette_24,
+            onClick = ::showLauncherIconDialog).also { it.view.tag = "launcher-icon" }
+        content.addView(launcherIconRow!!.view)
         content.addView(hairline())
 
         content.addView(sectionHeader(R.string.app_settings_conversation))
@@ -188,6 +195,28 @@ class AppSettingsActivity : ConfiguredActivity() {
             onClick = { startActivity(Intent(this, AboutActivity::class.java)) },
         ).view)
     }
+
+    private fun showLauncherIconDialog() {
+        val labels = launcherIconLabels.mapIndexed { index, resource ->
+            val title = getString(resource)
+            val note = when (LauncherIconMode.entries[index]) {
+                LauncherIconMode.AUTO -> getString(R.string.launcher_icon_auto_note)
+                LauncherIconMode.TRANSPARENT -> getString(R.string.launcher_icon_transparent_note)
+                else -> null
+            }
+            if (note == null) title else android.text.SpannableString("$title\n$note").apply {
+                setSpan(android.text.style.RelativeSizeSpan(0.8f), title.length + 1, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+        launcherIconDialog = singleChoiceDialog(getString(R.string.launcher_icon_title), labels, LauncherIcons.current(this).ordinal) { index ->
+            val result = runCatching { LauncherIcons.select(this, LauncherIconMode.entries[index]) }
+            Toast.makeText(this, if (result.isSuccess) R.string.launcher_icon_applied_note else R.string.launcher_icon_failed, Toast.LENGTH_LONG).show()
+            launcherIconRow?.summaryView?.text = getString(launcherIconLabels[LauncherIcons.current(this).ordinal])
+        }.also { dialog -> dialog.listView.post { dialog.listView.setSelection(0) } }
+    }
+
+    internal val launcherIconLabels = listOf(R.string.launcher_icon_light, R.string.launcher_icon_dark,
+        R.string.launcher_icon_auto, R.string.launcher_icon_transparent)
 
     private fun showThemeColorDialog() {
         val choices = listOf(

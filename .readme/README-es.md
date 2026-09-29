@@ -71,6 +71,7 @@ El README.md actual admite los siguientes idiomas:
 - Entrada JPEG/PNG y resultados de herramientas con imágenes mediante AI Provider 2.1 negociado, con ajustes por modelo.
 - Mantener al día los modelos predefinidos en línea con el catálogo público del proyecto en GitHub. La actualización automática está activada por defecto y comprueba una vez cada 24 horas al abrir los ajustes de IA en línea; se puede desactivar o actualizar manualmente. Respeta el ajuste de redes medidas, conserva la lista almacenada o integrada sin conexión o ante errores y no cambia los perfiles guardados ni los ID personalizados.
 - Agrupar los modelos predefinidos por proveedor y ampliar las opciones de OpenRouter con Qwen, Kimi, GLM, Grok, Meta y MiniMax, conservando los ID exactos.
+- El icono del lanzador admite adaptable claro, adaptable oscuro (predeterminado), adaptable automático y fondo transparente. El modo automático intenta seguir el tema del sistema, pero el lanzador puede guardar una sola paleta en caché; puede agregar un fondo o una máscara a los iconos transparentes. El cambio mantiene la aplicación en ejecución y puede tardar unos segundos.
 
 ******
 
@@ -176,6 +177,13 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ******
 
+# v1.3.0
+
+###### 2026/09/29
+
+* `Función` El icono del lanzador admite adaptable claro, adaptable oscuro (predeterminado), adaptable automático y fondo transparente. El modo automático intenta seguir el tema del sistema, pero el lanzador puede guardar una sola paleta en caché; puede agregar un fondo o una máscara a los iconos transparentes. El cambio mantiene la aplicación en ejecución y puede tardar unos segundos.
+* `Mejora` Mantener el marco redondeado del icono de Acerca de con el interior transparente sobre el fondo de la página. Mostrar las opciones del lanzador desde arriba con notas más pequeñas.
+
 # v1.2.1
 
 ###### 2026/09/29
@@ -201,13 +209,6 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Corrección` Conservar categorías fijas de errores en línea en las devoluciones AI Provider, sin exponer solicitudes o respuestas ni añadir reintentos automáticos
 * `Corrección` Corregir el fallo No APK found al ejecutar con F10 en IntelliJ IDEA usando el directorio APK real de AGP para cada variante y conservando las comprobaciones de alineación de 16 KB
 * `Mejora` Actualizar los modelos en línea predefinidos según los catálogos oficiales, incluidos Claude Fable 5.1 y otros modelos actuales, y eliminar los identificadores retirados conservando los perfiles existentes y los modelos personalizados
-
-# v1.1.4
-
-###### 2026/09/19
-
-* `Corrección` Advertencias de lectura de SDK XML v4 con AGP 9.1 y comprobaciones de alineación nativa de APK activadas por error al ensamblar pruebas unitarias JVM, mediante los plugins de compilación compartidos 1.8.3
-* `Mejora` Tras compileSdk, targetSdk sube a 37 (Android 17); el comportamiento del plugin no depende del nuevo objetivo
 
 ##### Más versiones
 

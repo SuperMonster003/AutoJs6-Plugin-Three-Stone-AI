@@ -176,6 +176,12 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 ******
 
+# v1.2.1
+
+###### 2026/09/29
+
+* `修复` 宿主传来的工具结果图片以宿主私有缓存中的普通文件描述符交付时, Provider 经 /proc/self/fd 重新打开会因无权遍历宿主目录而失败 (EACCES), 整轮工具续轮以 PROTOCOL_VIOLATION 中止; 现在对普通文件回退为复制描述符直接读取 (普通文件不会阻塞读取), 管道仍使用私有的非阻塞重开描述符. 真机 (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0) 上 screen_capture 图片经原生工具结果送入 Codex / Gemini 模型时曾必现此失败
+
 # v1.2.0
 
 ###### 2026/09/26
@@ -198,12 +204,6 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 * `修复` AGP 9.1 构建时的 SDK XML v4 解析警告, 以及 JVM 单元测试误触发 APK 原生库对齐检查的问题 (共享构建插件 1.8.3)
 * `优化` targetSdk 升级至 37 (Android 17)
-
-# v1.1.3
-
-###### 2026/09/15
-
-* `优化` compileSdk 升级至 37 (Android 17), targetSdk 保持 36
 
 ##### 更多版本
 

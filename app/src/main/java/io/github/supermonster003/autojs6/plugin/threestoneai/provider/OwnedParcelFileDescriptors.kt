@@ -28,15 +28,26 @@ internal class OwnedParcelFileDescriptors private constructor(
             // A private nonblocking fd avoids changing the sender's shared file flags. It also
             // stays owned by this worker until it exits, so cancellation cannot recycle it
             // under a poll/read operation. Preserve the sender's current regular-file offset.
+            // Re-opening through /proc/self/fd resolves the sender's path with this process's
+            // permissions, so a regular file inside another app's private directory (the host's
+            // tool-result images live in its cache) fails with EACCES although the descriptor
+            // itself is readable. A regular file never blocks a read, so a plain duplicate is
+            // the safe fallback there; pipes keep the private re-opened fd.
             val fd = synchronized(descriptors) {
                 check(!closed.get()) { "Descriptor owner was closed" }
                 val active = descriptors[index] ?: error("Descriptor owner was closed")
                 descriptor = active
                 val offset = try { Os.lseek(active.fileDescriptor, 0, OsConstants.SEEK_CUR) }
                 catch (failure: ErrnoException) { if (failure.errno == OsConstants.ESPIPE) null else throw failure }
-                Os.open("/proc/self/fd/${active.fd}", OsConstants.O_RDONLY or OsConstants.O_NONBLOCK or O_CLOEXEC, 0).also { copy ->
-                    try { if (offset != null) Os.lseek(copy, offset, OsConstants.SEEK_SET) }
-                    catch (failure: Throwable) { Os.close(copy); throw failure }
+                val copy = try {
+                    Os.open("/proc/self/fd/${active.fd}", OsConstants.O_RDONLY or OsConstants.O_NONBLOCK or O_CLOEXEC, 0)
+                } catch (failure: ErrnoException) {
+                    if (failure.errno != OsConstants.EACCES || offset == null || !isRegularFile(active)) throw failure
+                    Os.dup(active.fileDescriptor)
+                }
+                copy.also {
+                    try { if (offset != null) Os.lseek(it, offset, OsConstants.SEEK_SET) }
+                    catch (failure: Throwable) { Os.close(it); throw failure }
                 }
             }
             try {
@@ -113,5 +124,8 @@ internal class OwnedParcelFileDescriptors private constructor(
         private fun closeQuietly(descriptor: ParcelFileDescriptor?) {
             runCatching { descriptor?.close() }
         }
+
+        private fun isRegularFile(descriptor: ParcelFileDescriptor): Boolean =
+            runCatching { OsConstants.S_ISREG(Os.fstat(descriptor.fileDescriptor).st_mode) }.getOrDefault(false)
     }
 }

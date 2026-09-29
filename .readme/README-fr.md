@@ -176,6 +176,12 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 ******
 
+# v1.2.1
+
+###### 2026/09/29
+
+* `Correctif` Lorsque l'hôte transmet une image de résultat d'outil sous forme de descripteur de fichier ordinaire issu de son cache privé, la réouverture via /proc/self/fd échouait avec EACCES car le Provider ne peut pas traverser le répertoire de l'hôte, et toute la continuation d'outils s'interrompait avec PROTOCOL_VIOLATION; les fichiers ordinaires sont désormais lus via un descripteur dupliqué (la lecture d'un fichier ordinaire ne bloque jamais), tandis que les tubes conservent la réouverture privée non bloquante. Sur un appareil réel (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0), chaque image screen_capture envoyée aux modèles Codex / Gemini comme résultat d'outil natif provoquait cet échec
+
 # v1.2.0
 
 ###### 2026/09/26
@@ -198,12 +204,6 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 * `Correctif` Avertissements de lecture SDK XML v4 avec AGP 9.1 et contrôles d'alignement natif des APK déclenchés par erreur lors de l'assemblage des tests unitaires JVM, avec les plugins de compilation partagés 1.8.3
 * `Amélioration` Après compileSdk, targetSdk passe à 37 (Android 17) ; le comportement du plugin ne dépend pas de la nouvelle cible
-
-# v1.1.3
-
-###### 2026/09/15
-
-* `Amélioration` compileSdk passe à 37 (Android 17) ; targetSdk reste à 36 jusqu'à la vérification du comportement dépendant de la cible
 
 ##### Autres versions
 

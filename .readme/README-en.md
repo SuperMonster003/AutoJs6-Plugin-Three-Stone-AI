@@ -176,6 +176,12 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.2.1
+
+###### 2026/09/29
+
+* `Fix` When the host delivers a tool-result image as a regular-file descriptor from its private cache, re-opening it through /proc/self/fd failed with EACCES because the Provider may not traverse the host directory, and the whole tool continuation aborted with PROTOCOL_VIOLATION; regular files now fall back to reading through a duplicated descriptor (a regular file never blocks a read) while pipes keep the private non-blocking re-open. On a real device (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0) every screen_capture image sent to Codex / Gemini models as a native tool result hit this failure
+
 # v1.2.0
 
 ###### 2026/09/26
@@ -198,12 +204,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 * `Fix` SDK XML v4 parsing warnings with AGP 9.1 and APK native alignment checks incorrectly triggered by JVM unit-test assembly tasks, using shared build plugins 1.8.3
 * `Improvement` Raise targetSdk to 37 (Android 17) after compileSdk; the plugin's behavior does not depend on the new target
-
-# v1.1.3
-
-###### 2026/09/15
-
-* `Improvement` Raise compileSdk to 37 (Android 17); targetSdk stays at 36 until the behavior that depends on the target is verified
 
 ##### For more releases
 

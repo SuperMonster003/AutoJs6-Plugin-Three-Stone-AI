@@ -5,6 +5,12 @@
   "changelog_label_improvement": "개선",
   "changelog_label_dependency": "의존성",
   "$data": {
+    "v1.2.1": {
+      "released_date": "2026/09/29",
+      "fix": [
+        "호스트가 도구 결과 이미지를 호스트 비공개 캐시의 일반 파일 디스크립터로 전달하면 Provider가 /proc/self/fd로 다시 열 때 호스트 디렉터리를 탐색할 권한이 없어 EACCES로 실패했고, 도구 이어가기 전체가 PROTOCOL_VIOLATION으로 중단되었습니다. 이제 일반 파일은 디스크립터를 복제해 직접 읽는 방식으로 대체하고 (일반 파일 읽기는 블로킹되지 않음), 파이프는 여전히 비공개 논블로킹 재오픈을 사용합니다. 실제 기기 (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0)에서 screen_capture 이미지를 네이티브 도구 결과로 Codex / Gemini 모델에 보낼 때마다 이 실패가 발생했습니다"
+      ]
+    },
     "v1.2.0": {
       "released_date": "2026/09/26",
       "hint": [

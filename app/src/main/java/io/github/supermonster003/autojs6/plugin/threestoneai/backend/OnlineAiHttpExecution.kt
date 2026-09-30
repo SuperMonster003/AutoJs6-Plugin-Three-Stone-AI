@@ -235,13 +235,10 @@ internal class OnlineAiSession(
             if (isStopped()) return
 
             val (calls, nativeMessage) = progress.tools.finish(progress.text())
-            val nextRequest = if (calls.isNotEmpty() && request.maximumOutputTokens != null) {
-                val used = progress.statistics(true, startedNanos)?.outputTokens
-                    ?: throw OnlineAiFailureException(OnlineAiFailureReason.INVALID_RESPONSE)
-                val remaining = request.maximumOutputTokens.toLong() - used
-                check(remaining > 0L) { "Online AI tool output-token budget is exhausted" }
-                request.copy(maximumOutputTokens = remaining.toInt())
-            } else request
+            // Every tool round keeps the caller's output ceiling: the continuation method carries no new ceiling,
+            // callers reserve it again per round and bound the whole turn with their own budget (3-Stove Agent
+            // roadmap D51, 2026-09-29). Subtracting earlier rounds starved long turns after about ten rounds.
+            val nextRequest = request
             val committed = synchronized(stateLock) {
                 if (isStopped()) {
                     false

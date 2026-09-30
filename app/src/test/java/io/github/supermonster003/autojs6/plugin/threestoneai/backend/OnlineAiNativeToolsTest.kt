@@ -245,16 +245,20 @@ class OnlineAiNativeToolsTest {
     }
 
     @Test
-    fun outputTokenBudgetIsSharedByToolRoundsAndCannotBeRefilled() {
+    fun outputTokenCeilingAppliesToEveryToolRound() {
         val harness = Harness(OnlineAiProvider.OPENAI_COMPATIBLE, json(openAiCall), json(openAiFinal))
         harness.start(maxTokens = 5)
         harness.resume()
         assertEquals(5, harness.requests[0].get("max_tokens").asInt)
-        assertEquals(3, harness.requests[1].get("max_tokens").asInt)
-        val exhausted = Harness(OnlineAiProvider.OPENAI_COMPATIBLE, json(openAiCall))
-        exhausted.start(maxTokens = 2)
-        assertNotNull(exhausted.listener.failure)
-        assertTrue(exhausted.listener.calls.isEmpty())
+        assertEquals(5, harness.requests[1].get("max_tokens").asInt)
+        assertTrue(harness.listener.completed)
+        val tight = Harness(OnlineAiProvider.OPENAI_COMPATIBLE, json(openAiCall), json(openAiFinal))
+        tight.start(maxTokens = 2)
+        assertNull(tight.listener.failure)
+        assertEquals(listOf("a"), tight.listener.calls.map { it.callId })
+        tight.resume()
+        assertEquals(2, tight.requests[1].get("max_tokens").asInt)
+        assertTrue(tight.listener.completed)
     }
 
     @Test

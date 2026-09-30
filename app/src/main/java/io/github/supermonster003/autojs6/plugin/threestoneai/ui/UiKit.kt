@@ -101,7 +101,16 @@ internal fun View.applyThemedSelectableBackground(borderless: Boolean = false) {
     }
     val value = TypedValue()
     if (context.theme.resolveAttribute(attribute, value, true)) {
-        setBackgroundResource(value.resourceId)
+        var owner: android.content.Context = context
+        while (owner is android.content.ContextWrapper && owner !is io.github.supermonster003.autojs6.plugin.threestoneai.ConfiguredActivity) {
+            val next = owner.baseContext
+            if (next === owner) break
+            owner = next
+        }
+        val palette = (owner as? io.github.supermonster003.autojs6.plugin.threestoneai.ConfiguredActivity)?.appPalette
+        background = androidx.appcompat.content.res.AppCompatResources.getDrawable(context, value.resourceId)?.mutate()?.also {
+            if (palette != null) (it as? RippleDrawable)?.setColor(ColorStateList.valueOf(accentRipple(palette.accent)))
+        }
     }
 }
 

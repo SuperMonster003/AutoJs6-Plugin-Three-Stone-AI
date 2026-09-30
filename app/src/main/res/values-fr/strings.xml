@@ -224,13 +224,13 @@
     <string name="import_stage_validating">Validation de la source</string>
     <string name="import_succeeded">Modèle importé</string>
     <string name="launcher_icon_applied_note">Le lanceur peut prendre quelques secondes pour se rafraîchir. Certains raccourcis peuvent devoir être ajoutés a nouveau.</string>
-    <string name="launcher_icon_auto">Adaptative automatique</string>
+    <string name="launcher_icon_auto">Icône adaptative (automatique)</string>
     <string name="launcher_icon_auto_note">Tente de suivre le thème du système. Certains lanceurs gardent les icônes en cache ou utilisent une seule palette.</string>
-    <string name="launcher_icon_dark">Adaptative sombre</string>
+    <string name="launcher_icon_dark">Icône adaptative (sombre)</string>
     <string name="launcher_icon_failed">Impossible de changer l\'icône du lanceur. Veuillez réessayer.</string>
-    <string name="launcher_icon_light">Adaptative claire</string>
+    <string name="launcher_icon_light">Icône adaptative (claire)</string>
     <string name="launcher_icon_title">Icône du lanceur</string>
-    <string name="launcher_icon_transparent">Fond transparent</string>
+    <string name="launcher_icon_transparent">Icône à fond transparent</string>
     <string name="launcher_icon_transparent_note">Certains lanceurs ajoutent un fond ou un masque. La transparence peut ne pas être conservée.</string>
     <string name="litert_catalog_imported">Importé</string>
     <string name="model_catalog_loading">Chargement du catalogue de modèles</string>
@@ -341,4 +341,9 @@
     <string name="release_history_load_failed">Impossible de charger l\'historique local des versions</string>
     <string name="release_history_title">Historique des versions</string>
     <string name="screen_description">Choisissez un modèle LiteRT-LM local. Le fichier est copié dans le stockage privé de l\'application et jamais envoyé</string>
+    <string name="theme_picker_custom">Couleur personnalisée</string>
+    <string name="theme_picker_input">HEX / RGB</string>
+    <string name="theme_picker_invalid">Saisissez #RRGGBB, RRGGBB ou rgb(r, g, b). Les valeurs RGB doivent être comprises entre 0 et 255.</string>
+    <string name="theme_picker_presets">Couleurs prédéfinies</string>
+    <string name="theme_picker_preview">Aperçu</string>
 </resources>

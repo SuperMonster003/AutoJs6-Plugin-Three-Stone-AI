@@ -53,8 +53,12 @@ class LauncherIconSelectionTest {
                         assertEquals("All four options start at the top of the list", 0, dialog.listView.firstVisiblePosition)
                         assertTrue(dialog.listView.adapter.getItem(LauncherIconMode.AUTO.ordinal).toString().contains(activity.getString(R.string.launcher_icon_auto_note)))
                         assertTrue(dialog.listView.adapter.getItem(LauncherIconMode.TRANSPARENT.ordinal).toString().contains(activity.getString(R.string.launcher_icon_transparent_note)))
+                        val savedBefore = LauncherIcons.current(context)
                         dialog.listView.performItemClick(null, mode.ordinal, dialog.listView.adapter.getItemId(mode.ordinal))
+                        assertEquals("A draft choice must not change PackageManager", savedBefore, LauncherIcons.current(context))
+                        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
                     }
+                    InstrumentationRegistry.getInstrumentation().waitForIdleSync()
                     assertEquals(mode, LauncherIcons.current(context))
                     assertEquals(process, Process.myPid())
                     val matches = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(context.packageName), 0)

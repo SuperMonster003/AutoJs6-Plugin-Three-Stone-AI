@@ -25,11 +25,13 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.singleChoiceDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmedChoiceDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
 import java.util.Locale
 import org.autojs.plugin.ai.provider.api.AiProviderSettingsContract
 
 class AppSettingsActivity : ConfiguredActivity() {
+    internal var appearanceDialog: androidx.appcompat.app.AlertDialog? = null; private set
     internal var launcherIconDialog: androidx.appcompat.app.AlertDialog? = null; private set
     private var launcherIconRow: io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRow? = null
     private lateinit var settingsStore: ApplicationSettingsStore
@@ -56,7 +58,10 @@ class AppSettingsActivity : ConfiguredActivity() {
         setContentView(createContentView())
     }
 
+    override fun hasUnconfirmedDialog() = appearanceDialog?.isShowing == true || launcherIconDialog?.isShowing == true
+
     override fun onDestroy() {
+        appearanceDialog?.dismiss()
         launcherIconDialog?.dismiss()
         if (::updateController.isInitialized) updateController.cancel()
         super.onDestroy()
@@ -73,6 +78,12 @@ class AppSettingsActivity : ConfiguredActivity() {
     private fun createContentView(): View {
         val scaffold = buildScaffold(R.string.app_settings_title)
         buildSettingsContent(scaffold.content)
+        for (index in scaffold.content.childCount - 1 downTo 1) {
+            if (scaffold.content.getChildAt(index) is io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRowLayout &&
+                scaffold.content.getChildAt(index - 1) is io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRowLayout) {
+                scaffold.content.addView(hairline(64), index)
+            }
+        }
         applyThemeToControls(scaffold.content)
         return scaffold.root
     }
@@ -82,23 +93,23 @@ class AppSettingsActivity : ConfiguredActivity() {
         content.addView(settingRow(
             title = getString(R.string.app_settings_language),
             summary = languageSummary(settings.language),
-            iconResource = R.drawable.ic_language_24,
+            iconResource = R.drawable.ic_settings_language,
             onClick = ::showLanguageDialog,
         ).view)
         content.addView(settingRow(
             title = getString(R.string.app_settings_dark_mode),
             summary = darkModeSummary(settings.darkMode),
-            iconResource = R.drawable.ic_dark_mode_24,
+            iconResource = R.drawable.ic_settings_night,
             onClick = ::showDarkModeDialog,
         ).view)
         content.addView(settingRow(
             title = getString(R.string.app_settings_theme_color),
             summary = themeSummary(settings),
-            iconResource = R.drawable.ic_palette_24,
+            iconResource = R.drawable.ic_settings_theme,
             onClick = ::showThemeColorDialog,
         ).view)
         launcherIconRow = settingRow(getString(R.string.launcher_icon_title),
-            getString(launcherIconLabels[LauncherIcons.current(this).ordinal]), R.drawable.ic_palette_24,
+            getString(launcherIconLabels[LauncherIcons.current(this).ordinal]), R.drawable.ic_settings_launcher,
             onClick = ::showLauncherIconDialog).also { it.view.tag = "launcher-icon" }
         content.addView(launcherIconRow!!.view)
         content.addView(hairline())
@@ -205,10 +216,10 @@ class AppSettingsActivity : ConfiguredActivity() {
                 else -> null
             }
             if (note == null) title else android.text.SpannableString("$title\n$note").apply {
-                setSpan(android.text.style.RelativeSizeSpan(0.8f), title.length + 1, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(android.text.style.RelativeSizeSpan(14f / 16f), title.length + 1, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-        launcherIconDialog = singleChoiceDialog(getString(R.string.launcher_icon_title), labels, LauncherIcons.current(this).ordinal) { index ->
+        launcherIconDialog = confirmedChoiceDialog(getString(R.string.launcher_icon_title), labels, LauncherIcons.current(this).ordinal) { index ->
             val result = runCatching { LauncherIcons.select(this, LauncherIconMode.entries[index]) }
             Toast.makeText(this, if (result.isSuccess) R.string.launcher_icon_applied_note else R.string.launcher_icon_failed, Toast.LENGTH_LONG).show()
             launcherIconRow?.summaryView?.text = getString(launcherIconLabels[LauncherIcons.current(this).ordinal])
@@ -219,82 +230,20 @@ class AppSettingsActivity : ConfiguredActivity() {
         R.string.launcher_icon_auto, R.string.launcher_icon_transparent)
 
     private fun showThemeColorDialog() {
-        val choices = listOf(
-            ThemeChoice(R.string.app_settings_follow_autojs6, null, true),
-            ThemeChoice(
-                R.string.app_settings_theme_three_stone_ai,
-                AppSettingsPolicy.ORANGE_THEME_COLOR,
-            ),
-            ThemeChoice(R.string.app_settings_theme_teal, AppSettingsPolicy.TEAL_THEME_COLOR),
-            ThemeChoice(R.string.app_settings_theme_blue, AppSettingsPolicy.BLUE_THEME_COLOR),
-            ThemeChoice(R.string.app_settings_theme_green, AppSettingsPolicy.GREEN_THEME_COLOR),
-            ThemeChoice(R.string.app_settings_theme_purple, AppSettingsPolicy.PURPLE_THEME_COLOR),
-            ThemeChoice(R.string.app_settings_theme_custom, null),
-        )
-        val selected = when (settings.themeSelection) {
-            AppThemeSelection.FOLLOW_AUTOJS6 -> 0
-            AppThemeSelection.CUSTOM -> choices.indexOfFirst { it.color == settings.customThemeColor }
-                .takeIf { it >= 1 } ?: choices.lastIndex
-        }
-        val labels = choices.mapIndexed { index, choice ->
-            val title = getString(choice.labelResource)
-            when {
-                index == 0 -> followAutoJs6ChoiceLabel(
-                    title,
-                    AppSettingsPolicy.colorHex(followedThemeColor()),
-                )
-                choice.color != null -> "$title (${AppSettingsPolicy.colorHex(choice.color)})"
-                else -> title
+        hostResult = AutoJs6HostSettingsClient.query(this)
+        val current = if (settings.themeSelection == AppThemeSelection.FOLLOW_AUTOJS6) null else settings.customThemeColor
+        appearanceDialog = ThemeColorChooser.show(this, current, followedThemeColor(),
+            ThemeColorChooser.Palette(appPalette.accent, appPalette.surface, appPalette.primaryText, appPalette.secondaryText, appPalette.outline),
+            ThemeColorChooser.Labels(getString(R.string.app_settings_theme_color), getString(R.string.app_settings_follow_autojs6),
+            getString(R.string.theme_picker_presets), getString(R.string.theme_picker_custom),
+            getString(R.string.theme_picker_input), getString(R.string.theme_picker_invalid), getString(R.string.theme_picker_preview))) { color ->
+                saveSettings(if (color == null) settings.copy(themeSelection = AppThemeSelection.FOLLOW_AUTOJS6)
+                    else settings.copy(themeSelection = AppThemeSelection.CUSTOM, customThemeColor = color))
             }
-        }
-        singleChoiceDialog(
-            title = getString(R.string.app_settings_theme_color),
-            labels = labels,
-            checkedIndex = selected,
-        ) { index ->
-            val choice = choices[index]
-            when {
-                choice.followAutoJs6 -> saveSettings(
-                    settings.copy(themeSelection = AppThemeSelection.FOLLOW_AUTOJS6),
-                )
-                choice.color != null -> saveSettings(
-                    settings.copy(
-                        themeSelection = AppThemeSelection.CUSTOM,
-                        customThemeColor = choice.color,
-                    ),
-                )
-                else -> showCustomThemeColorDialog()
-            }
-        }
-    }
-
-    private fun showCustomThemeColorDialog() {
-        inputDialog(
-            title = getString(R.string.app_settings_custom_color_title),
-            initialValue = AppSettingsPolicy.colorHex(settings.customThemeColor),
-            hint = getString(R.string.app_settings_custom_color_hint),
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS,
-            maxLength = 7,
-            positiveResource = R.string.chat_settings_save,
-            validate = { value ->
-                if (AppSettingsPolicy.parseOpaqueColor(value) == null) {
-                    getString(R.string.app_settings_custom_color_error)
-                } else {
-                    null
-                }
-            },
-        ) { value ->
-            val color = AppSettingsPolicy.parseOpaqueColor(value) ?: return@inputDialog
-            saveSettings(
-                settings.copy(
-                    themeSelection = AppThemeSelection.CUSTOM,
-                    customThemeColor = color,
-                ),
-            )
-        }
     }
 
     private fun showDarkModeDialog() {
+        hostResult = AutoJs6HostSettingsClient.query(this)
         val values = AppDarkMode.entries
         val labels = values.mapIndexed { index, value ->
             getString(value.labelResource()).let { label ->
@@ -305,7 +254,7 @@ class AppSettingsActivity : ConfiguredActivity() {
                 }
             }
         }
-        singleChoiceDialog(
+        appearanceDialog = confirmedChoiceDialog(
             title = getString(R.string.app_settings_dark_mode),
             labels = labels,
             checkedIndex = values.indexOf(settings.darkMode),
@@ -313,6 +262,7 @@ class AppSettingsActivity : ConfiguredActivity() {
     }
 
     private fun showLanguageDialog() {
+        hostResult = AutoJs6HostSettingsClient.query(this)
         val values = AppLanguage.entries
         val labels = values.mapIndexed { index, value ->
             getString(value.labelResource()).let { label ->
@@ -323,7 +273,7 @@ class AppSettingsActivity : ConfiguredActivity() {
                 }
             }
         }
-        singleChoiceDialog(
+        appearanceDialog = confirmedChoiceDialog(
             title = getString(R.string.app_settings_language),
             labels = labels,
             checkedIndex = values.indexOf(settings.language),
@@ -591,6 +541,7 @@ class AppSettingsActivity : ConfiguredActivity() {
         gravity = Gravity.CENTER_VERTICAL
         setTextColor(appPalette.primaryText)
         buttonTintList = controlTintList()
+            buttonIconTintList = android.content.res.ColorStateList.valueOf(appPalette.onAccent)
         minimumHeight = uiDp(Ui.TOUCH_TARGET)
     }
 
@@ -675,7 +626,7 @@ class AppSettingsActivity : ConfiguredActivity() {
                 length,
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
             )
-            setSpan(RelativeSizeSpan(0.82f), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(RelativeSizeSpan(14f / 16f), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             setSpan(TypefaceSpan("sans-serif-light"), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }

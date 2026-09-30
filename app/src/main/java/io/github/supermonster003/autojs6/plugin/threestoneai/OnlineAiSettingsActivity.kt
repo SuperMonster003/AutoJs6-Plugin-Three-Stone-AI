@@ -577,6 +577,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                     isChecked = modelId in selectedVisionModelIds
                     minimumHeight = uiDp(48)
                     buttonTintList = controlTintList()
+            buttonIconTintList = android.content.res.ColorStateList.valueOf(appPalette.onAccent)
                     setTextColor(appPalette.primaryText)
                 }
             }
@@ -711,6 +712,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 isChecked = modelId in initial
                 minimumHeight = uiDp(46)
                 buttonTintList = controlTintList()
+            buttonIconTintList = android.content.res.ColorStateList.valueOf(appPalette.onAccent)
                 setTextColor(appPalette.primaryText)
             }
         }

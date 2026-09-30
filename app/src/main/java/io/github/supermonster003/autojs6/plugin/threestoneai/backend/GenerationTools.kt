@@ -75,8 +75,9 @@ internal object OnlineAiTools {
             val declaration = JsonObject().apply {
                 addProperty("name", tool.name)
                 addProperty("description", tool.description)
+                val schema = OnlineAiRequestSupport.parseSchema(tool.schema, 0L)
                 add(if (protocol == OnlineAiProtocol.ANTHROPIC_MESSAGES) "input_schema" else "parameters",
-                    OnlineAiRequestSupport.parseSchema(tool.schema, 0L))
+                    if (protocol == OnlineAiProtocol.GEMINI_GENERATE_CONTENT) GeminiSchemas.sanitize(schema) else schema)
             }
             add(if (protocol == OnlineAiProtocol.OPENAI_COMPATIBLE) JsonObject().apply {
                 addProperty("type", "function")

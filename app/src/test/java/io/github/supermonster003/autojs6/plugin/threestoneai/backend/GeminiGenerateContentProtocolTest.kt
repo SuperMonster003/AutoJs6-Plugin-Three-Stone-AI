@@ -235,6 +235,37 @@ class GeminiGenerateContentProtocolTest {
         }
     }
 
+    /** Captured on 2026-09-30: the official API answered HTTP 400 for every declaration carrying additionalProperties. */
+    @Test
+    fun requestKeepsOnlyTheGeminiSchemaSubsetInDeclarationsAndResponseSchema() {
+        val closed = """{"type":"object","${'$'}schema":"https://json-schema.org/draft/2020-12/schema","properties":{"query":{"type":"string","minLength":1,"maxLength":128,"const":"x"},"limit":{"type":"integer","minimum":1,"maximum":200,"default":50,"exclusiveMinimum":0},"points":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"object","properties":{"x":{"type":"integer"}},"required":["x"],"additionalProperties":false}},"mode":{"anyOf":[{"type":"string","enum":["a","b"]},{"type":"null","additionalProperties":false}]}},"required":["query"],"additionalProperties":false}"""
+        val turn = request(responseJsonSchema = closed).copy(
+            tools = listOf(GenerationToolDefinition("observe", "Inspect", closed)),
+            maximumToolRounds = 1,
+        )
+        GeminiGenerateContentProtocolAdapter.prepare(
+            profile = profile(),
+            messages = listOf(turn.prompt),
+            turn = turn,
+            credential = "gemini-secret".toByteArray(),
+        ).use { prepared ->
+            val json = prepared.request.bodyJson()
+            val parameters = json.getAsJsonArray("tools")[0].asJsonObject.getAsJsonArray("functionDeclarations")[0].asJsonObject.getAsJsonObject("parameters")
+            val responseSchema = json.getAsJsonObject("generationConfig").getAsJsonObject("responseSchema")
+            for (schema in listOf(parameters, responseSchema)) {
+                assertFalse(schema.toString().contains("additionalProperties"))
+                assertFalse(schema.toString().contains("\$schema") || schema.toString().contains("const") ||
+                    schema.toString().contains("exclusiveMinimum") || schema.toString().contains("uniqueItems"))
+                val properties = schema.getAsJsonObject("properties")
+                assertEquals(listOf("query"), schema.getAsJsonArray("required").map { it.asString })
+                assertEquals(128, properties.getAsJsonObject("query").get("maxLength").asInt)
+                assertEquals(50, properties.getAsJsonObject("limit").get("default").asInt)
+                assertEquals(listOf("x"), properties.getAsJsonObject("points").getAsJsonObject("items").getAsJsonArray("required").map { it.asString })
+                assertEquals("a", properties.getAsJsonObject("mode").getAsJsonArray("anyOf")[0].asJsonObject.getAsJsonArray("enum")[0].asString)
+            }
+        }
+    }
+
     private fun profile(
         baseUrl: String = "https://generativelanguage.googleapis.com/v1beta",
         modelId: String = "gemini-test",

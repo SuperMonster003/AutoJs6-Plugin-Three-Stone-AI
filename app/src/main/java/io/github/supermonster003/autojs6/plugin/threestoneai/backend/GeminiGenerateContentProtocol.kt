@@ -74,7 +74,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
                 generationConfig.addProperty("responseMimeType", "application/json")
                 generationConfig.add(
                     "responseSchema",
-                    OnlineAiRequestSupport.parseSchema(schema, messageBytes),
+                    GeminiSchemas.sanitize(OnlineAiRequestSupport.parseSchema(schema, messageBytes)),
                 )
             }
             if (generationConfig.size() > 0) add("generationConfig", generationConfig)

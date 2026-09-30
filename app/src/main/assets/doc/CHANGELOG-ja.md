@@ -11,6 +11,7 @@
 * `機能` 独立設定を平面グループ, 統一した行と中央の角丸ダイアログに統一しました. 言語, 夜間モード, テーマ色, ランチャーアイコンは確定後に適用され, キャンセルでは保存値を変えません. 色は既定で AutoJs6 に従い, 共通パレット, HEX/RGB 入力と局所プレビューを提供します. 中立な背景色は固定し, コントロールは選択したテーマに従います. ランチャーの既定は自動適応で, 更新時には明示的な選択を保持します.
 * `修正` OpenAI 互換ゲートウェイ経由で Claude や Gemini などのモデルを呼び出すと, パラメータのないツールのネイティブ呼び出しが "{}" ではなく空文字列を arguments としてストリーミングされ, セッションがこれを無効な応答と判定して ONLINE_INVALID_RESPONSE で終了していました (AIGoCode ゲートウェイ上の 3-Stove Agent の Claude Code Ex 最初のツールラウンドと Gemini Ex の 1 ラウンドがこれで失敗). 空白の arguments は空のオブジェクトとして扱い, モデルへ再送するアシスタントメッセージにも正規化した形を使います
 * `修正` ネイティブツールの継続ラウンドは, これまで最初のリクエストの出力トークン上限から前のラウンドの使用分を差し引いていたため, 長いターンは約 10 ラウンドで上限を使い切り ONLINE_INVALID_RESPONSE で終了していました (3-Stove Agent の電卓ケースは Claude Code Ex と Gemini Ex の両方で 9 から 14 回目の呼び出しで失敗). 各継続ラウンドは完全な上限を保持し, 合計は呼び出し側のタスク予算で制限されます. 2026-09-29 の継続タイムアウト再設定の決定と整合します
+* `修正` Gemini GenerateContent プロトコルはツール宣言と responseSchema の JSON Schema をそのまま送信していましたが, 公式 API は additionalProperties など未知のキーワードに対して HTTP 400 ("Unknown name additionalProperties") を返すため, 3-Stove Agent のネイティブツールタスクはすべて最初の呼び出しで ONLINE_REQUEST_REJECTED になっていました. Gemini が対応するサブセット (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default など) のみを送信し, 呼び出し側は引き続き完全なスキーマで引数と応答を検証します
 * `改善` アプリ情報のアイコンの角丸枠を保ち, 透明な内側に周囲と同じページ背景を表示します. ランチャーの選択肢を先頭から表示し, 説明を小さくしました.
 
 # v1.2.1

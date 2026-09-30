@@ -265,6 +265,8 @@ internal class MarkdownMessageView(
         text = value
         setTextSize(TypedValue.COMPLEX_UNIT_SP, messageTextSizeSp)
         setTextColor(palette.primaryText)
+        setLinkTextColor(palette.accent)
+        highlightColor = AppColorPolicy.withAlpha(palette.accent, 0x44)
         setLineSpacing(0f, 1.12f)
         setTextIsSelectable(messageLongClick == null)
         linksClickable = true

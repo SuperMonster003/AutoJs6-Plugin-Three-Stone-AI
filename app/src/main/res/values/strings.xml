@@ -276,13 +276,13 @@
     <string name="import_stage_validating">Validating source</string>
     <string name="import_succeeded">Model imported</string>
     <string name="launcher_icon_applied_note">The launcher may take a few seconds to refresh. Some home-screen shortcuts may need to be added again.</string>
-    <string name="launcher_icon_auto">Adaptive automatic</string>
+    <string name="launcher_icon_auto">Adaptive icon (automatic)</string>
     <string name="launcher_icon_auto_note">Tries to follow the system theme. Some launchers cache icons or use only one color scheme.</string>
-    <string name="launcher_icon_dark">Adaptive dark</string>
+    <string name="launcher_icon_dark">Adaptive icon (dark)</string>
     <string name="launcher_icon_failed">Unable to change the launcher icon. Please try again.</string>
-    <string name="launcher_icon_light">Adaptive light</string>
+    <string name="launcher_icon_light">Adaptive icon (light)</string>
     <string name="launcher_icon_title">Launcher icon</string>
-    <string name="launcher_icon_transparent">Transparent background</string>
+    <string name="launcher_icon_transparent">Transparent background icon</string>
     <string name="launcher_icon_transparent_note">Some launchers add their own background or mask, so transparency may not be preserved.</string>
     <string name="litert_capability_audio">Audio</string>
     <string name="litert_capability_image">Image</string>
@@ -451,4 +451,9 @@
     <string name="release_history_load_failed">Unable to load local version history</string>
     <string name="release_history_title">Version history</string>
     <string name="screen_description">Choose a local LiteRT-LM model. The file is copied into private app storage and is never uploaded</string>
+    <string name="theme_picker_custom">Custom color</string>
+    <string name="theme_picker_input">HEX / RGB</string>
+    <string name="theme_picker_invalid">Enter #RRGGBB, RRGGBB or rgb(r, g, b). RGB values must be 0..255.</string>
+    <string name="theme_picker_presets">Preset colors</string>
+    <string name="theme_picker_preview">Preview</string>
 </resources>

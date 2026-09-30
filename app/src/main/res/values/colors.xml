@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Ink & Stone palette: warm neutral foundation with a single lapis accent. -->
-    <color name="window_background">#FAF9F7</color>
+    <color name="window_background">#F3F4F5</color>
     <color name="surface">#FFFFFF</color>
-    <color name="surface_variant">#F1EFEB</color>
-    <color name="text_color_primary">#1B1A18</color>
-    <color name="text_color_secondary">#6E6A64</color>
-    <color name="divider">#ECE9E4</color>
-    <color name="outline">#D8D4CD</color>
+    <color name="surface_variant">#EBEDEF</color>
+    <color name="text_color_primary">#1D1B20</color>
+    <color name="text_color_secondary">#5F6368</color>
+    <color name="divider">#E0E3E7</color>
+    <color name="outline">#C5C8CE</color>
     <color name="brand_primary">#3A5CC8</color>
     <color name="brand_on_primary">#FFFFFF</color>
 
-    <color name="chat_user_surface">#E4EAF9</color>
-    <color name="chat_assistant_surface">#F2F0EC</color>
-    <color name="chat_notice_surface">#EEF1F9</color>
+    <color name="chat_user_surface">#E6E8EB</color>
+    <color name="chat_assistant_surface">#FFFFFF</color>
+    <color name="chat_notice_surface">#F3F4F5</color>
     <color name="chat_input_surface">#FFFFFF</color>
-    <color name="chat_border">#E1DED8</color>
+    <color name="chat_border">#C5C8CE</color>
     <color name="chat_markdown_code_surface">#14000000</color>
     <color name="chat_markdown_quote">#8A867E</color>
     <color name="chat_markdown_link">#3A5CC8</color>

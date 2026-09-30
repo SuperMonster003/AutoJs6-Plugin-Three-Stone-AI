@@ -51,7 +51,22 @@ internal data class AutoJs6HostSettingsResult(
 internal object AutoJs6HostSettingsClient {
     private val settingsUri = Uri.parse(Contract.CONTENT_URI)
 
-    fun query(context: Context): AutoJs6HostSettingsResult {
+    @Volatile private var cached = AutoJs6HostSettingsResult(AutoJs6HostAvailability.CONTRACT_UNAVAILABLE)
+    private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** Main-thread callers never perform Provider IO while attaching/inflating a screen. */
+    fun query(context: Context): AutoJs6HostSettingsResult =
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) cached else runCatching { read(context.applicationContext) }.getOrDefault(AutoJs6HostSettingsResult(AutoJs6HostAvailability.CONTRACT_UNAVAILABLE))
+
+    fun refresh(context: Context, result: (AutoJs6HostSettingsResult) -> Unit) {
+        val app = context.applicationContext
+        worker.execute { val next = runCatching { read(app) }.getOrDefault(AutoJs6HostSettingsResult(AutoJs6HostAvailability.CONTRACT_UNAVAILABLE)); main.post { result(next) } }
+    }
+
+    fun publish(result: AutoJs6HostSettingsResult) { cached = result }
+
+    private fun read(context: Context): AutoJs6HostSettingsResult {
         val installed = inspectHostPackage(context)
         if (installed != AutoJs6HostAvailability.AVAILABLE) {
             return AutoJs6HostSettingsResult(installed)
@@ -62,6 +77,12 @@ internal object AutoJs6HostSettingsClient {
             AutoJs6HostAvailability.CONTRACT_UNAVAILABLE,
         )
         val snapshot = runCatching {
+            require(!bundle.hasFileDescriptors())
+            @Suppress("DEPRECATION")
+            val typesValid = bundle.get(Contract.KEY_DARK_MODE_ACTIVE) is Boolean && bundle.get(Contract.KEY_THEME_COLOR_PRIMARY) is Int && bundle.get(Contract.KEY_THEME_COLOR_ACCENT) is Int
+            require(typesValid)
+            val resolvedTag = requireNotNull(bundle.getString(Contract.KEY_RESOLVED_LANGUAGE_TAG))
+            require(resolvedTag.length in 2..80 && resolvedTag.matches(Regex("[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*")) && java.util.Locale.forLanguageTag(resolvedTag).language.isNotBlank())
             require(
                 bundle.getInt(Contract.KEY_PROTOCOL_VERSION, 0) == Contract.PROTOCOL_VERSION,
             )

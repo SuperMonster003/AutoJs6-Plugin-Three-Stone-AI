@@ -19,6 +19,7 @@ import android.widget.CompoundButton
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Switch
+import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
@@ -66,11 +67,7 @@ internal object AppConfiguration {
         val systemDark = configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
             Configuration.UI_MODE_NIGHT_YES
         val resolvedDark = if (settings.darkMode == AppDarkMode.FOLLOW_AUTOJS6 && host != null) {
-            when (host.darkModePolicy) {
-                AutoJs6DarkModePolicy.FOLLOW_SYSTEM -> systemDark
-                AutoJs6DarkModePolicy.LIGHT -> false
-                AutoJs6DarkModePolicy.DARK -> true
-            }
+            host.darkModeActive
         } else {
             AppSettingsPolicy.resolveDarkMode(settings.darkMode, systemDark)
         }
@@ -246,7 +243,7 @@ internal object AppColorPolicy {
         return candidate
     }
 
-    private fun blend(first: Int, second: Int, ratio: Double): Int {
+    internal fun blend(first: Int, second: Int, ratio: Double): Int {
         fun channel(shift: Int): Int {
             val start = first shr shift and 0xFF
             val end = second shr shift and 0xFF
@@ -265,6 +262,7 @@ internal data class AppThemePalette(
     val primary: Int,
     val onPrimary: Int,
     val accent: Int,
+    val onAccent: Int,
     val windowBackground: Int,
     val surface: Int,
     val surfaceVariant: Int,
@@ -287,80 +285,32 @@ internal data class AppThemePalette(
                 settings,
                 resolved.hostResult?.snapshot?.themeColorPrimary,
             )
-            val seedPrimary = themeSeed.let { normalized ->
-                // The brand color adapts to the active mode; arbitrary host or custom
-                // colors retain their brightness and gain only a small chroma floor.
-                if (normalized == AppSettingsPolicy.THREE_STONE_AI_THEME_COLOR) {
-                    context.getColor(R.color.brand_primary)
-                } else {
-                    normalized
-                }
-            }
+            val dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+            val roles = ThemeAccentRoles.fromSeed(themeSeed, dark)
+            val accentSeed = if (settings.themeSelection == AppThemeSelection.FOLLOW_AUTOJS6)
+                resolved.hostResult?.snapshot?.themeColorAccent ?: themeSeed else themeSeed
+            val accentRoles = ThemeAccentRoles.fromSeed(accentSeed, dark)
+            val primary = roles.primary
             val background = context.getColor(R.color.window_background)
-            val isDark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
-                Configuration.UI_MODE_NIGHT_YES
-            val curated = AppSettingsPolicy.isCuratedThemeColor(themeSeed)
-            val primary = if (curated) seedPrimary else AppColorPolicy.dynamicPrimary(seedPrimary)
-            val accent = if (curated) {
-                AppColorPolicy.readableAccent(primary, background)
-            } else {
-                AppColorPolicy.dynamicAccent(primary, background)
-            }
-            val primaryText = context.getColor(R.color.text_color_primary)
-            val secondaryText = context.getColor(R.color.text_color_secondary)
             val surface = context.getColor(R.color.surface)
             val surfaceVariant = context.getColor(R.color.surface_variant)
-            val outline = context.getColor(R.color.outline)
-            val divider = context.getColor(R.color.divider)
-            val userSurface = context.getColor(R.color.chat_user_surface)
-            val assistantSurface = context.getColor(R.color.chat_assistant_surface)
-            val noticeSurface = context.getColor(R.color.chat_notice_surface)
-            val inputSurface = context.getColor(R.color.chat_input_surface)
-            val chatBorder = context.getColor(R.color.chat_border)
+            var accent = AppColorPolicy.readableAccent(accentRoles.primary, background)
+            repeat(8) {
+                for (reference in listOf(background, surface, surfaceVariant,
+                    AppColorPolicy.blend(background, accent, 0x1C / 255.0),
+                    AppColorPolicy.blend(surface, accent, 0x1C / 255.0))) {
+                    accent = AppColorPolicy.readableAccent(accent, reference)
+                }
+            }
             return AppThemePalette(
-                primary = primary,
-                onPrimary = AppColorPolicy.onFilledColor(primary),
-                accent = accent,
-                windowBackground = if (curated) background else AppColorPolicy.harmonizeSurface(
-                    background, accent, primaryText, if (isDark) 0.035 else 0.02,
-                ),
-                surface = if (curated) surface else AppColorPolicy.harmonizeSurface(
-                    surface, accent, primaryText, if (isDark) 0.055 else 0.025,
-                ),
-                surfaceVariant = if (curated) surfaceVariant else AppColorPolicy.harmonizeSurface(
-                    surfaceVariant, accent, primaryText, if (isDark) 0.11 else 0.07,
-                ),
-                outline = if (curated) outline else AppColorPolicy.harmonizeSurface(
-                    outline, accent, primaryText, if (isDark) 0.18 else 0.13,
-                ),
-                primaryText = primaryText,
-                secondaryText = secondaryText,
-                divider = if (curated) divider else AppColorPolicy.harmonizeSurface(
-                    divider, accent, primaryText, if (isDark) 0.10 else 0.06,
-                ),
-                userSurface = AppColorPolicy.retoneSurface(
-                    userSurface,
-                    primary,
-                    primaryText,
-                    themeSaturationScale = if (isDark) 0.72f else 0.68f,
-                ),
-                assistantSurface = if (curated) assistantSurface else AppColorPolicy.harmonizeSurface(
-                    assistantSurface, accent, primaryText, if (isDark) 0.09 else 0.065,
-                ),
-                noticeSurface = if (curated) {
-                    AppColorPolicy.retoneSurface(noticeSurface, primary, secondaryText)
-                } else {
-                    AppColorPolicy.harmonizeSurface(
-                        noticeSurface, accent, secondaryText, if (isDark) 0.14 else 0.10,
-                    )
-                },
-                inputSurface = if (curated) inputSurface else AppColorPolicy.harmonizeSurface(
-                    inputSurface, accent, primaryText, if (isDark) 0.05 else 0.025,
-                ),
-                chatBorder = if (curated) chatBorder else AppColorPolicy.harmonizeSurface(
-                    chatBorder, accent, primaryText, if (isDark) 0.20 else 0.14,
-                ),
-                isDark = isDark,
+                primary = primary, onPrimary = roles.onPrimary, accent = accent, onAccent = accentRoles.onPrimary,
+                windowBackground = background, surface = surface, surfaceVariant = surfaceVariant,
+                outline = context.getColor(R.color.outline), primaryText = context.getColor(R.color.text_color_primary),
+                secondaryText = context.getColor(R.color.text_color_secondary), divider = context.getColor(R.color.divider),
+                userSurface = context.getColor(R.color.chat_user_surface), assistantSurface = context.getColor(R.color.chat_assistant_surface),
+                noticeSurface = context.getColor(R.color.chat_notice_surface), inputSurface = context.getColor(R.color.chat_input_surface),
+                chatBorder = context.getColor(R.color.chat_border),
+                isDark = dark,
             )
         }
     }
@@ -373,8 +323,15 @@ abstract class ConfiguredActivity : AppCompatActivity() {
     private var appliedSettingsRevision = Long.MIN_VALUE
     private var appliedHostAppearanceSignature: Int? = null
     private var recreationRequested = false
+    private lateinit var systemContext: Context
+    private var appearanceGeneration = 0
+    private var interacted = false
+    protected open fun hasUnconfirmedDialog(): Boolean = false
+
+    override fun onUserInteraction() { interacted = true; super.onUserInteraction() }
 
     override fun attachBaseContext(newBase: Context) {
+        systemContext = newBase
         val configuredBase = AppConfiguration.wrap(newBase)
         val configuredNightMode = configuredBase.resources.configuration.uiMode and
             Configuration.UI_MODE_NIGHT_MASK
@@ -388,6 +345,7 @@ abstract class ConfiguredActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        LauncherIcons.normalizeAsync(this)
         appliedSettingsRevision = ApplicationSettingsStore(this).revision()
         appliedHostAppearanceSignature = currentHostAppearanceSignature()
         appPalette = AppThemePalette.resolve(this)
@@ -396,25 +354,35 @@ abstract class ConfiguredActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (
-            !recreationRequested &&
-            (
-                ApplicationSettingsStore(this).revision() != appliedSettingsRevision ||
-                    currentHostAppearanceSignature() != appliedHostAppearanceSignature
-                )
-        ) {
+        interacted = false
+        if (!recreationRequested && !hasUnconfirmedDialog() &&
+            (ApplicationSettingsStore(this).revision() != appliedSettingsRevision || currentHostAppearanceSignature() != appliedHostAppearanceSignature)) {
             recreationRequested = true
             recreate()
+            return
+        }
+        val expected = ++appearanceGeneration
+        AutoJs6HostSettingsClient.refresh(applicationContext) { next ->
+            if (expected != appearanceGeneration || isFinishing || isDestroyed) return@refresh
+            AutoJs6HostSettingsClient.publish(next)
+            if (!interacted && !hasUnconfirmedDialog() && !recreationRequested && currentHostAppearanceSignature() != appliedHostAppearanceSignature) {
+                recreationRequested = true
+                recreate()
+            }
         }
     }
 
-    private fun currentHostAppearanceSignature(): Int? {
-        val settings = ApplicationSettingsStore(this).load()
-        val followsHost = settings.themeSelection == AppThemeSelection.FOLLOW_AUTOJS6 ||
-            settings.darkMode == AppDarkMode.FOLLOW_AUTOJS6 ||
-            settings.language == AppLanguage.FOLLOW_AUTOJS6
-        if (!followsHost) return null
-        return AutoJs6HostSettingsClient.query(this).hashCode()
+    override fun onPause() { appearanceGeneration++; super.onPause() }
+
+    private fun currentHostAppearanceSignature(): Int {
+        val resolved = ApplicationSettingsResolver.resolve(systemContext)
+        val settings = resolved.settings
+        val snapshot = resolved.hostResult?.snapshot
+        val configuration = AppConfiguration.wrap(systemContext).resources.configuration
+        val primary = AppSettingsPolicy.resolveThemeColor(settings, snapshot?.themeColorPrimary)
+        val accent = if (settings.themeSelection == AppThemeSelection.FOLLOW_AUTOJS6) snapshot?.themeColorAccent ?: primary else primary
+        return listOf(configuration.locales.toLanguageTags(), configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK,
+            primary, accent, resolved.hostResult?.selectable).hashCode()
     }
 
     internal fun createAppToolbar(
@@ -499,6 +467,10 @@ abstract class ConfiguredActivity : AppCompatActivity() {
                 root.thumbTintList = switchThumbTintList()
                 root.trackTintList = switchTrackTintList()
             }
+            is com.google.android.material.checkbox.MaterialCheckBox -> {
+                root.buttonTintList = controlTintList()
+                root.buttonIconTintList = ColorStateList.valueOf(appPalette.onAccent)
+            }
             is CompoundButton -> root.buttonTintList = controlTintList()
             is CheckedTextView -> root.checkMarkTintList = controlTintList()
             is EditText -> tintEditText(root)
@@ -519,6 +491,15 @@ abstract class ConfiguredActivity : AppCompatActivity() {
                 root.setTextColor(appPalette.onPrimary)
             }
         }
+        if (root is TextView) {
+            root.setLinkTextColor(appPalette.accent)
+            root.highlightColor = AppColorPolicy.withAlpha(appPalette.accent, 0x55)
+            if (Build.VERSION.SDK_INT >= 29) {
+                root.textSelectHandle?.tinted(appPalette.accent)?.let(root::setTextSelectHandle)
+                root.textSelectHandleLeft?.tinted(appPalette.accent)?.let(root::setTextSelectHandleLeft)
+                root.textSelectHandleRight?.tinted(appPalette.accent)?.let(root::setTextSelectHandleRight)
+            }
+        }
         if (root is ViewGroup) {
             for (index in 0 until root.childCount) applyThemeToControls(root.getChildAt(index))
         }
@@ -531,7 +512,12 @@ abstract class ConfiguredActivity : AppCompatActivity() {
             AlertDialog.BUTTON_NEGATIVE,
             AlertDialog.BUTTON_NEUTRAL,
         ).forEach { button ->
-            dialog.getButton(button)?.setTextColor(appPalette.accent)
+            dialog.getButton(button)?.apply {
+                isAllCaps = false
+                setTextColor(ColorStateList(arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()),
+                    intArrayOf(AppColorPolicy.withAlpha(appPalette.secondaryText, 0x66), appPalette.accent)))
+                if (this is MaterialButton) rippleColor = ColorStateList.valueOf(AppColorPolicy.withAlpha(appPalette.accent, 0x2E))
+            }
         }
     }
 
@@ -572,7 +558,7 @@ abstract class ConfiguredActivity : AppCompatActivity() {
         ),
         intArrayOf(
             AppColorPolicy.withAlpha(appPalette.secondaryText, 0x55),
-            appPalette.accent,
+            appPalette.onPrimary,
             appPalette.secondaryText,
         ),
     )
@@ -585,8 +571,8 @@ abstract class ConfiguredActivity : AppCompatActivity() {
         ),
         intArrayOf(
             AppColorPolicy.withAlpha(appPalette.secondaryText, 0x24),
-            AppColorPolicy.withAlpha(appPalette.accent, 0x66),
-            AppColorPolicy.withAlpha(appPalette.secondaryText, 0x4D),
+            appPalette.primary,
+            appPalette.surfaceVariant,
         ),
     )
 
@@ -597,7 +583,7 @@ abstract class ConfiguredActivity : AppCompatActivity() {
 
     private fun applyWindowAppearance() {
         window.statusBarColor = appPalette.windowBackground
-        window.navigationBarColor = appPalette.windowBackground
+        window.navigationBarColor = if (Build.VERSION.SDK_INT >= 26) appPalette.windowBackground else 0xff121212.toInt()
         val lightStatusBackground = AppColorPolicy.luminance(appPalette.windowBackground) >= 0.179
         val lightNavigationBackground = AppColorPolicy.luminance(appPalette.windowBackground) >= 0.179
         val decorView = window.decorView

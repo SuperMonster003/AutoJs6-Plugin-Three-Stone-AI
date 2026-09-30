@@ -71,7 +71,7 @@ Le fichier README.md actuel prend en charge les langues suivantes:
 - Entrée JPEG/PNG et résultats visuels des outils via AI Provider 2.1 négocié, avec réglage par modèle.
 - Actualiser les modèles prédéfinis en ligne depuis le catalogue public du projet sur GitHub. La mise à jour automatique est activée par défaut et vérifie une fois toutes les 24 heures à l'ouverture des paramètres IA en ligne; un interrupteur et une actualisation manuelle sont disponibles. Elle respecte le réglage des réseaux facturés, conserve la liste en cache ou intégrée hors ligne ou en cas d'échec, et laisse les profils enregistrés et les ID personnalisés inchangés.
 - Regrouper les modèles prédéfinis par fournisseur et élargir le choix OpenRouter avec Qwen, Kimi, GLM, Grok, Meta et MiniMax, en conservant les ID exacts.
-- L'icône du lanceur propose les modes adaptatif clair, adaptatif sombre (par défaut), adaptatif automatique et fond transparent. Le mode automatique tente de suivre le thème système, mais le lanceur peut garder une palette en cache; il peut ajouter un fond ou un masque aux icônes transparentes. Le changement conserve l'application en cours et peut prendre quelques secondes.
+- Unifier les réglages avec des groupes plats, des lignes cohérentes et des dialogues arrondis centrés. La langue, le mode nuit, la couleur et l'icône ne changent qu'après validation; Annuler conserve les valeurs enregistrées. La couleur suit AutoJs6 par défaut et propose une palette commune, une saisie HEX/RGB et un aperçu local. Les fonds neutres restent stables et les contrôles suivent le thème. L'icône utilise le mode adaptatif automatique par défaut, tout en préservant les choix explicites lors des mises à jour.
 
 ******
 
@@ -179,9 +179,9 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 # v1.3.0
 
-###### 2026/09/29
+###### 2026/09/30
 
-* `Fonctionnalité` L'icône du lanceur propose les modes adaptatif clair, adaptatif sombre (par défaut), adaptatif automatique et fond transparent. Le mode automatique tente de suivre le thème système, mais le lanceur peut garder une palette en cache; il peut ajouter un fond ou un masque aux icônes transparentes. Le changement conserve l'application en cours et peut prendre quelques secondes.
+* `Fonctionnalité` Unifier les réglages avec des groupes plats, des lignes cohérentes et des dialogues arrondis centrés. La langue, le mode nuit, la couleur et l'icône ne changent qu'après validation; Annuler conserve les valeurs enregistrées. La couleur suit AutoJs6 par défaut et propose une palette commune, une saisie HEX/RGB et un aperçu local. Les fonds neutres restent stables et les contrôles suivent le thème. L'icône utilise le mode adaptatif automatique par défaut, tout en préservant les choix explicites lors des mises à jour.
 * `Amélioration` Conserver le cadre arrondi de l'icône À propos avec un intérieur transparent laissant voir le fond de la page. Afficher les choix du lanceur depuis le haut avec des notes plus petites.
 
 # v1.2.1

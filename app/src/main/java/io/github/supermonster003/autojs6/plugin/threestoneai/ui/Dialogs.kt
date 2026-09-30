@@ -141,42 +141,54 @@ internal fun ConfiguredActivity.inputDialog(
 }
 
 /** Choice-list adapter that keeps radio marks and text legible under the runtime palette. */
-internal class PaletteChoiceAdapter(
-    private val activity: ConfiguredActivity,
-    labels: List<CharSequence>,
-    private val enabledAt: (Int) -> Boolean = { true },
-) : ArrayAdapter<CharSequence>(activity, android.R.layout.simple_list_item_single_choice, labels) {
+private class PaletteChoiceItem(context: android.content.Context) : LinearLayout(context), android.widget.Checkable {
+    val indicator = com.google.android.material.radiobutton.MaterialRadioButton(context).apply {
+        isClickable = false; isFocusable = false
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        minimumWidth = 0; minimumHeight = 0
+    }
+    val label = TextView(context).apply {
+        textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        textSize = 16f
+        isSingleLine = false; maxLines = Int.MAX_VALUE; ellipsize = null
+        setLineSpacing(0f, 1.08f)
+    }
+    init {
+        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        addView(indicator)
+        addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+    }
+    override fun isChecked() = indicator.isChecked
+    override fun setChecked(value: Boolean) { indicator.isChecked = value }
+    override fun toggle() { isChecked = !isChecked }
+    override fun onInitializeAccessibilityNodeInfo(info: android.view.accessibility.AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+        info.className = android.widget.RadioButton::class.java.name
+        info.isCheckable = true; info.isChecked = isChecked
+    }
+}
 
-    override fun areAllItemsEnabled(): Boolean = false
-
-    override fun isEnabled(position: Int): Boolean = enabledAt(position)
-
+internal class PaletteChoiceAdapter(private val activity: ConfiguredActivity, labels: List<CharSequence>,
+                                    private val enabledAt: (Int) -> Boolean = { true }) :
+    ArrayAdapter<CharSequence>(activity, android.R.layout.simple_list_item_single_choice, labels) {
+    override fun areAllItemsEnabled() = false
+    override fun isEnabled(position: Int) = enabledAt(position)
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-        val view = super.getView(position, convertView, parent)
-        (view as? CheckedTextView)?.apply {
-            // The framework single-choice row has a fixed one-line height. Release that
-            // constraint so labels with a lightweight subtitle are never clipped.
-            layoutParams = (layoutParams ?: android.widget.AbsListView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )).apply { height = ViewGroup.LayoutParams.WRAP_CONTENT }
-            minHeight = activity.uiDp(52)
-            isSingleLine = false
-            maxLines = Int.MAX_VALUE
-            ellipsize = null
-            textSize = 15f
-            setLineSpacing(0f, 1.08f)
-            setPaddingRelative(
-                activity.uiDp(Ui.SPACE_XXL),
-                activity.uiDp(Ui.SPACE_MD),
-                activity.uiDp(Ui.SPACE_XXL),
-                activity.uiDp(Ui.SPACE_MD),
-            )
-            setTextColor(activity.appPalette.primaryText)
-            checkMarkTintList = activity.controlTintList()
-            alpha = if (isEnabled(position)) 1f else Ui.DISABLED_ALPHA
-        }
-        return view
+        val item = (convertView as? PaletteChoiceItem) ?: PaletteChoiceItem(activity)
+        item.layoutParams = android.widget.AbsListView.LayoutParams(-1, -2)
+        item.minimumHeight = activity.uiDp(if (getItem(position)?.contains('\n') == true) 72 else 56)
+        item.setPaddingRelative(activity.uiDp(24), activity.uiDp(12), activity.uiDp(24), activity.uiDp(12))
+        item.indicator.layoutParams = LinearLayout.LayoutParams(activity.uiDp(32), activity.uiDp(32)).apply { marginEnd = activity.uiDp(8) }
+        item.indicator.buttonTintList = activity.controlTintList()
+        item.label.text = getItem(position); item.label.setTextColor(activity.appPalette.primaryText)
+        item.contentDescription = item.label.text
+        item.isEnabled = isEnabled(position); item.indicator.isEnabled = item.isEnabled
+        item.alpha = if (item.isEnabled) 1f else Ui.DISABLED_ALPHA
+        item.isChecked = (parent as? android.widget.ListView)?.isItemChecked(position) == true
+        item.applyThemedSelectableBackground()
+        return item
     }
 }
 
@@ -335,4 +347,29 @@ internal fun ConfiguredActivity.formTextField(
     // The box drawable becomes the field's background; a leftover tint would erase it.
     editText.backgroundTintList = null
     return layout to editText
+}
+
+/** Appearance choice draft. Only the positive action calls [onConfirm]; all dismissal paths discard it. */
+internal fun ConfiguredActivity.confirmedChoiceDialog(title: CharSequence, labels: List<CharSequence>, checkedIndex: Int,
+                                          onConfirm: (Int) -> Unit): AlertDialog {
+    var draft = checkedIndex
+    return materialDialog().setTitle(title)
+        .setSingleChoiceItems(PaletteChoiceAdapter(this, labels), checkedIndex) { _, index -> draft = index }
+        .setNegativeButton(android.R.string.cancel, null)
+        .setPositiveButton(android.R.string.ok) { _, _ -> onConfirm(draft) }
+        .show().also {
+            tintDialogButtons(it)
+            val width = minOf(uiDp(560), this.resources.displayMetrics.widthPixels - uiDp(48))
+            it.window?.setBackgroundDrawable(roundedFill(appPalette.surface, 24))
+            it.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+            it.window?.decorView?.post {
+                val maximum = (this.resources.displayMetrics.heightPixels * 0.85f).toInt()
+                if ((it.window?.decorView?.height ?: 0) > maximum) it.window?.setLayout(width, maximum)
+            }
+            it.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)?.apply {
+                textSize = 20f
+                setTextColor(appPalette.primaryText)
+            }
+            it.listView.post { it.listView.setSelection(0) }
+        }
 }

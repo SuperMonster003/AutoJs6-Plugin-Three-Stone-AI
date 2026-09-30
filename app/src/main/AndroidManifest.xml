@@ -56,14 +56,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".launcher.AdaptiveDarkIconAlias" android:enabled="true" android:exported="true"
+        <activity-alias android:name=".launcher.AdaptiveDarkIconAlias" android:enabled="false" android:exported="true"
             android:icon="@mipmap/ic_launcher_system" android:targetActivity=".ChatActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".launcher.AdaptiveAutoIconAlias" android:enabled="false" android:exported="true"
+        <activity-alias android:name=".launcher.AdaptiveAutoIconAlias" android:enabled="true" android:exported="true"
             android:icon="@mipmap/ic_launcher_system_auto" android:targetActivity=".ChatActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -167,6 +167,9 @@
                 android:value="5276" />
         </service>
 
+        <receiver android:name=".LauncherIconUpdateReceiver" android:exported="false">
+            <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
+        </receiver>
     </application>
 
 </manifest>

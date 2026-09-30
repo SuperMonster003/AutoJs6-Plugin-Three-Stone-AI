@@ -252,6 +252,7 @@ class ConversationHistoryActivity : ConfiguredActivity() {
                         isChecked = checked
                         isClickable = false
                         buttonTintList = controlTintList()
+            buttonIconTintList = android.content.res.ColorStateList.valueOf(appPalette.onAccent)
                         contentDescription = conversation.title
                     },
                     LinearLayout.LayoutParams(

@@ -115,7 +115,12 @@ internal class OnlineAiToolCollector(
                 add("tool_calls", JsonArray().apply {
                     openAiCalls.values.forEach { saved ->
                         val function = saved.getAsJsonObject("function")
-                        calls += GenerationToolCall(required(saved, "id"), required(function, "name"), required(function, "arguments"))
+                        // Gateways that front Claude or Gemini through the chat completions API stream "" (or nothing)
+                        // as the arguments of a tool without parameters, where OpenAI itself sends "{}"; both mean an
+                        // empty object, and the replayed assistant message carries the normalized form.
+                        val arguments = OnlineAiResponseSupport.stringOrNull(function, "arguments")?.takeUnless { it.isBlank() } ?: "{}"
+                        function.addProperty("arguments", arguments)
+                        calls += GenerationToolCall(required(saved, "id"), required(function, "name"), arguments)
                         saved.addProperty("type", "function")
                         add(saved)
                     }

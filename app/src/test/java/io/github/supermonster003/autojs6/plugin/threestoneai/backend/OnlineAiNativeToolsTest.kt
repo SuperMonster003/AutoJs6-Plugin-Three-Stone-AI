@@ -17,6 +17,34 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class OnlineAiNativeToolsTest {
+    /** Captured on 2026-09-30 from the AIGoCode gateway fronting claude-opus-5-5: reasoning deltas, then a call with "" arguments. */
+    @Test
+    fun openAiStreamTreatsBlankArgumentsOfAParameterlessCallAsAnEmptyObject() {
+        val harness = Harness(OnlineAiProvider.OPENAI_COMPATIBLE, stream(
+            """{"choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}""",
+            """{"choices":[{"index":0,"delta":{"reasoning_content":"I will inspect first."},"finish_reason":null}]}""",
+            """{"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"toolu_1","type":"function","function":{"name":"observe","arguments":""}}]},"finish_reason":null}]}""",
+            """{"choices":[{"index":0,"delta":{"content":""},"finish_reason":"tool_calls"}]}""",
+            """{"choices":[],"usage":{"prompt_tokens":9,"completion_tokens":4,"total_tokens":13}}""", "[DONE]",
+        ), json(openAiFinal))
+        harness.start()
+        assertNull(harness.listener.failure)
+        assertEquals(listOf("toolu_1"), harness.listener.calls.map { it.callId })
+        assertEquals("{}", harness.listener.calls.single().argumentsJson)
+        harness.resume()
+        assertTrue(harness.listener.completed)
+        val replayed = harness.requests[1].getAsJsonArray("messages")[1].asJsonObject.getAsJsonArray("tool_calls")[0].asJsonObject
+        assertEquals("{}", replayed.getAsJsonObject("function").get("arguments").asString)
+    }
+
+    @Test
+    fun openAiJsonResponseTreatsBlankArgumentsAsAnEmptyObject() {
+        val harness = Harness(OnlineAiProvider.OPENAI_COMPATIBLE, json(openAiCall.replace("\"arguments\":\"{}\"", "\"arguments\":\"\"")), json(openAiFinal))
+        harness.start()
+        assertNull(harness.listener.failure)
+        assertEquals("{}", harness.listener.calls.single().argumentsJson)
+    }
+
     @Test
     fun openAiStreamAccumulatesInterleavedCallsAndResumesInOriginalOrder() {
         val harness = Harness(OnlineAiProvider.OPENAI_COMPATIBLE, stream(

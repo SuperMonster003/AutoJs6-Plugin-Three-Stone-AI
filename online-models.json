@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": 4,
-  "updatedAtEpochMillis": 1790761131611,
+  "revision": 5,
+  "updatedAtEpochMillis": 1790849078376,
   "providers": {
     "openai": {
       "defaultModelId": "gpt-5.6-sol",
@@ -38,7 +38,6 @@
         "claude-sonnet-5-5",
         "claude-sonnet-5",
         "claude-sonnet-4-6",
-        "claude-sonnet-4-5-20250929",
         "claude-opus-5-5",
         "claude-opus-5",
         "claude-opus-4-8",

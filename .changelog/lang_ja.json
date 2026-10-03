@@ -16,7 +16,8 @@
         "Gemini GenerateContent プロトコルはツール宣言と responseSchema の JSON Schema をそのまま送信していましたが, 公式 API は additionalProperties など未知のキーワードに対して HTTP 400 (\"Unknown name additionalProperties\") を返すため, 3-Stove Agent のネイティブツールタスクはすべて最初の呼び出しで ONLINE_REQUEST_REJECTED になっていました. Gemini が対応するサブセット (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default など) のみを送信し, 呼び出し側は引き続き完全なスキーマで引数と応答を検証します"
       ],
       "improvement": [
-        "アプリ情報のアイコンの角丸枠を保ち, 透明な内側に周囲と同じページ背景を表示します. ランチャーの選択肢を先頭から表示し, 説明を小さくしました."
+        "アプリ情報のアイコンの角丸枠を保ち, 透明な内側に周囲と同じページ背景を表示します. ランチャーの選択肢を先頭から表示し, 説明を小さくしました.",
+        "ランチャーとプラグインセンターのアイコンの見た目の大きさを統一し, 透明な背景と白黒または無彩色のグレースケールを使用"
       ]
     },
     "v1.2.1": {

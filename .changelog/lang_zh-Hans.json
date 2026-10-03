@@ -16,7 +16,8 @@
         "Gemini GenerateContent 协议把工具声明与 responseSchema 中的 JSON Schema 原样发送, 官方接口对 additionalProperties 等它不认识的关键字直接返回 HTTP 400 (\"Unknown name additionalProperties\"), 3-Stove Agent 的每个原生工具任务都在第一次调用时以 ONLINE_REQUEST_REJECTED 失败; 现在只保留 Gemini 支持的子集 (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default 等), 调用方仍按完整 Schema 校验参数与回复"
       ],
       "improvement": [
-        "关于页面保留图标圆角描边容器, 透明内部透出与容器外侧一致的页面底色; 启动器图标选项从顶部展示并采用较小的说明文字."
+        "关于页面保留图标圆角描边容器, 透明内部透出与容器外侧一致的页面底色; 启动器图标选项从顶部展示并采用较小的说明文字.",
+        "启动器与插件中心图标按统一视觉尺寸标准调整, 插件中心采用透明背景和黑白或中性灰阶图案"
       ]
     },
     "v1.2.1": {

@@ -16,7 +16,8 @@
         "Le protocole Gemini GenerateContent envoyait les déclarations d'outils et le responseSchema avec leur JSON Schema intact, et l'API officielle répond HTTP 400 (\"Unknown name additionalProperties\") aux mots-clés qu'elle ne connaît pas, si bien que chaque tâche d'outils natifs de 3-Stove Agent échouait dès le premier appel avec ONLINE_REQUEST_REJECTED. Seul le sous-ensemble pris en charge par Gemini (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default et similaires) est envoyé désormais ; les appelants continuent de valider arguments et réponses avec le schéma complet"
       ],
       "improvement": [
-        "Conserver le cadre arrondi de l'icône À propos avec un intérieur transparent laissant voir le fond de la page. Afficher les choix du lanceur depuis le haut avec des notes plus petites."
+        "Conserver le cadre arrondi de l'icône À propos avec un intérieur transparent laissant voir le fond de la page. Afficher les choix du lanceur depuis le haut avec des notes plus petites.",
+        "Taille visuelle harmonisée des icônes du lanceur et du Centre de plugins, avec des fonds transparents et des motifs noirs, blancs ou gris neutres"
       ]
     },
     "v1.2.1": {

@@ -186,6 +186,7 @@ AI Provider V2는 `local:*` 및 `profile:*` 대상을 하나의 페이지형 cat
 * `수정` 네이티브 도구 연속 라운드는 그동안 첫 요청의 출력 토큰 상한에서 이전 라운드의 사용량을 차감했기 때문에 긴 턴은 약 10 라운드 후 상한이 소진되어 ONLINE_INVALID_RESPONSE 로 종료되었습니다 (3-Stove Agent 의 계산기 사례가 Claude Code Ex 와 Gemini Ex 모두에서 9 에서 14 번째 호출에 실패). 이제 각 연속 라운드가 전체 상한을 유지하고 총량은 호출자의 작업 예산이 제한하며, 2026-09-29 의 연속 시간 제한 재설정 결정과 일치합니다
 * `수정` Gemini GenerateContent 프로토콜은 도구 선언과 responseSchema 의 JSON Schema 를 그대로 전송했는데, 공식 API 는 additionalProperties 등 알 수 없는 키워드에 HTTP 400 ("Unknown name additionalProperties") 을 반환하므로 3-Stove Agent 의 모든 네이티브 도구 작업이 첫 호출에서 ONLINE_REQUEST_REJECTED 로 실패했습니다. 이제 Gemini 가 지원하는 부분집합 (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default 등) 만 전송하며, 호출자는 계속 전체 스키마로 인수와 응답을 검증합니다
 * `개선` 정보 화면 아이콘의 둥근 테두리를 유지하고 투명한 내부에 주변과 같은 페이지 배경을 표시합니다. 런처 선택 목록을 처음부터 표시하고 설명 글자를 줄였습니다.
+* `개선` 런처와 플러그인 센터 아이콘의 시각적 크기를 통일하고 투명 배경과 흑백 또는 중성 회색조 적용
 
 # v1.2.1
 

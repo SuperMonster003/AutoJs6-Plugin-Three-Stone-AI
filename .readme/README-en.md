@@ -186,6 +186,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Fix` Native tool continuation rounds used to subtract the output tokens of earlier rounds from the first request's ceiling, so long turns ended with ONLINE_INVALID_RESPONSE once the ceiling ran out after about ten rounds (3-Stove Agent's calculator case failed between the 9th and 14th call on both Claude Code Ex and Gemini Ex). Every continuation now keeps the full ceiling and the caller's task budget bounds the total, matching the 2026-09-29 decision to reset the continuation timeout
 * `Fix` The Gemini GenerateContent protocol sent tool declarations and the responseSchema with their JSON Schema untouched, and the official API answers HTTP 400 ("Unknown name additionalProperties") for keywords it does not know, so every native tool task of 3-Stove Agent failed at its first call with ONLINE_REQUEST_REJECTED. Only the subset Gemini supports (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default and similar) is sent now; callers keep validating arguments and replies against the full schema
 * `Improvement` Keep the About icon in a rounded frame while its transparent interior reveals the surrounding page background. Show the launcher icon choices from the top with smaller explanatory notes.
+* `Improvement` Consistent visual sizing for launcher and Plugin Center icons, with transparent backgrounds and neutral black, white or grayscale artwork
 
 # v1.2.1
 

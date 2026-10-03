@@ -186,6 +186,7 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 * `修复` 原生工具续轮此前从首次请求的输出 token 上限中逐轮扣除已用输出, 长任务在约十轮后因上限耗尽而以 ONLINE_INVALID_RESPONSE 结束 (3-Stove Agent 的计算器用例在 Claude Code Ex 与 Gemini Ex 上均于第 9 到 14 次调用失败); 现在每个续轮都沿用完整的上限, 总量由调用方的任务预算约束, 与 2026-09-29 续轮超时重置的决定一致
 * `修复` Gemini GenerateContent 协议把工具声明与 responseSchema 中的 JSON Schema 原样发送, 官方接口对 additionalProperties 等它不认识的关键字直接返回 HTTP 400 ("Unknown name additionalProperties"), 3-Stove Agent 的每个原生工具任务都在第一次调用时以 ONLINE_REQUEST_REJECTED 失败; 现在只保留 Gemini 支持的子集 (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default 等), 调用方仍按完整 Schema 校验参数与回复
 * `优化` 关于页面保留图标圆角描边容器, 透明内部透出与容器外侧一致的页面底色; 启动器图标选项从顶部展示并采用较小的说明文字.
+* `优化` 启动器与插件中心图标按统一视觉尺寸标准调整, 插件中心采用透明背景和黑白或中性灰阶图案
 
 # v1.2.1
 

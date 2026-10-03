@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": 5,
-  "updatedAtEpochMillis": 1790849078376,
+  "revision": 6,
+  "updatedAtEpochMillis": 1791018363504,
   "providers": {
     "openai": {
       "defaultModelId": "gpt-5.6-sol",
@@ -149,6 +149,7 @@
         "amazon/nova-pro-v1",
         "microsoft/phi-4",
         "microsoft/wizardlm-2-8x22b",
+        "nvidia/switchyard",
         "nvidia/nemotron-3.5-lightning",
         "nvidia/nemotron-3-ultra-550b-a55b",
         "nvidia/nemotron-3-super-120b-a12b",

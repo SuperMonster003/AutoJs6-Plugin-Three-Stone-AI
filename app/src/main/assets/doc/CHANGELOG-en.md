@@ -6,7 +6,7 @@
 
 # v1.3.0
 
-###### 2026/09/30
+###### 2026/10/04
 
 * `Feature` Unify standalone settings with flat groups, consistent rows and centered rounded dialogs. Language, night mode, theme color and launcher icon changes apply only after OK; Cancel leaves saved values unchanged. Theme color follows AutoJs6 by default, with a shared palette, HEX/RGB input and a local preview. Neutral surfaces keep stable colors and controls follow the selected theme. The launcher default is adaptive automatic, while upgrades preserve explicit saved choices.
 * `Fix` Through an OpenAI-compatible gateway, Claude or Gemini models stream an empty string instead of "{}" as the arguments of a tool without parameters; the session rejected it as an invalid response and ended with ONLINE_INVALID_RESPONSE (3-Stove Agent's first Claude Code Ex tool round and one Gemini Ex round on the AIGoCode gateway failed this way). Blank arguments are now treated as an empty object, and the assistant message replayed to the model carries the normalized form
@@ -14,6 +14,7 @@
 * `Fix` The Gemini GenerateContent protocol sent tool declarations and the responseSchema with their JSON Schema untouched, and the official API answers HTTP 400 ("Unknown name additionalProperties") for keywords it does not know, so every native tool task of 3-Stove Agent failed at its first call with ONLINE_REQUEST_REJECTED. Only the subset Gemini supports (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default and similar) is sent now; callers keep validating arguments and replies against the full schema
 * `Improvement` Keep the About icon in a rounded frame while its transparent interior reveals the surrounding page background. Show the launcher icon choices from the top with smaller explanatory notes.
 * `Improvement` Consistent visual sizing for launcher and Plugin Center icons, with transparent backgrounds and neutral black, white or grayscale artwork
+* `Improvement` Plugin Center icons use the sizes, positions, light and dark artwork, and circular backgrounds adjusted in Icon Studio, retaining reproducible sources and parameters
 
 # v1.2.1
 

@@ -179,7 +179,7 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 
 # v1.3.0
 
-###### 2026/09/30
+###### 2026/10/04
 
 * `機能` 独立設定を平面グループ, 統一した行と中央の角丸ダイアログに統一しました. 言語, 夜間モード, テーマ色, ランチャーアイコンは確定後に適用され, キャンセルでは保存値を変えません. 色は既定で AutoJs6 に従い, 共通パレット, HEX/RGB 入力と局所プレビューを提供します. 中立な背景色は固定し, コントロールは選択したテーマに従います. ランチャーの既定は自動適応で, 更新時には明示的な選択を保持します.
 * `修正` OpenAI 互換ゲートウェイ経由で Claude や Gemini などのモデルを呼び出すと, パラメータのないツールのネイティブ呼び出しが "{}" ではなく空文字列を arguments としてストリーミングされ, セッションがこれを無効な応答と判定して ONLINE_INVALID_RESPONSE で終了していました (AIGoCode ゲートウェイ上の 3-Stove Agent の Claude Code Ex 最初のツールラウンドと Gemini Ex の 1 ラウンドがこれで失敗). 空白の arguments は空のオブジェクトとして扱い, モデルへ再送するアシスタントメッセージにも正規化した形を使います
@@ -187,6 +187,7 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 * `修正` Gemini GenerateContent プロトコルはツール宣言と responseSchema の JSON Schema をそのまま送信していましたが, 公式 API は additionalProperties など未知のキーワードに対して HTTP 400 ("Unknown name additionalProperties") を返すため, 3-Stove Agent のネイティブツールタスクはすべて最初の呼び出しで ONLINE_REQUEST_REJECTED になっていました. Gemini が対応するサブセット (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default など) のみを送信し, 呼び出し側は引き続き完全なスキーマで引数と応答を検証します
 * `改善` アプリ情報のアイコンの角丸枠を保ち, 透明な内側に周囲と同じページ背景を表示します. ランチャーの選択肢を先頭から表示し, 説明を小さくしました.
 * `改善` ランチャーとプラグインセンターのアイコンの見た目の大きさを統一し, 透明な背景と白黒または無彩色のグレースケールを使用
+* `改善` プラグインセンターのアイコンに Icon Studio で調整したサイズ, 位置, 明暗の図稿と円形背景を適用し, 再生成可能な原稿とパラメーターを保持
 
 # v1.2.1
 

@@ -179,7 +179,7 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 # v1.3.0
 
-###### 2026/09/30
+###### 2026/10/04
 
 * `新增` 统一独立设置的平面分组, 行规格与居中圆角对话框. 语言, 夜间模式, 主题色与启动器图标均在确定后生效, 取消不改变已保存的设置. 主题色默认跟随 AutoJs6, 提供统一色板, HEX/RGB 输入与局部预览; 中性底色保持稳定, 控件遵循所选主题. 启动器默认自适应自动, 升级保留明确保存的选择.
 * `修复` 经 OpenAI 兼容网关调用 Claude 或 Gemini 等模型时, 无参数工具的原生调用会以空字符串而非 "{}" 作为 arguments 流出, 会话把它判为无效响应并以 ONLINE_INVALID_RESPONSE 结束 (3-Stove Agent 在 AIGoCode 网关上的 Claude Code Ex 首个工具轮与 Gemini Ex 的一轮均因此失败); 现在空白 arguments 按空对象处理, 回放给模型的助手消息也使用规范化后的形式
@@ -187,6 +187,7 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 * `修复` Gemini GenerateContent 协议把工具声明与 responseSchema 中的 JSON Schema 原样发送, 官方接口对 additionalProperties 等它不认识的关键字直接返回 HTTP 400 ("Unknown name additionalProperties"), 3-Stove Agent 的每个原生工具任务都在第一次调用时以 ONLINE_REQUEST_REJECTED 失败; 现在只保留 Gemini 支持的子集 (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default 等), 调用方仍按完整 Schema 校验参数与回复
 * `优化` 关于页面保留图标圆角描边容器, 透明内部透出与容器外侧一致的页面底色; 启动器图标选项从顶部展示并采用较小的说明文字.
 * `优化` 启动器与插件中心图标按统一视觉尺寸标准调整, 插件中心采用透明背景和黑白或中性灰阶图案
+* `优化` 插件中心图标采用统一工作台调整后的尺寸, 位置, 亮暗图稿与圆形底色, 保留可重建原稿和参数
 
 # v1.2.1
 

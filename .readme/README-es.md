@@ -179,7 +179,7 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 # v1.3.0
 
-###### 2026/10/04
+###### 2026/10/05
 
 * `Función` Unificar los ajustes con grupos planos, filas coherentes y diálogos redondeados centrados. El idioma, el modo nocturno, el color y el icono solo cambian al confirmar; Cancelar conserva los valores guardados. El color sigue AutoJs6 por defecto, con una paleta común, entrada HEX/RGB y vista previa local. Los fondos neutros se mantienen estables y los controles siguen el tema. El icono usa el modo adaptativo automático por defecto, conservando las elecciones explícitas al actualizar.
 * `Corrección` A través de una pasarela compatible con OpenAI, los modelos Claude o Gemini transmiten una cadena vacía en lugar de "{}" como arguments de una herramienta sin parámetros; la sesión lo rechazaba como respuesta inválida y terminaba con ONLINE_INVALID_RESPONSE (así fallaron la primera ronda de herramientas de Claude Code Ex y una ronda de Gemini Ex de 3-Stove Agent en la pasarela AIGoCode). Ahora los arguments en blanco se tratan como un objeto vacío y el mensaje del asistente reenviado al modelo lleva la forma normalizada
@@ -188,6 +188,7 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Mejora` Mantener el marco redondeado del icono de Acerca de con el interior transparente sobre el fondo de la página. Mostrar las opciones del lanzador desde arriba con notas más pequeñas.
 * `Mejora` Tamaño visual uniforme de los iconos del lanzador y del Centro de complementos, con fondos transparentes y diseños en blanco, negro o grises neutros
 * `Mejora` Los iconos del centro de plugins usan los tamaños, posiciones, imágenes claras y oscuras y fondos circulares ajustados en Icon Studio, conservando fuentes y parámetros reproducibles
+* `Mejora` Los iconos de información de la aplicación de Android comparten las imágenes y los fondos claros y oscuros de Icon Studio, conservando las imágenes transparentes del centro de plugins y las opciones del lanzador
 
 # v1.2.1
 

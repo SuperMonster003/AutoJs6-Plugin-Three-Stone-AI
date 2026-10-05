@@ -6,7 +6,7 @@
 
 # v1.3.0
 
-###### 2026/10/04
+###### 2026/10/05
 
 * `Fonctionnalité` Unifier les réglages avec des groupes plats, des lignes cohérentes et des dialogues arrondis centrés. La langue, le mode nuit, la couleur et l'icône ne changent qu'après validation; Annuler conserve les valeurs enregistrées. La couleur suit AutoJs6 par défaut et propose une palette commune, une saisie HEX/RGB et un aperçu local. Les fonds neutres restent stables et les contrôles suivent le thème. L'icône utilise le mode adaptatif automatique par défaut, tout en préservant les choix explicites lors des mises à jour.
 * `Correctif` Via une passerelle compatible OpenAI, les modèles Claude ou Gemini diffusent une chaîne vide au lieu de "{}" comme arguments d'un outil sans paramètres, et la session le rejetait comme réponse invalide en se terminant par ONLINE_INVALID_RESPONSE (le premier tour d'outils Claude Code Ex et un tour Gemini Ex de 3-Stove Agent sur la passerelle AIGoCode échouaient ainsi). Les arguments vides sont désormais traités comme un objet vide et le message assistant renvoyé au modèle porte la forme normalisée
@@ -15,6 +15,7 @@
 * `Amélioration` Conserver le cadre arrondi de l'icône À propos avec un intérieur transparent laissant voir le fond de la page. Afficher les choix du lanceur depuis le haut avec des notes plus petites.
 * `Amélioration` Taille visuelle harmonisée des icônes du lanceur et du Centre de plugins, avec des fonds transparents et des motifs noirs, blancs ou gris neutres
 * `Amélioration` Les icônes du centre de plugins utilisent les tailles, positions, images claires et sombres et fonds circulaires réglés dans Icon Studio, avec les sources et paramètres permettant de les reproduire
+* `Amélioration` Les icônes des informations d'application Android utilisent les illustrations et les fonds clairs et sombres d'Icon Studio, en conservant les images transparentes du centre de plugins et les choix du lanceur
 
 # v1.2.1
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": 8,
-  "updatedAtEpochMillis": 1791455454750,
+  "revision": 9,
+  "updatedAtEpochMillis": 1791625607756,
   "providers": {
     "openai": {
       "defaultModelId": "gpt-5.6-sol",
@@ -54,10 +54,8 @@
       "defaultModelId": "gemini-3.8-flash",
       "models": [
         "gemini-3.8-flash",
-        "gemini-3.7-flash",
         "gemini-3.6-flash",
         "gemini-3.5-flash-lite",
-        "gemini-3.5-flash",
         "gemini-3.1-pro-preview",
         "gemini-3.1-flash-lite",
         "gemini-3-flash-preview"

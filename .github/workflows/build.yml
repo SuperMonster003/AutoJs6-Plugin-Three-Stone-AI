@@ -94,6 +94,10 @@ jobs:
             arch: x86_64
             abi: x86_64
             page_size: 16384
+            # At the 2560 MB default a 16 KB image gets ~463 MiB of zram swap (API 36.1 measured; the
+            # API 35 4 KB image gets ~1.8 GiB). Right after boot lmkd then kills down to oom_score_adj 0,
+            # where the ~230 MB foreground instrumentation process lives: "Process crashed.".
+            ram_size: 4096M
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
@@ -112,5 +116,7 @@ jobs:
           api-level: ${{ matrix.api }}
           arch: ${{ matrix.arch }}
           target: ${{ matrix.target }}
+          # Empty for the 4 KB images, which keep the runner default.
+          ram-size: ${{ matrix.ram_size }}
           disable-animations: true
           script: python3 .github/scripts/verify_apk_contract.py --apk-dir ci-apks --abi ${{ matrix.abi }} --pagesize ${{ matrix.page_size }}

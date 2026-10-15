@@ -228,7 +228,7 @@
     <string name="chat_target_unavailable_picker_message">%1$s 尚未就绪. 请先更新其设置, 再选择该目标.</string>
     <string name="chat_target_unavailable_suffix"> | 不可用</string>
     <string name="chat_target_unavailable_title">目标不可用</string>
-    <string name="chat_temperature">Temperature</string>
+    <string name="chat_temperature">采样温度</string>
     <string name="chat_thinking" tools:ignore="TypographyEllipsis">正在等待目标响应...</string>
     <string name="chat_top_k">Top K</string>
     <string name="chat_top_p">Top P</string>
@@ -360,7 +360,7 @@
     <string name="online_ai_add_profile_title">添加在线档案</string>
     <string name="online_ai_allow_metered_network">允许移动网络和按流量计费网络</string>
     <string name="online_ai_allow_metered_network_summary">关闭后, 在线 AI 请求仅在当前未按流量计费的网络上运行. 此设置不会影响本地推理.</string>
-    <string name="online_ai_base_url">HTTPS base URL</string>
+    <string name="online_ai_base_url">HTTPS 基础 URL</string>
     <string name="online_ai_base_url_hint">https://api.example.com/v1</string>
     <string name="online_ai_base_url_history">Base URL 历史记录</string>
     <string name="online_ai_base_url_history_clear">清空全部</string>
@@ -422,7 +422,7 @@
     <string name="online_ai_profile_summary">%1$s | %2$s\n%3$s\n凭据: %4$s | 默认: %5$s</string>
     <string name="online_ai_profiles_section">配置档案</string>
     <string name="online_ai_provider">提供方</string>
-    <string name="online_ai_provider_custom">OpenAI-compatible</string>
+    <string name="online_ai_provider_custom">兼容 OpenAI</string>
     <string name="online_ai_settings_title">在线服务</string>
     <string name="online_ai_settings_unavailable">在线服务设置不可用. 应用私有配置可能已损坏.</string>
     <string name="online_ai_test_cancelled">连接测试已取消</string>

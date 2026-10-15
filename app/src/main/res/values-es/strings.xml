@@ -177,7 +177,7 @@
     <string name="chat_target_unavailable_picker_message">%1$s no está listo. Actualiza sus ajustes antes de seleccionarlo.</string>
     <string name="chat_target_unavailable_suffix"> | No disponible</string>
     <string name="chat_target_unavailable_title">Destino no disponible</string>
-    <string name="chat_temperature">Temperature</string>
+    <string name="chat_temperature">Temperatura</string>
     <string name="chat_thinking" tools:ignore="TypographyEllipsis">Esperando al destino...</string>
     <string name="chat_top_k">Top K</string>
     <string name="chat_top_p">Top P</string>
@@ -312,7 +312,7 @@
     <string name="online_ai_profile_summary">%1$s | %2$s\n%3$s\nCredencial: %4$s | Predeterminado: %5$s</string>
     <string name="online_ai_profiles_section">Perfiles</string>
     <string name="online_ai_provider">Proveedor</string>
-    <string name="online_ai_provider_custom">OpenAI-compatible</string>
+    <string name="online_ai_provider_custom">Compatible con OpenAI</string>
     <string name="online_ai_settings_title">Servicios en línea</string>
     <string name="online_ai_settings_unavailable">Los ajustes de servicios en línea no están disponibles. La configuración privada de la aplicación puede estar dañada.</string>
     <string name="online_ai_test_cancelled">Prueba de conexión cancelada</string>

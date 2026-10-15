@@ -177,7 +177,7 @@
     <string name="chat_target_unavailable_picker_message">%1$s n\'est pas prêt. Mettez ses paramètres à jour avant de le sélectionner.</string>
     <string name="chat_target_unavailable_suffix"> | Indisponible</string>
     <string name="chat_target_unavailable_title">Cible indisponible</string>
-    <string name="chat_temperature">Temperature</string>
+    <string name="chat_temperature">Température</string>
     <string name="chat_thinking" tools:ignore="TypographyEllipsis">Attente de la cible...</string>
     <string name="chat_top_k">Top K</string>
     <string name="chat_top_p">Top P</string>
@@ -312,7 +312,7 @@
     <string name="online_ai_profile_summary">%1$s | %2$s\n%3$s\nIdentifiant: %4$s | Par défaut: %5$s</string>
     <string name="online_ai_profiles_section">Profils</string>
     <string name="online_ai_provider">Fournisseur</string>
-    <string name="online_ai_provider_custom">OpenAI-compatible</string>
+    <string name="online_ai_provider_custom">Compatible avec OpenAI</string>
     <string name="online_ai_settings_title">Services en ligne</string>
     <string name="online_ai_settings_unavailable">Les réglages des services en ligne sont indisponibles. La configuration privée de cette application est peut-être endommagée.</string>
     <string name="online_ai_test_cancelled">Test de connexion annulé</string>

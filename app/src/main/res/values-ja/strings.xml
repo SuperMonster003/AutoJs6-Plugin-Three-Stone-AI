@@ -177,7 +177,7 @@
     <string name="chat_target_unavailable_picker_message">%1$s は準備できていません. 選択する前に設定を更新してください.</string>
     <string name="chat_target_unavailable_suffix"> | 利用不可</string>
     <string name="chat_target_unavailable_title">ターゲットを利用できません</string>
-    <string name="chat_temperature">Temperature</string>
+    <string name="chat_temperature">温度</string>
     <string name="chat_thinking" tools:ignore="TypographyEllipsis">ターゲットの応答を待機中...</string>
     <string name="chat_top_k">Top K</string>
     <string name="chat_top_p">Top P</string>
@@ -273,7 +273,7 @@
     <string name="online_ai_add_profile_title">オンラインプロファイルを追加</string>
     <string name="online_ai_allow_metered_network">モバイル回線と従量制ネットワークを許可</string>
     <string name="online_ai_allow_metered_network_summary">オフの場合, オンライン AI リクエストは有効な非従量制ネットワークでのみ実行されます. この設定はローカル推論に影響しません.</string>
-    <string name="online_ai_base_url">HTTPS base URL</string>
+    <string name="online_ai_base_url">HTTPS ベース URL</string>
     <string name="online_ai_base_url_hint">https://api.example.com/v1</string>
     <string name="online_ai_clear_key_message">&quot;%1$s&quot; に保存された API キーを消去しますか? プロファイルは残りますが, 新しいキーを入力するまで接続できません. 既定の選択も解除されます.</string>
     <string name="online_ai_clear_key_title">API キーを消去しますか?</string>
@@ -312,7 +312,7 @@
     <string name="online_ai_profile_summary">%1$s | %2$s\n%3$s\n認証情報: %4$s | 既定: %5$s</string>
     <string name="online_ai_profiles_section">プロファイル</string>
     <string name="online_ai_provider">プロバイダー</string>
-    <string name="online_ai_provider_custom">OpenAI-compatible</string>
+    <string name="online_ai_provider_custom">OpenAI 互換</string>
     <string name="online_ai_settings_title">オンラインサービス</string>
     <string name="online_ai_settings_unavailable">オンラインサービス設定を利用できません. アプリの非公開設定が破損している可能性があります.</string>
     <string name="online_ai_test_cancelled">接続テストをキャンセルしました</string>

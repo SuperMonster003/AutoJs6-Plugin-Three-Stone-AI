@@ -177,7 +177,7 @@
     <string name="chat_target_unavailable_picker_message">%1$s 尚未就緒. 請先更新其設定, 再選取該目標.</string>
     <string name="chat_target_unavailable_suffix"> | 無法使用</string>
     <string name="chat_target_unavailable_title">目標無法使用</string>
-    <string name="chat_temperature">Temperature</string>
+    <string name="chat_temperature">取樣溫度</string>
     <string name="chat_thinking" tools:ignore="TypographyEllipsis">正在等候目標回應...</string>
     <string name="chat_top_k">Top K</string>
     <string name="chat_top_p">Top P</string>
@@ -273,7 +273,7 @@
     <string name="online_ai_add_profile_title">新增線上設定檔</string>
     <string name="online_ai_allow_metered_network">允許行動網路與計量付費網路</string>
     <string name="online_ai_allow_metered_network_summary">關閉後, 線上 AI 請求只會在目前非計量付費網路上執行. 此設定不會影響本機推論.</string>
-    <string name="online_ai_base_url">HTTPS base URL</string>
+    <string name="online_ai_base_url">HTTPS 基底 URL</string>
     <string name="online_ai_base_url_hint">https://api.example.com/v1</string>
     <string name="online_ai_clear_key_message">要清除 &quot;%1$s&quot; 已儲存的 API Key 嗎? 設定檔會保留, 但輸入新 Key 前無法連線. 其預設選擇也會清除.</string>
     <string name="online_ai_clear_key_title">清除 API Key?</string>
@@ -312,7 +312,7 @@
     <string name="online_ai_profile_summary">%1$s | %2$s\n%3$s\n憑證: %4$s | 預設: %5$s</string>
     <string name="online_ai_profiles_section">設定檔</string>
     <string name="online_ai_provider">供應商</string>
-    <string name="online_ai_provider_custom">OpenAI-compatible</string>
+    <string name="online_ai_provider_custom">相容於 OpenAI</string>
     <string name="online_ai_settings_title">線上服務</string>
     <string name="online_ai_settings_unavailable">線上服務設定無法使用. 應用程式私人設定可能已損壞.</string>
     <string name="online_ai_test_cancelled">連線測試已取消</string>

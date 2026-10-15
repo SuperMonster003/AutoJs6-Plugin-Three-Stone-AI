@@ -6,12 +6,13 @@
 
 # v1.3.0
 
-###### 2026/10/05
+###### 2026/10/15
 
 * `기능` 독립 설정을 평면 그룹, 일관된 행과 중앙의 둥근 대화상자로 통일했습니다. 언어, 야간 모드, 테마 색과 런처 아이콘은 확인 후 적용되며 취소하면 저장 값이 유지됩니다. 색은 기본적으로 AutoJs6를 따르며 공통 팔레트, HEX/RGB 입력과 부분 미리 보기를 제공합니다. 중립 배경색은 고정하고 컨트롤은 선택한 테마를 따릅니다. 런처 기본값은 자동 적응형이며 업데이트 시 명시적 선택을 유지합니다.
 * `수정` OpenAI 호환 게이트웨이를 통해 Claude 또는 Gemini 등의 모델을 호출하면 매개변수가 없는 도구의 네이티브 호출이 "{}" 대신 빈 문자열을 arguments 로 스트리밍하며, 세션이 이를 잘못된 응답으로 판정하여 ONLINE_INVALID_RESPONSE 로 종료되었습니다 (AIGoCode 게이트웨이의 3-Stove Agent Claude Code Ex 첫 도구 라운드와 Gemini Ex 한 라운드가 이 때문에 실패). 이제 빈 arguments 는 빈 객체로 처리하고 모델에 재전송하는 어시스턴트 메시지에도 정규화된 형태를 사용합니다
 * `수정` 네이티브 도구 연속 라운드는 그동안 첫 요청의 출력 토큰 상한에서 이전 라운드의 사용량을 차감했기 때문에 긴 턴은 약 10 라운드 후 상한이 소진되어 ONLINE_INVALID_RESPONSE 로 종료되었습니다 (3-Stove Agent 의 계산기 사례가 Claude Code Ex 와 Gemini Ex 모두에서 9 에서 14 번째 호출에 실패). 이제 각 연속 라운드가 전체 상한을 유지하고 총량은 호출자의 작업 예산이 제한하며, 2026-09-29 의 연속 시간 제한 재설정 결정과 일치합니다
 * `수정` Gemini GenerateContent 프로토콜은 도구 선언과 responseSchema 의 JSON Schema 를 그대로 전송했는데, 공식 API 는 additionalProperties 등 알 수 없는 키워드에 HTTP 400 ("Unknown name additionalProperties") 을 반환하므로 3-Stove Agent 의 모든 네이티브 도구 작업이 첫 호출에서 ONLINE_REQUEST_REJECTED 로 실패했습니다. 이제 Gemini 가 지원하는 부분집합 (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default 등) 만 전송하며, 호출자는 계속 전체 스키마로 인수와 응답을 검증합니다
+* `수정` 모델 샘플링 및 온라인 공급자 설정 번역 보완
 * `개선` 정보 화면 아이콘의 둥근 테두리를 유지하고 투명한 내부에 주변과 같은 페이지 배경을 표시합니다. 런처 선택 목록을 처음부터 표시하고 설명 글자를 줄였습니다.
 * `개선` 런처와 플러그인 센터 아이콘의 시각적 크기를 통일하고 투명 배경과 흑백 또는 중성 회색조 적용
 * `개선` 플러그인 센터 아이콘에 Icon Studio에서 조정한 크기, 위치, 밝은 이미지와 어두운 이미지 및 원형 배경을 적용하고 재생성 가능한 원본과 매개변수를 유지

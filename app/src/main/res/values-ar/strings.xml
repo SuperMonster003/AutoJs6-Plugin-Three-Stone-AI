@@ -177,7 +177,7 @@
     <string name="chat_target_unavailable_picker_message">%1$s غير جاهز. حدث إعداداته قبل اختياره.</string>
     <string name="chat_target_unavailable_suffix"> | غير متاح</string>
     <string name="chat_target_unavailable_title">الهدف غير متاح</string>
-    <string name="chat_temperature">Temperature</string>
+    <string name="chat_temperature">درجة الحرارة</string>
     <string name="chat_thinking" tools:ignore="TypographyEllipsis">في انتظار الهدف...</string>
     <string name="chat_top_k">Top K</string>
     <string name="chat_top_p">Top P</string>
@@ -312,7 +312,7 @@
     <string name="online_ai_profile_summary">%1$s | %2$s\n%3$s\nبيانات الاعتماد: %4$s | افتراضي: %5$s</string>
     <string name="online_ai_profiles_section">الملفات الشخصية</string>
     <string name="online_ai_provider">المزود</string>
-    <string name="online_ai_provider_custom">OpenAI-compatible</string>
+    <string name="online_ai_provider_custom">متوافق مع OpenAI</string>
     <string name="online_ai_settings_title">الخدمات عبر الإنترنت</string>
     <string name="online_ai_settings_unavailable">إعدادات الخدمات عبر الإنترنت غير متاحة. قد يكون إعداد التطبيق الخاص تالفا.</string>
     <string name="online_ai_test_cancelled">تم إلغاء اختبار الاتصال</string>

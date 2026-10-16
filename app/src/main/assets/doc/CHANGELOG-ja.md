@@ -13,6 +13,7 @@
 * `修正` ネイティブツールの継続ラウンドは, これまで最初のリクエストの出力トークン上限から前のラウンドの使用分を差し引いていたため, 長いターンは約 10 ラウンドで上限を使い切り ONLINE_INVALID_RESPONSE で終了していました (3-Stove Agent の電卓ケースは Claude Code Ex と Gemini Ex の両方で 9 から 14 回目の呼び出しで失敗). 各継続ラウンドは完全な上限を保持し, 合計は呼び出し側のタスク予算で制限されます. 2026-09-29 の継続タイムアウト再設定の決定と整合します
 * `修正` Gemini GenerateContent プロトコルはツール宣言と responseSchema の JSON Schema をそのまま送信していましたが, 公式 API は additionalProperties など未知のキーワードに対して HTTP 400 ("Unknown name additionalProperties") を返すため, 3-Stove Agent のネイティブツールタスクはすべて最初の呼び出しで ONLINE_REQUEST_REJECTED になっていました. Gemini が対応するサブセット (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default など) のみを送信し, 呼び出し側は引き続き完全なスキーマで引数と応答を検証します
 * `修正` モデルのサンプリング設定とオンラインプロバイダー設定の翻訳を補完
+* `修正` アラビア語の画面で 3-Stone AI, 4-bit, 数字で始まるモデルのリビジョンが逆順や分割で表示されなくなりました (例: Stone AI-3, bit-4)
 * `改善` アプリ情報のアイコンの角丸枠を保ち, 透明な内側に周囲と同じページ背景を表示します. ランチャーの選択肢を先頭から表示し, 説明を小さくしました.
 * `改善` ランチャーとプラグインセンターのアイコンの見た目の大きさを統一し, 透明な背景と白黒または無彩色のグレースケールを使用
 * `改善` プラグインセンターのアイコンに Icon Studio で調整したサイズ, 位置, 明暗の図稿と円形背景を適用し, 再生成可能な原稿とパラメーターを保持

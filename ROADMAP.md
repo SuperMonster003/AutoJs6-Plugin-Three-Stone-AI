@@ -3,6 +3,8 @@
 > 目标一句话: 把 "聊天记录" 与 "发给模型的上下文" 彻底解耦; 完整记录继续服务 UI, 真正发给模型的上下文由统一的 Context Compiler 按 token 预算编译, 并以水位驱动会话轮换, 使单轮输入恒定有界, 累计费用从近似 O(n²) 回落为 O(n).
 >
 > 制定日期: 2026-08-31.参考: 与 Codex 的方案讨论 (已逐项核实其现状描述), 结合本仓库实际结构调整.所有条目均可独立勾选,独立合入; 按 ID 引用 (如 "P1-3").
+>
+> 2026-10-17 追加第 10 节 "语音能力接入 (3-Macaw Speech)": 决策 D6-D34, 阶段 P5 (1.4.0) 与 P6 (1.5.0), 与第 1-9 节的上下文治理相互独立.
 
 ## 1. 背景与已核实现状
 
@@ -48,6 +50,8 @@
 | D3 | 默认输入 token 预算 16K, 按 target 可覆盖 | 见第 5 节参数基线 |
 | D4 | 持久化沿用现有二进制 codec, 直接升版本,fail-closed,不留迁移分支 | 项目未发布, 与会话历史 v3 的既有做法一致 |
 | D5 | 摘要生成必须后台化且失败可退化 | 当前网络环境 5xx/524 常见, 摘要失败保留旧检查点并退化为纯截断, 绝不阻塞或拖垮聊天主链路 |
+
+D6 起为语音能力接入的决策, 见第 10 节.
 
 ## 4. 总体设计
 
@@ -204,3 +208,129 @@ ConversationContextCoordinator
 4. 记账优先采用实际值 (在线实报 usage / 本地 `getTokenCount`), 估算仅兜底 - 比纯估算方案更稳.
 5. FTS/Room 召回最初降级为 P4 可选项: P4 后续按需部署时仍保留 AtomicFile 为唯一真相, 仅增加可丢弃的 SQLite FTS4 旁路索引, 因而没有把主历史存储迁移到 Room.
 6. 摘要失败退化路径按当前网络环境 (5xx/524 常见) 设计为常态而非异常 (D5).
+
+## 10. 语音能力接入 (3-Macaw Speech)
+
+> 目标一句话: 让 3-Stone AI 的聊天可以用嘴说, 用耳朵听, 并能免手连续对话, 开启常驻监听后说出唤醒词即可对话; 装了 3-Macaw Speech 时默认全程离线, 没装时听写与朗读仍可用系统已有的识别与合成应用.
+>
+> 制定日期: 2026-10-17. 决策 D6-D21 由维护者经四轮选择题确认 (全部为推荐项; 第一轮能力范围在推荐的三项之外加选了唤醒词); 同日维护者追加决定 3-Stone AI, 3-Stove Agent, 3-Macaw Speech 都具备可开关的常驻监听且同一时刻只允许一个, 经第五轮选择题确认 D27-D30 (全部为推荐项), D14 由 D27 取代; D22-D26 与 D31-D34 为据此派生的技术决策, 进入对应条目前可推翻 (推翻点已逐条标注), 之后视同固定. 起点: 3-Stone AI 1.3.0 (2026-10-15 已发布, `VERSION_BUILD=275`), 3-Macaw Speech `master@f020635` (P0-P5.6 已推送, 1.0.0 未发布), 3-Stove Agent `a1d90101` (其 D59 已推送); 宿主 6.8.0 未发布, `speech-api` 契约与 `speech` 脚本模块只在宿主本地提交 (`b91aef068` .. `bd410162c` 等). 本节不改宿主与 3-Macaw Speech.
+
+### 10.1 已核实现状
+
+| # | 现状事实 | 位置 |
+|---|---|---|
+| V1 | 聊天输入为 View 体系的 `EditText` + 46dp 发送按钮 (发送 / 停止共用), 输入上限 `ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS = 16_384`; 消息操作 4 项 `COPY` / `EDIT` / `DELETE` / `REGENERATE`; 流式输出经 `GenerationListener.onTextDelta` / `onCompleted` 到达; 回复由 `StreamingMarkdownParser` 解析为纯文本 + span (标题, 列表, 链接, 代码块, 表格, 行内代码, 数学) | `ChatActivity.kt` (输入区约 1233-1332 行, `MessageAction` 约 3809 行), `ChatConversation.kt`, `StreamingMarkdownParser.kt` |
+| V2 | 设置页分组: 外观 / 对话 / 生成 / 更新 / 信息; 聊天设置存于 `ChatUiSettings` / `ChatUiSettingsStore` (SharedPreferences) | `AppSettingsActivity.kt`, `ChatUiSettings.kt` |
+| V3 | 权限只有 `org.autojs.permission.PLUGIN`, `INTERNET`, `ACCESS_NETWORK_STATE`; `<queries>` 只有 `org.autojs.autojs6`; 仓库内没有任何语音代码 | `AndroidManifest.xml` |
+| V4 | 3-Macaw Speech 的系统语音输入: 导出且无权限的 `ui.voice.VoiceInputActivity` 应答 `android.speech.action.RECOGNIZE_SPEECH`, 底部弹层留在调用方任务中; 首句 `final` 即 `RESULT_OK`, 开始收音 8 s 无语音 `RESULT_NO_MATCH`, 单句上限 60 s; `EXTRA_LANGUAGE` 只用于选模型 (SenseVoice 自动识别语种), `EXTRA_PROMPT` 为弹层标题, 只返回 1 条结果; 无麦克风权限 / 无识别模型 / 麦克风被占用都在弹层内引导; 组件可被其设置开关禁用 | Macaw ROADMAP D41-D47 |
+| V5 | 3-Macaw Speech 的系统 TTS 引擎 `ttsengine.ThreeMacawSpeechTtsEngineService` (`TTS_SERVICE`, 无插件权限), 按语言选默认语音, 说话人取其设置页; 单句 warm RTF: XQ-DQ72 上 AISHELL-3 0.035 / MeloTTS 0.504, OPD2413 上 0.042 / 0.564, G8441 上 MeloTTS 2.262 与 Kokoro 3.434 (慢于实时, 句间停顿), AISHELL-3 / Piper / Matcha 在三台设备上都快于实时 | Macaw D19 / D35, `docs/development/tts-baseline.md` |
+| V6 | 3-Macaw Speech 的能力服务 `org.autojs.plugin.SPEECH` 只受 `org.autojs.permission.PLUGIN` 保护 (宿主定义, `protectionLevel="signature"`), 没有额外的调用方校验; 契约 `speech-api` (`ISpeechPlugin`, `CONTRACT_VERSION = 1`) 只在宿主本地提交; 整个插件同一时刻只有 1 个麦克风会话 (听写或唤醒, 超出为 `SESSION_BUSY`); API 34+ 由透明 `MicrophoneStartActivity` 启动麦克风前台服务, 绑定方需带 `BIND_ALLOW_ACTIVITY_STARTS`; 宿主未安装时该权限不存在, 任何应用都绑定不了 | Macaw D16 / D21 / D22, `service/ThreeMacawSpeechService.kt` |
+| V7 | 宿主 `speech` 模块 (`listen` / `wake` / `speak`) 与 `ai` 模块 (`chat` / `ask` / `stream` / `session`) 都运行在宿主进程, 插件调用不到; 脚本可以自行组合二者 | Macaw 附录 B, AutoJs6-Documentation `api/ai.md` |
+| V8 | 3-Stove Agent 先例 (D59): 偏好开启且 Macaw 弹层可解析时, `RecognizerIntent` 以 `setPackage` 固定到 Macaw, 否则交给系统选择; 设置行只在可解析时显示, 回到设置页重新判断; `<queries>` 只写 action; 未下载识别模型时由 Macaw 弹层引导安装, 不自动回退其他识别应用 | Stove ROADMAP D59, 提交 `a1d90101` |
+| V9 | 常驻监听的平台限制: Android 10+ 后台启动 Activity 需 "显示在其他应用上层" (`SYSTEM_ALERT_WINDOW`) 等豁免; API 34+ 前台服务必须声明类型, 不录音的应用不能用 `microphone` 类型; Android 14+ 不允许从 `BOOT_COMPLETED` 启动麦克风前台服务, Macaw 在 API 34+ 也只能在可见状态下启动其麦克风前台服务 (V6); 3-Stone AI 的 AI provider 只接受宿主 uid 的调用 (`HostCallerVerifier`), 其他插件无法借用; 3-Macaw Speech 的 1.1.0 候选 "内置语音助手" (其 D8 / P7) 计划由 Macaw 常驻唤醒并把指令交给 3-Stove Agent | 平台文档, `provider/HostCallerVerifier.kt`, Macaw ROADMAP P7 |
+
+### 10.2 目标与非目标
+
+目标:
+
+- G6: 输入框一键听写, 文字插入光标处, 由用户核对后发送.
+- G7: 回复可朗读: 手动朗读任一条回复, 或开启自动朗读后边生成边读; 代码与表格不逐字念.
+- G8: 免手语音对话: 长按麦克风进入, 说完自动发送, 读完自动再听; 1.5.0 起装了 Macaw 时无弹层.
+- G9: 没装 3-Macaw Speech 时用系统已有的识别 / 合成应用; 装了时默认固定用它, 全程离线.
+- G10: 常驻监听 (1.5.0, 可开关, 需 3-Macaw Speech): 说出唤醒词即唤醒 3-Stone AI 对话; 与 3-Stove Agent, 3-Macaw Speech 的常驻监听互斥, 开启时能指出是哪个应用占用.
+
+非目标:
+
+- 3-Stone AI 自己录音, 申请 `RECORD_AUDIO` 或处理音频 (D16, D27).
+- 新增脚本 API, 修改宿主 `ai` / `speech` 模块或 AI provider 契约 (D21).
+- 开机自动恢复常驻监听 (D30), 悬浮麦克风按钮.
+- 3-Stove Agent 与 3-Macaw Speech 两侧的常驻监听实现 (各自仓库, 按 D31 的共用约定).
+- 朗读时插话打断 (barge-in, 需要回声消除), 把音频作为多模态输入发给模型, 实现 `RecognitionService` 或自带语音模型.
+
+### 10.3 已定决策 (2026-10-17, 维护者四轮选择题)
+
+| ID | 决策 | 说明 |
+|---|---|---|
+| D6 | 路线: 先系统接口, 后 Binder | 1.4.0 用 `RecognizerIntent.ACTION_RECOGNIZE_SPEECH` 听写, 用 `android.speech.tts.TextToSpeech` 朗读, 不依赖任何契约, 只新增 2 条 `<queries>`; 1.5.0 在宿主 6.8.0 发布 `speech-api` 后直接绑定 3-Macaw Speech 的 `org.autojs.plugin.SPEECH`. 未采用: 只用系统接口 (做不了输入框内实时文字与唤醒词); 现在就绑定 Binder (要暂存未推送宿主提交构建的 AAR, 契约 v1 可能在 6.8.0 前变化, 发布被宿主阻塞). 宿主 `speech` 模块插件侧调用不到 (V7), 不作为路线 |
+| D7 | 能力范围: 听写, 朗读, 语音对话模式, 唤醒词 | 前三项在 1.4.0 (P5); 唤醒词只能经 Binder (`openWakeSession`), 在 1.5.0 (P6), 形态按 D27 为常驻监听 |
+| D8 | 未装 3-Macaw Speech: 回退系统应用 + 设置引导 | 与 Stove D59 一致. 听写: 任一识别应用可解析时显示麦克风按钮, 一个都没有时隐藏; 朗读: Macaw 引擎未装时用系统默认 TTS 引擎, 设备上没有任何 TTS 引擎时不显示 "朗读" 菜单项, 自动朗读开关显示为不可用; 设置页说明写明 "安装 3-Macaw Speech 并下载模型即可离线识别与朗读" |
+| D9 | 听写结果: 插入光标处, 手动发送 | 插入输入框光标处, 有选区则替换; 受 16,384 字符上限约束; 不自动发送 (语音对话模式除外, D13). 未采用: 设置项可选自动发送; 直接发送 |
+| D10 | 自动朗读: 边生成边读, 默认关 | 流式输出按句切分 (D25), 每成一句即 `QUEUE_ADD`; 设置开关 "自动朗读回复" 默认关, 语音对话模式下始终自动读; 停止生成, 发送新消息, 切换或新建会话, 离开聊天界面 (`onStop`) 即停读并清空队列. 手动 "朗读" 读整条已完成的回复. 未采用: 生成完成后再读; 默认开 |
+| D11 | Markdown 朗读: 读正文, 代码与表格用提示语 | 去掉标题 / 强调 / 列表 / 引用记号; 链接只读文字, 不读 URL; 代码块与表格各读一句本地化提示 (如 "此处有代码块" / "此处有表格"); 行内代码照读. 复用 `StreamingMarkdownParser` 的解析结果. 未采用: 去记号后全部照读; 静默跳过 |
+| D12 | 朗读引擎: 优先 3-Macaw Speech, 与听写共用一个开关 | 设置开关 "优先使用 3-Macaw Speech" 默认开: 开启时听写 intent 在 Macaw 弹层可解析时 `setPackage` 到 Macaw, `TextToSpeech` 在 Macaw 引擎已安装时以其包名创建; 关闭或不可用时由系统选择识别应用, 用系统默认 TTS 引擎. 语音与语速取引擎自身的设置 (Macaw D35). 未采用: 听写与朗读各一个开关; 设置页选引擎与语音 |
+| D13 | 语音对话模式: 长按麦克风进入, 状态条退出 | 短按 = 单次听写 (D9); 长按 = 进入对话模式: 听写 -> 结果自动发送 -> 回复边生成边读 -> 读完自动再听. 输入框上方显示 "语音对话中" 状态条 (含退出按钮); 识别弹层取消 (`RESULT_CANCELED`), 无语音 (`RESULT_NO_MATCH`), 其他识别错误, 生成失败, 离开聊天界面都退出; 朗读中点状态条可打断朗读并立即听下一句. 1.4.0 每轮都会弹出识别弹层, 1.5.0 装了 Macaw 时无弹层 (D20). 未采用: 顶栏单独按钮; 设置开关控制 |
+| D14 | (已由 D27 取代) 唤醒词: 仅聊天界面可见时监听, 默认关 | 第三轮选定: 聊天界面 `onStart` 后经 `openWakeSession` 监听, `onStop` 即释放, 无常驻通知, 不加前台服务. 同日维护者改为三个应用都具备可开关的常驻监听 (D27), 本条不再实施 |
+| D15 | 唤醒关键词: 默认 "小石小石" + "Hey Stone", 可改 | Macaw KWS `kws.zipformer.zh-en.2025-12-20` 为开放词表 (中文按拼音, 英文按模型 `en.phone`); 设置页可编辑, 至多 5 条; 灵敏度 3 档 (对应 Macaw 关键词的 `threshold` / `boost`, 数值在 P6-4 实测后确定). 未采用: 无默认词; 只用中文 |
+| D16 | 权限与隐私: 不申请麦克风, 不记日志 | 3-Stone AI 永不申请 `RECORD_AUDIO`, 不接触音频 (由识别应用或 Macaw 录音; 常驻监听同样由 Macaw 录音, 只为它新增前台服务, 通知与可选的悬浮窗权限, 见 D32); 识别文字与朗读文本不写 logcat (与 Macaw 附录 D Q8 (a) 一致); 语音输入的消息与打字消息在会话记录中没有区别, 会话历史 codec 不升版; README 与设置说明写明: 3-Macaw Speech 全程离线, 其他识别 / 合成应用可能联网, 识别出的文字仍按所选模型发送 (在线 target 会发给服务商). 未采用: 消息标记语音来源 (需会话历史 codec 升 v5) |
+| D17 | 设置: 新增 "语音" 组, 位于 "对话" 组之后 | 1.4.0 三行: 自动朗读回复 (开关, 默认关), 优先使用 3-Macaw Speech (开关, 默认开, 只在 Macaw 弹层或引擎任一可解析时显示), 状态说明 (听写与朗读当前分别由谁提供, 未装 Macaw 时的安装提示); 回到设置页时重新判断. 1.5.0 追加: 常驻监听 (开关, D27), 唤醒关键词 (编辑), 唤醒灵敏度. 遵循独立设置规范 (`AUTOJS6_PLUGIN_STANDALONE_SETTINGS_AGENTS.md`). 未采用: 并入 "对话" 组 |
+| D18 | 停止朗读: 输入框上方状态条 | 与语音对话模式共用同一状态条: 朗读时显示 "正在朗读" + 停止按钮; 正在朗读的那条回复, 消息菜单中的 "朗读" 显示为 "停止朗读"; 失去音频焦点 (来电, 其他播放) 即停. 未采用: 只用消息菜单 |
+| D19 | 朗读语言: 跟随应用语言 | `TextToSpeech.setLanguage` 取 3-Stone AI 当前界面语言 (应用语言设置; 跟随 AutoJs6 时取解析后的语言); 引擎返回 `LANG_MISSING_DATA` / `LANG_NOT_SUPPORTED` 时退回引擎默认语音并提示一次; 听写的 `EXTRA_LANGUAGE` 同样取界面语言 (Macaw 只用它选模型, SenseVoice 仍自动识别语种, V4). 未采用: 按每句文字判断 (中英混排的回复会频繁换声音); 完全交给引擎默认 |
+| D20 | 版本分期: 1.4.0 系统接口, 1.5.0 Binder | 1.4.0 = P5 (听写, 朗读, 语音对话模式), 可立即开工并独立发布; 1.5.0 = P6 (装了 Macaw 时听写改为输入框内实时文字, 语音对话无弹层, 常驻监听), 宿主 6.8.0 发布 `speech-api` 后开工. 未采用: 拆成 1.4.0 / 1.5.0 / 1.6.0 三版; 全部等 Binder 一版发布 |
+| D21 | 不新增脚本 API | 3-Stone AI 是 AI provider, 脚本侧的 `ai` 与 `speech` 模块都在宿主 (V7); 脚本自行组合 `speech.listen` -> `ai.chat` / `ai.stream` -> `speech.speak`. 1.5.0 (宿主 6.8.0 发布后) 在 README 与 `plugin_instruction` 中增加组合示例; 不改宿主模块与 AI provider 契约 |
+| D27 | 常驻监听: 三个应用都可开关, 同一时刻只允许一个 (取代 D14) | 维护者 2026-10-17 追加决定: 3-Stone AI, 3-Stove Agent, 3-Macaw Speech 各有常驻监听开关 (默认关); 3-Stone AI 命中唤醒词后唤醒自身并使用对话能力, 3-Stove Agent 唤醒自身并使用 agent 能力, 3-Macaw Speech 按其规划把能力指派给 3-Stone AI 或 3-Stove Agent. 3-Stone AI 侧 (1.5.0, Binder): 由自己的前台服务持有 Macaw 的唤醒会话, 仍不申请 `RECORD_AUDIO` (Macaw 录音); 开启时 3-Stone AI 与 Macaw 各有一条常驻通知; 需 Macaw 已装, 支持 `kws` 且已装 KWS 模型 (`kws.zipformer.zh-en.2025-12-20`, 8.4 MB), 否则开关不可用并说明原因. 未采用: 委托 Macaw 常驻, 3-Stone AI 只作指派目标 (要改 Macaw 契约, 与 Macaw 自己的开关语义重叠); 3-Stone AI 自己录音并内置 sherpa-onnx 与 KWS (推翻 D16, 每 ABI 约多 12-15 MB) |
+| D28 | 互斥检测: 组件状态即开关 | 三个应用各导出一个带统一 action 的组件, 只在常驻监听开启时启用 (与 Macaw D43 同法, 组件状态就是设置本身); 开启前查询其他包的该组件, 已有则提示 "系统只能支持一个常驻监听应用, 需要先关闭 xxx 才能开启" 并提供 "打开 xxx 设置" 按钮 (不能代为关闭别的应用); 不改宿主契约, 三个仓库各自实现同一约定 (D31). 未采用: 由 Macaw 仲裁 (未装 Macaw 时无从判断, 可能要进 `speech-api`); 只靠 Macaw 的 `SESSION_BUSY` 事后报错 (说不出是哪个应用) |
+| D29 | 唤醒后的行为: 有悬浮窗权限开界面, 否则后台语音对话 | 已授予 "显示在其他应用上层" 时, 命中唤醒词即打开聊天界面并进入语音对话模式 (D13); 未授予时不开界面, 在常驻通知中显示状态, 听写 -> 发送 -> 朗读回复, 记入会话历史, 点通知可打开该会话. 开启常驻监听时询问一次是否授予悬浮窗权限 (可拒绝). 未采用: 始终后台语音对话; 必须授权悬浮窗并始终开界面 |
+| D30 | 重启与进程被杀: 不自启, 打开应用即恢复 | 开关保持开启, 下次打开 3-Stone AI (界面可见) 时自动恢复监听; 手机重启后发一条通知 "点此恢复常驻监听", 点击后在可见状态下恢复 (V9 的平台限制). 未采用: 开机尽力自启; 重启即关闭开关 |
+
+### 10.4 派生技术决策 (进入对应条目前可推翻)
+
+| ID | 决策 | 说明 | 推翻点 |
+|---|---|---|---|
+| D22 | 可解析判定 | `<queries>` 新增 `<intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent>` 与 `<intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>` (只写 action, 同 Stove); 听写提供方 = Macaw (带 `setPackage` 的同一 intent 可解析) / 其他 (不带包名可解析) / 无; 朗读提供方 = Macaw (`TTS_SERVICE` + Macaw 包名可解析) / 系统默认引擎 (`TextToSpeech.getEngines()` 非空) / 无. 规则为纯 JVM 对象 `SpeechAvailabilityPolicy`, 聊天页与设置页在 `onResume` 重新判断. Macaw 包名 `io.github.supermonster003.autojs6.plugin.three.macaw.speech` | P5-1 |
+| D23 | 听写调用与插入 | `registerForActivityResult(StartActivityForResult)`; extras: `EXTRA_LANGUAGE_MODEL = LANGUAGE_MODEL_FREE_FORM`, `EXTRA_LANGUAGE` (D19), `EXTRA_PROMPT` (单次听写 "请说话", 对话模式 "请说出下一句", 10 种语言), `EXTRA_MAX_RESULTS = 1`; 取 `EXTRA_RESULTS[0]`. 插入规则为纯 JVM `DictationInsertion`: 光标插入或替换选区, 插入点两侧都是拉丁字母或数字时补一个空格, 超出 16,384 字符时截断并提示. 单次听写时取消与无语音静默, 其他错误码提示一次; `ActivityNotFoundException` 提示并刷新按钮. 麦克风按钮放在输入框内末端 (36dp, 与发送按钮分开), 生成中仍可听写 (只改输入框) | P5-2 |
+| D24 | 朗读输出 | 聊天页持有一个 `SpeechOutput` (包装 `TextToSpeech`): 首次需要时异步初始化, 引擎偏好变化或 `onDestroy` 时 `shutdown`; utterance ID = `<messageId>:<sentenceIndex>`; `UtteranceProgressListener` 驱动状态条与对话模式的 "读完再听"; 朗读期间请求 `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`, 失去焦点即 `stop()` 清队列; 单句长度不超过 `min(TextToSpeech.getMaxSpeechInputLength(), 1000)`, 超长句在逗号或空白处再切. 文本内容不写日志 (D16) | P5-3 |
+| D25 | 流式切句与 Markdown 规则 | 纯 JVM `SpeakableTextPolicy`: 输入 `StreamingMarkdownParser` 的结果, 按 D11 生成可读文本 (数学 span 读其渲染文字, 分隔线与图片忽略); 句末为全角句号 / 问号 / 叹号 (U+3002, U+FF1F, U+FF01), 半角 `.` `?` `!` 后跟空白或结尾 (排除小数与常见缩写), 省略号 (U+2026), 换行; 代码围栏内不切句, 围栏闭合时整块换成一句提示; 未结束的末句在 `onCompleted` 时冲刷. 约束: 对同一回复, 流式增量切出的句子序列与一次性处理完整文本的结果一致 | P5-3 |
+| D26 | Binder 接入 (1.5.0) | `libs/` 新增宿主 6.8.0 发布提交构建的 `speech-api.aar`, 登记 `libs/SHA256SUMS`, `hostApiNames` 由 4 个变为 5 个; 只在聊天界面可见时绑定 `org.autojs.plugin.SPEECH` + `setPackage(Macaw)`, flags `BIND_AUTO_CREATE` (+ API 34 `BIND_ALLOW_ACTIVITY_STARTS`, V6); 先读 `getCapabilities` 的契约版本与 `speechFeatures` (`asrStreaming`, `kws`), 不满足, 绑定失败 (宿主未装时 PLUGIN 权限不存在, `SecurityException`) 或回调 Binder 死亡时退回 P5 的系统接口; partial 以灰色临时文字写在光标处, `final` 定稿为正文; `PERMISSION_DENIED` 时打开 Macaw 的 `MicrophonePermissionActivity`, `SESSION_BUSY` 时提示麦克风被占用 | P6-1 |
+| D31 | 常驻监听互斥约定 (三个仓库共用) | action `org.autojs.plugin.speech.action.RESIDENT_LISTENER`; 承载组件为各应用的常驻监听服务 (3-Stone AI 为 `speech.ResidentListenerService`), 导出并受 `org.autojs.permission.PLUGIN` 保护, Manifest 默认 `enabled="false"`, 开关切换即以 `DONT_KILL_APP` 改组件状态, 不另存偏好; 组件 meta-data `org.autojs.plugin.speech.RESIDENT_LISTENER_SETTINGS` 写自己的设置 Activity 类名, 供对方的 "打开 xxx 设置" 按钮使用 (缺省时用启动 intent); 提示中的 "xxx" 取对方 application label; `<queries>` 增加该 action. 开启前与常驻服务每次启动前都查询一次, 发现多个时全部列出; 极端竞态下 Macaw 的单麦克风会话 (`SESSION_BUSY`) 兜底. 3-Stove Agent 与 3-Macaw Speech 的会话照抄本条, 三方确认后才可实现 | P6-0 |
+| D32 | 3-Stone AI 常驻服务 | 前台服务类型 `specialUse` (3-Stone AI 不录音, 不能用 `microphone` 类型, V9), 新增权限 `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS` (API 33+, 开启时申请) 与可选的 `SYSTEM_ALERT_WINDOW` (D29, 系统设置页授予); 只在 3-Stone AI 界面可见时开启或恢复; 绑定 Macaw 同 D26 (含 API 34 `BIND_ALLOW_ACTIVITY_STARTS`); Macaw 进程死亡或唤醒会话以 `error` / `end` 结束时停止服务并通知; 聊天界面内的听写 (P6-2) 先暂停唤醒会话, 听写结束后恢复 (Macaw 只有 1 个麦克风会话); 常驻期间脚本的 `speech.listen` 会得到 `SESSION_BUSY`, 设置说明与 README 写明 | P6-4 |
+| D33 | 后台语音对话 | 发送目标为聊天界面当前选中的 target; 距上一次唤醒对话结束不到 5 分钟时续用同一会话, 否则新建会话; 生成与朗读在常驻服务内运行 (从 `ChatActivity` 抽出可在服务中运行的会话协调层, 上下文治理 P1-P4 的编译与记账照常生效); 通知显示 "正在听 / 正在思考 / 正在朗读" 与 "停止" / "打开" 两个动作; 一轮对话结束后回到唤醒监听 | P6-5 |
+| D34 | 3-Macaw Speech 指派入口 | 3-Stone AI 的 AI provider 只接受宿主调用 (V9), 因此另提供受 `org.autojs.permission.PLUGIN` 保护的语音对话入口, 可带 Macaw 已识别的首句文字, 行为与 D29 一致; 入口形态 (导出 Activity 的 intent, 或可回传回复文本由 Macaw 朗读的 Binder) 与 Macaw 内置语音助手 (其 P7) 的评审一并确定, 本条只固定 "有入口, 受 PLUGIN 权限保护, 行为同 D29" | P6-6 |
+
+### 10.5 阶段任务
+
+#### P5 - 1.4.0 系统接口: 听写, 朗读, 语音对话模式
+
+- [ ] **P5-1** 可解析判定与设置: `<queries>` 两条 (D22); `SpeechAvailabilityPolicy` 与 Android 适配层; `ChatUiSettings` 新增 `autoReadReplies = false`, `preferMacawSpeech = true`; 设置页 "语音" 组三行 (D17); 10 种语言文案 (ASCII 标点; 阿拉伯语中紧跟非拉丁文字的 "3-Macaw Speech" 加 FSI / PDI).
+  - 验收: `ChatUiSettingsTest` 扩展; `SpeechAvailabilityPolicy` 单测 (Macaw 有 / 无, 其他识别应用有 / 无, 无 TTS 引擎, 开关开 / 关); Manifest 断言 `<queries>` 形状 (只有 action); `ApplicationTextPunctuationTest` 通过; 设置页在有 / 无 Macaw 两种设备状态下目视.
+- [ ] **P5-2** 单次听写 (D9, D23): 输入框内麦克风按钮, 短按发起 `RECOGNIZE_SPEECH`, 结果按 `DictationInsertion` 插入; 内容描述与 10 种语言文案.
+  - 验收: `DictationInsertion` 单测 (光标, 选区, 空格补齐, 截断); instrumentation 以 androidTest 内的假识别 Activity 核对插入与各返回码; 真机 E4: 装 Macaw 的 Sony 一台 (弹层直接打开, 无选择器) 与只有 Google 的设备一台, 系统选择器与权限对话框由维护者在手机上操作.
+- [ ] **P5-3** 朗读 (D10, D11, D12, D18, D19, D24, D25): `SpeakableTextPolicy`, `SpeechOutput`; 回复消息菜单新增 "朗读 / 停止朗读" (完成且非空的回复); 自动朗读; 输入框上方状态条.
+  - 验收: `SpeakableTextPolicyTest` (标题 / 列表 / 链接 / 裸 URL / 代码块 / 表格 / 行内代码 / 数学 / 未闭合围栏, 中英日混排, 小数与缩写, 超长句, 流式增量与一次性结果一致); 状态条与菜单状态单测; 真机: Macaw 引擎 (AISHELL-3 与 MeloTTS 各一次, 含 G8441 的慢于实时场景) 与系统默认引擎各一次, 记录首句出声延迟; 来电或其他播放抢占音频焦点时停读.
+- [ ] **P5-4** 语音对话模式 (D13): 纯 JVM 状态机 `VoiceConversationMachine` (空闲 -> 听写 -> 生成并朗读 -> 听写 ..., 各退出条件); 长按进入, 状态条退出与打断; 进入时若在编辑消息则先取消编辑.
+  - 验收: 状态机单测覆盖全部退出条件 (取消, 无语音, 识别错误, 生成失败, `onStop`, 点退出, 朗读中打断); 真机连续 10 轮语音对话 (在线 target 与 LiteRT 各一次), 记录 `docs/dev/voice-conversation-smoke.md` (每轮听写返回耗时, 首句出声延迟, 退出路径).
+- [ ] **P5-5** 文档与发布: `.readme` 10 种语言 (功能, 隐私 D16, 常见问题: 多个识别应用, 低端机句间停顿, 未下载模型), changelog 1.4.0 (10 种语言, 写给用户看), 生成与 `--check`; 界面截图; `VERSION_NAME=1.4.0`; 按 `AGENTS.md` 的发布流程 (签名包, `appendDigestToReleasedFiles`, 真机安装正式包, 官方索引登记).
+
+#### P6 - 1.5.0 Binder: 输入框内实时听写, 无弹层对话, 常驻监听
+
+- [ ] **P6-0** 前置: 宿主 6.8.0 已发布且 `speech-api` 契约 v1 冻结; 3-Macaw Speech 1.0.0 已发布; D31 的常驻监听互斥约定已写入 3-Stove Agent 与 3-Macaw Speech 的路线图并经三方确认. 开工前复核 Macaw D16 / D21 / D22 与本节 V6 / V9 是否仍成立.
+- [ ] **P6-1** 契约接入 (D26): `speech-api.aar` 暂存与校验和; `MacawSpeechClient` (绑定, 能力协商, `linkToDeath`, 退回 P5).
+  - 验收: 能力协商与退回规则单测; instrumentation 覆盖真实 Macaw, Macaw 未装, 宿主未装三种退回路径.
+- [ ] **P6-2** 输入框内实时听写: Macaw 可用且偏好开启时短按麦克风不再弹层, `openSession` (VAD 开, `silenceEndMillis` 1200 ms), partial / final 写入输入框 (D26), 再按麦克风为 `finish`, 离开界面为 `cancel`.
+  - 验收: 真机 API 31 / 33 / 35 各一台, partial 首字延迟与 CER 记录; `PERMISSION_DENIED` 与 `SESSION_BUSY` 两条引导由维护者在手机上确认.
+- [ ] **P6-3** 无弹层语音对话: P5-4 的状态机换用会话听写.
+  - 验收: 真机连续 10 轮, 对照 P5-4 的数据.
+- [ ] **P6-4** 常驻监听 (D15, D27, D28, D30, D31, D32): 设置三行; 互斥组件与查询, "需要先关闭 xxx" 提示与 "打开 xxx 设置"; `specialUse` 常驻服务持有 `openWakeSession`; 关键词编辑 (至多 5 条, 显示 Macaw 返回的拼写 warning); 灵敏度 3 档实测定值并回填 D15; 打开应用即恢复, 重启后的恢复通知; 与聊天界面听写的暂停 / 恢复.
+  - 验收: 互斥查询与提示规则单测 (无其他监听, 1 个, 多个, 对方无 settings meta-data); instrumentation 以测试包内的假监听组件核对提示; 真机 API 31 / 33 / 35 唤醒命中率 (每个默认关键词 20 次), 熄屏与 30 分钟静置的误唤醒次数与耗电, 进程被杀与重启后的恢复路径, 记录 `docs/dev/resident-listening-smoke.md`; 权限对话框与悬浮窗授权由维护者在手机上操作.
+- [ ] **P6-5** 唤醒后的对话 (D29, D33): 有悬浮窗权限时打开聊天界面进入语音对话模式; 没有时在常驻服务内后台对话 (服务可用的会话协调层, 通知状态与动作, 5 分钟内续用会话).
+  - 验收: 会话协调层与续用规则单测; 真机两条路径各连续 5 轮 (含锁屏下的后台对话), 记录在同一文档.
+- [ ] **P6-6** 3-Macaw Speech 指派入口 (D34): 形态随 Macaw P7 评审确定后实现, 受 PLUGIN 权限保护.
+  - 验收: 入口的权限与输入边界测试; 与 Macaw 联调一次.
+- [ ] **P6-7** 文档与发布: README (常驻监听: 互斥, 两条常驻通知, 耗电, 重启后需打开一次, 常驻期间脚本听写占用) 与 `plugin_instruction` 的脚本组合示例 (D21), changelog 1.5.0, 发布流程同 P5-5.
+
+### 10.6 阶段门槛与风险
+
+每个条目合入前须满足: (a) 新增规则为无 Android 依赖的纯策略对象并有 JVM 单测; (b) 真机证据记入 `docs/dev/` 或条目后 (设备型号 / API / 引擎与模型 ID / 数值); (c) P5 不新增任何权限与契约依赖, P6 只作为 `speech-api` 的调用方, 新增权限仅限 D32 所列; (d) 失败路径显式测试 (无识别应用, 取消, 无语音, TTS 初始化失败, 语言不支持, 音频焦点丢失, Binder 退回). 手机上需要人工确认的对话框 (系统选择器, 权限) 由维护者操作.
+
+| 风险 | 缓解 |
+|---|---|
+| 设备有多个识别应用, 每次弹系统选择器 | D12 默认 `setPackage` 固定到 Macaw; 关掉开关则交给系统 |
+| 低端机 (G8441) 上 MeloTTS / Kokoro 慢于实时, 句间停顿 | README 建议低端机在 3-Macaw Speech 中选 AISHELL-3 / Piper / Matcha 作为默认语音 (V5); 3-Stone AI 不做预合成缓冲 |
+| 1.4.0 语音对话每轮弹出识别弹层, 体验割裂 | 1.5.0 改为无弹层 (D20) |
+| 朗读声音被下一轮听写收进去 | 读完 (`onDone`) 后才开始听写, 不做 barge-in |
+| Macaw 已装但未下载识别模型 | 由 Macaw 弹层引导安装模型 (Macaw D47), 3-Stone AI 不自动改用其他识别应用 (同 Stove D59), 设置说明写明 |
+| `speech-api` v1 在宿主 6.8.0 发布前变化 | P6 等宿主发布后开工 (D20), P6-0 复核 |
+| 宿主未安装时 PLUGIN 权限不存在, 无法绑定 Macaw | P6 退回系统接口 (D26); 常驻监听开关不可用并说明 |
+| 三个应用对互斥约定的实现不一致 | D31 写死 action / meta-data / 组件状态规则, 三方路线图引用同一条, P6-0 要求三方确认; 不一致时 Macaw `SESSION_BUSY` 兜底 |
+| 常驻监听耗电与两条常驻通知 | 默认关, README 写明; P6-4 记录熄屏 30 分钟耗电 |
+| 后台语音对话要把聊天逻辑搬进服务, 改动面大 | P6-5 先抽出会话协调层并保持 `ChatActivity` 行为不变, 单独提交 |
+| 回退 | P5 / P6 各条目独立提交; 语音入口全部由可解析判定控制, 关闭 "优先使用 3-Macaw Speech" 即回到系统默认行为 |

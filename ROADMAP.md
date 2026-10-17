@@ -228,7 +228,7 @@ ConversationContextCoordinator
 | V7 | 宿主 `speech` 模块 (`listen` / `wake` / `speak`) 与 `ai` 模块 (`chat` / `ask` / `stream` / `session`) 都运行在宿主进程, 插件调用不到; 脚本可以自行组合二者 | Macaw 附录 B, AutoJs6-Documentation `api/ai.md` |
 | V8 | 3-Stove Agent 先例 (D59): 偏好开启且 Macaw 弹层可解析时, `RecognizerIntent` 以 `setPackage` 固定到 Macaw, 否则交给系统选择; 设置行只在可解析时显示, 回到设置页重新判断; `<queries>` 只写 action; 未下载识别模型时由 Macaw 弹层引导安装, 不自动回退其他识别应用 | Stove ROADMAP D59, 提交 `a1d90101` |
 | V9 | 常驻监听的平台限制: Android 10+ 后台启动 Activity 需 "显示在其他应用上层" (`SYSTEM_ALERT_WINDOW`) 等豁免; API 34+ 前台服务必须声明类型, 不录音的应用不能用 `microphone` 类型; Android 14+ 不允许从 `BOOT_COMPLETED` 启动麦克风前台服务, Macaw 在 API 34+ 也只能在可见状态下启动其麦克风前台服务 (V6); 3-Stone AI 的 AI provider 只接受宿主 uid 的调用 (`HostCallerVerifier`), 其他插件无法借用; 3-Macaw Speech 的 1.1.0 候选 "内置语音助手" (其 D8 / P7) 计划由 Macaw 常驻唤醒并把指令交给 3-Stove Agent; Android 10+ 有其他应用在录音 (通话, 录音机, 其他语音输入) 时, 常驻监听只收到静音; ColorOS / MIUI 需用户手动开启自启动与电池白名单, 否则常驻服务可能被杀; 常驻监听的耗电尚未在真机测过 | 平台文档, `provider/HostCallerVerifier.kt`, Macaw ROADMAP P7 |
-| V10 | 3-Macaw Speech 的系统数字助理 (Macaw D48-D56, P5.7, 本地提交 `dc91644`, 1.0.0 未发布): 用户把 Macaw 设为默认数字助理后, 长按电源键 / Home 键听写, 不常驻录音; 听写结束后显示可编辑的文字与目标按钮, 用户点按钮才发送 (D49); 目标入口契约 (D50): 目标导出一个 Activity 应答 `org.autojs.plugin.action.VOICE_COMMAND` + DEFAULT, extras 为 `Intent.EXTRA_TEXT` (识别文字, 必有) 与 `org.autojs.plugin.extra.VOICE_LANGUAGE` (BCP 47, 可缺), 发送用显式组件 + `FLAG_ACTIVITY_NEW_TASK`, 入口不受权限保护, 接收方把文本当作不可信输入; 按钮文字与图标取该 Activity 的 label 与 icon; 3-Stone AI 收到后打开聊天页, 在新对话里立即发送并显示回答 (D52), 是否朗读由本路线图定; 锁屏时先解锁再发送 (D55); 不读取屏幕内容 (D54) | Macaw ROADMAP D48-D56 |
+| V10 | 3-Macaw Speech 的系统数字助理 (Macaw D48-D57, P5.7, 已推送 `bf19529`, 1.0.0 未发布): 用户把 Macaw 设为默认数字助理后, 长按电源键 / Home 键听写, 不常驻录音; 听写结束后显示可编辑的文字与目标按钮, 用户点按钮才发送 (D49); 目标入口契约 (D50): 目标导出一个 Activity 应答 `org.autojs.plugin.action.VOICE_COMMAND` + DEFAULT, extras 为 `Intent.EXTRA_TEXT` (识别文字, 必有) 与 `org.autojs.plugin.extra.VOICE_LANGUAGE` (BCP 47, 可缺), 发送用显式组件 + `FLAG_ACTIVITY_NEW_TASK`, 入口不受权限保护, 接收方把文本当作不可信输入; 按钮文字与图标取该 Activity 的 label 与 icon; 3-Stone AI 收到后打开聊天页, 在新对话里立即发送并显示回答 (D52), 是否朗读由本路线图定; 锁屏时先解锁再发送 (D55); 不读取屏幕内容 (D54); Macaw 以本节 D27 为准, 三个应用各有常驻监听开关并按 D28 / D31 互斥, 与数字助理并存 (`bf19529`); 数字助理, `RECOGNIZE_SPEECH` 弹层, `RecognitionService` 与试听试说页开始收音时, 若麦克风正被唤醒会话占用 (例如 3-Stone AI 常驻服务持有的 kws 会话), 唤醒会话保持打开但静默 (不报命中, 不结束, 不发新事件), 接管方结束后自动继续, 对客户端透明且不改契约; 正在进行的听写会话 (含 `thenListen` 已转入听写的阶段) 不被接管, 仍得到占用引导 (Macaw D57) | Macaw ROADMAP D48-D57 |
 
 ### 10.2 目标与非目标
 
@@ -273,7 +273,7 @@ ConversationContextCoordinator
 | D28 | 互斥检测: 组件状态即开关 | 三个应用各导出一个带统一 action 的组件, 只在常驻监听开启时启用 (与 Macaw D43 同法, 组件状态就是设置本身); 开启前查询其他包的该组件, 已有则提示 "系统只能支持一个常驻监听应用, 需要先关闭 xxx 才能开启" 并提供 "打开 xxx 设置" 按钮 (不能代为关闭别的应用); 不改宿主契约, 三个仓库各自实现同一约定 (D31). 未采用: 由 Macaw 仲裁 (未装 Macaw 时无从判断, 可能要进 `speech-api`); 只靠 Macaw 的 `SESSION_BUSY` 事后报错 (说不出是哪个应用) |
 | D29 | 唤醒后的行为: 有悬浮窗权限开界面, 否则后台语音对话 | 已授予 "显示在其他应用上层" 时, 命中唤醒词即打开聊天界面并进入语音对话模式 (D13); 未授予时不开界面, 在常驻通知中显示状态, 听写 -> 发送 -> 朗读回复, 记入会话历史, 点通知可打开该会话. 开启常驻监听时询问一次是否授予悬浮窗权限 (可拒绝). 未采用: 始终后台语音对话; 必须授权悬浮窗并始终开界面 |
 | D30 | 重启与进程被杀: 不自启, 打开应用即恢复 | 开关保持开启, 下次打开 3-Stone AI (界面可见) 时自动恢复监听; 手机重启后发一条通知 "点此恢复常驻监听", 点击后在可见状态下恢复 (V9 的平台限制). 未采用: 开机尽力自启; 重启即关闭开关 |
-| D35 | 应答 3-Macaw Speech 的 `VOICE_COMMAND`, 并保留自己的常驻监听 | 第六轮选定 "两者都要": 3-Stone AI 导出一个 Activity 应答 `org.autojs.plugin.action.VOICE_COMMAND` + DEFAULT (Macaw D50), 收到后打开聊天页, 在新对话里用当前选中的 target 立即发送并显示回答 (Macaw D52); 同时保留 D27-D33 的常驻监听. 入口不受权限保护, 不新增权限; 放在 1.4.0 (P5-5), 不依赖 Binder 与宿主, Macaw 1.0.0 发布前不会被调用. 注意: Macaw P5.7 背景写有 "两个目标插件都不再需要各自的常驻监听", 与本条不一致, 需 Macaw 的会话回改. 未采用: 以 Macaw D48-D56 为准并撤销 D27-D34 |
+| D35 | 应答 3-Macaw Speech 的 `VOICE_COMMAND`, 并保留自己的常驻监听 | 第六轮选定 "两者都要": 3-Stone AI 导出一个 Activity 应答 `org.autojs.plugin.action.VOICE_COMMAND` + DEFAULT (Macaw D50), 收到后打开聊天页, 在新对话里用当前选中的 target 立即发送并显示回答 (Macaw D52); 同时保留 D27-D33 的常驻监听. 入口不受权限保护, 不新增权限; 放在 1.4.0 (P5-5), 不依赖 Binder 与宿主, Macaw 1.0.0 发布前不会被调用. Macaw 已随之改为以 D27 为准 (`bf19529`, V10). 未采用: 以 Macaw D48-D56 为准并撤销 D27-D34 |
 | D36 | `VOICE_COMMAND` 的回答: 这一轮总是朗读 | 该条回复边生成边读 (D10, D11 的规则), 读完即止, 不自动再听; 朗读语言优先取 `org.autojs.plugin.extra.VOICE_LANGUAGE`, 缺失或引擎不支持时按 D19 取应用语言; 之后的轮次照 "自动朗读回复" 设置. 未采用: 进入语音对话模式; 跟随自动朗读设置 |
 | D37 | `VOICE_COMMAND` 的防护: 立即发送 + 可见 + 限速 | 按 Macaw D52 立即发送, 但总是打开可见的聊天页并新建对话; 上一次立即发送后 10 s 内再收到的调用只填入新对话的输入框, 不发送; 文字去掉控制字符并按 16,384 字符截断; 文字内容不写日志 (D16). 未采用: 只在能确认调用方是同签名的 3-Macaw Speech 时立即发送 (Macaw 用 `startActivity`, API 34 以下多数情况无法可靠识别调用方); 不加限制 |
 
@@ -287,7 +287,7 @@ ConversationContextCoordinator
 | D25 | 流式切句与 Markdown 规则 | 纯 JVM `SpeakableTextPolicy`: 输入 `StreamingMarkdownParser` 的结果, 按 D11 生成可读文本 (数学 span 读其渲染文字, 分隔线与图片忽略); 句末为全角句号 / 问号 / 叹号 (U+3002, U+FF1F, U+FF01), 半角 `.` `?` `!` 后跟空白或结尾 (排除小数与常见缩写), 省略号 (U+2026), 换行; 代码围栏内不切句, 围栏闭合时整块换成一句提示; 未结束的末句在 `onCompleted` 时冲刷. 约束: 对同一回复, 流式增量切出的句子序列与一次性处理完整文本的结果一致 | P5-3 |
 | D26 | Binder 接入 (1.5.0) | `libs/` 新增宿主 6.8.0 发布提交构建的 `speech-api.aar`, 登记 `libs/SHA256SUMS`, `hostApiNames` 由 4 个变为 5 个; 只在聊天界面可见时绑定 `org.autojs.plugin.SPEECH` + `setPackage(Macaw)`, flags `BIND_AUTO_CREATE` (+ API 34 `BIND_ALLOW_ACTIVITY_STARTS`, V6); 先读 `getCapabilities` 的契约版本与 `speechFeatures` (`asrStreaming`, `kws`), 不满足, 绑定失败 (宿主未装时 PLUGIN 权限不存在, `SecurityException`) 或回调 Binder 死亡时退回 P5 的系统接口; partial 以灰色临时文字写在光标处, `final` 定稿为正文; `PERMISSION_DENIED` 时打开 Macaw 的 `MicrophonePermissionActivity`, `SESSION_BUSY` 时提示麦克风被占用 | P6-1 |
 | D31 | 常驻监听互斥约定 (三个仓库共用) | action `org.autojs.plugin.speech.action.RESIDENT_LISTENER`; 承载组件为各应用的常驻监听服务 (3-Stone AI 为 `speech.ResidentListenerService`), 导出并受 `org.autojs.permission.PLUGIN` 保护, Manifest 默认 `enabled="false"`, 开关切换即以 `DONT_KILL_APP` 改组件状态, 不另存偏好; 组件 meta-data `org.autojs.plugin.speech.RESIDENT_LISTENER_SETTINGS` 写自己的设置 Activity 类名, 供对方的 "打开 xxx 设置" 按钮使用 (缺省时用启动 intent); 提示中的 "xxx" 取对方 application label; `<queries>` 增加该 action. 开启前与常驻服务每次启动前都查询一次, 发现多个时全部列出; 极端竞态下 Macaw 的单麦克风会话 (`SESSION_BUSY`) 兜底. 3-Stove Agent 与 3-Macaw Speech 的会话照抄本条, 三方确认后才可实现 | P6-0 |
-| D32 | 3-Stone AI 常驻服务 | 前台服务类型 `specialUse` (3-Stone AI 不录音, 不能用 `microphone` 类型, V9), 新增权限 `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS` (API 33+, 开启时申请) 与可选的 `SYSTEM_ALERT_WINDOW` (D29, 系统设置页授予); 只在 3-Stone AI 界面可见时开启或恢复; 绑定 Macaw 同 D26 (含 API 34 `BIND_ALLOW_ACTIVITY_STARTS`); Macaw 进程死亡或唤醒会话以 `error` / `end` 结束时停止服务并通知; 聊天界面内的听写 (P6-2) 先暂停唤醒会话, 听写结束后恢复 (Macaw 只有 1 个麦克风会话); 常驻期间脚本的 `speech.listen` 会得到 `SESSION_BUSY`, 设置说明与 README 写明 | P6-4 |
+| D32 | 3-Stone AI 常驻服务 | 前台服务类型 `specialUse` (3-Stone AI 不录音, 不能用 `microphone` 类型, V9), 新增权限 `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS` (API 33+, 开启时申请) 与可选的 `SYSTEM_ALERT_WINDOW` (D29, 系统设置页授予); 只在 3-Stone AI 界面可见时开启或恢复; 绑定 Macaw 同 D26 (含 API 34 `BIND_ALLOW_ACTIVITY_STARTS`); Macaw 进程死亡或唤醒会话以 `error` / `end` 结束时停止服务并通知; 3-Stone AI 自己经 Binder 发起的听写 (P6-2, P6-3) 不在 Macaw D57 的接管范围内, 先暂停 (`stop`) 唤醒会话, 听写结束后重开 (Macaw 只有 1 个麦克风会话); 经 Macaw 弹层的听写 (P5) 与 Macaw 数字助理由 Macaw D57 临时接管唤醒会话, 3-Stone AI 不做处理, 唤醒会话一直有效; 常驻期间脚本的 `speech.listen` 会得到 `SESSION_BUSY`, 设置说明与 README 写明 | P6-4 |
 | D33 | 后台语音对话 | 发送目标为聊天界面当前选中的 target; 距上一次唤醒对话结束不到 5 分钟时续用同一会话, 否则新建会话; 生成与朗读在常驻服务内运行 (从 `ChatActivity` 抽出可在服务中运行的会话协调层, 上下文治理 P1-P4 的编译与记账照常生效); 通知显示 "正在听 / 正在思考 / 正在朗读" 与 "停止" / "打开" 两个动作; 一轮对话结束后回到唤醒监听 | P6-5 |
 | D34 | (已由 D35 / D38 取代) 3-Macaw Speech 指派入口 | 原定另开受 PLUGIN 权限保护的入口, 形态随 Macaw P7 评审确定; Macaw 已定为不受权限保护的 `VOICE_COMMAND` (Macaw D50), 由 D35-D38 实现, 本条不再实施 | - |
 | D38 | `VOICE_COMMAND` 入口实现 | 独立的透明跳板 Activity `voice.VoiceCommandActivity` (导出, 无权限, `excludeFromRecents`, label 为 `@string/app_name` 即 "3-Stone AI", icon 取应用图标), 只做校验后转交 `ChatActivity` (`onNewIntent` 或冷启动) 并立即结束, 不在跳板内初始化 backend; 纯 JVM `VoiceCommandPolicy`: `EXTRA_TEXT` 缺失或去空白后为空时只打开聊天页, 控制字符与截断 (D37), 10 s 限速窗口, `VOICE_LANGUAGE` 解析为 BCP 47 (非法即忽略). `ChatActivity` 收到后: 正在编辑消息则取消编辑; 正在生成则先停止当前生成 (已输出内容按停止轮保留) 再新建对话; 当前没有可用 target (未配置在线 provider, 本地模型未就绪) 时预填输入框并提示, 不发送 | P5-5 |
@@ -310,7 +310,7 @@ ConversationContextCoordinator
 
 #### P6 - 1.5.0 Binder: 输入框内实时听写, 无弹层对话, 常驻监听
 
-- [ ] **P6-0** 前置: 宿主 6.8.0 已发布且 `speech-api` 契约 v1 冻结; 3-Macaw Speech 1.0.0 已发布; D31 的常驻监听互斥约定已写入 3-Stove Agent 与 3-Macaw Speech 的路线图并经三方确认. 开工前复核 Macaw D16 / D21 / D22 与本节 V6 / V9 是否仍成立.
+- [ ] **P6-0** 前置: 宿主 6.8.0 已发布且 `speech-api` 契约 v1 冻结; 3-Macaw Speech 1.0.0 已发布; D31 的常驻监听互斥约定已写入 3-Stove Agent 与 3-Macaw Speech 的路线图并经三方确认 (Macaw 已采纳, `bf19529`; Stove 由父会话另行统筹). 开工前复核 Macaw D16 / D21 / D22 与本节 V6 / V9 是否仍成立.
 - [ ] **P6-1** 契约接入 (D26): `speech-api.aar` 暂存与校验和; `MacawSpeechClient` (绑定, 能力协商, `linkToDeath`, 退回 P5).
   - 验收: 能力协商与退回规则单测; instrumentation 覆盖真实 Macaw, Macaw 未装, 宿主未装三种退回路径.
 - [ ] **P6-2** 输入框内实时听写: Macaw 可用且偏好开启时短按麦克风不再弹层, `openSession` (VAD 开, `silenceEndMillis` 1200 ms), partial / final 写入输入框 (D26), 再按麦克风为 `finish`, 离开界面为 `cancel`.
@@ -321,8 +321,8 @@ ConversationContextCoordinator
   - 验收: 互斥查询与提示规则单测 (无其他监听, 1 个, 多个, 对方无 settings meta-data); instrumentation 以测试包内的假监听组件核对提示; 真机 API 31 / 33 / 35 唤醒命中率 (每个默认关键词 20 次), 熄屏与 30 分钟静置的误唤醒次数与耗电, 进程被杀与重启后的恢复路径, 记录 `docs/dev/resident-listening-smoke.md`; 权限对话框与悬浮窗授权由维护者在手机上操作.
 - [ ] **P6-5** 唤醒后的对话 (D29, D33): 有悬浮窗权限时打开聊天界面进入语音对话模式; 没有时在常驻服务内后台对话 (服务可用的会话协调层, 通知状态与动作, 5 分钟内续用会话).
   - 验收: 会话协调层与续用规则单测; 真机两条路径各连续 5 轮 (含锁屏下的后台对话), 记录在同一文档.
-- [ ] **P6-6** 常驻监听与 Macaw 数字助理并存 (D35; 原 "Macaw 指派入口" 已由 D34 取消): Stone 的常驻唤醒会话占着 Macaw 唯一的麦克风时, 用户触发 Macaw 数字助理的行为 (让出或拒绝) 由 Macaw 的会话决定并写入其路线图; Stone 侧在唤醒会话因此结束后, 于助理会话结束时重新打开唤醒会话, 不当作故障通知.
-  - 验收: 真机上常驻监听开启时长按电源键听写并点 "3-Stone AI", 之后唤醒词仍能命中, 记录在 `docs/dev/resident-listening-smoke.md`.
+- [ ] **P6-6** 常驻监听与 Macaw 数字助理并存 (D35; 原 "Macaw 指派入口" 已由 D34 取消): Macaw D57 在其助理, `RECOGNIZE_SPEECH` 弹层, `RecognitionService` 与试听试说页收音时临时接管 Stone 的唤醒会话 (保持打开, 静默, 结束后自动继续), 对 Stone 透明, Stone 侧不重开会话也不发通知; 本条只做联调验证, 以及确认静默期间常驻通知状态不变.
+  - 验收: 真机上常驻监听开启时 (a) 长按电源键听写并点 "3-Stone AI", (b) 在聊天页短按麦克风经 Macaw 弹层听写 (P5 路径), 两者都正常完成, 之后唤醒词仍能命中且唤醒会话未结束; 另测唤醒命中后已转入听写的阶段触发助理时得到 Macaw 的占用引导. 记录在 `docs/dev/resident-listening-smoke.md`.
 - [ ] **P6-7** 文档与发布: README (常驻监听: 互斥, 两条常驻通知, 耗电, 重启后需打开一次, 常驻期间脚本听写占用, 其他应用录音时听不到, ColorOS / MIUI 的自启动与电池白名单) 与 `plugin_instruction` 的脚本组合示例 (D21), changelog 1.5.0, 发布流程同 P5-6.
 
 ### 10.6 阶段门槛与风险
@@ -344,5 +344,5 @@ ConversationContextCoordinator
 | 其他应用录音时常驻监听只收到静音 (V9), 唤醒会话不报错却听不到 | 设置说明与 README 写明; P6-4 实测通话与录音机期间的行为 |
 | ColorOS / MIUI 杀掉常驻服务 | 设置说明引导开启自启动与电池白名单; P6-4 在 OnePlus 63751f63 与 Xiaomi Pad 968e9f18 实测 |
 | `VOICE_COMMAND` 入口被其他应用滥用, 消耗模型额度 | D37: 总是可见, 新建对话, 10 s 限速; 调用方必须在前台才能启动界面 (Android 10+) |
-| Macaw P5.7 背景与 D35 不一致 (其写 "两个目标插件都不再需要各自的常驻监听") | 交接文档与汇报中提请 Macaw 的会话回改; P6-0 复核 |
+| 常驻唤醒与 Macaw 助理 / 弹层争用唯一的麦克风 | Macaw D57 临时接管并静默唤醒会话, 结束后自动继续, 对 Stone 透明; Stone 自己的 Binder 听写不在其范围, 按 D32 先暂停再重开; P6-6 联调 |
 | 回退 | P5 / P6 各条目独立提交; 语音入口全部由可解析判定控制, 关闭 "优先使用 3-Macaw Speech" 即回到系统默认行为 |

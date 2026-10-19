@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_speech">语音</string>
+    <string name="speech_auto_read_replies">自动朗读回复</string>
+    <string name="speech_auto_read_replies_summary">新回复边生成边朗读; 语音对话中总是朗读</string>
+    <string name="speech_auto_read_unavailable">设备上没有可用的语音合成引擎</string>
+    <string name="speech_prefer_macaw">优先使用 3-Macaw Speech</string>
+    <string name="speech_prefer_macaw_summary">听写与朗读直接使用 3-Macaw Speech, 不必每次选择应用; 关闭后由系统选择</string>
+    <string name="speech_status_dictation_macaw">听写: 3-Macaw Speech, 离线</string>
+    <string name="speech_status_dictation_none">听写: 没有可用的语音识别应用</string>
+    <string name="speech_status_dictation_system">听写: 由系统选择的语音识别应用</string>
+    <string name="speech_status_install_macaw">安装 3-Macaw Speech 并下载模型即可离线识别与朗读.</string>
+    <string name="speech_status_privacy">3-Macaw Speech 全程离线; 其他识别与合成应用可能联网. 识别出的文字与打字一样发给所选模型, 在线模型会把它发给服务商.</string>
+    <string name="speech_status_read_aloud_macaw">朗读: 3-Macaw Speech, 离线</string>
+    <string name="speech_status_read_aloud_none">朗读: 没有可用的语音合成引擎</string>
+    <string name="speech_status_read_aloud_system">朗读: 系统默认的语音合成引擎</string>
+    <string name="speech_status_title">语音服务</string>
+</resources>

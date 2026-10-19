@@ -15,6 +15,12 @@ import android.widget.TextView
 import android.widget.Toast
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.textfield.TextInputLayout
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationProvider
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadAloudProvider
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechAvailability
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechAvailabilityPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceProbe
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceState
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formBottomSheet
@@ -41,6 +47,7 @@ class AppSettingsActivity : ConfiguredActivity() {
     private lateinit var chatSettings: ChatUiSettings
     private lateinit var updateSettingsStore: AppUpdateSettingsStore
     private lateinit var updateController: AppUpdateController
+    private var speechDeviceState: SpeechDeviceState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -165,6 +172,9 @@ class AppSettingsActivity : ConfiguredActivity() {
         ).view)
         content.addView(hairline())
 
+        buildSpeechSettings(content)
+        content.addView(hairline())
+
         content.addView(sectionHeader(R.string.app_settings_updates))
         content.addView(settingRow(
             title = getString(R.string.app_update_check),
@@ -205,6 +215,65 @@ class AppSettingsActivity : ConfiguredActivity() {
             iconResource = R.drawable.ic_info_24,
             onClick = { startActivity(Intent(this, AboutActivity::class.java)) },
         ).view)
+    }
+
+    /** The "Voice" group after "Conversation" (roadmap D17); its rows follow what the device offers. */
+    private fun buildSpeechSettings(content: LinearLayout) {
+        val speech = SpeechDeviceProbe.probe(this).also { speechDeviceState = it }
+        val availability = SpeechAvailabilityPolicy.resolve(speech, chatSettings.preferMacawSpeech)
+        content.addView(sectionHeader(R.string.app_settings_speech))
+        content.addView(switchRow(
+            title = getString(R.string.speech_auto_read_replies),
+            summary = getString(
+                if (availability.readAloudAvailable) R.string.speech_auto_read_replies_summary
+                else R.string.speech_auto_read_unavailable,
+            ),
+            iconResource = R.drawable.ic_volume_up_24,
+            checked = chatSettings.autoReadReplies && availability.readAloudAvailable,
+        ) { checked -> saveChatSettings(chatSettings.copy(autoReadReplies = checked)) }.view.apply {
+            tag = TAG_SPEECH_AUTO_READ
+            if (!availability.readAloudAvailable) {
+                isEnabled = false
+                alpha = Ui.DISABLED_ALPHA
+            }
+        })
+        if (availability.showPreferMacawSetting) {
+            content.addView(switchRow(
+                title = getString(R.string.speech_prefer_macaw),
+                summary = getString(R.string.speech_prefer_macaw_summary),
+                iconResource = R.drawable.ic_mic_24,
+                checked = chatSettings.preferMacawSpeech,
+            ) { checked ->
+                saveChatSettings(chatSettings.copy(preferMacawSpeech = checked), recreate = true)
+            }.view.apply { tag = TAG_SPEECH_PREFER_MACAW })
+        }
+        content.addView(settingRow(
+            title = getString(R.string.speech_status_title),
+            summary = speechStatusSummary(availability),
+            iconResource = R.drawable.ic_info_24,
+        ).view.apply { tag = TAG_SPEECH_STATUS })
+    }
+
+    private fun speechStatusSummary(availability: SpeechAvailability): String = buildList {
+        add(getString(when (availability.dictation) {
+            DictationProvider.MACAW -> R.string.speech_status_dictation_macaw
+            DictationProvider.SYSTEM -> R.string.speech_status_dictation_system
+            DictationProvider.NONE -> R.string.speech_status_dictation_none
+        }))
+        add(getString(when (availability.readAloud) {
+            ReadAloudProvider.MACAW -> R.string.speech_status_read_aloud_macaw
+            ReadAloudProvider.SYSTEM -> R.string.speech_status_read_aloud_system
+            ReadAloudProvider.NONE -> R.string.speech_status_read_aloud_none
+        }))
+        if (availability.showMacawInstallHint) add(getString(R.string.speech_status_install_macaw))
+        add(getString(R.string.speech_status_privacy))
+    }.joinToString("\n")
+
+    override fun onResume() {
+        super.onResume()
+        // Recognizers and engines may be installed, enabled or removed while settings are open (D17).
+        val built = speechDeviceState ?: return
+        if (SpeechDeviceProbe.probe(this) != built) recreate()
     }
 
     private fun showLauncherIconDialog() {
@@ -711,8 +780,11 @@ class AppSettingsActivity : ConfiguredActivity() {
         val followAutoJs6: Boolean = false,
     )
 
-    private companion object {
-        const val TOKENS_PER_K = 1_024
-        val CONTEXT_TOKEN_BUDGET_PRESETS = listOf(8_192, 16_384, 32_768)
+    internal companion object {
+        const val TAG_SPEECH_AUTO_READ = "speech-auto-read"
+        const val TAG_SPEECH_PREFER_MACAW = "speech-prefer-macaw"
+        const val TAG_SPEECH_STATUS = "speech-status"
+        private const val TOKENS_PER_K = 1_024
+        private val CONTEXT_TOKEN_BUDGET_PRESETS = listOf(8_192, 16_384, 32_768)
     }
 }

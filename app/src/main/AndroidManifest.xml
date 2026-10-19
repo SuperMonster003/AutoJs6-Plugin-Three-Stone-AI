@@ -6,8 +6,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!--
+        Speech uses only the system interfaces (roadmap D6, D22): a recognition app records and returns
+        text, a text-to-speech engine reads replies. This app never records audio.
+    -->
     <queries>
         <package android:name="org.autojs.autojs6" />
+        <intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     </queries>
 
     <application

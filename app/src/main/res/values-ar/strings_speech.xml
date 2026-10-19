@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_speech">الصوت</string>
+    <string name="speech_auto_read_replies">قراءة الردود بصوت عال تلقائيا</string>
+    <string name="speech_auto_read_replies_summary">قراءة كل رد جديد أثناء توليده. تقرأ المحادثة الصوتية الردود دائما</string>
+    <string name="speech_auto_read_unavailable">لا يوجد محرك لتحويل النص إلى كلام على هذا الجهاز</string>
+    <string name="speech_prefer_macaw">تفضيل ⁨3-Macaw Speech⁩</string>
+    <string name="speech_prefer_macaw_summary">الإملاء والقراءة بصوت عال باستخدام ⁨3-Macaw Speech⁩ دون اختيار تطبيق في كل مرة. أوقفه ليختار النظام</string>
+    <string name="speech_status_dictation_macaw">الإملاء: ⁨3-Macaw Speech⁩, دون اتصال</string>
+    <string name="speech_status_dictation_none">الإملاء: لا يوجد تطبيق للتعرف على الكلام</string>
+    <string name="speech_status_dictation_system">الإملاء: تطبيق للتعرف على الكلام يختاره النظام</string>
+    <string name="speech_status_install_macaw">ثبت ⁨3-Macaw Speech⁩ ونزل نماذجه للإملاء والقراءة بصوت عال دون اتصال.</string>
+    <string name="speech_status_privacy">يعمل ⁨3-Macaw Speech⁩ دون اتصال بالكامل. قد تستخدم تطبيقات التعرف والنطق الأخرى الشبكة. يرسل النص المتعرف عليه إلى النموذج المحدد مثل النص المكتوب, لذا يرسله النموذج المتصل إلى مزوده.</string>
+    <string name="speech_status_read_aloud_macaw">القراءة: ⁨3-Macaw Speech⁩, دون اتصال</string>
+    <string name="speech_status_read_aloud_none">القراءة: لا يوجد محرك لتحويل النص إلى كلام</string>
+    <string name="speech_status_read_aloud_system">القراءة: محرك تحويل النص إلى كلام الافتراضي</string>
+    <string name="speech_status_title">خدمات الصوت</string>
+</resources>

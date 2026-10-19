@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_speech">Voix</string>
+    <string name="speech_auto_read_replies">Lire les réponses à voix haute</string>
+    <string name="speech_auto_read_replies_summary">Lire chaque nouvelle réponse pendant sa génération. Les conversations vocales lisent toujours les réponses</string>
+    <string name="speech_auto_read_unavailable">Aucun moteur de synthèse vocale n\'est installé sur cet appareil</string>
+    <string name="speech_prefer_macaw">Privilégier 3-Macaw Speech</string>
+    <string name="speech_prefer_macaw_summary">Dicter et lire avec 3-Macaw Speech sans choisir une application à chaque fois. Désactivez pour laisser le système choisir</string>
+    <string name="speech_status_dictation_macaw">Dictée: 3-Macaw Speech, hors ligne</string>
+    <string name="speech_status_dictation_none">Dictée: aucune application de reconnaissance vocale installée</string>
+    <string name="speech_status_dictation_system">Dictée: application de reconnaissance vocale choisie par le système</string>
+    <string name="speech_status_install_macaw">Installez 3-Macaw Speech et téléchargez ses modèles pour dicter et lire hors ligne.</string>
+    <string name="speech_status_privacy">3-Macaw Speech fonctionne entièrement hors ligne. Les autres applications de reconnaissance et de synthèse peuvent utiliser le réseau. Le texte reconnu est envoyé au modèle choisi comme du texte saisi: un modèle en ligne l\'envoie à son fournisseur.</string>
+    <string name="speech_status_read_aloud_macaw">Lecture: 3-Macaw Speech, hors ligne</string>
+    <string name="speech_status_read_aloud_none">Lecture: aucun moteur de synthèse vocale installé</string>
+    <string name="speech_status_read_aloud_system">Lecture: moteur de synthèse vocale par défaut</string>
+    <string name="speech_status_title">Services vocaux</string>
+</resources>

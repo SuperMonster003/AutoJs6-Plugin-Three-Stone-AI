@@ -39,6 +39,19 @@ class ChatUiSettingsTest {
     }
 
     @Test
+    fun `speech defaults read only on request and prefer macaw`() {
+        val settings = ChatUiSettings()
+
+        // Roadmap D10 and D12: automatic reading is off, 3-Macaw Speech is preferred.
+        assertEquals(false, settings.autoReadReplies)
+        assertEquals(true, settings.preferMacawSpeech)
+        assertEquals(
+            ChatUiSettings(autoReadReplies = true, preferMacawSpeech = false),
+            settings.copy(autoReadReplies = true, preferMacawSpeech = false),
+        )
+    }
+
+    @Test
     fun `context token budget must remain positive`() {
         assertThrows(IllegalArgumentException::class.java) {
             ChatUiSettings(contextTokenBudget = 0)

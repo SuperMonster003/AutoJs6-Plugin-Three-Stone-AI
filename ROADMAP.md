@@ -220,7 +220,7 @@ ConversationContextCoordinator
 | # | 现状事实 | 位置 |
 |---|---|---|
 | V1 | 聊天输入为 View 体系的 `EditText` + 46dp 发送按钮 (发送 / 停止共用), 输入上限 `ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS = 16_384`; 消息操作 4 项 `COPY` / `EDIT` / `DELETE` / `REGENERATE`; 流式输出经 `GenerationListener.onTextDelta` / `onCompleted` 到达; 回复由 `StreamingMarkdownParser` 解析为纯文本 + span (标题, 列表, 链接, 代码块, 表格, 行内代码, 数学) | `ChatActivity.kt` (输入区约 1233-1332 行, `MessageAction` 约 3809 行), `ChatConversation.kt`, `StreamingMarkdownParser.kt` |
-| V2 | 设置页分组: 外观 / 对话 / 生成 / 更新 / 信息; 聊天设置存于 `ChatUiSettings` / `ChatUiSettingsStore` (SharedPreferences) | `AppSettingsActivity.kt`, `ChatUiSettings.kt` |
+| V2 | 设置页分组: 外观 / 对话 / 更新 / 信息 ("生成" 是 "对话" 组内打开底部表单的一行, 2026-10-19 复核更正); 聊天设置存于 `ChatUiSettings` / `ChatUiSettingsStore` (SharedPreferences) | `AppSettingsActivity.kt`, `ChatUiSettings.kt` |
 | V3 | 权限只有 `org.autojs.permission.PLUGIN`, `INTERNET`, `ACCESS_NETWORK_STATE`; `<queries>` 只有 `org.autojs.autojs6`; 仓库内没有任何语音代码 | `AndroidManifest.xml` |
 | V4 | 3-Macaw Speech 的系统语音输入: 导出且无权限的 `ui.voice.VoiceInputActivity` 应答 `android.speech.action.RECOGNIZE_SPEECH`, 底部弹层留在调用方任务中; 首句 `final` 即 `RESULT_OK`, 开始收音 8 s 无语音 `RESULT_NO_MATCH`, 单句上限 60 s; `EXTRA_LANGUAGE` 只用于选模型 (SenseVoice 自动识别语种), `EXTRA_PROMPT` 为弹层标题, 只返回 1 条结果; 无麦克风权限 / 无识别模型 / 麦克风被占用都在弹层内引导; 组件可被其设置开关禁用 | Macaw ROADMAP D41-D47 |
 | V5 | 3-Macaw Speech 的系统 TTS 引擎 `ttsengine.ThreeMacawSpeechTtsEngineService` (`TTS_SERVICE`, 无插件权限), 按语言选默认语音, 说话人取其设置页; 单句 warm RTF: XQ-DQ72 上 AISHELL-3 0.035 / MeloTTS 0.504, OPD2413 上 0.042 / 0.564, G8441 上 MeloTTS 2.262 与 Kokoro 3.434 (慢于实时, 句间停顿), AISHELL-3 / Piper / Matcha 在三台设备上都快于实时 | Macaw D19 / D35, `docs/development/tts-baseline.md` |
@@ -229,6 +229,8 @@ ConversationContextCoordinator
 | V8 | 3-Stove Agent 先例 (D59): 偏好开启且 Macaw 弹层可解析时, `RecognizerIntent` 以 `setPackage` 固定到 Macaw, 否则交给系统选择; 设置行只在可解析时显示, 回到设置页重新判断; `<queries>` 只写 action; 未下载识别模型时由 Macaw 弹层引导安装, 不自动回退其他识别应用 | Stove ROADMAP D59, 提交 `a1d90101` |
 | V9 | 常驻监听的平台限制: Android 10+ 后台启动 Activity 需 "显示在其他应用上层" (`SYSTEM_ALERT_WINDOW`) 等豁免; API 34+ 前台服务必须声明类型, 不录音的应用不能用 `microphone` 类型; Android 14+ 不允许从 `BOOT_COMPLETED` 启动麦克风前台服务, Macaw 在 API 34+ 也只能在可见状态下启动其麦克风前台服务 (V6); 3-Stone AI 的 AI provider 只接受宿主 uid 的调用 (`HostCallerVerifier`), 其他插件无法借用; 3-Macaw Speech 的 1.1.0 候选 "内置语音助手" (其 D8 / P7) 计划由 Macaw 常驻唤醒并把指令交给 3-Stove Agent; Android 10+ 有其他应用在录音 (通话, 录音机, 其他语音输入) 时, 常驻监听只收到静音; ColorOS / MIUI 需用户手动开启自启动与电池白名单, 否则常驻服务可能被杀; 常驻监听的耗电尚未在真机测过 | 平台文档, `provider/HostCallerVerifier.kt`, Macaw ROADMAP P7 |
 | V10 | 3-Macaw Speech 的系统数字助理 (Macaw D48-D57, P5.7, 已推送 `bf19529`, 1.0.0 未发布): 用户把 Macaw 设为默认数字助理后, 长按电源键 / Home 键听写, 不常驻录音; 听写结束后显示可编辑的文字与目标按钮, 用户点按钮才发送 (D49); 目标入口契约 (D50): 目标导出一个 Activity 应答 `org.autojs.plugin.action.VOICE_COMMAND` + DEFAULT, extras 为 `Intent.EXTRA_TEXT` (识别文字, 必有) 与 `org.autojs.plugin.extra.VOICE_LANGUAGE` (BCP 47, 可缺), 发送用显式组件 + `FLAG_ACTIVITY_NEW_TASK`, 入口不受权限保护, 接收方把文本当作不可信输入; 按钮文字与图标取该 Activity 的 label 与 icon; 3-Stone AI 收到后打开聊天页, 在新对话里立即发送并显示回答 (D52), 是否朗读由本路线图定; 锁屏时先解锁再发送 (D55); 不读取屏幕内容 (D54); Macaw 以本节 D27 为准, 三个应用各有常驻监听开关并按 D28 / D31 互斥, 与数字助理并存 (`bf19529`); 数字助理, `RECOGNIZE_SPEECH` 弹层, `RecognitionService` 与试听试说页开始收音时, 若麦克风正被唤醒会话占用 (例如 3-Stone AI 常驻服务持有的 kws 会话), 唤醒会话保持打开但静默 (不报命中, 不结束, 不发新事件), 接管方结束后自动继续, 对客户端透明且不改契约; 正在进行的听写会话 (含 `thenListen` 已转入听写的阶段) 不被接管, 仍得到占用引导 (Macaw D57) | Macaw ROADMAP D48-D57 |
+
+2026-10-19 开工前复核: V1 (输入区 `ChatActivity.kt` 1233-1332 行, `MessageAction` 3809 行; 回复消息菜单为 `COPY` / `REGENERATE`, 用户消息为 `COPY` / `EDIT` / `DELETE`), V3 与 V8 仍成立, V2 已更正; Sony 三台装有 3-Macaw Speech versionCode 41 (弹层与 TTS 引擎均可解析), 小米两台仍是 versionCode 22 (两者都不可解析, 按 "无 Macaw" 处理).
 
 ### 10.2 目标与非目标
 
@@ -296,8 +298,9 @@ ConversationContextCoordinator
 
 #### P5 - 1.4.0 系统接口: 听写, 朗读, 语音对话模式, `VOICE_COMMAND` 入口
 
-- [ ] **P5-1** 可解析判定与设置: `<queries>` 两条 (D22); `SpeechAvailabilityPolicy` 与 Android 适配层; `ChatUiSettings` 新增 `autoReadReplies = false`, `preferMacawSpeech = true`; 设置页 "语音" 组三行 (D17); 10 种语言文案 (ASCII 标点; 阿拉伯语中紧跟非拉丁文字的 "3-Macaw Speech" 加 FSI / PDI).
+- [x] **P5-1** 可解析判定与设置: `<queries>` 两条 (D22); `SpeechAvailabilityPolicy` 与 Android 适配层; `ChatUiSettings` 新增 `autoReadReplies = false`, `preferMacawSpeech = true`; 设置页 "语音" 组三行 (D17); 10 种语言文案 (ASCII 标点; 阿拉伯语中紧跟非拉丁文字的 "3-Macaw Speech" 加 FSI / PDI).
   - 验收: `ChatUiSettingsTest` 扩展; `SpeechAvailabilityPolicy` 单测 (Macaw 有 / 无, 其他识别应用有 / 无, 无 TTS 引擎, 开关开 / 关); Manifest 断言 `<queries>` 形状 (只有 action); `ApplicationTextPunctuationTest` 通过; 设置页在有 / 无 Macaw 两种设备状态下目视.
+  - 完成 (2026-10-19): `speech/SpeechAvailability.kt` (纯策略) 与 `speech/SpeechDeviceProbe.kt` (适配层; 引擎是否存在用 `queryIntentServices(TTS_SERVICE)`, 与 `TextToSpeech.getEngines()` 同一查询, 不必绑定引擎); 文案在 `strings_speech.xml` (10 种语言 + 显式英语). 单测: `SpeechAvailabilityPolicyTest` 7 项, `SpeechManifestContractTest` 2 项 (`<queries>` 只有宿主包与两条 action, 权限仍为 3 项), `ChatUiSettingsTest` 4 项, 标点守卫通过. 真机 (`py .python/device_speech_check.py --serial <X> --only settings`, 截图在 `build/verification/speech/<X>/`): XQ-AT72 (API 31, Macaw versionCode 41) 听写与朗读均为 MACAW, "优先使用" 行可见, 关闭后两者变为 SYSTEM; 小米 23046RP50C (API 35, Macaw versionCode 22 不提供弹层与引擎, 小米识别与合成) 两者为 SYSTEM, 无 "优先使用" 行, 显示安装提示; 两台截图已目视. 设备上无任何 TTS 引擎的状态只有单测覆盖 (当时没有可用的空白模拟器).
 - [ ] **P5-2** 单次听写 (D9, D23): 输入框内麦克风按钮, 短按发起 `RECOGNIZE_SPEECH`, 结果按 `DictationInsertion` 插入; 内容描述与 10 种语言文案.
   - 验收: `DictationInsertion` 单测 (光标, 选区, 空格补齐, 截断); instrumentation 以 androidTest 内的假识别 Activity 核对插入与各返回码; 真机 E4: 装 Macaw 的 Sony 一台 (弹层直接打开, 无选择器) 与只有 Google 的设备一台, 系统选择器与权限对话框由维护者在手机上操作.
 - [ ] **P5-3** 朗读 (D10, D11, D12, D18, D19, D24, D25): `SpeakableTextPolicy`, `SpeechOutput`; 回复消息菜单新增 "朗读 / 停止朗读" (完成且非空的回复); 自动朗读; 输入框上方状态条.

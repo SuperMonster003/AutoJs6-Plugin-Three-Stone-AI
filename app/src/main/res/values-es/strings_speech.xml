@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_speech">Voz</string>
+    <string name="speech_auto_read_replies">Leer las respuestas en voz alta</string>
+    <string name="speech_auto_read_replies_summary">Lee cada respuesta nueva mientras se genera. Las conversaciones por voz siempre leen las respuestas</string>
+    <string name="speech_auto_read_unavailable">No hay ningún motor de texto a voz instalado en este dispositivo</string>
+    <string name="speech_prefer_macaw">Preferir 3-Macaw Speech</string>
+    <string name="speech_prefer_macaw_summary">Dicta y lee en voz alta con 3-Macaw Speech sin elegir una aplicación cada vez. Desactívalo para que elija el sistema</string>
+    <string name="speech_status_dictation_macaw">Dictado: 3-Macaw Speech, sin conexión</string>
+    <string name="speech_status_dictation_none">Dictado: no hay ninguna aplicación de reconocimiento de voz instalada</string>
+    <string name="speech_status_dictation_system">Dictado: una aplicación de reconocimiento de voz elegida por el sistema</string>
+    <string name="speech_status_install_macaw">Instala 3-Macaw Speech y descarga sus modelos para dictar y leer en voz alta sin conexión.</string>
+    <string name="speech_status_privacy">3-Macaw Speech funciona totalmente sin conexión. Otras aplicaciones de reconocimiento y de voz pueden usar la red. El texto reconocido se envía al modelo seleccionado como el texto escrito, así que un modelo en línea lo envía a su proveedor.</string>
+    <string name="speech_status_read_aloud_macaw">Lectura: 3-Macaw Speech, sin conexión</string>
+    <string name="speech_status_read_aloud_none">Lectura: no hay ningún motor de texto a voz instalado</string>
+    <string name="speech_status_read_aloud_system">Lectura: el motor de texto a voz predeterminado</string>
+    <string name="speech_status_title">Servicios de voz</string>
+</resources>

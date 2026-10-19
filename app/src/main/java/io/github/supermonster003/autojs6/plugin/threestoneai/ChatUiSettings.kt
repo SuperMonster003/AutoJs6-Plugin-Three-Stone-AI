@@ -39,6 +39,10 @@ internal data class ChatUiSettings(
     val temperature: Double = AiProviderSamplingDefaults.TEMPERATURE,
     val topK: Int = AiProviderSamplingDefaults.TOP_K,
     val topP: Double = AiProviderSamplingDefaults.TOP_P,
+    /** Read new replies aloud while they stream (roadmap D10); voice conversations always read. */
+    val autoReadReplies: Boolean = false,
+    /** Pin dictation and reading to 3-Macaw Speech when it resolves (roadmap D12). */
+    val preferMacawSpeech: Boolean = true,
 ) {
     init {
         require(contextTokenBudget > 0)
@@ -113,6 +117,8 @@ internal class ChatUiSettingsStore(context: Context) {
             ?.toDoubleOrNull()
             ?.takeIf { it.isFinite() && it in 0.0..1.0 }
             ?: AiProviderSamplingDefaults.TOP_P,
+        autoReadReplies = preferences.getBoolean(KEY_AUTO_READ_REPLIES, false),
+        preferMacawSpeech = preferences.getBoolean(KEY_PREFER_MACAW_SPEECH, true),
     )
 
     fun save(settings: ChatUiSettings) {
@@ -134,6 +140,8 @@ internal class ChatUiSettingsStore(context: Context) {
             .putString(KEY_TEMPERATURE, settings.temperature.toString())
             .putInt(KEY_TOP_K, settings.topK)
             .putString(KEY_TOP_P, settings.topP.toString())
+            .putBoolean(KEY_AUTO_READ_REPLIES, settings.autoReadReplies)
+            .putBoolean(KEY_PREFER_MACAW_SPEECH, settings.preferMacawSpeech)
             .apply()
     }
 
@@ -158,6 +166,8 @@ internal class ChatUiSettingsStore(context: Context) {
         const val KEY_TEMPERATURE = "temperature"
         const val KEY_TOP_K = "top-k"
         const val KEY_TOP_P = "top-p"
+        const val KEY_AUTO_READ_REPLIES = "auto-read-replies"
+        const val KEY_PREFER_MACAW_SPEECH = "prefer-macaw-speech"
     }
 }
 

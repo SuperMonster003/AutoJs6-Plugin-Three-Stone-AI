@@ -80,9 +80,14 @@ internal class ScriptedAiBackend : AiBackend {
     private inner class Session(override val target: AiTarget) : AiBackendSession {
         @Volatile private var cancelled = false
 
+        /** Returns at once like the real backends; the reply streams on its own thread. */
         override fun stream(request: GenerationRequest, listener: GenerationListener) {
             prompts += request.prompt.textParts.joinToString("")
             released = false
+            Thread({ run(listener) }, "speech-test-reply").apply { isDaemon = true }.start()
+        }
+
+        private fun run(listener: GenerationListener) {
             val started = SystemClock.elapsedRealtime()
             for (chunk in reply) {
                 if (cancelled) return

@@ -41,6 +41,8 @@ import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.button.MaterialButton
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
@@ -86,7 +88,11 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechAvaila
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceProbe
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceState
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechOutput
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceConversationMachine
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceEffect
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceEvent
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoicePhase
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceSituation
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusAction
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusLabel
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusPolicy
@@ -204,6 +210,27 @@ class ChatActivity : ConfiguredActivity() {
     private var readingSegmenter: SpeakableTextSegmenter? = null
     private var readingSegmenterMessageId: Long? = null
     private var readingBeganAtMillis = 0L
+    private var voicePhase = VoicePhase.IDLE
+    private var voiceReplyId: Long? = null
+
+    /** Instrumentation only: where the voice conversation stands. */
+    @VisibleForTesting
+    internal val currentVoicePhase: VoicePhase
+        get() = voicePhase
+
+    /** Instrumentation only: timings of finished voice rounds; no text is kept. */
+    @VisibleForTesting
+    internal val voiceRounds = ArrayList<VoiceRoundTiming>()
+
+    /** Instrumentation only: the event that last ended a voice conversation. */
+    @VisibleForTesting
+    internal var lastVoiceExit: String? = null
+        private set
+
+    private var voiceListenAt = 0L
+    private var voiceListenMillis = 0L
+    private var voiceSendAt = 0L
+    private var voiceFirstSoundAt: Long? = null
 
     /** Instrumentation only: the reply being read aloud. */
     @VisibleForTesting
@@ -224,16 +251,21 @@ class ChatActivity : ConfiguredActivity() {
             renderVoiceStatus()
         }
 
-        override fun onReadingFinished(messageId: Long) = Unit
+        override fun onReadingFinished(messageId: Long) {
+            if (messageId == voiceReplyId) dispatchVoice(VoiceEvent.ReplyDone)
+        }
 
         override fun onReadingStopped(messageId: Long, reason: ReadingStopReason) {
             if (reason == ReadingStopReason.ENGINE_FAILED && !destroyed) {
                 showSnackbar(drawerLayout, getString(R.string.speech_read_aloud_failed))
             }
+            if (messageId == voiceReplyId) dispatchVoice(VoiceEvent.ReadingInterrupted)
         }
 
         override fun onFirstUtteranceStarted(messageId: Long) {
             firstUtteranceLatencyMillis = android.os.SystemClock.elapsedRealtime() - readingBeganAtMillis
+            if (messageId == voiceReplyId) voiceFirstSoundAt = android.os.SystemClock.elapsedRealtime()
+            if (messageId == voiceReplyId) dispatchVoice(VoiceEvent.ReadingStarted)
         }
 
         override fun onLanguageUnavailable(locale: Locale) {
@@ -459,8 +491,12 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     override fun onStop() {
-        // Leaving the chat stops reading and clears the queue (roadmap D10).
-        stopReading()
+        // Leaving the chat stops reading and a voice conversation (roadmap D10, D13); our own
+        // recognizer covering the chat is not leaving it.
+        if (pendingDictation == null) {
+            dispatchVoice(VoiceEvent.LeftChat)
+            stopReading()
+        }
         persistComposerDraft()
         persistConversationNow()
         if (managerAttached) {
@@ -1460,7 +1496,21 @@ class ChatActivity : ConfiguredActivity() {
                         contentDescription = getString(R.string.speech_dictate)
                         visibility = View.GONE
                         applySelectableBackground(this)
-                        setOnClickListener { startDictation(DictationMode.SINGLE) }
+                        setOnClickListener {
+                            if (voicePhase != VoicePhase.IDLE) dispatchVoice(VoiceEvent.Exit)
+                            startDictation(DictationMode.SINGLE)
+                        }
+                        // Long press starts a voice conversation (roadmap D13).
+                        setOnLongClickListener {
+                            startVoiceConversation()
+                            true
+                        }
+                        ViewCompat.replaceAccessibilityAction(
+                            this,
+                            AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_LONG_CLICK,
+                            getString(R.string.speech_conversation_start),
+                            null,
+                        )
                     }
                     addView(
                         micButton,
@@ -1499,7 +1549,12 @@ class ChatActivity : ConfiguredActivity() {
                 setImageResource(R.drawable.ic_send_24)
                 contentDescription = getString(R.string.chat_send)
                 setOnClickListener {
-                    if (isGenerating) stopGeneration() else sendCurrentMessage()
+                    if (isGenerating) {
+                        stopGeneration()
+                        dispatchVoice(VoiceEvent.GenerationStopped)
+                    } else {
+                        sendCurrentMessage()
+                    }
                 }
             }
             addView(sendButton, LinearLayout.LayoutParams(dp(46), dp(46)).apply {
@@ -1805,9 +1860,9 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun currentLocale(): Locale = resources.configuration.locales[0]
 
-    private fun startDictation(mode: DictationMode) {
-        if (destroyed || pendingDictation != null) return
-        if (!speechAvailability.dictationAvailable || !isConversationTargetReady()) return
+    private fun startDictation(mode: DictationMode): Boolean {
+        if (destroyed || pendingDictation != null) return false
+        if (!speechAvailability.dictationAvailable || !isConversationTargetReady()) return false
         // Insert where the user was typing; without focus, append (roadmap D9).
         if (input.hasFocus()) {
             dictationSelectionStart = input.selectionStart
@@ -1820,16 +1875,23 @@ class ChatActivity : ConfiguredActivity() {
         val request = DictationIntents.create(
             availability = speechAvailability,
             locale = currentLocale(),
-            prompt = getString(R.string.speech_dictation_prompt),
+            prompt = getString(
+                when (mode) {
+                    DictationMode.SINGLE -> R.string.speech_dictation_prompt
+                    DictationMode.CONVERSATION -> R.string.speech_conversation_prompt
+                },
+            ),
         )
         pendingDictation = mode
-        try {
+        return try {
             dictationLauncher.launch(request)
             dictationRequestCount++
+            true
         } catch (_: ActivityNotFoundException) {
             pendingDictation = null
             refreshSpeechAvailability()
             showSnackbar(drawerLayout, getString(R.string.speech_dictation_unavailable))
+            false
         }
     }
 
@@ -1838,8 +1900,90 @@ class ChatActivity : ConfiguredActivity() {
         pendingDictation = null
         if (destroyed) return
         val outcome = DictationOutcomePolicy.classify(resultCode, DictationIntents.results(data))
-        when (mode) {
-            DictationMode.SINGLE -> applySingleDictation(outcome)
+        if (mode == DictationMode.CONVERSATION) {
+            voiceListenMillis = android.os.SystemClock.elapsedRealtime() - voiceListenAt
+        }
+        when {
+            mode == DictationMode.CONVERSATION && voicePhase == VoicePhase.LISTENING -> dispatchVoice(
+                when (outcome) {
+                    is DictationOutcome.Recognized -> VoiceEvent.Recognized(outcome.text)
+                    DictationOutcome.Canceled -> VoiceEvent.RecognitionCanceled
+                    DictationOutcome.NoMatch -> VoiceEvent.RecognitionNoMatch
+                    is DictationOutcome.Failed -> VoiceEvent.RecognitionFailed(outcome.kind)
+                },
+            )
+            // A conversation lost with a recreated chat still keeps what was said, unsent.
+            else -> applySingleDictation(outcome)
+        }
+    }
+
+    private fun startVoiceConversation() {
+        if (destroyed || pendingDictation != null || voicePhase != VoicePhase.IDLE) return
+        if (!speechAvailability.dictationAvailable || !isConversationTargetReady()) return
+        dispatchVoice(VoiceEvent.Start)
+    }
+
+    private fun dispatchVoice(event: VoiceEvent) {
+        if (destroyed) return
+        val previous = voicePhase
+        val transition = VoiceConversationMachine.next(
+            voicePhase,
+            event,
+            VoiceSituation(editing = editingMessageId != null, generating = isGenerating),
+        )
+        if (event == VoiceEvent.ReplyDone && (previous == VoicePhase.THINKING || previous == VoicePhase.SPEAKING)) {
+            recordVoiceRound()
+        }
+        voicePhase = transition.phase
+        if (voicePhase == VoicePhase.IDLE) voiceReplyId = null
+        if (previous != VoicePhase.IDLE && voicePhase == VoicePhase.IDLE) {
+            lastVoiceExit = event::class.simpleName
+        }
+        transition.effects.forEach(::applyVoiceEffect)
+        renderVoiceStatus()
+    }
+
+    private fun recordVoiceRound() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val reply = messages.singleOrNull { message -> message.id == voiceReplyId }
+        if (voiceRounds.size >= MAXIMUM_VOICE_ROUNDS_KEPT) voiceRounds.removeAt(0)
+        voiceRounds += VoiceRoundTiming(
+            listenMillis = voiceListenMillis,
+            firstSoundMillis = voiceFirstSoundAt?.minus(voiceSendAt),
+            roundMillis = now - voiceSendAt,
+            replyCharacters = reply?.text?.length ?: 0,
+        )
+    }
+
+    /** Instrumentation only: makes the conversation use [targetId] when it is ready. */
+    @VisibleForTesting
+    internal fun useTargetForTest(targetId: String): Boolean {
+        val target = targetCatalog?.targets?.singleOrNull { candidate -> candidate.targetId == targetId }
+            ?.takeIf(::isTargetReady)
+            ?: return false
+        applyConversationTarget(target, announce = false)
+        return true
+    }
+
+    private fun applyVoiceEffect(effect: VoiceEffect) {
+        when (effect) {
+            VoiceEffect.CancelEditing -> cancelEditing()
+            VoiceEffect.StopGeneration -> if (isGenerating) stopGeneration(showToast = false)
+            VoiceEffect.StopReading -> stopReading()
+            VoiceEffect.Listen -> if (startDictation(DictationMode.CONVERSATION)) {
+                voiceListenAt = android.os.SystemClock.elapsedRealtime()
+            } else {
+                voicePhase = VoicePhase.IDLE
+                voiceReplyId = null
+                lastVoiceExit = "ListenUnavailable"
+            }
+            is VoiceEffect.Send -> {
+                voiceSendAt = android.os.SystemClock.elapsedRealtime()
+                voiceFirstSoundAt = null
+                val replyId = sendCurrentMessage(promptOverride = effect.text)
+                if (replyId == null) dispatchVoice(VoiceEvent.SendRejected) else voiceReplyId = replyId
+            }
+            is VoiceEffect.ReportFailure -> showSnackbar(drawerLayout, dictationFailureText(effect.kind))
         }
     }
 
@@ -1939,11 +2083,9 @@ class ChatActivity : ConfiguredActivity() {
         speechOutput.endInput()
     }
 
-    private fun voicePhase(): VoicePhase = VoicePhase.IDLE
-
     private fun renderVoiceStatus() {
         if (!::voiceStatusBar.isInitialized) return
-        val status = VoiceStatusPolicy.status(voicePhase(), readingMessageId != null)
+        val status = VoiceStatusPolicy.status(voicePhase, readingMessageId != null)
         if (status == null) {
             voiceStatusBar.visibility = View.GONE
             return
@@ -1973,14 +2115,17 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun onVoiceStatusAction() {
-        val status = VoiceStatusPolicy.status(voicePhase(), readingMessageId != null) ?: return
+        val status = VoiceStatusPolicy.status(voicePhase, readingMessageId != null) ?: return
         when (status.action) {
             VoiceStatusAction.STOP_READING -> stopReading()
-            VoiceStatusAction.EXIT_CONVERSATION -> Unit
+            VoiceStatusAction.EXIT_CONVERSATION -> dispatchVoice(VoiceEvent.Exit)
         }
     }
 
-    private fun onVoiceStatusTapped() = Unit
+    private fun onVoiceStatusTapped() {
+        val status = VoiceStatusPolicy.status(voicePhase, readingMessageId != null) ?: return
+        if (status.tapInterrupts) dispatchVoice(VoiceEvent.Interrupt)
+    }
 
     private fun renderTranscript() {
         messagesColumn.removeAllViews()
@@ -2298,8 +2443,15 @@ class ChatActivity : ConfiguredActivity() {
         sendCurrentMessage()
     }
 
-    private fun sendCurrentMessage(targetOverride: ConversationTargetSnapshot? = null) {
-        if (isGenerating) return
+    /**
+     * Sends the composer text, or [promptOverride] from a voice conversation without touching the
+     * composer. Returns the new reply's message ID, or null when nothing was sent.
+     */
+    private fun sendCurrentMessage(
+        targetOverride: ConversationTargetSnapshot? = null,
+        promptOverride: String? = null,
+    ): Long? {
+        if (isGenerating) return null
         val target = if (targetOverride == null) {
             resolvedConversationTarget()
         } else {
@@ -2311,23 +2463,28 @@ class ChatActivity : ConfiguredActivity() {
             } else {
                 showUnavailableRegenerationTargetDialog(targetOverride)
             }
-            return
+            return null
         }
         checkNotNull(target)
-        val promptText = input.text.toString().trim()
-        if (promptText.isEmpty()) return
+        val promptText = (promptOverride ?: input.text.toString()).trim()
+            .take(ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS)
+        if (promptText.isEmpty()) return null
         val messageBeingEdited = editingMessageId
         val retainedPrefix = messageBeingEdited?.let { messageId ->
             ConversationEditPolicy.prefixBefore(messages, messageId)
         }
         if (messageBeingEdited != null && retainedPrefix == null) {
             cancelEditing()
-            return
+            return null
         }
         allowDeletedConversationRevival = true
-        input.text.clear()
-        draftStore.clear()
-        hideKeyboard()
+        if (promptOverride == null) {
+            // A typed message ends a voice conversation.
+            dispatchVoice(VoiceEvent.ConversationChanged)
+            input.text.clear()
+            draftStore.clear()
+            hideKeyboard()
+        }
         stopReading()
 
         val userMessage = ChatMessage(
@@ -2372,7 +2529,7 @@ class ChatActivity : ConfiguredActivity() {
         if (
             ReadAloudPolicy.readsNewReply(
                 autoRead = uiSettings.autoReadReplies,
-                voiceConversation = false,
+                voiceConversation = voicePhase != VoicePhase.IDLE,
                 voiceCommandTurn = false,
                 engineAvailable = speechAvailability.readAloudAvailable,
             )
@@ -2383,6 +2540,7 @@ class ChatActivity : ConfiguredActivity() {
         renderEmptyState()
         persistConversationNow()
         startBackendTurn(target, promptText, assistantMessage.id, generationId)
+        return assistantMessage.id
     }
 
     private fun startBackendTurn(
@@ -2881,6 +3039,10 @@ class ChatActivity : ConfiguredActivity() {
             ),
         )
         feedReading(assistantMessageId, final = true)
+        // Nothing (more) to read, for example without an engine: listen again (D13).
+        if (assistantMessageId == voiceReplyId && readingMessageId != assistantMessageId) {
+            dispatchVoice(VoiceEvent.ReplyDone)
+        }
         val cumulativeInputTokens = ChatConversationPolicy.cumulativeInputTokensThrough(
             messages,
             assistantMessageId,
@@ -3114,6 +3276,7 @@ class ChatActivity : ConfiguredActivity() {
         if (!isGenerationCurrent(generationId)) return
         flushTextDelta(generationId, assistantMessageId)
         stopReading()
+        dispatchVoice(VoiceEvent.GenerationFailed)
         val current = messages.singleOrNull { message -> message.id == assistantMessageId }
         if (current != null) {
             val failedTarget = actualTarget ?: checkNotNull(current.target)
@@ -3178,6 +3341,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun startNewConversation(
         target: ConversationTargetSnapshot? = targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot),
     ) {
+        dispatchVoice(VoiceEvent.ConversationChanged)
         stopReading()
         if (isGenerating) stopGeneration(showToast = false) else generationEpoch.incrementAndGet()
         persistConversationNow()
@@ -3249,6 +3413,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun enterEditing(messageId: Long) {
         val message = messages.singleOrNull { candidate -> candidate.id == messageId } ?: return
         if (message.role != ChatMessageRole.USER || isGenerating) return
+        dispatchVoice(VoiceEvent.ConversationChanged)
         closeSearch()
         draftBeforeEditing = input.text.toString()
         draftStore.save(draftBeforeEditing)
@@ -3477,6 +3642,7 @@ class ChatActivity : ConfiguredActivity() {
             showSnackbar(drawerLayout, getString(R.string.chat_history_not_found))
             return
         }
+        dispatchVoice(VoiceEvent.ConversationChanged)
         stopReading()
         if (isGenerating) stopGeneration(showToast = false) else persistConversationNow()
         cancelSummaryCheckpoint()
@@ -3642,6 +3808,7 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun applyConversationTarget(target: AiTarget, announce: Boolean) {
+        dispatchVoice(VoiceEvent.ConversationChanged)
         if (isGenerating) stopGeneration(showToast = false)
         cancelSummaryCheckpoint()
         failedSummaryPlanKey = null
@@ -3839,6 +4006,7 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun deleteMessageAndFollowing(messageId: Long) {
         val retained = ConversationDeletionPolicy.prefixBefore(messages, messageId) ?: return
+        dispatchVoice(VoiceEvent.ConversationChanged)
         val reading = readingMessageId
         if (reading != null && retained.none { message -> message.id == reading }) stopReading()
         if (isGenerating) stopGeneration(showToast = false)
@@ -4279,6 +4447,7 @@ class ChatActivity : ConfiguredActivity() {
         const val COMPOSER_CONTROL_MIN_HEIGHT_DP = 46
         const val COMPOSER_CORNER_RADIUS_DP = 22
         const val COMPOSER_MIC_SIZE_DP = 36
+        const val MAXIMUM_VOICE_ROUNDS_KEPT = 64
         const val COMPOSER_MIC_INSET_DP = 5
         const val COMPOSER_TEXT_END_DP = 16
         const val COMPOSER_TEXT_END_WITH_MIC_DP = 44
@@ -4329,3 +4498,11 @@ internal object ChatViewTags {
     const val VOICE_STATUS = "chat-voice-status"
     const val VOICE_STATUS_ACTION = "chat-voice-status-action"
 }
+
+/** One voice round: recognizer open to result, send to first sound and to the end of reading. */
+internal data class VoiceRoundTiming(
+    val listenMillis: Long,
+    val firstSoundMillis: Long?,
+    val roundMillis: Long,
+    val replyCharacters: Int,
+)

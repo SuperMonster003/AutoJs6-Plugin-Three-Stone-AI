@@ -26,10 +26,13 @@ CLASSES = {
     "settings": PACKAGE + ".speech.SpeechSettingsDeviceTest",
     "dictation": PACKAGE + ".speech.SpeechDictationDeviceTest",
     "reading": PACKAGE + ".speech.SpeechReadingDeviceTest",
+    "conversation": PACKAGE + ".speech.SpeechConversationDeviceTest",
     "engine": PACKAGE + ".speech.SpeechEngineLatencyDeviceTest",
+    "conversation-local": PACKAGE + ".speech.SpeechConversationRealDeviceTest#localTargetTenRounds",
+    "conversation-online": PACKAGE + ".speech.SpeechConversationRealDeviceTest#onlineTargetTenRounds",
 }
 # These play sound through the speaker at the device's media volume: never on adjacent phones at once.
-ACOUSTIC = {"engine"}
+ACOUSTIC = {"engine", "conversation-local", "conversation-online"}
 
 
 def apk_from_metadata(directory, abi=None):

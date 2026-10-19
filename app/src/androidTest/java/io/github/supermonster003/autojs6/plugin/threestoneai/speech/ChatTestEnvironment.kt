@@ -24,7 +24,7 @@ import java.util.UUID
  * fresh conversation. [close] deletes the conversations the test created and restores the chat
  * preferences, the remembered conversation and the composer draft.
  */
-internal class ChatTestEnvironment : Closeable {
+internal class ChatTestEnvironment(scripted: Boolean = true) : Closeable {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
     val context: Context = instrumentation.targetContext
     val backend = ScriptedAiBackend()
@@ -37,10 +37,20 @@ internal class ChatTestEnvironment : Closeable {
     }
 
     init {
-        application.aiBackendOverride = backend
+        if (scripted) application.aiBackendOverride = backend
         // An unknown remembered ID makes the chat open a fresh, empty conversation.
         history.rememberLastConversation("speech-test-${UUID.randomUUID()}")
         context.getSharedPreferences("chat-composer-draft", Context.MODE_PRIVATE).edit().clear().commit()
+    }
+
+    /** Answers successive recognizer requests with [steps] (result code to text); the last repeats. */
+    fun script(vararg steps: Pair<Int, String>) {
+        DictationIntents.testPackage = fakeRecognizerPackage
+        DictationIntents.testExtras = android.os.Bundle().apply {
+            putString(FakeRecognizerActivity.EXTRA_SCRIPT_ID, UUID.randomUUID().toString())
+            putIntArray(FakeRecognizerActivity.EXTRA_SCRIPT_CODES, steps.map { it.first }.toIntArray())
+            putStringArray(FakeRecognizerActivity.EXTRA_SCRIPT_TEXTS, steps.map { it.second }.toTypedArray())
+        }
     }
 
     fun launchChat(): ActivityScenario<ChatActivity> =

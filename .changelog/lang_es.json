@@ -6,7 +6,7 @@
   "changelog_label_dependency": "Dependencia",
   "$data": {
     "v1.4.0": {
-      "released_date": "2026/10/19",
+      "released_date": "2026/10/20",
       "hint": [
         "3-Stone AI no pide el permiso del micrófono: graba la aplicación de reconocimiento. 3-Macaw Speech funciona totalmente sin conexión, otras aplicaciones de reconocimiento o de voz pueden usar la red, y el texto reconocido se envía al modelo seleccionado igual que el texto escrito"
       ],

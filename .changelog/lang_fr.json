@@ -6,7 +6,7 @@
   "changelog_label_dependency": "Dépendance",
   "$data": {
     "v1.4.0": {
-      "released_date": "2026/10/19",
+      "released_date": "2026/10/20",
       "hint": [
         "3-Stone AI ne demande pas l'autorisation du micro: c'est l'application de reconnaissance qui enregistre. 3-Macaw Speech fonctionne entièrement hors ligne, les autres applications de reconnaissance ou de synthèse peuvent utiliser le réseau, et le texte reconnu est envoyé au modèle choisi comme un texte saisi"
       ],

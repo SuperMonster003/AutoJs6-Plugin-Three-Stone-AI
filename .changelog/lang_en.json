@@ -6,7 +6,7 @@
   "changelog_label_dependency": "Dependency",
   "$data": {
     "v1.4.0": {
-      "released_date": "2026/10/19",
+      "released_date": "2026/10/20",
       "hint": [
         "3-Stone AI does not ask for the microphone permission; the recognition app records. 3-Macaw Speech works fully offline, other recognition or speech apps may use the network, and recognized text goes to the selected model just like typed text"
       ],

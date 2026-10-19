@@ -196,7 +196,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 # v1.4.0
 
-###### 2026/10/19
+###### 2026/10/20
 
 * `Note` 3-Stone AI ne demande pas l'autorisation du micro: c'est l'application de reconnaissance qui enregistre. 3-Macaw Speech fonctionne entièrement hors ligne, les autres applications de reconnaissance ou de synthèse peuvent utiliser le réseau, et le texte reconnu est envoyé au modèle choisi comme un texte saisi
 * `Fonctionnalité` Nouveau bouton micro dans le champ de saisie: touchez-le et parlez, le texte reconnu est inséré au curseur pour être vérifié avant l'envoi. Avec 3-Macaw Speech, la reconnaissance se fait hors ligne; sinon, l'application de reconnaissance vocale du téléphone est utilisée

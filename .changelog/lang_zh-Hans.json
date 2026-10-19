@@ -6,7 +6,7 @@
   "changelog_label_dependency": "依赖",
   "$data": {
     "v1.4.0": {
-      "released_date": "2026/10/19",
+      "released_date": "2026/10/20",
       "hint": [
         "3-Stone AI 不申请麦克风权限, 录音由识别应用完成. 3-Macaw Speech 全程离线, 其他识别或朗读应用可能联网; 识别出的文字和打字一样发给所选模型"
       ],

@@ -196,7 +196,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 # v1.4.0
 
-###### 2026/10/19
+###### 2026/10/20
 
 * `Hint` 3-Stone AI does not ask for the microphone permission; the recognition app records. 3-Macaw Speech works fully offline, other recognition or speech apps may use the network, and recognized text goes to the selected model just like typed text
 * `Feature` A microphone button inside the input box: tap and speak, and the recognized text is inserted at the cursor so you can check it before sending. With 3-Macaw Speech installed it recognizes offline; otherwise the phone's own speech recognition app is used

@@ -6,7 +6,7 @@
 
 # v1.4.0
 
-###### 2026/10/19
+###### 2026/10/20
 
 * `Aviso` 3-Stone AI no pide el permiso del micrófono: graba la aplicación de reconocimiento. 3-Macaw Speech funciona totalmente sin conexión, otras aplicaciones de reconocimiento o de voz pueden usar la red, y el texto reconocido se envía al modelo seleccionado igual que el texto escrito
 * `Función` Nuevo botón de micrófono dentro del cuadro de entrada: tócalo y habla, y el texto reconocido se inserta en el cursor para revisarlo antes de enviar. Con 3-Macaw Speech el reconocimiento es sin conexión; si no, se usa la aplicación de reconocimiento de voz del teléfono

@@ -219,6 +219,7 @@ class ChatActivity : ConfiguredActivity() {
     private var voiceReplyId: Long? = null
     private lateinit var voiceCommandStore: VoiceCommandStore
     private var voiceCommandCheckPending = false
+    private var appearanceSettled = false
     private var voiceCommandTurn = false
     private var voiceCommandTurnLanguage: String? = null
 
@@ -514,9 +515,23 @@ class ChatActivity : ConfiguredActivity() {
         }
         refreshTargetCatalog(importCoordinator.managerState())
         refreshSpeechAvailability()
-        processVoiceCommands()
         refreshDrawerHistory()
         updateController.checkAutomaticallyIfDue()
+    }
+
+    override fun onPause() {
+        appearanceSettled = false
+        super.onPause()
+    }
+
+    // A cold start may recreate the chat once the AutoJs6 appearance is known; work started before
+    // that (a voice command's reply and its reading) would be cut off.
+    override fun defersAppearanceRecreation(): Boolean =
+        isGenerating || readingMessageId != null || pendingDictation != null || voicePhase != VoicePhase.IDLE
+
+    override fun onAppearanceSettled() {
+        appearanceSettled = true
+        processVoiceCommands()
     }
 
     override fun onStop() {
@@ -1610,12 +1625,12 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun renderManagerState(state: ModelManagerState) {
         refreshTargetCatalog(state)
-        if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) processVoiceCommands()
+        processVoiceCommands()
     }
 
     /** Answers commands from [io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommandActivity] once targets are known. */
     private fun processVoiceCommands() {
-        if (!voiceCommandCheckPending || destroyed) return
+        if (!voiceCommandCheckPending || destroyed || !appearanceSettled) return
         if (targetCatalogAvailability == TargetCatalogAvailability.LOADING) return
         voiceCommandCheckPending = false
         VoiceCommandInbox.takeAll().forEach(::handleVoiceCommand)

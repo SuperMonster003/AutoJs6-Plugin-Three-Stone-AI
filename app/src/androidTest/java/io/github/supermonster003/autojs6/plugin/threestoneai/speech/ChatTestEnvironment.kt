@@ -108,7 +108,7 @@ internal class ChatTestEnvironment(scripted: Boolean = true) : Closeable {
     }
 
     companion object {
-        private val PREFERENCE_FILES = listOf("chat-ui-settings", "chat-composer-draft", "voice-command")
+        private val PREFERENCE_FILES = listOf("chat-ui-settings", "chat-composer-draft", "voice-command", "application-settings")
 
         fun composer(activity: ChatActivity): EditText =
             activity.window.decorView.findViewWithTag(ChatViewTags.COMPOSER_INPUT)

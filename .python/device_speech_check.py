@@ -81,6 +81,8 @@ def main():
                         help="leave the test APK (and its fake recognizer) installed")
     parser.add_argument("--force", action="store_true",
                         help="run even when another app is in the foreground")
+    parser.add_argument("--prefer-macaw", choices=["true", "false"],
+                        help="manual tests: set \"Prefer 3-Macaw Speech\" for this run only")
     parser.add_argument("--output", type=Path, default=ROOT / "build/verification/speech")
     args = parser.parse_args()
     selected = [name.strip() for name in args.only.split(",") if name.strip()]
@@ -133,7 +135,8 @@ def main():
                     volume = shell("media", "volume", "--stream", "3", "--get", check=False)
                 level = re.search(r"volume is (\d+) in range \[(\d+)\.\.(\d+)\]", volume)
                 print(f"  {name} plays sound; media volume {level.group(1) + '/' + level.group(3) if level else 'unknown'}")
-            result = shell("am", "instrument", "-w", "-r", "-e", "class", CLASSES[name], RUNNER, timeout=1800)
+            extra = ["-e", "preferMacaw", args.prefer_macaw] if args.prefer_macaw else []
+            result = shell("am", "instrument", "-w", "-r", *extra, "-e", "class", CLASSES[name], RUNNER, timeout=1800)
             (output / f"{name}-instrumentation.txt").write_text(result, encoding="utf-8")
             passed, tests, failures = summarize(result)
             all_passed &= passed

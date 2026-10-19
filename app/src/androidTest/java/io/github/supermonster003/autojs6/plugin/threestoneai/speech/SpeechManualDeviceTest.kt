@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.speech
 
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import io.github.supermonster003.autojs6.plugin.threestoneai.ChatActivity
@@ -52,7 +53,7 @@ class SpeechManualDeviceTest {
             environment.backend.chunkDelayMillis = 150L
             val availability = SpeechDeviceProbe.availability(environment.context, preferMacaw = preferMacaw(environment))
             environment.launchChat().use { scenario ->
-                waitUntil("the maintainer finishes a voice conversation", timeoutMillis = 3 * WAIT_MILLIS) {
+                waitUntil("the maintainer finishes a voice conversation", timeoutMillis = 2 * WAIT_MILLIS) {
                     var done = false
                     scenario.onActivity { activity ->
                         done = activity.voiceRounds.isNotEmpty() && activity.lastVoiceExit != null &&
@@ -101,9 +102,14 @@ class SpeechManualDeviceTest {
         }
     }
 
-    private fun preferMacaw(environment: ChatTestEnvironment): Boolean =
-        io.github.supermonster003.autojs6.plugin.threestoneai.ChatUiSettingsStore(environment.context)
-            .load().preferMacawSpeech
+    /** `-e preferMacaw false` turns the preference off for this run; the environment restores it. */
+    private fun preferMacaw(environment: ChatTestEnvironment): Boolean {
+        val store = io.github.supermonster003.autojs6.plugin.threestoneai.ChatUiSettingsStore(environment.context)
+        InstrumentationRegistry.getArguments().getString("preferMacaw")?.toBooleanStrictOrNull()?.let { prefer ->
+            store.save(store.load().copy(preferMacawSpeech = prefer))
+        }
+        return store.load().preferMacawSpeech
+    }
 
     private fun chat(environment: ChatTestEnvironment): ChatActivity? {
         var chat: ChatActivity? = null
@@ -115,6 +121,6 @@ class SpeechManualDeviceTest {
     }
 
     private companion object {
-        const val WAIT_MILLIS = 120_000L
+        const val WAIT_MILLIS = 300_000L
     }
 }

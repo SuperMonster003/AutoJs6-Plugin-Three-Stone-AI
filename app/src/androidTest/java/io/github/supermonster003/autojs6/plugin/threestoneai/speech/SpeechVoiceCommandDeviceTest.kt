@@ -5,6 +5,10 @@ import android.view.View
 import androidx.test.core.app.ActivityScenario
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
+import io.github.supermonster003.autojs6.plugin.threestoneai.ApplicationSettingsStore
+import io.github.supermonster003.autojs6.plugin.threestoneai.AutoJs6HostAvailability
+import io.github.supermonster003.autojs6.plugin.threestoneai.AutoJs6HostSettingsClient
+import io.github.supermonster003.autojs6.plugin.threestoneai.AutoJs6HostSettingsResult
 import io.github.supermonster003.autojs6.plugin.threestoneai.ChatActivity
 import io.github.supermonster003.autojs6.plugin.threestoneai.ChatViewTags
 import io.github.supermonster003.autojs6.plugin.threestoneai.R
@@ -66,6 +70,30 @@ class SpeechVoiceCommandDeviceTest {
         values["coldStart"] = "pass"
         values["language"] = FakeSpeechEngine.engines.last().languagesTried.first()
         SpeechDeviceReport.receipt("voice-command-cold", values)
+    }
+
+    /**
+     * A cold start recreates the chat once AutoJs6's appearance is known. The command must wait for
+     * that, and a later appearance change must not recreate the chat while the answer is read.
+     */
+    @Test
+    fun theAppearanceCheckNeverCutsOffTheAnswer() {
+        // The state of a fresh process: no AutoJs6 appearance known yet.
+        AutoJs6HostSettingsClient.publish(AutoJs6HostSettingsResult(AutoJs6HostAvailability.CONTRACT_UNAVAILABLE))
+        voiceCommand("Cold question", "en-US")
+        waitUntil("the command is sent") { environment.backend.prompts.toList() == listOf("Cold question") }
+        waitUntil("the answer is read") { onChat { it.readingMessageId != null } }
+        val reading = onChat { System.identityHashCode(it) }
+        // An appearance change arrives while the answer is still being read.
+        val settings = ApplicationSettingsStore(environment.context)
+        settings.save(settings.load())
+        voiceCommand(null, null)
+        environment.instrumentation.waitForIdleSync()
+        android.os.SystemClock.sleep(1_500L)
+        assertEquals("The chat was not recreated", reading, onChat { System.identityHashCode(it) })
+        assertTrue(onChat { it.readingMessageId != null })
+        assertEquals(1, environment.backend.prompts.size)
+        SpeechDeviceReport.receipt("voice-command-appearance", mapOf("answerKept" to "pass"))
     }
 
     @Test

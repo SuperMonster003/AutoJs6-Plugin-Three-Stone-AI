@@ -328,6 +328,15 @@ abstract class ConfiguredActivity : AppCompatActivity() {
     private var interacted = false
     protected open fun hasUnconfirmedDialog(): Boolean = false
 
+    /**
+     * True while work runs that recreating the activity would cut off (a reply being generated or
+     * read, an open recognizer); the appearance check then waits for the next resume.
+     */
+    protected open fun defersAppearanceRecreation(): Boolean = false
+
+    /** Called once this resume's appearance check is done without recreating the activity. */
+    protected open fun onAppearanceSettled() = Unit
+
     override fun onUserInteraction() { interacted = true; super.onUserInteraction() }
 
     override fun attachBaseContext(newBase: Context) {
@@ -355,7 +364,7 @@ abstract class ConfiguredActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         interacted = false
-        if (!recreationRequested && !hasUnconfirmedDialog() &&
+        if (!recreationRequested && !hasUnconfirmedDialog() && !defersAppearanceRecreation() &&
             (ApplicationSettingsStore(this).revision() != appliedSettingsRevision || currentHostAppearanceSignature() != appliedHostAppearanceSignature)) {
             recreationRequested = true
             recreate()
@@ -365,9 +374,13 @@ abstract class ConfiguredActivity : AppCompatActivity() {
         AutoJs6HostSettingsClient.refresh(applicationContext) { next ->
             if (expected != appearanceGeneration || isFinishing || isDestroyed) return@refresh
             AutoJs6HostSettingsClient.publish(next)
-            if (!interacted && !hasUnconfirmedDialog() && !recreationRequested && currentHostAppearanceSignature() != appliedHostAppearanceSignature) {
+            if (recreationRequested) return@refresh
+            if (!interacted && !hasUnconfirmedDialog() && !defersAppearanceRecreation() &&
+                currentHostAppearanceSignature() != appliedHostAppearanceSignature) {
                 recreationRequested = true
                 recreate()
+            } else {
+                onAppearanceSettled()
             }
         }
     }

@@ -35,4 +35,6 @@
     <string name="speech_status_read_aloud_none">Lectura: no hay ningún motor de texto a voz instalado</string>
     <string name="speech_status_read_aloud_system">Lectura: el motor de texto a voz predeterminado</string>
     <string name="speech_status_title">Servicios de voz</string>
+    <string name="speech_voice_command_no_target">No hay ningún modelo listo, así que la pregunta dictada se puso en el cuadro de entrada</string>
+    <string name="speech_voice_command_rate_limited">Pasaron menos de 10 segundos desde la última pregunta dictada, así que esta se puso en el cuadro de entrada. Envíala cuando quieras</string>
 </resources>

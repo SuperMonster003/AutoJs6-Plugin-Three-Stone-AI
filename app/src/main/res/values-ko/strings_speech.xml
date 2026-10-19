@@ -35,4 +35,6 @@
     <string name="speech_status_read_aloud_none">읽기: 사용할 수 있는 음성 합성 엔진이 없습니다</string>
     <string name="speech_status_read_aloud_system">읽기: 기본 음성 합성 엔진</string>
     <string name="speech_status_title">음성 서비스</string>
+    <string name="speech_voice_command_no_target">사용할 수 있는 모델이 없어 음성 질문을 입력란에 넣었습니다</string>
+    <string name="speech_voice_command_rate_limited">마지막 음성 질문 후 10초가 지나지 않아 입력란에 넣었습니다. 확인 후 보내세요</string>
 </resources>

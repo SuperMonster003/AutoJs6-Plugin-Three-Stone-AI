@@ -35,4 +35,6 @@
     <string name="speech_status_read_aloud_none">القراءة: لا يوجد محرك لتحويل النص إلى كلام</string>
     <string name="speech_status_read_aloud_system">القراءة: محرك تحويل النص إلى كلام الافتراضي</string>
     <string name="speech_status_title">خدمات الصوت</string>
+    <string name="speech_voice_command_no_target">لا يوجد نموذج جاهز, لذا وضع السؤال المنطوق في مربع الإدخال</string>
+    <string name="speech_voice_command_rate_limited">مضى أقل من 10 ثوان على آخر سؤال منطوق, لذا وضع هذا في مربع الإدخال. أرسله عندما تكون جاهزا</string>
 </resources>

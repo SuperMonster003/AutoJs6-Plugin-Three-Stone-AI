@@ -35,4 +35,6 @@
     <string name="speech_status_read_aloud_none">読み上げ: 音声合成エンジンがありません</string>
     <string name="speech_status_read_aloud_system">読み上げ: 既定の音声合成エンジン</string>
     <string name="speech_status_title">音声サービス</string>
+    <string name="speech_voice_command_no_target">使用できるモデルがないため, 音声での質問を入力欄に入れました</string>
+    <string name="speech_voice_command_rate_limited">前回の音声での質問から 10 秒以内のため, 入力欄に入れました. 確認してから送信してください</string>
 </resources>

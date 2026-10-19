@@ -35,4 +35,6 @@
     <string name="speech_status_read_aloud_none">Lecture: aucun moteur de synthèse vocale installé</string>
     <string name="speech_status_read_aloud_system">Lecture: moteur de synthèse vocale par défaut</string>
     <string name="speech_status_title">Services vocaux</string>
+    <string name="speech_voice_command_no_target">Aucun modèle n\'est prêt: la question dictée a été placée dans le champ de saisie</string>
+    <string name="speech_voice_command_rate_limited">Moins de 10 secondes depuis la dernière question dictée: celle-ci a été placée dans le champ de saisie. Envoyez-la quand vous êtes prêt</string>
 </resources>

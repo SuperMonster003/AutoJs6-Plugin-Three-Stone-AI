@@ -49,6 +49,27 @@ class SpeechManifestContractTest {
         )
     }
 
+    @Test
+    fun `the voice command entry is an exported unprotected trampoline`() {
+        val activity = manifest.children("application").single().children("activity")
+            .single { it.android("name") == ".voice.VoiceCommandActivity" }
+
+        // Roadmap D38 and Macaw D50: no permission, the app's label and icon, gone after use.
+        assertEquals("true", activity.android("exported"))
+        assertEquals("", activity.android("permission"))
+        assertEquals("@string/app_name", activity.android("label"))
+        assertEquals("@mipmap/ic_icon_studio_application", activity.android("icon"))
+        assertEquals("@android:style/Theme.NoDisplay", activity.android("theme"))
+        assertEquals("true", activity.android("excludeFromRecents"))
+        assertEquals("true", activity.android("noHistory"))
+        assertEquals("", activity.getAttributeNS(ANDROID, "taskAffinity"))
+        assertEquals(true, activity.hasAttributeNS(ANDROID, "taskAffinity"))
+        val filter = activity.children("intent-filter").single()
+        assertEquals(listOf("org.autojs.plugin.action.VOICE_COMMAND"), filter.children("action").map { it.android("name") })
+        assertEquals(listOf("android.intent.category.DEFAULT"), filter.children("category").map { it.android("name") })
+        assertEquals(emptyList<Element>(), filter.children("data"))
+    }
+
     private fun Element.childElements(): List<Element> = buildList {
         val nodes = childNodes
         for (index in 0 until nodes.length) (nodes.item(index) as? Element)?.let(::add)

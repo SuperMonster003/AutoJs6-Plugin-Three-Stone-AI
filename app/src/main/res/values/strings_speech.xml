@@ -35,4 +35,6 @@
     <string name="speech_status_read_aloud_none">Reading aloud: no text-to-speech engine is installed</string>
     <string name="speech_status_read_aloud_system">Reading aloud: the default text-to-speech engine</string>
     <string name="speech_status_title">Voice services</string>
+    <string name="speech_voice_command_no_target">No model is ready, so the spoken question was put in the input box</string>
+    <string name="speech_voice_command_rate_limited">Less than 10 seconds since the last spoken question, so this one was put in the input box. Send it when ready</string>
 </resources>

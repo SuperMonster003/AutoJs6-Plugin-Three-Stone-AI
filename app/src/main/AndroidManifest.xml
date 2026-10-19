@@ -145,6 +145,26 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Target of the 3-Macaw Speech digital assistant (roadmap D35-D38, Macaw D50). The assistant shows
+            this label and icon on its button. No permission by contract: the chat treats the text as
+            untrusted, always opens visibly in a new conversation and rate limits immediate sends.
+        -->
+        <activity
+            android:name=".voice.VoiceCommandActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_icon_studio_application"
+            android:label="@string/app_name"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="org.autojs.plugin.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".ThreeStoneAiPluginInfoService"
             android:enabled="true"

@@ -25,7 +25,13 @@ internal class FakeSpeechEngine(private val callbacks: SpeechEngineCallbacks) : 
     var shutDown = false
         private set
 
-    override fun setLanguage(locale: Locale): Boolean = locale.language in supportedLanguages
+    /** Every language the chat asked for, in order. */
+    val languagesTried: MutableList<String> = Collections.synchronizedList(ArrayList())
+
+    override fun setLanguage(locale: Locale): Boolean {
+        languagesTried += locale.toLanguageTag()
+        return locale.language in supportedLanguages
+    }
 
     override fun useDefaultVoice() {
         defaultVoiceUses++

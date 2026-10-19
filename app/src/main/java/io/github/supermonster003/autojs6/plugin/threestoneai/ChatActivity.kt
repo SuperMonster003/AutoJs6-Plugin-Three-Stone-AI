@@ -96,6 +96,11 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceSituati
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusAction
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusLabel
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommand
+import io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommandDisposition
+import io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommandInbox
+import io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommandPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommandStore
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -212,6 +217,19 @@ class ChatActivity : ConfiguredActivity() {
     private var readingBeganAtMillis = 0L
     private var voicePhase = VoicePhase.IDLE
     private var voiceReplyId: Long? = null
+    private lateinit var voiceCommandStore: VoiceCommandStore
+    private var voiceCommandCheckPending = false
+    private var voiceCommandTurn = false
+    private var voiceCommandTurnLanguage: String? = null
+
+    /** Instrumentation only: the open conversation and its message count. */
+    @VisibleForTesting
+    internal val conversationIdForTest: String
+        get() = currentConversationId
+
+    @VisibleForTesting
+    internal val messageCountForTest: Int
+        get() = messages.size
 
     /** Instrumentation only: where the voice conversation stands. */
     @VisibleForTesting
@@ -321,6 +339,8 @@ class ChatActivity : ConfiguredActivity() {
         uiSettings = uiSettingsStore.load()
         speechAvailability = SpeechDeviceProbe.availability(this, uiSettings.preferMacawSpeech)
         speechOutput = SpeechOutput(this, speechListener)
+        voiceCommandStore = VoiceCommandStore(applicationContext)
+        voiceCommandCheckPending = intent.getBooleanExtra(VoiceCommandInbox.EXTRA_CHECK_INBOX, false)
         pendingDrawerExportId = savedInstanceState?.getString(STATE_PENDING_DRAWER_EXPORT_ID)
         pendingDictation = savedInstanceState?.getString(STATE_PENDING_DICTATION)
             ?.let { name -> runCatching { DictationMode.valueOf(name) }.getOrNull() }
@@ -356,6 +376,7 @@ class ChatActivity : ConfiguredActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.getBooleanExtra(VoiceCommandInbox.EXTRA_CHECK_INBOX, false)) voiceCommandCheckPending = true
         val conversationId = intent.getStringExtra(ConversationNavigation.EXTRA_CONVERSATION_ID)
             ?: return
         if (conversationId != currentConversationId) switchConversation(conversationId)
@@ -486,6 +507,7 @@ class ChatActivity : ConfiguredActivity() {
         }
         refreshTargetCatalog(importCoordinator.managerState())
         refreshSpeechAvailability()
+        processVoiceCommands()
         refreshDrawerHistory()
         updateController.checkAutomaticallyIfDue()
     }
@@ -1581,6 +1603,62 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun renderManagerState(state: ModelManagerState) {
         refreshTargetCatalog(state)
+        if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) processVoiceCommands()
+    }
+
+    /** Answers commands from [io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommandActivity] once targets are known. */
+    private fun processVoiceCommands() {
+        if (!voiceCommandCheckPending || destroyed) return
+        if (targetCatalogAvailability == TargetCatalogAvailability.LOADING) return
+        voiceCommandCheckPending = false
+        VoiceCommandInbox.takeAll().forEach(::handleVoiceCommand)
+    }
+
+    /**
+     * Roadmap D35-D38: a new conversation with the current target, sent at once and read aloud in
+     * the spoken language. An edit is canceled and a running reply stopped first; without a ready
+     * target or within 10 s of the last immediate send the text only fills the composer.
+     */
+    private fun handleVoiceCommand(command: VoiceCommand) {
+        val text = command.text ?: return
+        dispatchVoice(VoiceEvent.ConversationChanged)
+        closeSearch()
+        if (::drawerLayout.isInitialized) drawerLayout.closeDrawer(GravityCompat.START)
+        if (editingMessageId != null) cancelEditing()
+        val draft = input.text.toString()
+        startNewConversation(conversationTarget ?: targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot))
+        when (
+            VoiceCommandPolicy.disposition(
+                command = command,
+                targetReady = isConversationTargetReady(),
+                lastImmediateSendAtMillis = voiceCommandStore.lastImmediateSendAtMillis,
+            )
+        ) {
+            VoiceCommandDisposition.OPEN -> Unit
+            VoiceCommandDisposition.PREFILL_NO_TARGET -> prefillVoiceCommand(text, R.string.speech_voice_command_no_target)
+            VoiceCommandDisposition.PREFILL_RATE_LIMITED ->
+                prefillVoiceCommand(text, R.string.speech_voice_command_rate_limited)
+            VoiceCommandDisposition.SEND -> {
+                voiceCommandTurn = true
+                voiceCommandTurnLanguage = command.languageTag
+                val replyId = try {
+                    sendCurrentMessage(promptOverride = text)
+                } finally {
+                    voiceCommandTurn = false
+                    voiceCommandTurnLanguage = null
+                }
+                if (replyId != null) voiceCommandStore.lastImmediateSendAtMillis = command.receivedAtMillis
+                // The unsent draft from before stays in the composer.
+                input.setText(draft)
+                input.setSelection(input.text.length)
+            }
+        }
+    }
+
+    private fun prefillVoiceCommand(text: String, message: Int) {
+        input.setText(text)
+        input.setSelection(input.text.length)
+        showSnackbar(drawerLayout, getString(message), com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
     }
 
     private fun refreshTargetCatalog(state: ModelManagerState) {
@@ -2530,11 +2608,12 @@ class ChatActivity : ConfiguredActivity() {
             ReadAloudPolicy.readsNewReply(
                 autoRead = uiSettings.autoReadReplies,
                 voiceConversation = voicePhase != VoicePhase.IDLE,
-                voiceCommandTurn = false,
+                voiceCommandTurn = voiceCommandTurn,
                 engineAvailable = speechAvailability.readAloudAvailable,
             )
         ) {
-            startReading(assistantMessage.id)
+            // A voice command's answer is read in the spoken language first (D36).
+            startReading(assistantMessage.id, voiceCommandTurnLanguage.takeIf { voiceCommandTurn })
         }
         renderComposerState()
         renderEmptyState()

@@ -35,4 +35,6 @@
     <string name="speech_status_read_aloud_none">Озвучивание: нет синтезатора речи</string>
     <string name="speech_status_read_aloud_system">Озвучивание: синтезатор речи по умолчанию</string>
     <string name="speech_status_title">Голосовые службы</string>
+    <string name="speech_voice_command_no_target">Нет готовой модели, поэтому произнесенный вопрос помещен в поле ввода</string>
+    <string name="speech_voice_command_rate_limited">С последнего голосового вопроса прошло меньше 10 секунд, поэтому этот помещен в поле ввода. Отправьте его, когда будете готовы</string>
 </resources>

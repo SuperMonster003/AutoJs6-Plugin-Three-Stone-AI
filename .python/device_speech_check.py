@@ -27,6 +27,7 @@ CLASSES = {
     "dictation": PACKAGE + ".speech.SpeechDictationDeviceTest",
     "reading": PACKAGE + ".speech.SpeechReadingDeviceTest",
     "conversation": PACKAGE + ".speech.SpeechConversationDeviceTest",
+    "voice-command": PACKAGE + ".speech.SpeechVoiceCommandDeviceTest",
     "engine": PACKAGE + ".speech.SpeechEngineLatencyDeviceTest",
     "conversation-local": PACKAGE + ".speech.SpeechConversationRealDeviceTest#localTargetTenRounds",
     "conversation-online": PACKAGE + ".speech.SpeechConversationRealDeviceTest#onlineTargetTenRounds",

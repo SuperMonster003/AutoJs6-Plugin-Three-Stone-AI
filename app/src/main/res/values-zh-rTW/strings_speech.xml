@@ -35,4 +35,6 @@
     <string name="speech_status_read_aloud_none">朗讀: 沒有可用的語音合成引擎</string>
     <string name="speech_status_read_aloud_system">朗讀: 系統預設的語音合成引擎</string>
     <string name="speech_status_title">語音服務</string>
+    <string name="speech_voice_command_no_target">目前沒有可用的模型, 語音提問已填入輸入框</string>
+    <string name="speech_voice_command_rate_limited">距上一次語音提問不到 10 秒, 已填入輸入框, 確認後再傳送</string>
 </resources>

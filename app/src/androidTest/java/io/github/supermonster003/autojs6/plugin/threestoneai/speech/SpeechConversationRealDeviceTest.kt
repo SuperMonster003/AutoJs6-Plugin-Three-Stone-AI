@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai.speech
 import android.app.Activity
 import android.content.Intent
 import androidx.test.core.app.ActivityScenario
+import androidx.test.platform.app.InstrumentationRegistry
 import io.github.supermonster003.autojs6.plugin.threestoneai.ChatActivity
 import io.github.supermonster003.autojs6.plugin.threestoneai.ChatUiSettingsStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiApplication
@@ -32,9 +33,20 @@ class SpeechConversationRealDeviceTest {
     private fun tenRounds(locality: AiTargetLocality, label: String) {
         ChatTestEnvironment(scripted = false).use { environment ->
             val application = environment.context.applicationContext as ThreeStoneAiApplication
-            val target = application.aiBackend.catalog().targets.firstOrNull { target ->
+            val ready = application.aiBackend.catalog().targets.filter { target ->
                 target.locality == locality && target.configured && target.available && target.capabilities.streaming
             }
+            val arguments = InstrumentationRegistry.getArguments()
+            if (arguments.getString("listTargets") == "true") {
+                // Model and provider names only; profiles and credentials stay private.
+                SpeechDeviceReport.receipt(
+                    "conversation-$label-targets",
+                    ready.mapIndexed { index, target -> "target$index" to "${target.providerId} ${target.modelId}" }.toMap(),
+                )
+                return@use
+            }
+            val wanted = arguments.getString("targetModel")
+            val target = ready.firstOrNull { target -> wanted == null || target.modelId == wanted }
             assumeTrue("No ready $label target on this device", target != null)
             checkNotNull(target)
             val store = ChatUiSettingsStore(environment.context)

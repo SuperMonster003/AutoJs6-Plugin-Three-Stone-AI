@@ -83,6 +83,9 @@ def main():
                         help="run even when another app is in the foreground")
     parser.add_argument("--prefer-macaw", choices=["true", "false"],
                         help="manual tests: set \"Prefer 3-Macaw Speech\" for this run only")
+    parser.add_argument("--target-model", help="real-target conversations: the exact model ID to use")
+    parser.add_argument("--list-targets", action="store_true",
+                        help="real-target conversations: only list the ready targets (model and provider)")
     parser.add_argument("--output", type=Path, default=ROOT / "build/verification/speech")
     args = parser.parse_args()
     selected = [name.strip() for name in args.only.split(",") if name.strip()]
@@ -136,6 +139,10 @@ def main():
                 level = re.search(r"volume is (\d+) in range \[(\d+)\.\.(\d+)\]", volume)
                 print(f"  {name} plays sound; media volume {level.group(1) + '/' + level.group(3) if level else 'unknown'}")
             extra = ["-e", "preferMacaw", args.prefer_macaw] if args.prefer_macaw else []
+            if args.target_model:
+                extra += ["-e", "targetModel", args.target_model]
+            if args.list_targets:
+                extra += ["-e", "listTargets", "true"]
             result = shell("am", "instrument", "-w", "-r", *extra, "-e", "class", CLASSES[name], RUNNER, timeout=1800)
             (output / f"{name}-instrumentation.txt").write_text(result, encoding="utf-8")
             passed, tests, failures = summarize(result)

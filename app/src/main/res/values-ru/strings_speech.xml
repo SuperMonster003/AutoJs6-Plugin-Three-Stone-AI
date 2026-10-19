@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_settings_speech">Голос</string>
+    <string name="chat_message_read_aloud">Озвучить</string>
+    <string name="chat_message_stop_reading">Остановить озвучивание</string>
     <string name="speech_auto_read_replies">Озвучивать ответы автоматически</string>
     <string name="speech_auto_read_replies_summary">Читать каждый новый ответ во время генерации. В голосовом диалоге ответы читаются всегда</string>
     <string name="speech_auto_read_unavailable">На устройстве нет синтезатора речи</string>
+    <string name="speech_conversation_exit">Выйти из голосового диалога</string>
+    <string name="speech_conversation_listening">Голосовой диалог: слушаю</string>
+    <string name="speech_conversation_prompt">Скажите следующее сообщение</string>
+    <string name="speech_conversation_speaking">Голосовой диалог: озвучивание, нажмите, чтобы прервать</string>
+    <string name="speech_conversation_start">Начать голосовой диалог</string>
+    <string name="speech_conversation_thinking">Голосовой диалог: ожидание ответа</string>
     <string name="speech_dictate">Голосовой ввод</string>
     <string name="speech_dictation_failed">Не удалось распознать речь. Попробуйте еще раз</string>
     <string name="speech_dictation_failed_audio">Приложение распознавания речи не смогло использовать микрофон</string>
@@ -11,8 +19,13 @@
     <string name="speech_dictation_prompt">Говорите</string>
     <string name="speech_dictation_truncated">Достигнут предел в %1$s символов; остальной продиктованный текст не добавлен</string>
     <string name="speech_dictation_unavailable">Нет доступного приложения распознавания речи</string>
+    <string name="speech_hint_code_block">Здесь блок кода</string>
+    <string name="speech_hint_table">Здесь таблица</string>
+    <string name="speech_language_unavailable">У синтезатора нет голоса для языка %1$s; используется голос по умолчанию</string>
     <string name="speech_prefer_macaw">Предпочитать 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">Диктовать и озвучивать через 3-Macaw Speech без выбора приложения каждый раз. Выключите, чтобы выбирала система</string>
+    <string name="speech_read_aloud_failed">Не удалось запустить синтезатор речи</string>
+    <string name="speech_reading_status">Идет озвучивание</string>
     <string name="speech_status_dictation_macaw">Диктовка: 3-Macaw Speech, офлайн</string>
     <string name="speech_status_dictation_none">Диктовка: нет приложения распознавания речи</string>
     <string name="speech_status_dictation_system">Диктовка: приложение распознавания речи по выбору системы</string>

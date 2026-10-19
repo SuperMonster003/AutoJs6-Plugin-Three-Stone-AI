@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_settings_speech">الصوت</string>
+    <string name="chat_message_read_aloud">قراءة بصوت عال</string>
+    <string name="chat_message_stop_reading">إيقاف القراءة</string>
     <string name="speech_auto_read_replies">قراءة الردود بصوت عال تلقائيا</string>
     <string name="speech_auto_read_replies_summary">قراءة كل رد جديد أثناء توليده. تقرأ المحادثة الصوتية الردود دائما</string>
     <string name="speech_auto_read_unavailable">لا يوجد محرك لتحويل النص إلى كلام على هذا الجهاز</string>
+    <string name="speech_conversation_exit">إنهاء المحادثة الصوتية</string>
+    <string name="speech_conversation_listening">المحادثة الصوتية: جار الاستماع</string>
+    <string name="speech_conversation_prompt">قل رسالتك التالية</string>
+    <string name="speech_conversation_speaking">المحادثة الصوتية: جار القراءة, انقر للمقاطعة</string>
+    <string name="speech_conversation_start">بدء محادثة صوتية</string>
+    <string name="speech_conversation_thinking">المحادثة الصوتية: في انتظار الرد</string>
     <string name="speech_dictate">الإدخال الصوتي</string>
     <string name="speech_dictation_failed">فشل التعرف على الكلام. حاول مرة أخرى</string>
     <string name="speech_dictation_failed_audio">تعذر على تطبيق التعرف على الكلام استخدام الميكروفون</string>
@@ -11,8 +19,13 @@
     <string name="speech_dictation_prompt">تحدث الآن</string>
     <string name="speech_dictation_truncated">تم بلوغ حد الإدخال البالغ %1$s حرف; لم يضف باقي النص المملى</string>
     <string name="speech_dictation_unavailable">لا يوجد تطبيق متاح للتعرف على الكلام</string>
+    <string name="speech_hint_code_block">يوجد هنا مقطع برمجي</string>
+    <string name="speech_hint_table">يوجد هنا جدول</string>
+    <string name="speech_language_unavailable">لا يتوفر في محرك الكلام صوت للغة %1$s; سيستخدم صوته الافتراضي</string>
     <string name="speech_prefer_macaw">تفضيل ⁨3-Macaw Speech⁩</string>
     <string name="speech_prefer_macaw_summary">الإملاء والقراءة بصوت عال باستخدام ⁨3-Macaw Speech⁩ دون اختيار تطبيق في كل مرة. أوقفه ليختار النظام</string>
+    <string name="speech_read_aloud_failed">تعذر تشغيل محرك الكلام</string>
+    <string name="speech_reading_status">جار القراءة بصوت عال</string>
     <string name="speech_status_dictation_macaw">الإملاء: ⁨3-Macaw Speech⁩, دون اتصال</string>
     <string name="speech_status_dictation_none">الإملاء: لا يوجد تطبيق للتعرف على الكلام</string>
     <string name="speech_status_dictation_system">الإملاء: تطبيق للتعرف على الكلام يختاره النظام</string>

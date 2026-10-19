@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_settings_speech">Voz</string>
+    <string name="chat_message_read_aloud">Leer en voz alta</string>
+    <string name="chat_message_stop_reading">Detener la lectura</string>
     <string name="speech_auto_read_replies">Leer las respuestas en voz alta</string>
     <string name="speech_auto_read_replies_summary">Lee cada respuesta nueva mientras se genera. Las conversaciones por voz siempre leen las respuestas</string>
     <string name="speech_auto_read_unavailable">No hay ningún motor de texto a voz instalado en este dispositivo</string>
+    <string name="speech_conversation_exit">Salir de la conversación por voz</string>
+    <string name="speech_conversation_listening">Conversación por voz: escuchando</string>
+    <string name="speech_conversation_prompt">Di tu siguiente mensaje</string>
+    <string name="speech_conversation_speaking">Conversación por voz: leyendo, toca para interrumpir</string>
+    <string name="speech_conversation_start">Iniciar una conversación por voz</string>
+    <string name="speech_conversation_thinking">Conversación por voz: esperando la respuesta</string>
     <string name="speech_dictate">Entrada de voz</string>
     <string name="speech_dictation_failed">El reconocimiento de voz falló. Inténtalo de nuevo</string>
     <string name="speech_dictation_failed_audio">La aplicación de reconocimiento de voz no pudo usar el micrófono</string>
@@ -11,8 +19,13 @@
     <string name="speech_dictation_prompt">Habla ahora</string>
     <string name="speech_dictation_truncated">Se alcanzó el límite de %1$s caracteres; el resto del texto dictado no se añadió</string>
     <string name="speech_dictation_unavailable">No hay ninguna aplicación de reconocimiento de voz disponible</string>
+    <string name="speech_hint_code_block">Aquí hay un bloque de código</string>
+    <string name="speech_hint_table">Aquí hay una tabla</string>
+    <string name="speech_language_unavailable">El motor de voz no tiene voz para %1$s; se usa su voz predeterminada</string>
     <string name="speech_prefer_macaw">Preferir 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">Dicta y lee en voz alta con 3-Macaw Speech sin elegir una aplicación cada vez. Desactívalo para que elija el sistema</string>
+    <string name="speech_read_aloud_failed">No se pudo iniciar el motor de voz</string>
+    <string name="speech_reading_status">Leyendo en voz alta</string>
     <string name="speech_status_dictation_macaw">Dictado: 3-Macaw Speech, sin conexión</string>
     <string name="speech_status_dictation_none">Dictado: no hay ninguna aplicación de reconocimiento de voz instalada</string>
     <string name="speech_status_dictation_system">Dictado: una aplicación de reconocimiento de voz elegida por el sistema</string>

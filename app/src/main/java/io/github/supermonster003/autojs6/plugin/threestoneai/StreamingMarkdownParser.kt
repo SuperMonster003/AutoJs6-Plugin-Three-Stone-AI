@@ -198,6 +198,15 @@ internal object StreamingMarkdownParser {
         return MarkdownDocument(output.toString(), spans.sortedWith(SPAN_ORDER))
     }
 
+    /** The cells of [line] as the block parser splits a table row, or null when it is no row. */
+    internal fun tableRowCells(line: String): List<String>? = splitTableRow(line)
+
+    /** Whether [line] is the delimiter row of a table with [columns] columns. */
+    internal fun isTableDelimiter(line: String, columns: Int): Boolean {
+        val cells = splitTableRow(line) ?: return false
+        return cells.size == columns && cells.all { cell -> tableAlignment(cell) != null }
+    }
+
     private fun parseTable(lines: List<String>, start: Int): ParsedTable? {
         val header = splitTableRow(lines.getOrNull(start) ?: return null) ?: return null
         if (header.size < 2) return null

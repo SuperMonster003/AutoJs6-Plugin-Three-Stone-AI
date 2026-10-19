@@ -25,7 +25,11 @@ REMOTE = f"/sdcard/Android/data/{PACKAGE}/files/speech-check"
 CLASSES = {
     "settings": PACKAGE + ".speech.SpeechSettingsDeviceTest",
     "dictation": PACKAGE + ".speech.SpeechDictationDeviceTest",
+    "reading": PACKAGE + ".speech.SpeechReadingDeviceTest",
+    "engine": PACKAGE + ".speech.SpeechEngineLatencyDeviceTest",
 }
+# These play sound through the speaker at the device's media volume: never on adjacent phones at once.
+ACOUSTIC = {"engine"}
 
 
 def apk_from_metadata(directory, abi=None):
@@ -55,10 +59,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--serial", required=True)
     parser.add_argument("--adb", default="adb")
-    parser.add_argument("--only", default=",".join(CLASSES), help="comma-separated: " + ", ".join(CLASSES))
+    parser.add_argument("--only", default=",".join(name for name in CLASSES if name not in ACOUSTIC),
+                        help="comma-separated: " + ", ".join(CLASSES) + "; acoustic ones only on request")
     parser.add_argument("--no-install", action="store_true")
     parser.add_argument("--keep-test-apk", action="store_true",
                         help="leave the test APK (and its fake recognizer) installed")
+    parser.add_argument("--force", action="store_true",
+                        help="run even when another app is in the foreground")
     parser.add_argument("--output", type=Path, default=ROOT / "build/verification/speech")
     args = parser.parse_args()
     selected = [name.strip() for name in args.only.split(",") if name.strip()]
@@ -83,6 +90,17 @@ def main():
     model = shell("getprop", "ro.product.model").strip()
     abi = shell("getprop", "ro.product.cpu.abi").strip()
     print(f"device {args.serial} model={model} api={sdk} abi={abi}")
+    # The tests open the chat in front; do not take the screen from someone using the phone.
+    home = shell("cmd", "package", "resolve-activity", "--brief", "-a", "android.intent.action.MAIN",
+                 "-c", "android.intent.category.HOME", check=False).strip().splitlines()
+    home_package = home[-1].split("/")[0] if home else ""
+    activities = shell("dumpsys", "activity", "activities", check=False)
+    front = re.search(r"(?:topResumedActivity|mResumedActivity)[=:] ?ActivityRecord\{\S+ u\d+ ([^/ ]+)/", activities)
+    front_package = front.group(1) if front else ""
+    allowed = {home_package, PACKAGE, PACKAGE + ".test", ""}
+    if front_package not in allowed and not front_package.endswith(".launcher") and not args.force:
+        print(f"BUSY {front_package} is in the foreground; rerun with --force when the phone is free")
+        return 2
     if not args.no_install:
         adb("install", "-r", "-t", apk_from_metadata(ROOT / "app/build/outputs/apk/debug", abi))
         adb("install", "-r", "-t", apk_from_metadata(ROOT / "app/build/outputs/apk/androidTest/debug"))
@@ -91,6 +109,13 @@ def main():
     all_passed = True
     try:
         for name in selected:
+            if name in ACOUSTIC:
+                volume = shell("cmd", "media_session", "volume", "--stream", "3", "--get", check=False)
+                if "volume is" not in volume:
+                    # API 28 has no media_session shell command.
+                    volume = shell("media", "volume", "--stream", "3", "--get", check=False)
+                level = re.search(r"volume is (\d+) in range \[(\d+)\.\.(\d+)\]", volume)
+                print(f"  {name} plays sound; media volume {level.group(1) + '/' + level.group(3) if level else 'unknown'}")
             result = shell("am", "instrument", "-w", "-r", "-e", "class", CLASSES[name], RUNNER, timeout=1800)
             (output / f"{name}-instrumentation.txt").write_text(result, encoding="utf-8")
             passed, tests, failures = summarize(result)

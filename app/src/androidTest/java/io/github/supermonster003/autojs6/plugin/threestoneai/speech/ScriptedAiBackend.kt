@@ -30,6 +30,8 @@ internal class ScriptedAiBackend : AiBackend {
     @Volatile var hold: Boolean = false
     @Volatile var failNext: Boolean = false
     val prompts: MutableList<String> = Collections.synchronizedList(ArrayList())
+    @Volatile var completions = 0
+    @Volatile var completedAt = 0L
 
     @Volatile private var released = false
 
@@ -91,9 +93,12 @@ internal class ScriptedAiBackend : AiBackend {
             if (cancelled) return
             if (failNext) {
                 failNext = false
+                completions++
                 listener.onFailed(IllegalStateException("Scripted failure"), null)
                 return
             }
+            completedAt = SystemClock.elapsedRealtime()
+            completions++
             listener.onCompleted(
                 GenerationStatistics(
                     inputTokens = 1L,

@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_settings_speech">음성</string>
+    <string name="chat_message_read_aloud">읽어 주기</string>
+    <string name="chat_message_stop_reading">읽기 중지</string>
     <string name="speech_auto_read_replies">응답 자동 읽기</string>
     <string name="speech_auto_read_replies_summary">새 응답을 생성하면서 읽습니다. 음성 대화에서는 항상 읽습니다</string>
     <string name="speech_auto_read_unavailable">이 기기에 사용할 수 있는 음성 합성 엔진이 없습니다</string>
+    <string name="speech_conversation_exit">음성 대화 종료</string>
+    <string name="speech_conversation_listening">음성 대화: 듣는 중</string>
+    <string name="speech_conversation_prompt">다음 메시지를 말씀하세요</string>
+    <string name="speech_conversation_speaking">음성 대화: 읽는 중, 탭하여 중단</string>
+    <string name="speech_conversation_start">음성 대화 시작</string>
+    <string name="speech_conversation_thinking">음성 대화: 응답 대기 중</string>
     <string name="speech_dictate">음성 입력</string>
     <string name="speech_dictation_failed">음성 인식에 실패했습니다. 다시 시도하세요</string>
     <string name="speech_dictation_failed_audio">음성 인식 앱이 마이크를 사용할 수 없습니다</string>
@@ -11,8 +19,13 @@
     <string name="speech_dictation_prompt">말씀하세요</string>
     <string name="speech_dictation_truncated">입력 한도 %1$s자에 도달하여 나머지 받아쓴 텍스트는 추가되지 않았습니다</string>
     <string name="speech_dictation_unavailable">사용할 수 있는 음성 인식 앱이 없습니다</string>
+    <string name="speech_hint_code_block">여기에 코드 블록이 있습니다</string>
+    <string name="speech_hint_table">여기에 표가 있습니다</string>
+    <string name="speech_language_unavailable">음성 엔진이 %1$s을(를) 지원하지 않아 기본 음성을 사용합니다</string>
     <string name="speech_prefer_macaw">3-Macaw Speech 우선 사용</string>
     <string name="speech_prefer_macaw_summary">매번 앱을 고르지 않고 3-Macaw Speech로 받아쓰기와 읽기를 합니다. 끄면 시스템이 선택합니다</string>
+    <string name="speech_read_aloud_failed">음성 엔진을 시작할 수 없습니다</string>
+    <string name="speech_reading_status">읽는 중</string>
     <string name="speech_status_dictation_macaw">받아쓰기: 3-Macaw Speech, 오프라인</string>
     <string name="speech_status_dictation_none">받아쓰기: 사용할 수 있는 음성 인식 앱이 없습니다</string>
     <string name="speech_status_dictation_system">받아쓰기: 시스템이 선택한 음성 인식 앱</string>

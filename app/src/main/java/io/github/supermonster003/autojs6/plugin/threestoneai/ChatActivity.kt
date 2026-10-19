@@ -74,10 +74,22 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationInt
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationMode
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationOutcome
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationOutcomePolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadAloudMenuItem
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadAloudPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadableReply
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadingStopReason
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeakableHints
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeakableTextPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeakableTextSegmenter
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechAvailability
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechAvailabilityPolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceProbe
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceState
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechOutput
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoicePhase
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusAction
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusLabel
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusPolicy
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -117,6 +129,10 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var micButton: android.widget.ImageButton
     private lateinit var scrollToBottomButton: android.widget.ImageButton
     private lateinit var editingBar: LinearLayout
+    private lateinit var voiceStatusBar: LinearLayout
+    private lateinit var voiceStatusIcon: ImageView
+    private lateinit var voiceStatusLabel: TextView
+    private lateinit var voiceStatusAction: ImageView
     private lateinit var editingLabel: TextView
     private var pendingSearchRefresh: Runnable? = null
 
@@ -184,6 +200,52 @@ class ChatActivity : ConfiguredActivity() {
     internal val dictationPending: Boolean
         get() = pendingDictation != null
 
+    private lateinit var speechOutput: SpeechOutput
+    private var readingSegmenter: SpeakableTextSegmenter? = null
+    private var readingSegmenterMessageId: Long? = null
+    private var readingBeganAtMillis = 0L
+
+    /** Instrumentation only: the reply being read aloud. */
+    @VisibleForTesting
+    internal val readingMessageId: Long?
+        get() = if (::speechOutput.isInitialized) speechOutput.readingMessageId else null
+
+    /** Instrumentation only: milliseconds from starting a reading to its first sound. */
+    @VisibleForTesting
+    internal var firstUtteranceLatencyMillis: Long? = null
+        private set
+
+    private val speechListener = object : SpeechOutput.Listener {
+        override fun onReadingChanged(messageId: Long?) {
+            if (messageId == null) {
+                readingSegmenter = null
+                readingSegmenterMessageId = null
+            }
+            renderVoiceStatus()
+        }
+
+        override fun onReadingFinished(messageId: Long) = Unit
+
+        override fun onReadingStopped(messageId: Long, reason: ReadingStopReason) {
+            if (reason == ReadingStopReason.ENGINE_FAILED && !destroyed) {
+                showSnackbar(drawerLayout, getString(R.string.speech_read_aloud_failed))
+            }
+        }
+
+        override fun onFirstUtteranceStarted(messageId: Long) {
+            firstUtteranceLatencyMillis = android.os.SystemClock.elapsedRealtime() - readingBeganAtMillis
+        }
+
+        override fun onLanguageUnavailable(locale: Locale) {
+            if (destroyed) return
+            showSnackbar(
+                drawerLayout,
+                getString(R.string.speech_language_unavailable, locale.getDisplayName(currentLocale())),
+                com.google.android.material.snackbar.Snackbar.LENGTH_LONG,
+            )
+        }
+    }
+
     /** Instrumentation only: recognizer requests handed to the system so far. */
     @VisibleForTesting
     internal var dictationRequestCount = 0
@@ -226,6 +288,7 @@ class ChatActivity : ConfiguredActivity() {
         )
         uiSettings = uiSettingsStore.load()
         speechAvailability = SpeechDeviceProbe.availability(this, uiSettings.preferMacawSpeech)
+        speechOutput = SpeechOutput(this, speechListener)
         pendingDrawerExportId = savedInstanceState?.getString(STATE_PENDING_DRAWER_EXPORT_ID)
         pendingDictation = savedInstanceState?.getString(STATE_PENDING_DICTATION)
             ?.let { name -> runCatching { DictationMode.valueOf(name) }.getOrNull() }
@@ -396,6 +459,8 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     override fun onStop() {
+        // Leaving the chat stops reading and clears the queue (roadmap D10).
+        stopReading()
         persistComposerDraft()
         persistConversationNow()
         if (managerAttached) {
@@ -487,6 +552,7 @@ class ChatActivity : ConfiguredActivity() {
             pendingDelta.clear()
             deltaFlushScheduled = false
         }
+        if (::speechOutput.isInitialized) speechOutput.shutdown()
         val detached = detachBackend()
         if (detached != null) {
             try {
@@ -1214,6 +1280,56 @@ class ChatActivity : ConfiguredActivity() {
         orientation = LinearLayout.VERTICAL
         setBackgroundColor(appPalette.windowBackground)
 
+        // Reading and voice conversation state with its stop or exit action (roadmap D13, D18).
+        voiceStatusBar = LinearLayout(context).apply {
+            tag = ChatViewTags.VOICE_STATUS
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = View.GONE
+            background = roundedRippleFill(
+                accentTone(appPalette.accent),
+                accentRipple(appPalette.accent),
+                Ui.RADIUS_CONTROL,
+            )
+            setPaddingRelative(dp(12), dp(2), dp(4), dp(2))
+            setOnClickListener { onVoiceStatusTapped() }
+            voiceStatusIcon = ImageView(context)
+            addView(
+                voiceStatusIcon,
+                LinearLayout.LayoutParams(dp(14), dp(14)).apply { marginEnd = dp(8) },
+            )
+            voiceStatusLabel = TextView(context).apply {
+                textSize = 12.5f
+                typeface = Ui.mediumTypeface
+                setTextColor(appPalette.accent)
+            }
+            addView(
+                voiceStatusLabel,
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+            )
+            voiceStatusAction = ImageView(context).apply {
+                tag = ChatViewTags.VOICE_STATUS_ACTION
+                setImageDrawable(tintedDrawable(R.drawable.ic_close_24, appPalette.accent))
+                isClickable = true
+                isFocusable = true
+                scaleType = ImageView.ScaleType.CENTER
+                applySelectableBackground(this)
+                setOnClickListener { onVoiceStatusAction() }
+            }
+            addView(voiceStatusAction, LinearLayout.LayoutParams(dp(36), dp(36)))
+        }
+        addView(
+            voiceStatusBar,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply {
+                marginStart = dp(12)
+                marginEnd = dp(12)
+                topMargin = dp(8)
+            },
+        )
+
         editingBar = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -1365,6 +1481,7 @@ class ChatActivity : ConfiguredActivity() {
 
             val onPrimary = appPalette.onPrimary
             sendButton = android.widget.ImageButton(context).apply {
+                tag = ChatViewTags.COMPOSER_SEND
                 scaleType = ImageView.ScaleType.CENTER
                 background = roundedRippleFill(
                     android.graphics.Color.WHITE,
@@ -1699,6 +1816,7 @@ class ChatActivity : ConfiguredActivity() {
             dictationSelectionStart = -1
             dictationSelectionEnd = -1
         }
+        stopReading()
         val request = DictationIntents.create(
             availability = speechAvailability,
             locale = currentLocale(),
@@ -1766,6 +1884,103 @@ class ChatActivity : ConfiguredActivity() {
             DictationFailure.OTHER -> R.string.speech_dictation_failed
         },
     )
+
+    private fun speakableHints() = SpeakableHints(
+        codeBlock = getString(R.string.speech_hint_code_block),
+        table = getString(R.string.speech_hint_table),
+    )
+
+    /** Starts reading [messageId]; its sentences follow through [feedReading]. */
+    private fun startReading(messageId: Long, voiceLanguageTag: String? = null): Boolean {
+        if (!speechAvailability.readAloudAvailable) return false
+        val languages = ReadAloudPolicy.languageTags(currentLocale().toLanguageTag(), voiceLanguageTag)
+            .map(Locale::forLanguageTag)
+        readingSegmenter = SpeakableTextSegmenter(speakableHints())
+        readingSegmenterMessageId = messageId
+        readingBeganAtMillis = android.os.SystemClock.elapsedRealtime()
+        firstUtteranceLatencyMillis = null
+        val started = speechOutput.begin(messageId, speechAvailability.ttsEnginePackage, languages)
+        if (!started) {
+            readingSegmenter = null
+            readingSegmenterMessageId = null
+        }
+        return started
+    }
+
+    /** Hands the newly finished sentences of [messageId] to the engine (roadmap D10, D25). */
+    private fun feedReading(messageId: Long, final: Boolean) {
+        val segmenter = readingSegmenter ?: return
+        if (readingSegmenterMessageId != messageId || speechOutput.readingMessageId != messageId) return
+        val message = messages.singleOrNull { candidate -> candidate.id == messageId } ?: return
+        speechOutput.append(if (final) segmenter.finish(message.text) else segmenter.update(message.text))
+        if (final) {
+            readingSegmenter = null
+            readingSegmenterMessageId = null
+            speechOutput.endInput()
+        }
+    }
+
+    private fun stopReading() {
+        readingSegmenter = null
+        readingSegmenterMessageId = null
+        if (::speechOutput.isInitialized) speechOutput.stop()
+    }
+
+    private fun readMessageAloud(messageId: Long) {
+        val message = messages.singleOrNull { candidate -> candidate.id == messageId } ?: return
+        stopReading()
+        if (!speechAvailability.readAloudAvailable) return
+        val languages = ReadAloudPolicy.languageTags(currentLocale().toLanguageTag(), null)
+            .map(Locale::forLanguageTag)
+        readingBeganAtMillis = android.os.SystemClock.elapsedRealtime()
+        firstUtteranceLatencyMillis = null
+        if (!speechOutput.begin(messageId, speechAvailability.ttsEnginePackage, languages)) return
+        speechOutput.append(SpeakableTextPolicy.sentences(message.text, speakableHints()))
+        speechOutput.endInput()
+    }
+
+    private fun voicePhase(): VoicePhase = VoicePhase.IDLE
+
+    private fun renderVoiceStatus() {
+        if (!::voiceStatusBar.isInitialized) return
+        val status = VoiceStatusPolicy.status(voicePhase(), readingMessageId != null)
+        if (status == null) {
+            voiceStatusBar.visibility = View.GONE
+            return
+        }
+        val listening = status.label == VoiceStatusLabel.LISTENING
+        voiceStatusIcon.setImageDrawable(
+            tintedDrawable(if (listening) R.drawable.ic_mic_24 else R.drawable.ic_volume_up_24, appPalette.accent),
+        )
+        voiceStatusLabel.text = getString(
+            when (status.label) {
+                VoiceStatusLabel.READING -> R.string.speech_reading_status
+                VoiceStatusLabel.LISTENING -> R.string.speech_conversation_listening
+                VoiceStatusLabel.THINKING -> R.string.speech_conversation_thinking
+                VoiceStatusLabel.SPEAKING -> R.string.speech_conversation_speaking
+            },
+        )
+        voiceStatusAction.contentDescription = getString(
+            when (status.action) {
+                VoiceStatusAction.STOP_READING -> R.string.chat_message_stop_reading
+                VoiceStatusAction.EXIT_CONVERSATION -> R.string.speech_conversation_exit
+            },
+        )
+        voiceStatusBar.isClickable = status.tapInterrupts
+        voiceStatusBar.isFocusable = status.tapInterrupts
+        voiceStatusBar.contentDescription = voiceStatusLabel.text
+        voiceStatusBar.visibility = View.VISIBLE
+    }
+
+    private fun onVoiceStatusAction() {
+        val status = VoiceStatusPolicy.status(voicePhase(), readingMessageId != null) ?: return
+        when (status.action) {
+            VoiceStatusAction.STOP_READING -> stopReading()
+            VoiceStatusAction.EXIT_CONVERSATION -> Unit
+        }
+    }
+
+    private fun onVoiceStatusTapped() = Unit
 
     private fun renderTranscript() {
         messagesColumn.removeAllViews()
@@ -2113,6 +2328,7 @@ class ChatActivity : ConfiguredActivity() {
         input.text.clear()
         draftStore.clear()
         hideKeyboard()
+        stopReading()
 
         val userMessage = ChatMessage(
             id = messageBeingEdited ?: allocateMessageId(),
@@ -2152,6 +2368,16 @@ class ChatActivity : ConfiguredActivity() {
             pendingDeltaAssistantId = assistantMessage.id
             pendingDelta.clear()
             deltaFlushScheduled = false
+        }
+        if (
+            ReadAloudPolicy.readsNewReply(
+                autoRead = uiSettings.autoReadReplies,
+                voiceConversation = false,
+                voiceCommandTurn = false,
+                engineAvailable = speechAvailability.readAloudAvailable,
+            )
+        ) {
+            startReading(assistantMessage.id)
         }
         renderComposerState()
         renderEmptyState()
@@ -2614,6 +2840,7 @@ class ChatActivity : ConfiguredActivity() {
         if (current.status != ChatMessageStatus.GENERATING) return
         val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
         replaceMessage(current.copy(text = current.text + delta))
+        feedReading(assistantMessageId, final = false)
         if (followOutput) scrollToBottom()
     }
 
@@ -2653,6 +2880,7 @@ class ChatActivity : ConfiguredActivity() {
                 },
             ),
         )
+        feedReading(assistantMessageId, final = true)
         val cumulativeInputTokens = ChatConversationPolicy.cumulativeInputTokensThrough(
             messages,
             assistantMessageId,
@@ -2885,6 +3113,7 @@ class ChatActivity : ConfiguredActivity() {
     ) {
         if (!isGenerationCurrent(generationId)) return
         flushTextDelta(generationId, assistantMessageId)
+        stopReading()
         val current = messages.singleOrNull { message -> message.id == assistantMessageId }
         if (current != null) {
             val failedTarget = actualTarget ?: checkNotNull(current.target)
@@ -2915,6 +3144,7 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun stopGeneration(showToast: Boolean = true) {
         val generationId = activeGenerationId ?: return
+        stopReading()
         val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
         val assistantMessageId = activeAssistantMessageId
         val actualTarget = synchronized(backendLock) { activeBackendTarget }
@@ -2948,6 +3178,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun startNewConversation(
         target: ConversationTargetSnapshot? = targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot),
     ) {
+        stopReading()
         if (isGenerating) stopGeneration(showToast = false) else generationEpoch.incrementAndGet()
         persistConversationNow()
         closeCurrentBackend()
@@ -3246,6 +3477,7 @@ class ChatActivity : ConfiguredActivity() {
             showSnackbar(drawerLayout, getString(R.string.chat_history_not_found))
             return
         }
+        stopReading()
         if (isGenerating) stopGeneration(showToast = false) else persistConversationNow()
         cancelSummaryCheckpoint()
         closeCurrentBackend()
@@ -3544,23 +3776,48 @@ class ChatActivity : ConfiguredActivity() {
                 MessageAction.EDIT,
                 MessageAction.DELETE,
             )
-            ChatMessageRole.ASSISTANT -> listOf(
+            ChatMessageRole.ASSISTANT -> listOfNotNull(
                 MessageAction.COPY,
+                readAloudAction(message),
                 MessageAction.REGENERATE,
             )
             ChatMessageRole.NOTICE -> return
         }
-        materialDialog()
+        messageActionsDialog = materialDialog()
             .setItems(actions.map { action -> getString(action.labelResource) }.toTypedArray()) { _, index ->
                 when (actions[index]) {
                     MessageAction.COPY -> copyMessage(messageId)
                     MessageAction.EDIT -> requestEditMessage(messageId)
                     MessageAction.DELETE -> requestDeleteMessage(messageId)
                     MessageAction.REGENERATE -> requestRegenerateMessage(messageId)
+                    MessageAction.READ_ALOUD -> readMessageAloud(messageId)
+                    MessageAction.STOP_READING -> stopReading()
                 }
             }
             .show()
             .also(::tintDialogButtons)
+    }
+
+    /** Instrumentation only: the last message menu shown. */
+    @VisibleForTesting
+    internal var messageActionsDialog: AlertDialog? = null
+        private set
+
+    private fun readAloudAction(message: ChatMessage): MessageAction? = when (
+        ReadAloudPolicy.menuItem(
+            reply = ReadableReply(
+                messageId = message.id,
+                isAssistant = message.role == ChatMessageRole.ASSISTANT,
+                complete = message.status == ChatMessageStatus.COMPLETE,
+                text = message.text,
+            ),
+            readingMessageId = readingMessageId,
+            engineAvailable = speechAvailability.readAloudAvailable,
+        )
+    ) {
+        ReadAloudMenuItem.READ -> MessageAction.READ_ALOUD
+        ReadAloudMenuItem.STOP -> MessageAction.STOP_READING
+        null -> null
     }
 
     private fun requestDeleteMessage(messageId: Long) {
@@ -3582,6 +3839,8 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun deleteMessageAndFollowing(messageId: Long) {
         val retained = ConversationDeletionPolicy.prefixBefore(messages, messageId) ?: return
+        val reading = readingMessageId
+        if (reading != null && retained.none { message -> message.id == reading }) stopReading()
         if (isGenerating) stopGeneration(showToast = false)
         invalidateConversationContextFrom(messageId)
         closeCurrentBackend()
@@ -3969,6 +4228,8 @@ class ChatActivity : ConfiguredActivity() {
         EDIT(R.string.chat_message_edit),
         DELETE(R.string.chat_message_delete),
         REGENERATE(R.string.chat_message_regenerate),
+        READ_ALOUD(R.string.chat_message_read_aloud),
+        STOP_READING(R.string.chat_message_stop_reading),
     }
 
     private enum class DrawerConversationAction(val labelResource: Int) {
@@ -4064,4 +4325,7 @@ class ChatActivity : ConfiguredActivity() {
 internal object ChatViewTags {
     const val COMPOSER_INPUT = "chat-composer-input"
     const val COMPOSER_MIC = "chat-composer-mic"
+    const val COMPOSER_SEND = "chat-composer-send"
+    const val VOICE_STATUS = "chat-voice-status"
+    const val VOICE_STATUS_ACTION = "chat-voice-status-action"
 }

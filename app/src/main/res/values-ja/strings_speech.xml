@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_settings_speech">音声</string>
+    <string name="chat_message_read_aloud">読み上げ</string>
+    <string name="chat_message_stop_reading">読み上げを停止</string>
     <string name="speech_auto_read_replies">応答を自動で読み上げ</string>
     <string name="speech_auto_read_replies_summary">新しい応答を生成しながら読み上げます. 音声会話では常に読み上げます</string>
     <string name="speech_auto_read_unavailable">この端末には音声合成エンジンがありません</string>
+    <string name="speech_conversation_exit">音声会話を終了</string>
+    <string name="speech_conversation_listening">音声会話: 聞き取り中</string>
+    <string name="speech_conversation_prompt">次のメッセージを話してください</string>
+    <string name="speech_conversation_speaking">音声会話: 読み上げ中, タップで中断</string>
+    <string name="speech_conversation_start">音声会話を開始</string>
+    <string name="speech_conversation_thinking">音声会話: 応答を待機中</string>
     <string name="speech_dictate">音声入力</string>
     <string name="speech_dictation_failed">音声認識に失敗しました. もう一度お試しください</string>
     <string name="speech_dictation_failed_audio">音声認識アプリがマイクを使用できませんでした</string>
@@ -11,8 +19,13 @@
     <string name="speech_dictation_prompt">話してください</string>
     <string name="speech_dictation_truncated">入力上限の %1$s 文字に達したため, 残りの音声入力テキストは追加されませんでした</string>
     <string name="speech_dictation_unavailable">使用できる音声認識アプリがありません</string>
+    <string name="speech_hint_code_block">ここにコードブロックがあります</string>
+    <string name="speech_hint_table">ここに表があります</string>
+    <string name="speech_language_unavailable">読み上げエンジンは %1$s に対応していないため, 既定の音声を使用します</string>
     <string name="speech_prefer_macaw">3-Macaw Speech を優先</string>
     <string name="speech_prefer_macaw_summary">毎回アプリを選ばずに 3-Macaw Speech で音声入力と読み上げを行います. オフにするとシステムが選択します</string>
+    <string name="speech_read_aloud_failed">読み上げエンジンを起動できませんでした</string>
+    <string name="speech_reading_status">読み上げ中</string>
     <string name="speech_status_dictation_macaw">音声入力: 3-Macaw Speech, オフライン</string>
     <string name="speech_status_dictation_none">音声入力: 音声認識アプリがありません</string>
     <string name="speech_status_dictation_system">音声入力: システムが選ぶ音声認識アプリ</string>

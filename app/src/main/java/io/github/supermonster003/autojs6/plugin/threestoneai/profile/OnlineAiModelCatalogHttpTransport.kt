@@ -38,7 +38,7 @@ internal class OnlineAiModelCatalogHttpTransport(
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
-            .header("User-Agent", "3-Stone-AI-model-catalog")
+            .header("User-Agent", "Three-Stone-AI-model-catalog")
             .apply { validOnlineAiModelCatalogEtag(etag)?.let { header("If-None-Match", it) } }
             .build()
         val call = client.newCall(request)

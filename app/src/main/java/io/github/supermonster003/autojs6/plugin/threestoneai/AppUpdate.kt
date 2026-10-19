@@ -113,7 +113,7 @@ internal class AppUpdateChecker(
         val request = Request.Builder()
             .url(LATEST_RELEASE_API)
             .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", "3-Stone-AI-update-checker")
+            .header("User-Agent", "Three-Stone-AI-update-checker")
             .build()
         return client.newCall(request).also { call ->
             call.enqueue(object : Callback {

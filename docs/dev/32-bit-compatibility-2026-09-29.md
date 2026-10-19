@@ -111,6 +111,11 @@ Use the matching ABI and `process64 true` for a 64-bit APK. Require
 `:app:assembleDebugAndroidTest` without `releaseAbiSmoke` before running ordinary
 AndroidJUnitRunner suites. The final local test build was restored to that default.
 
+Since 1.4.0, `py .python/device_release_smoke.py --serial SERIAL [--abi ABI]` does these
+steps for one archived APK of `releases/v<VERSION_NAME>/`: SHA-256 against the manifest,
+`adb install -r` (with `--abi` for a 32-bit APK on a 64-bit device), the installed version
+code, the smoke with the matching `process64`, and removal of the test APK.
+
 The Redmi was upgraded from build 223 with `adb install -r`, without clearing app
 data. After the 32-bit tests it was restored to the signed arm64-v8a build 224.
 

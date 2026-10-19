@@ -55,6 +55,29 @@ Ten rounds, then the canceled recognizer ended the conversation (`RecognitionCan
 | 9 | 2667 | 8709 | 22 |
 | 10 | 1747 | 3373 | 3 |
 
+## Real online target (`SpeechConversationRealDeviceTest#onlineTargetTenRounds`, 2026-10-20)
+
+G8441 (BH900ASK9E, API 28), OpenAI-compatible profile with model `claude-opus-4-8` (selected with
+`--target-model`), 3-Macaw Speech engine (versionCode 41, default voice), media volume 0/50 (left
+as found). Ten rounds, then the canceled recognizer ended the conversation (`RecognitionCanceled`).
+
+| Round | Send to first sound (ms) | Send to end of reading (ms) | Reply characters |
+|---|---|---|---|
+| 1 | 4844 | 20221 | 53 |
+| 2 | 3358 | 5395 | 1 |
+| 3 | 3870 | 25038 | 57 |
+| 4 | 3080 | 5390 | 3 |
+| 5 | 3750 | 6159 | 4 |
+| 6 | 3721 | 24257 | 60 |
+| 7 | 3588 | 18013 | 35 |
+| 8 | 3201 | 30125 | 62 |
+| 9 | 4261 | 20895 | 40 |
+| 10 | 3185 | 8470 | 9 |
+
+The other configured online profiles (XQ-DQ72 `gpt-6.1-sol`, XQ-AT72 `gpt-5.6-sol` and
+`claude-fable-5-1`, G8441 `claude-fable-5-1`) were refused by their provider with HTTP 403 on the
+first round; each run ended correctly with `GenerationFailed` and no further listening.
+
 The listen times of these runs are the fake recognizer's (well under 100 ms) and are not speech
 recognition times.
 
@@ -69,7 +92,3 @@ engine (default AISHELL-3 voice), media volume 9/30.
 | `manual-dictation --prefer-macaw false` | system chooser (Google, 3-Macaw Speech), Google "just once"; recognized, 9999 ms, 7 characters inserted; no default was set |
 | `manual-conversation` | 3 rounds; listen 6023 / 6016 / 5425 ms, send to first sound 1649 / 447 / 477 ms, round 4315 / 3165 / 3314 ms; ended by closing the sheet (`RecognitionCanceled`) |
 | `manual-assistant` (P5-5) | power button, speech, "3-Stone AI": the question reached a new conversation and was sent; first sound 1863 ms after the reading started. The first attempt was cut off by the cold-start appearance recreation, fixed in `a1252ef` |
-
-## Not run
-
-- Ten rounds with an online target: the maintainer decided on 2026-10-19 not to run it for now.

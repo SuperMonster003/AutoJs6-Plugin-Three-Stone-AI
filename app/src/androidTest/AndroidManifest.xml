@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!--
+            Fake recognizer for the speech device tests (roadmap 10.5, P5-2). The shell may not toggle components
+            of other packages (API 31+), so it stays enabled and .python/device_speech_check.py uninstalls the
+            test APK after each run; it never stays in another app's chooser. It lives in the test APK process,
+            which has no Kotlin runtime, hence Java.
+        -->
+        <activity
+            android:name="io.github.supermonster003.autojs6.plugin.threestoneai.speech.FakeRecognizerActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

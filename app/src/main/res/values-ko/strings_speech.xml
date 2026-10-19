@@ -4,6 +4,13 @@
     <string name="speech_auto_read_replies">응답 자동 읽기</string>
     <string name="speech_auto_read_replies_summary">새 응답을 생성하면서 읽습니다. 음성 대화에서는 항상 읽습니다</string>
     <string name="speech_auto_read_unavailable">이 기기에 사용할 수 있는 음성 합성 엔진이 없습니다</string>
+    <string name="speech_dictate">음성 입력</string>
+    <string name="speech_dictation_failed">음성 인식에 실패했습니다. 다시 시도하세요</string>
+    <string name="speech_dictation_failed_audio">음성 인식 앱이 마이크를 사용할 수 없습니다</string>
+    <string name="speech_dictation_failed_network">음성 인식 앱이 네트워크에 연결할 수 없습니다</string>
+    <string name="speech_dictation_prompt">말씀하세요</string>
+    <string name="speech_dictation_truncated">입력 한도 %1$s자에 도달하여 나머지 받아쓴 텍스트는 추가되지 않았습니다</string>
+    <string name="speech_dictation_unavailable">사용할 수 있는 음성 인식 앱이 없습니다</string>
     <string name="speech_prefer_macaw">3-Macaw Speech 우선 사용</string>
     <string name="speech_prefer_macaw_summary">매번 앱을 고르지 않고 3-Macaw Speech로 받아쓰기와 읽기를 합니다. 끄면 시스템이 선택합니다</string>
     <string name="speech_status_dictation_macaw">받아쓰기: 3-Macaw Speech, 오프라인</string>

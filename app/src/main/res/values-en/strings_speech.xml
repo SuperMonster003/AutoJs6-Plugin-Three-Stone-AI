@@ -4,6 +4,13 @@
     <string name="speech_auto_read_replies">Read replies aloud automatically</string>
     <string name="speech_auto_read_replies_summary">Read each new reply while it is generated. Voice conversations always read replies</string>
     <string name="speech_auto_read_unavailable">No text-to-speech engine is installed on this device</string>
+    <string name="speech_dictate">Voice input</string>
+    <string name="speech_dictation_failed">Speech recognition failed. Try again</string>
+    <string name="speech_dictation_failed_audio">The speech recognition app could not use the microphone</string>
+    <string name="speech_dictation_failed_network">The speech recognition app could not reach the network</string>
+    <string name="speech_dictation_prompt">Speak now</string>
+    <string name="speech_dictation_truncated">The input limit of %1$s characters was reached; the rest of the dictated text was not added</string>
+    <string name="speech_dictation_unavailable">No speech recognition app is available</string>
     <string name="speech_prefer_macaw">Prefer 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">Dictate and read aloud with 3-Macaw Speech without choosing an app each time. Turn off to let the system choose</string>
     <string name="speech_status_dictation_macaw">Dictation: 3-Macaw Speech, offline</string>

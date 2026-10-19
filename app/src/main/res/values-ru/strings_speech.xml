@@ -4,6 +4,13 @@
     <string name="speech_auto_read_replies">Озвучивать ответы автоматически</string>
     <string name="speech_auto_read_replies_summary">Читать каждый новый ответ во время генерации. В голосовом диалоге ответы читаются всегда</string>
     <string name="speech_auto_read_unavailable">На устройстве нет синтезатора речи</string>
+    <string name="speech_dictate">Голосовой ввод</string>
+    <string name="speech_dictation_failed">Не удалось распознать речь. Попробуйте еще раз</string>
+    <string name="speech_dictation_failed_audio">Приложение распознавания речи не смогло использовать микрофон</string>
+    <string name="speech_dictation_failed_network">Приложение распознавания речи не смогло подключиться к сети</string>
+    <string name="speech_dictation_prompt">Говорите</string>
+    <string name="speech_dictation_truncated">Достигнут предел в %1$s символов; остальной продиктованный текст не добавлен</string>
+    <string name="speech_dictation_unavailable">Нет доступного приложения распознавания речи</string>
     <string name="speech_prefer_macaw">Предпочитать 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">Диктовать и озвучивать через 3-Macaw Speech без выбора приложения каждый раз. Выключите, чтобы выбирала система</string>
     <string name="speech_status_dictation_macaw">Диктовка: 3-Macaw Speech, офлайн</string>

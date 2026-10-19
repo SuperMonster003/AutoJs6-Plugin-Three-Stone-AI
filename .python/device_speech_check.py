@@ -24,6 +24,7 @@ RUNNER = PACKAGE + ".test/androidx.test.runner.AndroidJUnitRunner"
 REMOTE = f"/sdcard/Android/data/{PACKAGE}/files/speech-check"
 CLASSES = {
     "settings": PACKAGE + ".speech.SpeechSettingsDeviceTest",
+    "dictation": PACKAGE + ".speech.SpeechDictationDeviceTest",
 }
 
 
@@ -56,6 +57,8 @@ def main():
     parser.add_argument("--adb", default="adb")
     parser.add_argument("--only", default=",".join(CLASSES), help="comma-separated: " + ", ".join(CLASSES))
     parser.add_argument("--no-install", action="store_true")
+    parser.add_argument("--keep-test-apk", action="store_true",
+                        help="leave the test APK (and its fake recognizer) installed")
     parser.add_argument("--output", type=Path, default=ROOT / "build/verification/speech")
     args = parser.parse_args()
     selected = [name.strip() for name in args.only.split(",") if name.strip()]
@@ -86,16 +89,19 @@ def main():
     shell("rm", "-rf", REMOTE, check=False)
 
     all_passed = True
-    for name in selected:
-        result = shell("am", "instrument", "-w", "-r", "-e", "class", CLASSES[name], RUNNER, timeout=1800)
-        (output / f"{name}-instrumentation.txt").write_text(result, encoding="utf-8")
-        passed, tests, failures = summarize(result)
-        all_passed &= passed
-        print(f"{'PASS' if passed else 'FAIL'} {name}: {tests} tests, {failures} failures")
-        if not passed:
-            failure = re.search(r"^(?:INSTRUMENTATION_STATUS: stack=)(.*)$", result, re.MULTILINE)
-            if failure:
-                print("  " + failure.group(1)[:300])
+    try:
+        for name in selected:
+            result = shell("am", "instrument", "-w", "-r", "-e", "class", CLASSES[name], RUNNER, timeout=1800)
+            (output / f"{name}-instrumentation.txt").write_text(result, encoding="utf-8")
+            passed, tests, failures = summarize(result)
+            all_passed &= passed
+            print(f"{'PASS' if passed else 'FAIL'} {name}: {tests} tests, {failures} failures")
+            for failure in re.findall(r"^INSTRUMENTATION_STATUS: stack=(.*)$", result, re.MULTILINE):
+                print("  " + failure[:300])
+    finally:
+        if not args.keep_test_apk:
+            # The test APK carries an exported fake recognizer; never leave it in system choosers.
+            adb("uninstall", PACKAGE + ".test", check=False)
 
     listing = shell("ls", REMOTE, check=False).split()
     for file in listing:

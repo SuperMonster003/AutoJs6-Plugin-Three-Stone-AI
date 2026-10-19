@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -36,6 +37,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
@@ -66,6 +68,16 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportSt
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationFailure
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationInsertion
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationIntents
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationMode
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationOutcome
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationOutcomePolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechAvailability
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechAvailabilityPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceProbe
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceState
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -102,6 +114,7 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var suggestionButtons: List<Button>
     private lateinit var input: EditText
     private lateinit var sendButton: android.widget.ImageButton
+    private lateinit var micButton: android.widget.ImageButton
     private lateinit var scrollToBottomButton: android.widget.ImageButton
     private lateinit var editingBar: LinearLayout
     private lateinit var editingLabel: TextView
@@ -162,6 +175,24 @@ class ChatActivity : ConfiguredActivity() {
     private var pendingDeltaAssistantId = 0L
     private val pendingDelta = StringBuilder()
     private var deltaFlushScheduled = false
+    private var speechAvailability: SpeechAvailability =
+        SpeechAvailabilityPolicy.resolve(SpeechDeviceState.NONE, preferMacaw = true)
+    private var pendingDictation: DictationMode? = null
+
+    /** Instrumentation only: a recognizer result is still outstanding. */
+    @VisibleForTesting
+    internal val dictationPending: Boolean
+        get() = pendingDictation != null
+
+    /** Instrumentation only: recognizer requests handed to the system so far. */
+    @VisibleForTesting
+    internal var dictationRequestCount = 0
+        private set
+    private var dictationSelectionStart = -1
+    private var dictationSelectionEnd = -1
+    private val dictationLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result -> onDictationResult(result.resultCode, result.data) }
     private val drawerExportPicker = registerForActivityResult(
         ActivityResultContracts.CreateDocument(MIME_CONVERSATIONS),
     ) { uri ->
@@ -194,7 +225,10 @@ class ChatActivity : ConfiguredActivity() {
             executor = summaryExecutor,
         )
         uiSettings = uiSettingsStore.load()
+        speechAvailability = SpeechDeviceProbe.availability(this, uiSettings.preferMacawSpeech)
         pendingDrawerExportId = savedInstanceState?.getString(STATE_PENDING_DRAWER_EXPORT_ID)
+        pendingDictation = savedInstanceState?.getString(STATE_PENDING_DICTATION)
+            ?.let { name -> runCatching { DictationMode.valueOf(name) }.getOrNull() }
         updateController = AppUpdateController(this)
         if (restoreTranscript(savedInstanceState)) {
             conversationContextState = historyStore.find(currentConversationId)?.contextState
@@ -356,6 +390,7 @@ class ChatActivity : ConfiguredActivity() {
             applyUiSettings()
         }
         refreshTargetCatalog(importCoordinator.managerState())
+        refreshSpeechAvailability()
         refreshDrawerHistory()
         updateController.checkAutomaticallyIfDue()
     }
@@ -431,6 +466,7 @@ class ChatActivity : ConfiguredActivity() {
         editingMessageId?.let { id -> outState.putLong(STATE_EDITING_MESSAGE_ID, id) }
         outState.putString(STATE_DRAFT_BEFORE_EDITING, draftBeforeEditing)
         outState.putString(STATE_PENDING_DRAWER_EXPORT_ID, pendingDrawerExportId)
+        outState.putString(STATE_PENDING_DICTATION, pendingDictation?.name)
         persistComposerDraft()
         super.onSaveInstanceState(outState)
     }
@@ -1231,6 +1267,7 @@ class ChatActivity : ConfiguredActivity() {
             isBaselineAligned = false
 
             input = EditText(context).apply {
+                tag = ChatViewTags.COMPOSER_INPUT
                 textSize = uiSettings.fontSize.inputSp
                 maxLines = 6
                 minLines = 1
@@ -1297,6 +1334,28 @@ class ChatActivity : ConfiguredActivity() {
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.WRAP_CONTENT,
                         ),
+                    )
+                    // Inside the field and apart from send/stop (roadmap D23); shown only when a
+                    // recognizer resolves, and usable while a reply streams because it only edits text.
+                    micButton = android.widget.ImageButton(context).apply {
+                        tag = ChatViewTags.COMPOSER_MIC
+                        scaleType = ImageView.ScaleType.CENTER
+                        setImageDrawable(tintedDrawable(R.drawable.ic_mic_24, appPalette.secondaryText))
+                        contentDescription = getString(R.string.speech_dictate)
+                        visibility = View.GONE
+                        applySelectableBackground(this)
+                        setOnClickListener { startDictation(DictationMode.SINGLE) }
+                    }
+                    addView(
+                        micButton,
+                        FrameLayout.LayoutParams(
+                            dp(COMPOSER_MIC_SIZE_DP),
+                            dp(COMPOSER_MIC_SIZE_DP),
+                            Gravity.END or Gravity.BOTTOM,
+                        ).apply {
+                            marginEnd = dp(COMPOSER_MIC_INSET_DP)
+                            bottomMargin = dp(COMPOSER_MIC_INSET_DP)
+                        },
                     )
                 },
                 LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
@@ -1600,6 +1659,7 @@ class ChatActivity : ConfiguredActivity() {
             },
         )
         sendButton.isEnabled = isGenerating || (targetReady && input.text.toString().isNotBlank())
+        renderMicButton(targetReady)
         if (::suggestionButtons.isInitialized) {
             suggestionButtons.forEach { suggestion ->
                 suggestion.isEnabled = targetReady && !isGenerating
@@ -1608,6 +1668,104 @@ class ChatActivity : ConfiguredActivity() {
         }
         refreshEditableMessageActions()
     }
+
+    private fun renderMicButton(targetReady: Boolean) {
+        if (!::micButton.isInitialized) return
+        val shown = speechAvailability.dictationAvailable
+        micButton.visibility = if (shown) View.VISIBLE else View.GONE
+        micButton.isEnabled = targetReady
+        micButton.alpha = if (targetReady) 1f else Ui.DISABLED_ALPHA
+        val endPadding = dp(if (shown) COMPOSER_TEXT_END_WITH_MIC_DP else COMPOSER_TEXT_END_DP)
+        if (input.paddingEnd != endPadding) {
+            input.setPaddingRelative(input.paddingStart, input.paddingTop, endPadding, input.paddingBottom)
+        }
+    }
+
+    private fun refreshSpeechAvailability() {
+        speechAvailability = SpeechDeviceProbe.availability(this, uiSettings.preferMacawSpeech)
+        renderComposerState()
+    }
+
+    private fun currentLocale(): Locale = resources.configuration.locales[0]
+
+    private fun startDictation(mode: DictationMode) {
+        if (destroyed || pendingDictation != null) return
+        if (!speechAvailability.dictationAvailable || !isConversationTargetReady()) return
+        // Insert where the user was typing; without focus, append (roadmap D9).
+        if (input.hasFocus()) {
+            dictationSelectionStart = input.selectionStart
+            dictationSelectionEnd = input.selectionEnd
+        } else {
+            dictationSelectionStart = -1
+            dictationSelectionEnd = -1
+        }
+        val request = DictationIntents.create(
+            availability = speechAvailability,
+            locale = currentLocale(),
+            prompt = getString(R.string.speech_dictation_prompt),
+        )
+        pendingDictation = mode
+        try {
+            dictationLauncher.launch(request)
+            dictationRequestCount++
+        } catch (_: ActivityNotFoundException) {
+            pendingDictation = null
+            refreshSpeechAvailability()
+            showSnackbar(drawerLayout, getString(R.string.speech_dictation_unavailable))
+        }
+    }
+
+    private fun onDictationResult(resultCode: Int, data: Intent?) {
+        val mode = pendingDictation ?: DictationMode.SINGLE
+        pendingDictation = null
+        if (destroyed) return
+        val outcome = DictationOutcomePolicy.classify(resultCode, DictationIntents.results(data))
+        when (mode) {
+            DictationMode.SINGLE -> applySingleDictation(outcome)
+        }
+    }
+
+    private fun applySingleDictation(outcome: DictationOutcome) {
+        when (outcome) {
+            is DictationOutcome.Recognized -> insertDictation(outcome.text)
+            is DictationOutcome.Failed -> showSnackbar(drawerLayout, dictationFailureText(outcome.kind))
+            DictationOutcome.Canceled, DictationOutcome.NoMatch -> Unit
+        }
+    }
+
+    private fun insertDictation(text: String) {
+        val editable = input.text ?: return
+        val edit = DictationInsertion.edit(
+            current = editable,
+            selectionStart = dictationSelectionStart,
+            selectionEnd = dictationSelectionEnd,
+            recognized = text,
+            maximumLength = ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS,
+        ) ?: return
+        if (edit.insertion.isNotEmpty() || edit.end > edit.start) {
+            editable.replace(edit.start, edit.end, edit.insertion)
+            input.setSelection(edit.cursor.coerceIn(0, editable.length))
+        }
+        input.requestFocus()
+        if (edit.truncated) {
+            showSnackbar(
+                drawerLayout,
+                getString(
+                    R.string.speech_dictation_truncated,
+                    NumberFormat.getIntegerInstance().format(ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS),
+                ),
+                com.google.android.material.snackbar.Snackbar.LENGTH_LONG,
+            )
+        }
+    }
+
+    private fun dictationFailureText(kind: DictationFailure): String = getString(
+        when (kind) {
+            DictationFailure.NETWORK -> R.string.speech_dictation_failed_network
+            DictationFailure.AUDIO -> R.string.speech_dictation_failed_audio
+            DictationFailure.OTHER -> R.string.speech_dictation_failed
+        },
+    )
 
     private fun renderTranscript() {
         messagesColumn.removeAllViews()
@@ -3859,6 +4017,10 @@ class ChatActivity : ConfiguredActivity() {
         const val PLACEHOLDER_ALPHA = 0.65f
         const val COMPOSER_CONTROL_MIN_HEIGHT_DP = 46
         const val COMPOSER_CORNER_RADIUS_DP = 22
+        const val COMPOSER_MIC_SIZE_DP = 36
+        const val COMPOSER_MIC_INSET_DP = 5
+        const val COMPOSER_TEXT_END_DP = 16
+        const val COMPOSER_TEXT_END_WITH_MIC_DP = 44
         const val SEARCH_DEBOUNCE_MILLIS = 150L
         const val GENERATION_FAILURE_SEPARATOR = "\n\n---\n\n"
         const val NO_USAGE = -1L
@@ -3890,9 +4052,16 @@ class ChatActivity : ConfiguredActivity() {
         const val STATE_EDITING_MESSAGE_ID = "chatEditingMessageId"
         const val STATE_DRAFT_BEFORE_EDITING = "chatDraftBeforeEditing"
         const val STATE_PENDING_DRAWER_EXPORT_ID = "pendingDrawerConversationExportId"
+        const val STATE_PENDING_DICTATION = "chatPendingDictation"
         const val MIME_CONVERSATIONS = "application/vnd.three-stone-ai.conversations"
         const val EXPORT_TIMESTAMP_PATTERN = "yyyyMMdd-HHmmss"
 
         fun newConversationId(): String = UUID.randomUUID().toString()
     }
+}
+
+/** View tags that the speech device tests look up. */
+internal object ChatViewTags {
+    const val COMPOSER_INPUT = "chat-composer-input"
+    const val COMPOSER_MIC = "chat-composer-mic"
 }

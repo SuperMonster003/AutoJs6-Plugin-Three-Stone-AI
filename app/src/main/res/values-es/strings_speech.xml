@@ -4,6 +4,13 @@
     <string name="speech_auto_read_replies">Leer las respuestas en voz alta</string>
     <string name="speech_auto_read_replies_summary">Lee cada respuesta nueva mientras se genera. Las conversaciones por voz siempre leen las respuestas</string>
     <string name="speech_auto_read_unavailable">No hay ningún motor de texto a voz instalado en este dispositivo</string>
+    <string name="speech_dictate">Entrada de voz</string>
+    <string name="speech_dictation_failed">El reconocimiento de voz falló. Inténtalo de nuevo</string>
+    <string name="speech_dictation_failed_audio">La aplicación de reconocimiento de voz no pudo usar el micrófono</string>
+    <string name="speech_dictation_failed_network">La aplicación de reconocimiento de voz no pudo conectarse a la red</string>
+    <string name="speech_dictation_prompt">Habla ahora</string>
+    <string name="speech_dictation_truncated">Se alcanzó el límite de %1$s caracteres; el resto del texto dictado no se añadió</string>
+    <string name="speech_dictation_unavailable">No hay ninguna aplicación de reconocimiento de voz disponible</string>
     <string name="speech_prefer_macaw">Preferir 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">Dicta y lee en voz alta con 3-Macaw Speech sin elegir una aplicación cada vez. Desactívalo para que elija el sistema</string>
     <string name="speech_status_dictation_macaw">Dictado: 3-Macaw Speech, sin conexión</string>

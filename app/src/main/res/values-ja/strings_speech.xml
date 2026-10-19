@@ -4,6 +4,13 @@
     <string name="speech_auto_read_replies">応答を自動で読み上げ</string>
     <string name="speech_auto_read_replies_summary">新しい応答を生成しながら読み上げます. 音声会話では常に読み上げます</string>
     <string name="speech_auto_read_unavailable">この端末には音声合成エンジンがありません</string>
+    <string name="speech_dictate">音声入力</string>
+    <string name="speech_dictation_failed">音声認識に失敗しました. もう一度お試しください</string>
+    <string name="speech_dictation_failed_audio">音声認識アプリがマイクを使用できませんでした</string>
+    <string name="speech_dictation_failed_network">音声認識アプリがネットワークに接続できませんでした</string>
+    <string name="speech_dictation_prompt">話してください</string>
+    <string name="speech_dictation_truncated">入力上限の %1$s 文字に達したため, 残りの音声入力テキストは追加されませんでした</string>
+    <string name="speech_dictation_unavailable">使用できる音声認識アプリがありません</string>
     <string name="speech_prefer_macaw">3-Macaw Speech を優先</string>
     <string name="speech_prefer_macaw_summary">毎回アプリを選ばずに 3-Macaw Speech で音声入力と読み上げを行います. オフにするとシステムが選択します</string>
     <string name="speech_status_dictation_macaw">音声入力: 3-Macaw Speech, オフライン</string>

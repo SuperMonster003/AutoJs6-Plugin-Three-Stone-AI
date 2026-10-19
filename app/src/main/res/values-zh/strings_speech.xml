@@ -4,6 +4,13 @@
     <string name="speech_auto_read_replies">自动朗读回复</string>
     <string name="speech_auto_read_replies_summary">新回复边生成边朗读; 语音对话中总是朗读</string>
     <string name="speech_auto_read_unavailable">设备上没有可用的语音合成引擎</string>
+    <string name="speech_dictate">语音输入</string>
+    <string name="speech_dictation_failed">语音识别失败, 请重试</string>
+    <string name="speech_dictation_failed_audio">语音识别应用无法使用麦克风</string>
+    <string name="speech_dictation_failed_network">语音识别应用无法连接网络</string>
+    <string name="speech_dictation_prompt">请说话</string>
+    <string name="speech_dictation_truncated">已达到 %1$s 字符的输入上限, 其余听写文字未插入</string>
+    <string name="speech_dictation_unavailable">没有可用的语音识别应用</string>
     <string name="speech_prefer_macaw">优先使用 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">听写与朗读直接使用 3-Macaw Speech, 不必每次选择应用; 关闭后由系统选择</string>
     <string name="speech_status_dictation_macaw">听写: 3-Macaw Speech, 离线</string>

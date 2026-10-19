@@ -4,6 +4,13 @@
     <string name="speech_auto_read_replies">قراءة الردود بصوت عال تلقائيا</string>
     <string name="speech_auto_read_replies_summary">قراءة كل رد جديد أثناء توليده. تقرأ المحادثة الصوتية الردود دائما</string>
     <string name="speech_auto_read_unavailable">لا يوجد محرك لتحويل النص إلى كلام على هذا الجهاز</string>
+    <string name="speech_dictate">الإدخال الصوتي</string>
+    <string name="speech_dictation_failed">فشل التعرف على الكلام. حاول مرة أخرى</string>
+    <string name="speech_dictation_failed_audio">تعذر على تطبيق التعرف على الكلام استخدام الميكروفون</string>
+    <string name="speech_dictation_failed_network">تعذر على تطبيق التعرف على الكلام الوصول إلى الشبكة</string>
+    <string name="speech_dictation_prompt">تحدث الآن</string>
+    <string name="speech_dictation_truncated">تم بلوغ حد الإدخال البالغ %1$s حرف; لم يضف باقي النص المملى</string>
+    <string name="speech_dictation_unavailable">لا يوجد تطبيق متاح للتعرف على الكلام</string>
     <string name="speech_prefer_macaw">تفضيل ⁨3-Macaw Speech⁩</string>
     <string name="speech_prefer_macaw_summary">الإملاء والقراءة بصوت عال باستخدام ⁨3-Macaw Speech⁩ دون اختيار تطبيق في كل مرة. أوقفه ليختار النظام</string>
     <string name="speech_status_dictation_macaw">الإملاء: ⁨3-Macaw Speech⁩, دون اتصال</string>

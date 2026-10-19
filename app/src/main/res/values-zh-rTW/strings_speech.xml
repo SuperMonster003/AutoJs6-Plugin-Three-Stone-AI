@@ -4,6 +4,13 @@
     <string name="speech_auto_read_replies">自動朗讀回覆</string>
     <string name="speech_auto_read_replies_summary">新回覆邊生成邊朗讀; 語音對話中一律朗讀</string>
     <string name="speech_auto_read_unavailable">裝置上沒有可用的語音合成引擎</string>
+    <string name="speech_dictate">語音輸入</string>
+    <string name="speech_dictation_failed">語音辨識失敗, 請重試</string>
+    <string name="speech_dictation_failed_audio">語音辨識應用程式無法使用麥克風</string>
+    <string name="speech_dictation_failed_network">語音辨識應用程式無法連上網路</string>
+    <string name="speech_dictation_prompt">請說話</string>
+    <string name="speech_dictation_truncated">已達到 %1$s 字元的輸入上限, 其餘聽寫文字未插入</string>
+    <string name="speech_dictation_unavailable">沒有可用的語音辨識應用程式</string>
     <string name="speech_prefer_macaw">優先使用 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">聽寫與朗讀直接使用 3-Macaw Speech, 不必每次選擇應用程式; 關閉後由系統選擇</string>
     <string name="speech_status_dictation_macaw">聽寫: 3-Macaw Speech, 離線</string>

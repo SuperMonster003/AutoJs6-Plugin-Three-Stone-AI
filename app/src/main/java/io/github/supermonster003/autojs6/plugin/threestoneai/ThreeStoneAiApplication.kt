@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.app.Application
+import androidx.annotation.VisibleForTesting
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AndroidOnlineAiNetworkAccess
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.CompositeAiBackend
@@ -92,9 +93,14 @@ class ThreeStoneAiApplication : Application() {
         )
     }
 
+    /** Instrumentation only: a scripted backend for chat UI tests on real devices. */
+    @VisibleForTesting
+    @Volatile
+    internal var aiBackendOverride: AiBackend? = null
+
     /** Unified local/remote dispatch with no automatic fallback across the locality boundary. */
     internal val aiBackend: AiBackend
-        get() = aiBackendDelegate.value
+        get() = aiBackendOverride ?: aiBackendDelegate.value
 
     override fun onTrimMemory(level: Int) {
         if (

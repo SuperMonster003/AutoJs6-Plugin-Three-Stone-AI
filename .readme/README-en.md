@@ -194,6 +194,12 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.4.1
+
+###### 2026/10/20
+
+* `Fix` The 1.4.0 APKs declared only the 64-bit processor architectures (arm64-v8a, x86_64), so on 32-bit phones (armeabi-v7a, x86) the AutoJs6 Plugin Center could treat the plugin as incompatible; all four architectures are now declared correctly
+
 # v1.4.0
 
 ###### 2026/10/20
@@ -219,16 +225,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Improvement` Consistent visual sizing for launcher and Plugin Center icons, with transparent backgrounds and neutral black, white or grayscale artwork
 * `Improvement` Plugin Center icons use the sizes, positions, light and dark artwork, and circular backgrounds adjusted in Icon Studio, retaining reproducible sources and parameters
 * `Improvement` Android App info icons share Icon Studio artwork and light/dark backgrounds while preserving transparent Plugin Center artwork and existing launcher choices
-
-# v1.2.1
-
-###### 2026/09/29
-
-* `Hint` The 32-bit compatibility changes are an unpublished candidate. See docs/dev/32-bit-compatibility-2026-09-29.md for executed checks and remaining device coverage.
-* `Fix` When the host delivers a tool-result image as a regular-file descriptor from its private cache, re-opening it through /proc/self/fd failed with EACCES because the Provider may not traverse the host directory, and the whole tool continuation aborted with PROTOCOL_VIOLATION; regular files now fall back to reading through a duplicated descriptor (a regular file never blocks a read) while pipes keep the private non-blocking re-open. On a real device (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0) every screen_capture image sent to Codex / Gemini models as a native tool result hit this failure
-* `Fix` After each accepted batch of native tool results, the generation timeout starts over: previously the whole tool turn, including the time spent waiting for results, shared the first request's timeout, so multi-round tasks longer than it always ended with TIMEOUT; now only waiting without submitting results still expires on the original timeout. Matches the corresponding AutoJs6 host and 3-Stove Agent changes
-* `Fix` Add x86 and armeabi-v7a APKs for online AI and host integration; check process ABI and the installed native payload before exposing local inference, and explain unavailable local models in the manager
-* `Improvement` Unify Three series launcher icons with light artwork on a stable dark background, while plugin-center and in-app icons remain transparent and follow the application theme; prevent nested launcher backgrounds on some devices
 
 ##### For more releases
 

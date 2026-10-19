@@ -5,6 +5,12 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "相依性",
   "$data": {
+    "v1.4.1": {
+      "released_date": "2026/10/20",
+      "fix": [
+        "1.4.0 的安裝套件只宣告了 64 位元處理器架構 (arm64-v8a, x86_64), 32 位元手機 (armeabi-v7a, x86) 上 AutoJs6 的外掛程式中心可能把本外掛程式視為不相容; 現在 4 種架構都已正確宣告"
+      ]
+    },
     "v1.4.0": {
       "released_date": "2026/10/20",
       "hint": [

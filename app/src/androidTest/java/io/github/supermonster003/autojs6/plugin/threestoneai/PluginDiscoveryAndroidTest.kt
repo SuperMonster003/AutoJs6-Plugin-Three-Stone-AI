@@ -75,6 +75,12 @@ class PluginDiscoveryAndroidTest {
             assertFalse(requireNotNull(info.engine).isBlank())
             assertFalse(requireNotNull(info.variant).isBlank())
             assertEquals(setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"), requireNotNull(info.supportedAbis).toSet())
+            // The host and the official index prefer this build-written meta-data to INFO.
+            val metaData = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA).metaData
+            assertEquals(
+                setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"),
+                requireNotNull(metaData.getString("org.autojs.plugin.contract.SUPPORTED_ABIS")).split(",").map(String::trim).toSet(),
+            )
             val capabilities = requireNotNull(info.capabilities)
             assertTrue(capabilities.getLong(PluginCapabilityKeys.REQUIRES_HOST_VERSION) > 0)
         } finally {

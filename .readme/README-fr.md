@@ -194,6 +194,12 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 ******
 
+# v1.4.1
+
+###### 2026/10/20
+
+* `Correctif` Les APK de la version 1.4.0 ne déclaraient que les architectures de processeur 64 bits (arm64-v8a, x86_64), si bien que sur les téléphones 32 bits (armeabi-v7a, x86) le Centre de plugins d'AutoJs6 pouvait considérer le plugin comme incompatible; les quatre architectures sont désormais déclarées correctement
+
 # v1.4.0
 
 ###### 2026/10/20
@@ -219,16 +225,6 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Amélioration` Taille visuelle harmonisée des icônes du lanceur et du Centre de plugins, avec des fonds transparents et des motifs noirs, blancs ou gris neutres
 * `Amélioration` Les icônes du centre de plugins utilisent les tailles, positions, images claires et sombres et fonds circulaires réglés dans Icon Studio, avec les sources et paramètres permettant de les reproduire
 * `Amélioration` Les icônes des informations d'application Android utilisent les illustrations et les fonds clairs et sombres d'Icon Studio, en conservant les images transparentes du centre de plugins et les choix du lanceur
-
-# v1.2.1
-
-###### 2026/09/29
-
-* `Note` Les changements de compatibilité 32 bits constituent une version candidate non publiée. Voir docs/dev/32-bit-compatibility-2026-09-29.md pour les vérifications exécutées et les appareils restant à tester.
-* `Correctif` Lorsque l'hôte transmet une image de résultat d'outil sous forme de descripteur de fichier ordinaire issu de son cache privé, la réouverture via /proc/self/fd échouait avec EACCES car le Provider ne peut pas traverser le répertoire de l'hôte, et toute la continuation d'outils s'interrompait avec PROTOCOL_VIOLATION; les fichiers ordinaires sont désormais lus via un descripteur dupliqué (la lecture d'un fichier ordinaire ne bloque jamais), tandis que les tubes conservent la réouverture privée non bloquante. Sur un appareil réel (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0), chaque image screen_capture envoyée aux modèles Codex / Gemini comme résultat d'outil natif provoquait cet échec
-* `Correctif` Après chaque lot accepté de résultats d'outils natifs, le délai de génération repart de zéro: auparavant tout le tour d'outils, temps d'attente des résultats compris, partageait le délai de la première requête, si bien que les tâches multi-tours plus longues se terminaient toujours par TIMEOUT; désormais seule une attente sans soumission de résultats expire encore selon le délai initial. Cohérent avec les changements correspondants de l'hôte AutoJs6 et de 3-Stove Agent
-* `Correctif` Ajout des APK x86 et armeabi-v7a pour les services IA en ligne et l'intégration hôte; vérification de l'ABI du processus et des bibliothèques installées avant d'activer les modèles locaux, avec explication dans le gestionnaire
-* `Amélioration` Uniformiser les icônes du lanceur de la série Three avec un dessin clair sur fond sombre fixe, conserver la transparence et le thème des icônes dans le centre des plugins et dans l'application, et éviter les fonds imbriqués sur certains appareils
 
 ##### Autres versions
 

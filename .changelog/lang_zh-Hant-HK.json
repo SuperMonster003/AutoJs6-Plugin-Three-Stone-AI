@@ -5,6 +5,12 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "依賴",
   "$data": {
+    "v1.4.1": {
+      "released_date": "2026/10/20",
+      "fix": [
+        "1.4.0 的安裝套件只聲明了 64 位元處理器架構 (arm64-v8a, x86_64), 32 位元手機 (armeabi-v7a, x86) 上 AutoJs6 的插件中心可能把本插件視為不兼容; 現在 4 種架構都已正確聲明"
+      ]
+    },
     "v1.4.0": {
       "released_date": "2026/10/20",
       "hint": [

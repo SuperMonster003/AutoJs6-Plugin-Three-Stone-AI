@@ -5,6 +5,12 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.4.1": {
+      "released_date": "2026/10/20",
+      "fix": [
+        "1.4.0 の APK は 64 ビットのプロセッサアーキテクチャ (arm64-v8a, x86_64) しか宣言していなかったため, 32 ビットの端末 (armeabi-v7a, x86) では AutoJs6 のプラグインセンターがこのプラグインを非対応と見なすことがありました. 現在は 4 種類のアーキテクチャをすべて正しく宣言しています"
+      ]
+    },
     "v1.4.0": {
       "released_date": "2026/10/20",
       "hint": [

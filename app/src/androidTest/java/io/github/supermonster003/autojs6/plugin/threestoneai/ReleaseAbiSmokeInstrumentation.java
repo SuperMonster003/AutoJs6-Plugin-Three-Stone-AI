@@ -99,6 +99,12 @@ public class ReleaseAbiSmokeInstrumentation extends Instrumentation {
             require(new HashSet<>(Arrays.asList("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
                     .equals(new HashSet<>(Arrays.asList(info.getSupportedAbis()))), "INFO ABIs differ");
         });
+        // The host and the official index prefer the build-written meta-data to INFO.
+        String declared = getTargetContext().getPackageManager()
+                .getApplicationInfo(PACKAGE, PackageManager.GET_META_DATA).metaData
+                .getString("org.autojs.plugin.contract.SUPPORTED_ABIS");
+        require(declared != null && new HashSet<>(Arrays.asList("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+                .equals(new HashSet<>(Arrays.asList(declared.split(",")))), "SUPPORTED_ABIS meta-data differs");
     }
 
     private void verifyProvider() throws Exception {

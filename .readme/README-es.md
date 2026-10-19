@@ -194,6 +194,12 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ******
 
+# v1.4.1
+
+###### 2026/10/20
+
+* `Corrección` Los APK de 1.4.0 solo declaraban las arquitecturas de procesador de 64 bits (arm64-v8a, x86_64), por lo que en teléfonos de 32 bits (armeabi-v7a, x86) el centro de plugins de AutoJs6 podía considerar el plugin incompatible; ahora se declaran correctamente las cuatro arquitecturas
+
 # v1.4.0
 
 ###### 2026/10/20
@@ -219,16 +225,6 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Mejora` Tamaño visual uniforme de los iconos del lanzador y del Centro de complementos, con fondos transparentes y diseños en blanco, negro o grises neutros
 * `Mejora` Los iconos del centro de plugins usan los tamaños, posiciones, imágenes claras y oscuras y fondos circulares ajustados en Icon Studio, conservando fuentes y parámetros reproducibles
 * `Mejora` Los iconos de información de la aplicación de Android comparten las imágenes y los fondos claros y oscuros de Icon Studio, conservando las imágenes transparentes del centro de plugins y las opciones del lanzador
-
-# v1.2.1
-
-###### 2026/09/29
-
-* `Aviso` Los cambios de compatibilidad de 32 bits son una versión candidata sin publicar. Consulta docs/dev/32-bit-compatibility-2026-09-29.md para las comprobaciones ejecutadas y los dispositivos pendientes.
-* `Corrección` Cuando el host entrega una imagen de resultado de herramienta como descriptor de un archivo regular de su caché privada, reabrirlo mediante /proc/self/fd fallaba con EACCES porque el Provider no puede recorrer el directorio del host, y toda la continuación de herramientas se abortaba con PROTOCOL_VIOLATION; los archivos regulares ahora se leen mediante un descriptor duplicado (la lectura de un archivo regular nunca bloquea), mientras que las tuberías conservan la reapertura privada no bloqueante. En un dispositivo real (Sony XQ-DQ72, AutoJs6 5298, 3-Stove Agent 1.3.0), cada imagen de screen_capture enviada a los modelos Codex / Gemini como resultado de herramienta nativa sufría este fallo
-* `Corrección` Tras cada lote aceptado de resultados de herramientas nativas, el tiempo límite de generación vuelve a empezar: antes todo el turno de herramientas, incluido el tiempo de espera de los resultados, compartía el tiempo límite de la primera solicitud, de modo que las tareas de varias rondas más largas siempre terminaban con TIMEOUT; ahora solo la espera sin enviar resultados sigue caducando con el tiempo límite original. Coherente con los cambios correspondientes del host AutoJs6 y de 3-Stove Agent
-* `Corrección` Añadir APK x86 y armeabi-v7a para IA en línea e integración con el host; comprobar la ABI del proceso y las bibliotecas instaladas antes de habilitar la inferencia local, con un aviso en el gestor de modelos
-* `Mejora` Unificar los iconos del lanzador de la serie Three con dibujos claros sobre un fondo oscuro fijo, mantener transparentes los del centro de complementos y de la aplicación según su tema y evitar fondos superpuestos en algunos dispositivos
 
 ##### Más versiones
 

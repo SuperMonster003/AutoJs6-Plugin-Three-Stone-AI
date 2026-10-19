@@ -37,6 +37,9 @@ val buildTypeRelease = "release"
 val supportedAbis = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
 // LiteRT-LM 0.15.0 ships only 64-bit JNI libraries. The 32-bit APKs run online AI.
 extra["nativeRuntimeAbis"] = setOf("arm64-v8a", "x86_64")
+// The SUPPORTED_ABIS meta-data read by the host and the official index would otherwise come from the
+// native libraries alone and leave out the 32-bit APKs, which have none.
+nativeAlignment.supportedAbis.set(supportedAbis)
 
 android {
     namespace = globalApplicationId

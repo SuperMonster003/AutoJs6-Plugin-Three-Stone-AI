@@ -4,6 +4,12 @@
 
 ******
 
+# v1.4.1
+
+###### 2026/10/20
+
+* `Fix` The 1.4.0 APKs declared only the 64-bit processor architectures (arm64-v8a, x86_64), so on 32-bit phones (armeabi-v7a, x86) the AutoJs6 Plugin Center could treat the plugin as incompatible; all four architectures are now declared correctly
+
 # v1.4.0
 
 ###### 2026/10/20

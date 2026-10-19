@@ -5,6 +5,12 @@
   "changelog_label_improvement": "개선",
   "changelog_label_dependency": "의존성",
   "$data": {
+    "v1.4.1": {
+      "released_date": "2026/10/20",
+      "fix": [
+        "1.4.0 APK가 64비트 프로세서 아키텍처 (arm64-v8a, x86_64)만 선언해서 32비트 휴대폰 (armeabi-v7a, x86)에서는 AutoJs6 플러그인 센터가 이 플러그인을 호환되지 않는 것으로 볼 수 있었습니다. 이제 네 가지 아키텍처를 모두 올바르게 선언합니다"
+      ]
+    },
     "v1.4.0": {
       "released_date": "2026/10/20",
       "hint": [

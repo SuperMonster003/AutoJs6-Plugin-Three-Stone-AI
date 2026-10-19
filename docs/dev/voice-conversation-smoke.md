@@ -58,8 +58,18 @@ Ten rounds, then the canceled recognizer ended the conversation (`RecognitionCan
 The listen times of these runs are the fake recognizer's (well under 100 ms) and are not speech
 recognition times.
 
-## Not yet run
+## Spoken by the maintainer (`SpeechManualDeviceTest`)
 
-- Ten rounds with an online target (needs the maintainer's consent for the provider traffic).
-- Rounds spoken by a person through 3-Macaw Speech's sheet and through another recognizer, which
-  give the real time from opening the recognizer to its result.
+XQ-DQ72 (QV770340J7, API 33), scripted reply, 3-Macaw Speech versionCode 41 for the sheet and the
+engine (default AISHELL-3 voice), media volume 9/30.
+
+| Check | Result |
+|---|---|
+| `manual-dictation`, preference on | 3-Macaw Speech sheet directly, no chooser; recognized, 6505 ms request to result (speaking included), 8 characters inserted |
+| `manual-dictation --prefer-macaw false` | system chooser (Google, 3-Macaw Speech), Google "just once"; recognized, 9999 ms, 7 characters inserted; no default was set |
+| `manual-conversation` | 3 rounds; listen 6023 / 6016 / 5425 ms, send to first sound 1649 / 447 / 477 ms, round 4315 / 3165 / 3314 ms; ended by closing the sheet (`RecognitionCanceled`) |
+| `manual-assistant` (P5-5) | power button, speech, "3-Stone AI": the question reached a new conversation and was sent; first sound 1863 ms after the reading started. The first attempt was cut off by the cold-start appearance recreation, fixed in `a1252ef` |
+
+## Not run
+
+- Ten rounds with an online target: the maintainer decided on 2026-10-19 not to run it for now.

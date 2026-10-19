@@ -300,6 +300,13 @@ class ChatActivity : ConfiguredActivity() {
     @VisibleForTesting
     internal var dictationRequestCount = 0
         private set
+
+    /** Instrumentation only: the last recognizer result, without its text. */
+    @VisibleForTesting
+    internal var lastDictationResult: DictationResultSummary? = null
+        private set
+
+    private var dictationLaunchedAt = 0L
     private var dictationSelectionStart = -1
     private var dictationSelectionEnd = -1
     private val dictationLauncher = registerForActivityResult(
@@ -1963,6 +1970,7 @@ class ChatActivity : ConfiguredActivity() {
         pendingDictation = mode
         return try {
             dictationLauncher.launch(request)
+            dictationLaunchedAt = android.os.SystemClock.elapsedRealtime()
             dictationRequestCount++
             true
         } catch (_: ActivityNotFoundException) {
@@ -1978,6 +1986,11 @@ class ChatActivity : ConfiguredActivity() {
         pendingDictation = null
         if (destroyed) return
         val outcome = DictationOutcomePolicy.classify(resultCode, DictationIntents.results(data))
+        lastDictationResult = DictationResultSummary(
+            outcome = outcome::class.simpleName.orEmpty(),
+            millis = android.os.SystemClock.elapsedRealtime() - dictationLaunchedAt,
+            characters = (outcome as? DictationOutcome.Recognized)?.text?.length ?: 0,
+        )
         if (mode == DictationMode.CONVERSATION) {
             voiceListenMillis = android.os.SystemClock.elapsedRealtime() - voiceListenAt
         }
@@ -4584,4 +4597,11 @@ internal data class VoiceRoundTiming(
     val firstSoundMillis: Long?,
     val roundMillis: Long,
     val replyCharacters: Int,
+)
+
+/** A recognizer result as instrumentation sees it: kind, time from request to result, text length. */
+internal data class DictationResultSummary(
+    val outcome: String,
+    val millis: Long,
+    val characters: Int,
 )

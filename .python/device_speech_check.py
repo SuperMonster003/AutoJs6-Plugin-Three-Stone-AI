@@ -34,6 +34,17 @@ CLASSES = {
 }
 # These play sound through the speaker at the device's media volume: never on adjacent phones at once.
 ACOUSTIC = {"engine", "conversation-local", "conversation-online"}
+# These wait for the maintainer on the phone (roadmap 10.5 E4); run one at a time on request.
+MANUAL = {
+    "manual-dictation": "tap the microphone once and say a sentence",
+    "manual-conversation": "long press the microphone, talk a few rounds, then cancel the recognizer",
+    "manual-assistant": "hold the power button, speak, then tap \"3-Stone AI\"",
+}
+CLASSES.update({
+    "manual-dictation": PACKAGE + ".speech.SpeechManualDeviceTest#dictateOnce",
+    "manual-conversation": PACKAGE + ".speech.SpeechManualDeviceTest#voiceConversation",
+    "manual-assistant": PACKAGE + ".speech.SpeechManualDeviceTest#voiceCommandFromTheAssistant",
+})
 
 
 def apk_from_metadata(directory, abi=None):
@@ -63,8 +74,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--serial", required=True)
     parser.add_argument("--adb", default="adb")
-    parser.add_argument("--only", default=",".join(name for name in CLASSES if name not in ACOUSTIC),
-                        help="comma-separated: " + ", ".join(CLASSES) + "; acoustic ones only on request")
+    parser.add_argument("--only", default=",".join(name for name in CLASSES if name not in ACOUSTIC | set(MANUAL)),
+                        help="comma-separated: " + ", ".join(CLASSES) + "; acoustic and manual ones only on request")
     parser.add_argument("--no-install", action="store_true")
     parser.add_argument("--keep-test-apk", action="store_true",
                         help="leave the test APK (and its fake recognizer) installed")
@@ -113,6 +124,8 @@ def main():
     all_passed = True
     try:
         for name in selected:
+            if name in MANUAL:
+                print(f"  {name}: waiting for the maintainer to {MANUAL[name]}", flush=True)
             if name in ACOUSTIC:
                 volume = shell("cmd", "media_session", "volume", "--stream", "3", "--get", check=False)
                 if "volume is" not in volume:

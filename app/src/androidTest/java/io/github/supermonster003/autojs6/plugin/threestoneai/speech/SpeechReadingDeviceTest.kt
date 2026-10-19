@@ -66,6 +66,7 @@ class SpeechReadingDeviceTest {
             waitUntil("reading starts") { reading(scenario) != null }
             waitUntil("the first sentence is read") { FakeSpeechEngine.spokenTexts().isNotEmpty() }
             assertTrue("Status bar shows reading", statusShows(scenario, R.string.speech_reading_status))
+            SpeechDeviceReport.screenshot("chat-reading-status")
             waitUntil("the reply is read to the end") {
                 environment.backend.completions == 1 && reading(scenario) == null
             }
@@ -94,7 +95,7 @@ class SpeechReadingDeviceTest {
             assertTrue(FakeSpeechEngine.spokenTexts().isEmpty())
 
             FakeSpeechEngine.hold = true
-            chooseFromMenu(scenario, R.string.chat_message_read_aloud)
+            chooseFromMenu(scenario, R.string.chat_message_read_aloud, screenshot = "chat-reply-menu")
             waitUntil("reading starts") { reading(scenario) != null }
             chooseFromMenu(scenario, R.string.chat_message_stop_reading)
             waitUntil("reading stops") { reading(scenario) == null }
@@ -282,8 +283,9 @@ class SpeechReadingDeviceTest {
     private fun lastReply(activity: ChatActivity): View =
         views(activity.window.decorView).filterIsInstance<MarkdownMessageView>().last()
 
-    private fun chooseFromMenu(scenario: ActivityScenario<ChatActivity>, label: Int) {
+    private fun chooseFromMenu(scenario: ActivityScenario<ChatActivity>, label: Int, screenshot: String? = null) {
         scenario.onActivity { activity -> lastReply(activity).performLongClick() }
+        screenshot?.let(SpeechDeviceReport::screenshot)
         scenario.onActivity { activity ->
             val dialog = activity.messageActionsDialog!!
             val adapter = dialog.listView.adapter

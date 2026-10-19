@@ -136,6 +136,7 @@ class SpeechConversationDeviceTest {
             start(scenario)
             waitUntil("the reply is generating") { phase(scenario) == VoicePhase.THINKING }
             assertTrue(statusShows(scenario, R.string.speech_conversation_thinking))
+            SpeechDeviceReport.screenshot("chat-voice-thinking")
             scenario.onActivity { activity ->
                 activity.window.decorView.findViewWithTag<View>(ChatViewTags.VOICE_STATUS_ACTION).performClick()
             }
@@ -151,6 +152,7 @@ class SpeechConversationDeviceTest {
             start(scenario)
             waitUntil("the reply is read") { phase(scenario) == VoicePhase.SPEAKING }
             assertTrue(statusShows(scenario, R.string.speech_conversation_speaking))
+            SpeechDeviceReport.screenshot("chat-voice-speaking")
             scenario.moveToState(Lifecycle.State.CREATED)
             waitForExit(scenario)
             values["leftChat"] = exit(scenario)

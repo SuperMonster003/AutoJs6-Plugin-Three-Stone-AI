@@ -4,6 +4,17 @@
 
 ******
 
+# v1.4.0
+
+###### 2026/10/19
+
+* `Aviso` 3-Stone AI no pide el permiso del micrófono: graba la aplicación de reconocimiento. 3-Macaw Speech funciona totalmente sin conexión, otras aplicaciones de reconocimiento o de voz pueden usar la red, y el texto reconocido se envía al modelo seleccionado igual que el texto escrito
+* `Función` Nuevo botón de micrófono dentro del cuadro de entrada: tócalo y habla, y el texto reconocido se inserta en el cursor para revisarlo antes de enviar. Con 3-Macaw Speech el reconocimiento es sin conexión; si no, se usa la aplicación de reconocimiento de voz del teléfono
+* `Función` Las respuestas se pueden leer en voz alta: mantén pulsada una respuesta y elige "Leer en voz alta", o activa "Leer las respuestas en voz alta" en Ajustes > Voz para escuchar las respuestas nuevas mientras se generan. Las marcas de títulos y listas no se leen, y los bloques de código y las tablas se anuncian con una frase. Se prefieren las voces sin conexión de 3-Macaw Speech si está instalado
+* `Función` Mantén pulsado el micrófono para una conversación por voz: lo que dices se envía enseguida y la aplicación vuelve a escuchar después de leer la respuesta. Una barra de estado sobre el cuadro de entrada muestra qué está pasando y permite salir en cualquier momento; mientras se lee una respuesta, tócala para interrumpir y hablar enseguida
+* `Función` Pregunta a través del asistente digital de 3-Macaw Speech: mantén pulsado el botón de encendido, habla y toca "3-Stone AI" para recibir la respuesta en una conversación nueva, leída en voz alta. Otra pregunta de este tipo en menos de 10 segundos solo se pone en el cuadro de entrada, para evitar abusos
+* `Función` Nuevo grupo "Voz" en Ajustes: lectura automática, "Preferir 3-Macaw Speech" y qué aplicación dicta y lee en este momento
+
 # v1.3.0
 
 ###### 2026/10/15

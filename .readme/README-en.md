@@ -72,6 +72,23 @@ The current README.md supports the following languages:
 - Keep online model presets current with a public catalog from the project on GitHub. Automatic updates are enabled by default and check once every 24 hours when Online AI settings are opened; a switch and manual refresh are available. Updates respect the metered-network setting, keep the cached or built-in list available offline or on failure, and leave saved profiles and custom model IDs unchanged.
 - Group model presets by vendor and expand OpenRouter choices to include Qwen, Kimi, GLM, Grok, Meta and MiniMax, while preserving exact model IDs.
 - Unify standalone settings with flat groups, consistent rows and centered rounded dialogs. Language, night mode, theme color and launcher icon changes apply only after OK; Cancel leaves saved values unchanged. Theme color follows AutoJs6 by default, with a shared palette, HEX/RGB input and a local preview. Neutral surfaces keep stable colors and controls follow the selected theme. The launcher default is adaptive automatic, while upgrades preserve explicit saved choices.
+- A microphone inside the input box: tap to dictate, and the recognized text goes to the cursor for you to check before sending; long press for a voice conversation that sends what you say and listens again after the reply has been read.
+- Read replies aloud: long press a reply and choose "Read aloud", or turn on "Read replies aloud automatically" in Settings > Voice to hear new replies while they are generated. Heading and list markers are skipped, and a code block or table is announced in one sentence.
+- Answers the `VOICE_COMMAND` of the 3-Macaw Speech digital assistant: hold the power button, speak and tap "3-Stone AI", and the question is sent in a new conversation and the answer read aloud.
+
+******
+
+### Voice
+
+******
+
+Dictation and reading use the Android system interfaces (`RecognizerIntent` and `TextToSpeech`). 3-Stone AI never records audio itself and does not ask for the microphone permission. With 3-Macaw Speech installed, "Prefer 3-Macaw Speech" in Settings > Voice is on by default: dictation opens its offline recognition sheet and reading uses its offline voices. Without it, or with the option off, the phone's own recognition app and default text-to-speech engine are used. In 1.4.0 every round of a voice conversation opens the recognizer's screen; while a reply is read, tap the status bar above the input box to interrupt and speak right away, or use its button to leave.
+
+- **Several speech recognition apps ask me to choose every time?** Keep "Prefer 3-Macaw Speech" on to use 3-Macaw Speech directly. With it off the system decides, and you can make one app the default in the system chooser.
+- **Pauses between sentences on a slow phone?** Some voices (such as MeloTTS and Kokoro) synthesize slower than they speak on slower phones. Choose AISHELL-3, Piper or Matcha as the default voice in 3-Macaw Speech.
+- **The microphone says there is no recognition model?** The 3-Macaw Speech sheet guides you through downloading one; until then 3-Stone AI does not switch to another recognizer on its own. Turn off "Prefer 3-Macaw Speech" to use another app meanwhile.
+- **How do I ask through the 3-Macaw Speech digital assistant?** Make 3-Macaw Speech the default digital assistant, hold the power (or home) button, speak, and tap "3-Stone AI" on the result card. 3-Stone AI opens a new conversation, sends the question at once and reads the answer; unlock the phone first if it is locked. Within 10 seconds of the previous such question the text only fills the input box and is not sent.
+- **Where does the recognized text go?** To the selected model, like typed text; an online model sends it to its provider. 3-Macaw Speech works fully offline; other recognition or speech apps may use the network.
 
 ******
 
@@ -124,7 +141,7 @@ Host build 5276 or later and Android 7.0 or later are required. Build outputs in
 
 ******
 
-The plugin requests `INTERNET` for user-triggered recommended-model downloads, requests to a user-configured online target, and public model-preset catalog updates from GitHub in Online AI settings. Catalog updates need no API key, make no inference calls, and never start during plugin activation or local generation. It requests no broad storage permission. Recommended model downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, matching signatures, target metadata, and declared origin boundaries.
+The plugin requests `INTERNET` for user-triggered recommended-model downloads, requests to a user-configured online target, and public model-preset catalog updates from GitHub in Online AI settings. Catalog updates need no API key, make no inference calls, and never start during plugin activation or local generation. It requests no broad storage permission. Recommended model downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, matching signatures, target metadata, and declared origin boundaries. Voice features do not ask for the microphone permission; the recognition app records. Recognized and spoken text is not logged, and dictated messages are stored like typed ones.
 
 ******
 
@@ -177,6 +194,17 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.4.0
+
+###### 2026/10/19
+
+* `Hint` 3-Stone AI does not ask for the microphone permission; the recognition app records. 3-Macaw Speech works fully offline, other recognition or speech apps may use the network, and recognized text goes to the selected model just like typed text
+* `Feature` A microphone button inside the input box: tap and speak, and the recognized text is inserted at the cursor so you can check it before sending. With 3-Macaw Speech installed it recognizes offline; otherwise the phone's own speech recognition app is used
+* `Feature` Replies can be read aloud: long press a reply and choose "Read aloud", or turn on "Read replies aloud automatically" in Settings > Voice to hear new replies while they are generated. Heading and list markers are skipped, and code blocks and tables are announced in one sentence. The offline voices of 3-Macaw Speech are preferred when it is installed
+* `Feature` Long press the microphone for a voice conversation: what you say is sent at once, and the app listens again after the reply has been read. A status bar above the input box shows what is happening and lets you leave at any time; while a reply is read, tap it to interrupt and speak right away
+* `Feature` Ask through the 3-Macaw Speech digital assistant: hold the power button, speak and tap "3-Stone AI" to get the answer in a new conversation, read aloud. Another such question within 10 seconds only fills the input box, so it cannot be misused
+* `Feature` Settings have a new "Voice" group: automatic reading, "Prefer 3-Macaw Speech" and which app currently dictates and reads
+
 # v1.3.0
 
 ###### 2026/10/15
@@ -201,22 +229,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Fix` After each accepted batch of native tool results, the generation timeout starts over: previously the whole tool turn, including the time spent waiting for results, shared the first request's timeout, so multi-round tasks longer than it always ended with TIMEOUT; now only waiting without submitting results still expires on the original timeout. Matches the corresponding AutoJs6 host and 3-Stove Agent changes
 * `Fix` Add x86 and armeabi-v7a APKs for online AI and host integration; check process ABI and the installed native payload before exposing local inference, and explain unavailable local models in the manager
 * `Improvement` Unify Three series launcher icons with light artwork on a stable dark background, while plugin-center and in-app icons remain transparent and follow the application theme; prevent nested launcher backgrounds on some devices
-
-# v1.2.0
-
-###### 2026/09/26
-
-* `Hint` Development candidate, not published. Online tool calling uses AI Provider V2; Agent integration requires the host native-tool broker in build 5297+ and an Agent version that supports it. The plugin returns calls to the host and does not execute device actions itself.
-* `Hint` In Settings > Online AI, edit a profile and select its models with image input. Existing profiles stay disabled by default. Images go only to that configured service. LiteRT and persistent ai.session remain text-only; Agent screenshots require Android 11+, compatible AutoJs6 and AI Agent versions, the observe group, and image input enabled for the exact selected model.
-* `Hint` AiGoCode gpt-5.6-sol passed real initial-image and tool-result-image probes on Provider 1.2.0 / build 218. These synthetic-image probes do not establish support for other targets or a complete Agent visual task.
-* `Feature` Native tool calling for online OpenAI-compatible, Anthropic Messages and Gemini GenerateContent targets, including streamed arguments, parallel calls and result continuation
-* `Feature` Online JPEG/PNG image input and image tool results through negotiated AI Provider 2.1, with explicit per-model settings
-* `Feature` Add automatic and manual online model-preset updates with local caching and offline fallback, preserving saved profiles and custom model IDs
-* `Feature` Group model presets by vendor and expand OpenRouter choices to include Qwen, Kimi, GLM, Grok, Meta and MiniMax, while preserving exact model IDs
-* `Fix` Descriptor reads release workers on cancellation or timeout and preserve reliable-pipe producer errors
-* `Fix` Preserve fixed online failure categories across AI Provider callbacks without exposing request or response contents or adding automatic retries
-* `Fix` Fix IntelliJ IDEA F10 runs failing with No APK found by using the actual AGP APK directory for each build variant while retaining 16 KB alignment checks
-* `Improvement` Refresh online model presets from official catalogs, including Claude Fable 5.1 and other current models, and remove retired model IDs while preserving existing profiles and custom models
 
 ##### For more releases
 

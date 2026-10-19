@@ -4,6 +4,17 @@
 
 ******
 
+# v1.4.0
+
+###### 2026/10/19
+
+* `Note` 3-Stone AI ne demande pas l'autorisation du micro: c'est l'application de reconnaissance qui enregistre. 3-Macaw Speech fonctionne entièrement hors ligne, les autres applications de reconnaissance ou de synthèse peuvent utiliser le réseau, et le texte reconnu est envoyé au modèle choisi comme un texte saisi
+* `Fonctionnalité` Nouveau bouton micro dans le champ de saisie: touchez-le et parlez, le texte reconnu est inséré au curseur pour être vérifié avant l'envoi. Avec 3-Macaw Speech, la reconnaissance se fait hors ligne; sinon, l'application de reconnaissance vocale du téléphone est utilisée
+* `Fonctionnalité` Les réponses peuvent être lues à voix haute: appuyez longuement sur une réponse et choisissez "Lire à voix haute", ou activez "Lire les réponses à voix haute" dans Paramètres > Voix pour entendre les nouvelles réponses pendant leur génération. Les marques de titre et de liste ne sont pas lues, et les blocs de code et les tableaux sont annoncés en une phrase. Les voix hors ligne de 3-Macaw Speech sont privilégiées s'il est installé
+* `Fonctionnalité` Appuyez longuement sur le micro pour une conversation vocale: ce que vous dites est envoyé aussitôt, et l'écoute reprend après la lecture de la réponse. Une barre d'état au-dessus du champ de saisie indique ce qui se passe et permet de quitter à tout moment; pendant la lecture, touchez-la pour interrompre et parler aussitôt
+* `Fonctionnalité` Posez vos questions via l'assistant numérique de 3-Macaw Speech: maintenez le bouton marche, parlez et touchez "3-Stone AI" pour obtenir la réponse dans une nouvelle conversation, lue à voix haute. Une autre question de ce type dans les 10 secondes est seulement placée dans le champ de saisie, pour éviter les abus
+* `Fonctionnalité` Nouveau groupe "Voix" dans les paramètres: lecture automatique, "Privilégier 3-Macaw Speech" et l'application qui assure actuellement la dictée et la lecture
+
 # v1.3.0
 
 ###### 2026/10/15

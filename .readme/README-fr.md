@@ -72,6 +72,23 @@ Le fichier README.md actuel prend en charge les langues suivantes:
 - Actualiser les modèles prédéfinis en ligne depuis le catalogue public du projet sur GitHub. La mise à jour automatique est activée par défaut et vérifie une fois toutes les 24 heures à l'ouverture des paramètres IA en ligne; un interrupteur et une actualisation manuelle sont disponibles. Elle respecte le réglage des réseaux facturés, conserve la liste en cache ou intégrée hors ligne ou en cas d'échec, et laisse les profils enregistrés et les ID personnalisés inchangés.
 - Regrouper les modèles prédéfinis par fournisseur et élargir le choix OpenRouter avec Qwen, Kimi, GLM, Grok, Meta et MiniMax, en conservant les ID exacts.
 - Unifier les réglages avec des groupes plats, des lignes cohérentes et des dialogues arrondis centrés. La langue, le mode nuit, la couleur et l'icône ne changent qu'après validation; Annuler conserve les valeurs enregistrées. La couleur suit AutoJs6 par défaut et propose une palette commune, une saisie HEX/RGB et un aperçu local. Les fonds neutres restent stables et les contrôles suivent le thème. L'icône utilise le mode adaptatif automatique par défaut, tout en préservant les choix explicites lors des mises à jour.
+- Un micro dans le champ de saisie: touchez-le pour dicter, et le texte reconnu est inséré au curseur pour que vous le vérifiiez avant l'envoi; un appui long lance une conversation vocale qui envoie ce que vous dites et écoute à nouveau après la lecture de la réponse.
+- Lecture des réponses à voix haute: appuyez longuement sur une réponse et choisissez "Lire à voix haute", ou activez "Lire les réponses à voix haute" dans Paramètres > Voix pour entendre les nouvelles réponses pendant leur génération. Les marques de titre et de liste ne sont pas lues, et un bloc de code ou un tableau est annoncé en une phrase.
+- Répond au `VOICE_COMMAND` de l'assistant numérique de 3-Macaw Speech: maintenez le bouton marche, parlez et touchez "3-Stone AI"; la question est envoyée dans une nouvelle conversation et la réponse lue à voix haute.
+
+******
+
+### Voix
+
+******
+
+La dictée et la lecture utilisent les interfaces système d'Android (`RecognizerIntent` et `TextToSpeech`). 3-Stone AI n'enregistre jamais l'audio lui-même et ne demande pas l'autorisation du micro. Si 3-Macaw Speech est installé, "Privilégier 3-Macaw Speech" dans Paramètres > Voix est activé par défaut: la dictée ouvre sa fenêtre de reconnaissance hors ligne et la lecture utilise ses voix hors ligne. Sinon, ou avec l'option désactivée, l'application de reconnaissance du téléphone et le moteur de synthèse vocale par défaut sont utilisés. Dans la version 1.4.0, chaque tour d'une conversation vocale ouvre l'écran de reconnaissance; pendant la lecture d'une réponse, touchez la barre d'état au-dessus du champ de saisie pour l'interrompre et parler aussitôt, ou utilisez son bouton pour quitter.
+
+- **Plusieurs applications de reconnaissance vocale demandent un choix à chaque fois?** Laissez "Privilégier 3-Macaw Speech" activé pour utiliser directement 3-Macaw Speech. Désactivé, le système décide, et vous pouvez définir une application par défaut dans le sélecteur du système.
+- **Des pauses entre les phrases sur un téléphone lent?** Certaines voix (comme MeloTTS et Kokoro) synthétisent moins vite qu'elles ne parlent sur les téléphones lents. Choisissez AISHELL-3, Piper ou Matcha comme voix par défaut dans 3-Macaw Speech.
+- **Le micro indique qu'aucun modèle de reconnaissance n'est installé?** La fenêtre de 3-Macaw Speech vous guide pour en télécharger un; d'ici là, 3-Stone AI ne passe pas de lui-même à une autre application. Désactivez "Privilégier 3-Macaw Speech" pour en utiliser une autre en attendant.
+- **Comment poser une question via l'assistant numérique de 3-Macaw Speech?** Définissez 3-Macaw Speech comme assistant numérique par défaut, maintenez le bouton marche (ou accueil), parlez, puis touchez "3-Stone AI" sur la carte du résultat. 3-Stone AI ouvre une nouvelle conversation, envoie aussitôt la question et lit la réponse; déverrouillez d'abord le téléphone s'il est verrouillé. Moins de 10 secondes après une question précédente de ce type, le texte est seulement placé dans le champ de saisie et n'est pas envoyé.
+- **Où va le texte reconnu?** Au modèle sélectionné, comme un texte saisi; un modèle en ligne l'envoie à son fournisseur. 3-Macaw Speech fonctionne entièrement hors ligne; les autres applications de reconnaissance ou de synthèse peuvent utiliser le réseau.
 
 ******
 
@@ -124,7 +141,7 @@ La build hôte 5276 ou ultérieure et Android 7.0 ou ultérieur sont requis. Les
 
 ******
 
-Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés déclenchés par l'utilisateur, les requêtes vers une cible en ligne configurée et les mises à jour du catalogue public de modèles prédéfinis depuis GitHub dans les paramètres IA en ligne. Ces mises à jour ne nécessitent aucune clé API, ne lancent aucune inférence et ne démarrent ni à l'activation du plugin ni pendant la génération locale. Les identifiants restent dans le stockage privé chiffré du plugin et ne traversent jamais Binder ni le catalogue de cibles. Le plugin ne demande aucune permission générale de stockage. Les téléchargements de fichiers de modèles utilisent des révisions HTTPS immuables, une taille et un SHA-256 épinglés, et n'écrivent que dans l'emplacement SAF choisi; en-tête LiteRT-LM, taille, empreinte, flush et fsync doivent tous réussir. Les services vérifient aussi le paquet AutoJs6, l'UID appelant et les signatures.
+Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés déclenchés par l'utilisateur, les requêtes vers une cible en ligne configurée et les mises à jour du catalogue public de modèles prédéfinis depuis GitHub dans les paramètres IA en ligne. Ces mises à jour ne nécessitent aucune clé API, ne lancent aucune inférence et ne démarrent ni à l'activation du plugin ni pendant la génération locale. Les identifiants restent dans le stockage privé chiffré du plugin et ne traversent jamais Binder ni le catalogue de cibles. Le plugin ne demande aucune permission générale de stockage. Les téléchargements de fichiers de modèles utilisent des révisions HTTPS immuables, une taille et un SHA-256 épinglés, et n'écrivent que dans l'emplacement SAF choisi; en-tête LiteRT-LM, taille, empreinte, flush et fsync doivent tous réussir. Les services vérifient aussi le paquet AutoJs6, l'UID appelant et les signatures. Les fonctions vocales ne demandent pas l'autorisation du micro: c'est l'application de reconnaissance qui enregistre. Le texte reconnu et le texte lu ne sont pas journalisés, et les messages dictés sont enregistrés comme les messages saisis.
 
 ******
 
@@ -177,6 +194,17 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 ******
 
+# v1.4.0
+
+###### 2026/10/19
+
+* `Note` 3-Stone AI ne demande pas l'autorisation du micro: c'est l'application de reconnaissance qui enregistre. 3-Macaw Speech fonctionne entièrement hors ligne, les autres applications de reconnaissance ou de synthèse peuvent utiliser le réseau, et le texte reconnu est envoyé au modèle choisi comme un texte saisi
+* `Fonctionnalité` Nouveau bouton micro dans le champ de saisie: touchez-le et parlez, le texte reconnu est inséré au curseur pour être vérifié avant l'envoi. Avec 3-Macaw Speech, la reconnaissance se fait hors ligne; sinon, l'application de reconnaissance vocale du téléphone est utilisée
+* `Fonctionnalité` Les réponses peuvent être lues à voix haute: appuyez longuement sur une réponse et choisissez "Lire à voix haute", ou activez "Lire les réponses à voix haute" dans Paramètres > Voix pour entendre les nouvelles réponses pendant leur génération. Les marques de titre et de liste ne sont pas lues, et les blocs de code et les tableaux sont annoncés en une phrase. Les voix hors ligne de 3-Macaw Speech sont privilégiées s'il est installé
+* `Fonctionnalité` Appuyez longuement sur le micro pour une conversation vocale: ce que vous dites est envoyé aussitôt, et l'écoute reprend après la lecture de la réponse. Une barre d'état au-dessus du champ de saisie indique ce qui se passe et permet de quitter à tout moment; pendant la lecture, touchez-la pour interrompre et parler aussitôt
+* `Fonctionnalité` Posez vos questions via l'assistant numérique de 3-Macaw Speech: maintenez le bouton marche, parlez et touchez "3-Stone AI" pour obtenir la réponse dans une nouvelle conversation, lue à voix haute. Une autre question de ce type dans les 10 secondes est seulement placée dans le champ de saisie, pour éviter les abus
+* `Fonctionnalité` Nouveau groupe "Voix" dans les paramètres: lecture automatique, "Privilégier 3-Macaw Speech" et l'application qui assure actuellement la dictée et la lecture
+
 # v1.3.0
 
 ###### 2026/10/15
@@ -201,22 +229,6 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Correctif` Après chaque lot accepté de résultats d'outils natifs, le délai de génération repart de zéro: auparavant tout le tour d'outils, temps d'attente des résultats compris, partageait le délai de la première requête, si bien que les tâches multi-tours plus longues se terminaient toujours par TIMEOUT; désormais seule une attente sans soumission de résultats expire encore selon le délai initial. Cohérent avec les changements correspondants de l'hôte AutoJs6 et de 3-Stove Agent
 * `Correctif` Ajout des APK x86 et armeabi-v7a pour les services IA en ligne et l'intégration hôte; vérification de l'ABI du processus et des bibliothèques installées avant d'activer les modèles locaux, avec explication dans le gestionnaire
 * `Amélioration` Uniformiser les icônes du lanceur de la série Three avec un dessin clair sur fond sombre fixe, conserver la transparence et le thème des icônes dans le centre des plugins et dans l'application, et éviter les fonds imbriqués sur certains appareils
-
-# v1.2.0
-
-###### 2026/09/26
-
-* `Note` Version de développement non publiée. Les outils en ligne utilisent AI Provider V2; leur intégration Agent nécessite le courtier natif de l'hôte build 5297+ et une version Agent compatible. Le plugin transmet les appels à l'hôte sans exécuter lui-même les actions sur l'appareil.
-* `Note` Dans Paramètres > IA en ligne, modifiez un profil et sélectionnez ses modèles acceptant les images. Les profils existants restent désactivés par défaut. Les images sont envoyées uniquement à ce service. LiteRT et ai.session persistant restent textuels; les captures Agent nécessitent Android 11+, des versions compatibles de AutoJs6 et AI Agent, le groupe observe et l'entrée d'images activée pour le modèle exact sélectionné.
-* `Note` AiGoCode gpt-5.6-sol a réussi les tests réels avec image initiale et image dans un résultat d'outil sur Provider 1.2.0 / build 218. Ces images synthétiques ne prouvent ni la compatibilité des autres cibles ni la réussite d'une tâche visuelle Agent complète.
-* `Fonctionnalité` Appels natifs aux outils pour les cibles en ligne compatibles OpenAI, Anthropic Messages et Gemini GenerateContent, avec arguments en streaming, appels parallèles et reprise après résultats
-* `Fonctionnalité` Entrée JPEG/PNG et résultats visuels des outils via AI Provider 2.1 négocié, avec réglage par modèle
-* `Fonctionnalité` Ajouter la mise à jour automatique et manuelle des modèles prédéfinis en ligne avec cache local et liste disponible hors ligne, en conservant les profils enregistrés et les ID personnalisés
-* `Fonctionnalité` Regrouper les modèles prédéfinis par fournisseur et élargir le choix OpenRouter avec Qwen, Kimi, GLM, Grok, Meta et MiniMax, en conservant les ID exacts
-* `Correctif` Les lectures de descripteurs libèrent les threads après annulation ou expiration et conservent les erreurs du producteur des canaux fiables
-* `Correctif` Conserver les catégories fixes des échecs en ligne dans les rappels AI Provider, sans exposer les requêtes ou réponses ni ajouter de nouvelles tentatives automatiques
-* `Correctif` Corriger l'échec No APK found lors du lancement par F10 dans IntelliJ IDEA en utilisant le répertoire APK réel d'AGP pour chaque variante, tout en conservant les contrôles d'alignement de 16 Ko
-* `Amélioration` Actualiser les modèles en ligne prédéfinis selon les catalogues officiels, dont Claude Fable 5.1 et les autres modèles actuels, et retirer les identifiants obsolètes en conservant les profils existants et les modèles personnalisés
 
 ##### Autres versions
 

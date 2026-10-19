@@ -4,6 +4,17 @@
 
 ******
 
+# v1.4.0
+
+###### 2026/10/19
+
+* `Hint` 3-Stone AI does not ask for the microphone permission; the recognition app records. 3-Macaw Speech works fully offline, other recognition or speech apps may use the network, and recognized text goes to the selected model just like typed text
+* `Feature` A microphone button inside the input box: tap and speak, and the recognized text is inserted at the cursor so you can check it before sending. With 3-Macaw Speech installed it recognizes offline; otherwise the phone's own speech recognition app is used
+* `Feature` Replies can be read aloud: long press a reply and choose "Read aloud", or turn on "Read replies aloud automatically" in Settings > Voice to hear new replies while they are generated. Heading and list markers are skipped, and code blocks and tables are announced in one sentence. The offline voices of 3-Macaw Speech are preferred when it is installed
+* `Feature` Long press the microphone for a voice conversation: what you say is sent at once, and the app listens again after the reply has been read. A status bar above the input box shows what is happening and lets you leave at any time; while a reply is read, tap it to interrupt and speak right away
+* `Feature` Ask through the 3-Macaw Speech digital assistant: hold the power button, speak and tap "3-Stone AI" to get the answer in a new conversation, read aloud. Another such question within 10 seconds only fills the input box, so it cannot be misused
+* `Feature` Settings have a new "Voice" group: automatic reading, "Prefer 3-Macaw Speech" and which app currently dictates and reads
+
 # v1.3.0
 
 ###### 2026/10/15

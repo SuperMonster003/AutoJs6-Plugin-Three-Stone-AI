@@ -72,6 +72,23 @@ El README.md actual admite los siguientes idiomas:
 - Mantener al día los modelos predefinidos en línea con el catálogo público del proyecto en GitHub. La actualización automática está activada por defecto y comprueba una vez cada 24 horas al abrir los ajustes de IA en línea; se puede desactivar o actualizar manualmente. Respeta el ajuste de redes medidas, conserva la lista almacenada o integrada sin conexión o ante errores y no cambia los perfiles guardados ni los ID personalizados.
 - Agrupar los modelos predefinidos por proveedor y ampliar las opciones de OpenRouter con Qwen, Kimi, GLM, Grok, Meta y MiniMax, conservando los ID exactos.
 - Unificar los ajustes con grupos planos, filas coherentes y diálogos redondeados centrados. El idioma, el modo nocturno, el color y el icono solo cambian al confirmar; Cancelar conserva los valores guardados. El color sigue AutoJs6 por defecto, con una paleta común, entrada HEX/RGB y vista previa local. Los fondos neutros se mantienen estables y los controles siguen el tema. El icono usa el modo adaptativo automático por defecto, conservando las elecciones explícitas al actualizar.
+- Un micrófono dentro del cuadro de entrada: tócalo para dictar, y el texto reconocido se inserta en el cursor para que lo revises antes de enviarlo; mantenlo pulsado para una conversación por voz que envía lo que dices y vuelve a escuchar después de leer la respuesta.
+- Lectura de respuestas en voz alta: mantén pulsada una respuesta y elige "Leer en voz alta", o activa "Leer las respuestas en voz alta" en Ajustes > Voz para escuchar las respuestas nuevas mientras se generan. Las marcas de títulos y listas no se leen, y un bloque de código o una tabla se anuncia con una frase.
+- Responde al `VOICE_COMMAND` del asistente digital de 3-Macaw Speech: mantén pulsado el botón de encendido, habla y toca "3-Stone AI"; la pregunta se envía en una conversación nueva y la respuesta se lee en voz alta.
+
+******
+
+### Voz
+
+******
+
+El dictado y la lectura usan las interfaces del sistema Android (`RecognizerIntent` y `TextToSpeech`). 3-Stone AI nunca graba audio por sí mismo ni pide el permiso del micrófono. Con 3-Macaw Speech instalado, "Preferir 3-Macaw Speech" en Ajustes > Voz está activado de forma predeterminada: el dictado abre su ventana de reconocimiento sin conexión y la lectura usa sus voces sin conexión. Sin él, o con la opción desactivada, se usan la aplicación de reconocimiento del teléfono y el motor de texto a voz predeterminado. En 1.4.0 cada turno de una conversación por voz abre la pantalla del reconocedor; mientras se lee una respuesta, toca la barra de estado sobre el cuadro de entrada para interrumpir y hablar enseguida, o usa su botón para salir.
+
+- **Varias aplicaciones de reconocimiento de voz piden elegir cada vez?** Deja activado "Preferir 3-Macaw Speech" para usar 3-Macaw Speech directamente. Si lo desactivas, decide el sistema, y puedes fijar una aplicación predeterminada en su selector.
+- **Pausas entre frases en un teléfono lento?** Algunas voces (como MeloTTS y Kokoro) sintetizan más despacio de lo que hablan en teléfonos lentos. Elige AISHELL-3, Piper o Matcha como voz predeterminada en 3-Macaw Speech.
+- **El micrófono indica que no hay modelo de reconocimiento?** La ventana de 3-Macaw Speech te guía para descargar uno; mientras tanto, 3-Stone AI no cambia por su cuenta a otro reconocedor. Desactiva "Preferir 3-Macaw Speech" para usar otra aplicación entretanto.
+- **Cómo pregunto a través del asistente digital de 3-Macaw Speech?** Configura 3-Macaw Speech como asistente digital predeterminado, mantén pulsado el botón de encendido (o de inicio), habla y toca "3-Stone AI" en la tarjeta del resultado. 3-Stone AI abre una conversación nueva, envía la pregunta enseguida y lee la respuesta; desbloquea antes el teléfono si está bloqueado. Si han pasado menos de 10 segundos desde la pregunta anterior de este tipo, el texto solo se pone en el cuadro de entrada y no se envía.
+- **A dónde va el texto reconocido?** Al modelo seleccionado, igual que el texto escrito; un modelo en línea lo envía a su proveedor. 3-Macaw Speech funciona totalmente sin conexión; otras aplicaciones de reconocimiento o de voz pueden usar la red.
 
 ******
 
@@ -124,7 +141,7 @@ Se requiere la build 5276 o posterior del host y Android 7.0 o posterior. Las co
 
 ******
 
-El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario, solicitudes a un destino en línea configurado por el usuario y actualizaciones del catálogo público de modelos predefinidos desde GitHub en los ajustes de IA en línea. Estas actualizaciones no requieren una clave API ni realizan inferencia, y no se inician al activar el plugin ni durante la generación local. Las credenciales permanecen en el almacenamiento privado cifrado del plugin y nunca cruzan Binder ni el catálogo de destinos. No solicita ningún permiso general de almacenamiento. Las descargas de archivos de modelos usan revisiones HTTPS inmutables, tamaño y SHA-256 fijados, y solo escriben en la ubicación SAF elegida; deben superar cabecera LiteRT-LM, tamaño, resumen, flush y fsync. Los servicios también verifican el paquete AutoJs6, el UID y las firmas.
+El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario, solicitudes a un destino en línea configurado por el usuario y actualizaciones del catálogo público de modelos predefinidos desde GitHub en los ajustes de IA en línea. Estas actualizaciones no requieren una clave API ni realizan inferencia, y no se inician al activar el plugin ni durante la generación local. Las credenciales permanecen en el almacenamiento privado cifrado del plugin y nunca cruzan Binder ni el catálogo de destinos. No solicita ningún permiso general de almacenamiento. Las descargas de archivos de modelos usan revisiones HTTPS inmutables, tamaño y SHA-256 fijados, y solo escriben en la ubicación SAF elegida; deben superar cabecera LiteRT-LM, tamaño, resumen, flush y fsync. Los servicios también verifican el paquete AutoJs6, el UID y las firmas. Las funciones de voz no piden el permiso del micrófono: graba la aplicación de reconocimiento. El texto reconocido y el leído no se registran, y los mensajes dictados se guardan igual que los escritos.
 
 ******
 
@@ -177,6 +194,17 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ******
 
+# v1.4.0
+
+###### 2026/10/19
+
+* `Aviso` 3-Stone AI no pide el permiso del micrófono: graba la aplicación de reconocimiento. 3-Macaw Speech funciona totalmente sin conexión, otras aplicaciones de reconocimiento o de voz pueden usar la red, y el texto reconocido se envía al modelo seleccionado igual que el texto escrito
+* `Función` Nuevo botón de micrófono dentro del cuadro de entrada: tócalo y habla, y el texto reconocido se inserta en el cursor para revisarlo antes de enviar. Con 3-Macaw Speech el reconocimiento es sin conexión; si no, se usa la aplicación de reconocimiento de voz del teléfono
+* `Función` Las respuestas se pueden leer en voz alta: mantén pulsada una respuesta y elige "Leer en voz alta", o activa "Leer las respuestas en voz alta" en Ajustes > Voz para escuchar las respuestas nuevas mientras se generan. Las marcas de títulos y listas no se leen, y los bloques de código y las tablas se anuncian con una frase. Se prefieren las voces sin conexión de 3-Macaw Speech si está instalado
+* `Función` Mantén pulsado el micrófono para una conversación por voz: lo que dices se envía enseguida y la aplicación vuelve a escuchar después de leer la respuesta. Una barra de estado sobre el cuadro de entrada muestra qué está pasando y permite salir en cualquier momento; mientras se lee una respuesta, tócala para interrumpir y hablar enseguida
+* `Función` Pregunta a través del asistente digital de 3-Macaw Speech: mantén pulsado el botón de encendido, habla y toca "3-Stone AI" para recibir la respuesta en una conversación nueva, leída en voz alta. Otra pregunta de este tipo en menos de 10 segundos solo se pone en el cuadro de entrada, para evitar abusos
+* `Función` Nuevo grupo "Voz" en Ajustes: lectura automática, "Preferir 3-Macaw Speech" y qué aplicación dicta y lee en este momento
+
 # v1.3.0
 
 ###### 2026/10/15
@@ -201,22 +229,6 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Corrección` Tras cada lote aceptado de resultados de herramientas nativas, el tiempo límite de generación vuelve a empezar: antes todo el turno de herramientas, incluido el tiempo de espera de los resultados, compartía el tiempo límite de la primera solicitud, de modo que las tareas de varias rondas más largas siempre terminaban con TIMEOUT; ahora solo la espera sin enviar resultados sigue caducando con el tiempo límite original. Coherente con los cambios correspondientes del host AutoJs6 y de 3-Stove Agent
 * `Corrección` Añadir APK x86 y armeabi-v7a para IA en línea e integración con el host; comprobar la ABI del proceso y las bibliotecas instaladas antes de habilitar la inferencia local, con un aviso en el gestor de modelos
 * `Mejora` Unificar los iconos del lanzador de la serie Three con dibujos claros sobre un fondo oscuro fijo, mantener transparentes los del centro de complementos y de la aplicación según su tema y evitar fondos superpuestos en algunos dispositivos
-
-# v1.2.0
-
-###### 2026/09/26
-
-* `Aviso` Versión de desarrollo no publicada. Las herramientas en línea usan AI Provider V2; su integración con Agent requiere el intermediario nativo del host build 5297+ y una versión compatible de Agent. El plugin devuelve llamadas al host y no ejecuta acciones del dispositivo por sí mismo.
-* `Aviso` En Ajustes > IA en línea, edite un perfil y seleccione sus modelos con entrada de imágenes. Los perfiles existentes quedan desactivados por defecto. Las imágenes solo se envían a ese servicio. LiteRT y ai.session persistente siguen siendo de texto; las capturas de Agent requieren Android 11+, versiones compatibles de AutoJs6 y AI Agent, el grupo observe y la entrada de imágenes activada para el modelo exacto seleccionado.
-* `Aviso` AiGoCode gpt-5.6-sol pasó las pruebas reales de imagen inicial e imagen en resultados de herramientas con Provider 1.2.0 / build 218. Estas pruebas con imágenes sintéticas no demuestran compatibilidad con otros destinos ni una tarea visual completa de Agent.
-* `Función` Llamadas nativas a herramientas para destinos en línea compatibles con OpenAI, Anthropic Messages y Gemini GenerateContent, con argumentos en streaming, llamadas paralelas y continuación tras resultados
-* `Función` Entrada JPEG/PNG y resultados de herramientas con imágenes mediante AI Provider 2.1 negociado, con ajustes por modelo
-* `Función` Añadir actualización automática y manual de modelos predefinidos en línea con caché local y lista disponible sin conexión, conservando los perfiles guardados y los ID personalizados
-* `Función` Agrupar los modelos predefinidos por proveedor y ampliar las opciones de OpenRouter con Qwen, Kimi, GLM, Grok, Meta y MiniMax, conservando los ID exactos
-* `Corrección` Las lecturas de descriptores liberan hilos al cancelar o agotar el plazo y conservan los errores del productor de tuberías fiables
-* `Corrección` Conservar categorías fijas de errores en línea en las devoluciones AI Provider, sin exponer solicitudes o respuestas ni añadir reintentos automáticos
-* `Corrección` Corregir el fallo No APK found al ejecutar con F10 en IntelliJ IDEA usando el directorio APK real de AGP para cada variante y conservando las comprobaciones de alineación de 16 KB
-* `Mejora` Actualizar los modelos en línea predefinidos según los catálogos oficiales, incluidos Claude Fable 5.1 y otros modelos actuales, y eliminar los identificadores retirados conservando los perfiles existentes y los modelos personalizados
 
 ##### Más versiones
 

@@ -8,7 +8,7 @@
 
 ###### 2026/10/22
 
-* `Función` Las aplicaciones con firma independiente pueden usar modelos de IA configurados tras la autorización Android, con control de propietario y cancelación tras revocarla
+* `Función` Las aplicaciones con firma independiente solicitan acceso a IA en el complemento, ligado a su identidad e instalación; revocarlo en los ajustes detiene las solicitudes activas
 
 # v1.4.1
 

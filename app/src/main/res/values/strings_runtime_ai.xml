@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ai_runtime_access_empty">No apps are authorized.</string>
+    <string name="ai_runtime_access_section">AI access</string>
+    <string name="ai_runtime_access_summary">Manage access to local models and saved online accounts.</string>
+    <string name="ai_runtime_access_title">Apps with AI access</string>
+    <string name="ai_runtime_allow">Allow</string>
+    <string name="ai_runtime_deny">Deny</string>
     <string name="ai_runtime_permission_description">Allow this app to use local models and saved online AI accounts in 3-Stone AI. Online calls may consume paid account quota.</string>
     <string name="ai_runtime_permission_label">Use configured AI models</string>
+    <string name="ai_runtime_remove">Remove access</string>
+    <string name="ai_runtime_remove_message">Remove access for %1$s (%2$s) and stop its active requests?</string>
+    <string name="ai_runtime_remove_title">Remove AI access?</string>
+    <string name="ai_runtime_request_app">Allow %1$s (%2$s) to access AI?</string>
 </resources>

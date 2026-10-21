@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ai_runtime_access_empty">허용된 앱이 없습니다.</string>
+    <string name="ai_runtime_access_section">AI 접근</string>
+    <string name="ai_runtime_access_summary">로컬 모델과 저장된 온라인 계정 접근을 관리합니다.</string>
+    <string name="ai_runtime_access_title">AI 접근을 허용한 앱</string>
+    <string name="ai_runtime_allow">허용</string>
+    <string name="ai_runtime_deny">거부</string>
     <string name="ai_runtime_permission_description">이 앱이 3-Stone AI의 로컬 모델과 저장된 온라인 AI 계정을 사용하도록 허용합니다. 온라인 호출은 유료 할당량을 사용할 수 있습니다.</string>
     <string name="ai_runtime_permission_label">설정된 AI 모델 사용</string>
+    <string name="ai_runtime_remove">접근 철회</string>
+    <string name="ai_runtime_remove_message">%1$s (%2$s)의 접근을 철회하고 실행 중인 요청을 중지할까요?</string>
+    <string name="ai_runtime_remove_title">AI 접근을 철회할까요?</string>
+    <string name="ai_runtime_request_app">%1$s (%2$s)의 AI 접근을 허용할까요?</string>
 </resources>

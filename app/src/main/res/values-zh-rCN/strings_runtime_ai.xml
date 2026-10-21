@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ai_runtime_access_empty">尚未授权任何应用.</string>
+    <string name="ai_runtime_access_section">AI 访问授权</string>
+    <string name="ai_runtime_access_summary">管理本地模型及已保存在线账户的访问授权.</string>
+    <string name="ai_runtime_access_title">获授权的应用</string>
+    <string name="ai_runtime_allow">允许</string>
+    <string name="ai_runtime_deny">拒绝</string>
     <string name="ai_runtime_permission_description">允许此应用使用 3-Stone AI 的本地模型及已保存的在线 AI 账户. 在线调用可能消耗付费账户额度.</string>
     <string name="ai_runtime_permission_label">使用已配置的 AI 模型</string>
+    <string name="ai_runtime_remove">移除授权</string>
+    <string name="ai_runtime_remove_message">移除 %1$s (%2$s) 的访问授权并停止其运行中的请求?</string>
+    <string name="ai_runtime_remove_title">移除 AI 访问授权?</string>
+    <string name="ai_runtime_request_app">允许 %1$s (%2$s) 访问 AI?</string>
 </resources>

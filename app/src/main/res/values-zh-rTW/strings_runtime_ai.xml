@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ai_runtime_access_empty">尚未授權任何應用程式.</string>
+    <string name="ai_runtime_access_section">AI 存取授權</string>
+    <string name="ai_runtime_access_summary">管理本機模型及已儲存線上帳戶的存取授權.</string>
+    <string name="ai_runtime_access_title">已授權的應用程式</string>
+    <string name="ai_runtime_allow">允許</string>
+    <string name="ai_runtime_deny">拒絕</string>
     <string name="ai_runtime_permission_description">允許此應用程式使用 3-Stone AI 的本機模型及已儲存的線上 AI 帳戶. 線上呼叫可能消耗付費帳戶額度.</string>
     <string name="ai_runtime_permission_label">使用已設定的 AI 模型</string>
+    <string name="ai_runtime_remove">移除授權</string>
+    <string name="ai_runtime_remove_message">移除 %1$s (%2$s) 的存取授權並停止其執行中的請求?</string>
+    <string name="ai_runtime_remove_title">移除 AI 存取授權?</string>
+    <string name="ai_runtime_request_app">允許 %1$s (%2$s) 存取 AI?</string>
 </resources>

@@ -97,5 +97,5 @@
   "h3_links": "链接",
   "text_link_autojs6_docs": "AutoJs6 文档",
   "text_link_upstream": "LiteRT-LM 项目",
-  "p_runtime_access": "独立签名应用在 Android 授权后可使用已配置的 AI 模型, 支持会话归属校验及撤销授权后的取消清理. `org.autojs.permission.AI_RUNTIME`: 该授权涵盖本地模型与已保存的在线账户, 在线调用可能消耗付费额度. Node.js, Bun 和 Worker 使用 ai.hasAccess() 与 ai.requestAccess()."
+  "p_runtime_access": "独立签名应用可在插件中请求 AI 访问授权, 绑定应用身份与安装记录, 支持在设置中撤销授权并停止运行中的请求. 该授权涵盖本地模型与已保存的在线账户, 在线调用可能消耗付费额度. Node.js, Bun 和 Worker 使用 ai.hasAccess() 与 ai.requestAccess()."
 }

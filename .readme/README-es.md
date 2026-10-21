@@ -135,7 +135,7 @@ Se requiere la build 5276 o posterior del host y Android 7.0 o posterior. Las co
 
 > En AutoJs6 (compilación 5276 y posteriores), `ai.catalog()` devuelve cada modelo local importado y profile en línea configurado como un único catálogo de destinos, con ID exacto, proveedor, modelo, localidad, configuración, disponibilidad, capacidades, controles, límites, origen y profiles backend locales. Pase un `target` exacto a `ai.ask`, `ai.chat`, `ai.stream` o `ai.session`; solo `target` selecciona el plugin oficial 3-Stone AI, mientras que `plugin: true` usa su destino predeterminado declarado. Los destinos locales pueden ofrecer `cpu`, `gpu` y `npu` no disponible; los destinos en línea no tienen profile de ejecución local. Un backend o destino no disponible falla sin fallback y las rutas local/en línea nunca cambian automáticamente. Las respuestas completas y de streaming exponen target, plugin, profile, razonamiento, motivo de finalización, usage completo y duración medida por el proveedor. Los errores estables distinguen proveedor ausente o deshabilitado, destino desconocido, no configurado, no disponible o con capacidad incompatible y backend no disponible. `responseSchema` activa la salida estructurada; `structuredJson: true` sin schema usa una raíz object predeterminada y las sesiones persistentes fijan el mismo target, schema y backend opcional para todos los turnos.
 
-Las aplicaciones con firma independiente pueden usar modelos de IA configurados tras la autorización Android, con control de propietario y cancelación tras revocarla. `org.autojs.permission.AI_RUNTIME`: Este permiso cubre modelos locales y cuentas en línea guardadas. Las llamadas en línea pueden consumir cuota de pago. Use ai.hasAccess() y ai.requestAccess() en Node.js, Bun o Workers.
+Las aplicaciones con firma independiente solicitan acceso a IA en el complemento, ligado a su identidad e instalación; revocarlo en los ajustes detiene las solicitudes activas. Este permiso cubre modelos locales y cuentas en línea guardadas. Las llamadas en línea pueden consumir cuota de pago. Use ai.hasAccess() y ai.requestAccess() en Node.js, Bun o Workers.
 
 ******
 
@@ -200,7 +200,7 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ###### 2026/10/22
 
-* `Función` Las aplicaciones con firma independiente pueden usar modelos de IA configurados tras la autorización Android, con control de propietario y cancelación tras revocarla
+* `Función` Las aplicaciones con firma independiente solicitan acceso a IA en el complemento, ligado a su identidad e instalación; revocarlo en los ajustes detiene las solicitudes activas
 
 # v1.4.1
 

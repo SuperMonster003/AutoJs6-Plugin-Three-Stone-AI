@@ -119,7 +119,7 @@ class PluginDiscoveryAndroidTest {
     }
 
     @Test
-    fun packagedEntryUsesASeparateDangerousPermission() {
+    fun packagedEntryUsesASeparatePermissionAndConsentProvider() {
         val pm = context.packageManager
         val services = pm.queryIntentServices(Intent("org.autojs.plugin.AI_PROVIDER").setPackage(context.packageName), 0)
         assertEquals(2, services.size)
@@ -128,7 +128,11 @@ class PluginDiscoveryAndroidTest {
         assertEquals("org.autojs.permission.AI_RUNTIME", runtime.permission)
         val permission = pm.getPermissionInfo(runtime.permission, 0)
         assertEquals(context.packageName, permission.packageName)
-        assertEquals(android.content.pm.PermissionInfo.PROTECTION_DANGEROUS,
+        val access = requireNotNull(pm.resolveContentProvider(context.packageName + ".runtime-access", 0))
+        assertEquals(context.packageName, access.packageName)
+        assertEquals("org.autojs.permission.AI_RUNTIME", access.readPermission)
+        assertEquals(context.packageName + ":provider", access.processName)
+        assertEquals(android.content.pm.PermissionInfo.PROTECTION_NORMAL,
             permission.protectionLevel and android.content.pm.PermissionInfo.PROTECTION_MASK_BASE)
     }
 }

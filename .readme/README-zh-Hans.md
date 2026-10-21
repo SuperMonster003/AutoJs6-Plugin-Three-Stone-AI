@@ -135,7 +135,7 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 > 在 AutoJs6 (构建 5276 及以上) 中, `ai.catalog()` 将全部已导入本机模型与已配置在线 profile 作为统一目标目录返回, 包含精确 ID, 提供方, 模型, 本机/在线属性, 配置与可用状态, 能力, 控制项, 限制, 来源及本机 backend profile. 向 `ai.ask`, `ai.chat`, `ai.stream` 或 `ai.session` 传入精确 `target`; 仅传 `target` 会选择官方 3-Stone AI 插件, `plugin: true` 则使用其声明的默认目标. 本机目标可提供 `cpu`, `gpu` 与不可用的 `npu`, 在线目标没有本机执行 profile. backend 或目标不可用时会直接失败且不回退, 本机与在线路由也绝不自动切换. 完成及流式响应公开 target, plugin, profile, reasoning, finish reason, 完整 usage 和提供端实测耗时. 稳定错误码可区分提供方缺失或停用, 目标未知, 未配置, 不可用或能力不匹配, 以及 backend 不可用. `responseSchema` 会隐式启用结构化输出; 仅设置 `structuredJson: true` 时使用默认对象根 schema, 持久会话在所有轮次固定同一 target, schema 与可选 backend.
 
-独立签名应用在 Android 授权后可使用已配置的 AI 模型, 支持会话归属校验及撤销授权后的取消清理. `org.autojs.permission.AI_RUNTIME`: 该授权涵盖本地模型与已保存的在线账户, 在线调用可能消耗付费额度. Node.js, Bun 和 Worker 使用 ai.hasAccess() 与 ai.requestAccess().
+独立签名应用可在插件中请求 AI 访问授权, 绑定应用身份与安装记录, 支持在设置中撤销授权并停止运行中的请求. 该授权涵盖本地模型与已保存的在线账户, 在线调用可能消耗付费额度. Node.js, Bun 和 Worker 使用 ai.hasAccess() 与 ai.requestAccess().
 
 ******
 
@@ -200,7 +200,7 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 ###### 2026/10/22
 
-* `新增` 独立签名应用在 Android 授权后可使用已配置的 AI 模型, 支持会话归属校验及撤销授权后的取消清理
+* `新增` 独立签名应用可在插件中请求 AI 访问授权, 绑定应用身份与安装记录, 支持在设置中撤销授权并停止运行中的请求
 
 # v1.4.1
 

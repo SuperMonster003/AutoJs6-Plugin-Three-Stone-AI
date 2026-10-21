@@ -135,7 +135,7 @@ Host build 5276 or later and Android 7.0 or later are required. Build outputs in
 
 > In AutoJs6 (build 5276 and later), `ai.catalog()` returns every imported local model and configured online profile as one target catalog, including exact ID, provider, model, locality, configuration, availability, capabilities, controls, limits, origin, and local backend profiles. Pass an exact `target` to `ai.ask`, `ai.chat`, `ai.stream`, or `ai.session`; `target` alone selects the official 3-Stone AI plugin, while `plugin: true` uses its declared default target. Local targets may expose `cpu`, `gpu`, and unavailable `npu`; online targets have no local execution profile. An unavailable backend or target fails without fallback, and local/online routes never switch automatically. Completed and streamed responses expose target, plugin, profile, reasoning, finish reason, complete usage, and provider-measured duration. Stable errors distinguish a missing or disabled provider, an unknown, unconfigured, unavailable, or capability-mismatched target, and an unavailable backend. `responseSchema` implies structured output; `structuredJson: true` without a schema uses a default object-root schema, and persistent sessions fix the same target, schema, and optional backend for every turn.
 
-Independently signed applications can use configured AI models after Android permission approval, with session ownership and cancellation after revocation. `org.autojs.permission.AI_RUNTIME`: This grant covers local models and saved online accounts. Online calls may consume paid quota. Use ai.hasAccess() and ai.requestAccess() in Node.js, Bun or Workers.
+Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests. This grant covers local models and saved online accounts. Online calls may consume paid quota. Use ai.hasAccess() and ai.requestAccess() in Node.js, Bun or Workers.
 
 ******
 
@@ -200,7 +200,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ###### 2026/10/22
 
-* `Feature` Independently signed applications can use configured AI models after Android permission approval, with session ownership and cancellation after revocation
+* `Feature` Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests
 
 # v1.4.1
 

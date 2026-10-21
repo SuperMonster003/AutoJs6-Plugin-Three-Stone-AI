@@ -135,7 +135,7 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 
 > AutoJs6 (build 5276 以降) では, `ai.catalog()` がインポート済みローカルモデルと設定済みオンライン profile を統一ターゲットカタログとして返し, 正確な ID, プロバイダー, モデル, ローカリティ, 設定/可用状態, 機能, 制御項目, 上限, オリジン, ローカル backend profile を含みます. `ai.ask`, `ai.chat`, `ai.stream`, `ai.session` に正確な `target` を渡します. `target` だけなら公式 3-Stone AI プラグインを選択し, `plugin: true` は宣言済みデフォルトターゲットを使います. ローカルターゲットは `cpu`, `gpu`, 利用不可の `npu` を公開できますが, オンラインターゲットにローカル実行 profile はありません. backend またはターゲットが利用不可ならフォールバックせず失敗し, ローカル/オンラインルートも自動切替しません. 完了/ストリーム応答は target, plugin, profile, reasoning, finish reason, 完全な usage, プロバイダー計測時間を公開します. 安定したエラーはプロバイダー欠落/無効, ターゲット不明/未設定/利用不可/機能不一致, backend 利用不可を区別します. `responseSchema` は構造化出力を有効にし, schema なしの `structuredJson: true` は既定の object ルートを使い, 永続セッションは全ターンで同じ target, schema, 任意 backend を固定します.
 
-独立署名アプリが Android の許可後に設定済み AI モデルを利用可能, セッション所有者の検証と許可取り消し後のキャンセルに対応. `org.autojs.permission.AI_RUNTIME`: この許可はローカルモデルと保存済みオンラインアカウントを対象とし, オンライン呼び出しは有料枠を消費する場合があります. Node.js, Bun と Worker では ai.hasAccess() と ai.requestAccess() を使います.
+独立署名アプリがプラグインで AI アクセスを要求可能, アプリとインストールの識別情報に許可を結び付け, 設定で取り消すと実行中のリクエストも停止. この許可はローカルモデルと保存済みオンラインアカウントを対象とし, オンライン呼び出しは有料枠を消費する場合があります. Node.js, Bun と Worker では ai.hasAccess() と ai.requestAccess() を使います.
 
 ******
 
@@ -200,7 +200,7 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 
 ###### 2026/10/22
 
-* `機能` 独立署名アプリが Android の許可後に設定済み AI モデルを利用可能, セッション所有者の検証と許可取り消し後のキャンセルに対応
+* `機能` 独立署名アプリがプラグインで AI アクセスを要求可能, アプリとインストールの識別情報に許可を結び付け, 設定で取り消すと実行中のリクエストも停止
 
 # v1.4.1
 

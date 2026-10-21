@@ -8,7 +8,7 @@
     "v1.5.0": {
       "released_date": "2026/10/22",
       "feature": [
-        "Independently signed applications can use configured AI models after Android permission approval, with session ownership and cancellation after revocation"
+        "Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests"
       ]
     },
     "v1.4.1": {

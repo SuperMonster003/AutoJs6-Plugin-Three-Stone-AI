@@ -97,5 +97,5 @@
   "h3_links": "Links",
   "text_link_autojs6_docs": "AutoJs6 documentation",
   "text_link_upstream": "LiteRT-LM project",
-  "p_runtime_access": "Independently signed applications can use configured AI models after Android permission approval, with session ownership and cancellation after revocation. `org.autojs.permission.AI_RUNTIME`: This grant covers local models and saved online accounts. Online calls may consume paid quota. Use ai.hasAccess() and ai.requestAccess() in Node.js, Bun or Workers."
+  "p_runtime_access": "Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests. This grant covers local models and saved online accounts. Online calls may consume paid quota. Use ai.hasAccess() and ai.requestAccess() in Node.js, Bun or Workers."
 }

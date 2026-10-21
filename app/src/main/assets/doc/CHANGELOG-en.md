@@ -8,7 +8,7 @@
 
 ###### 2026/10/22
 
-* `Feature` Independently signed applications can use configured AI models after Android permission approval, with session ownership and cancellation after revocation
+* `Feature` Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests
 
 # v1.4.1
 

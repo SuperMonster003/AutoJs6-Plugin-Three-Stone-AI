@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Binder
 
-/** Separately signed applications require the user's Android runtime permission. */
+/** Separately signed applications require explicit consent stored by the plugin. */
 class ThreeStoneAiRuntimeService : ThreeStoneAiProviderService() {
     override val runtimeEntry = true
 }
@@ -24,7 +24,8 @@ internal class RuntimeCallerVerifier(private val context: Context) : ProviderCal
         RuntimeCallerPolicy.requireAllowed(Binder.getCallingUid(), expectedUid, granted = false, cleanup = true)
     }
 
-    private fun granted(uid: Int) = context.checkPermission(PERMISSION, -1, uid) == PackageManager.PERMISSION_GRANTED
+    private fun granted(uid: Int) = context.checkPermission(PERMISSION, -1, uid) == PackageManager.PERMISSION_GRANTED &&
+        RuntimeAccessStore(context).isGranted(uid)
 
     companion object { const val PERMISSION = "org.autojs.permission.AI_RUNTIME" }
 }

@@ -8,7 +8,7 @@
 
 ###### 2026/10/22
 
-* `Fonctionnalité` Les applications signées séparément peuvent utiliser les modèles IA configurés après autorisation Android, avec contrôle du propriétaire et annulation après révocation
+* `Fonctionnalité` Les applications signées séparément demandent un accès IA explicite dans le module, lié à leur identité et installation; la révocation dans les réglages arrête les requêtes actives
 
 # v1.4.1
 

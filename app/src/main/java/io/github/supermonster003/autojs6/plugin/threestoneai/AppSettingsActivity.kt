@@ -121,6 +121,14 @@ class AppSettingsActivity : ConfiguredActivity() {
         content.addView(launcherIconRow!!.view)
         content.addView(hairline())
 
+        content.addView(sectionHeader(R.string.ai_runtime_access_section))
+        content.addView(settingRow(
+            title = getString(R.string.ai_runtime_access_title),
+            summary = getString(R.string.ai_runtime_access_summary),
+            iconResource = R.drawable.ic_person_24,
+            onClick = { startActivity(Intent(this, io.github.supermonster003.autojs6.plugin.threestoneai.provider.RuntimeAccessManagementActivity::class.java)) },
+        ).view)
+
         content.addView(sectionHeader(R.string.app_settings_conversation))
         content.addView(settingRow(
             title = getString(R.string.chat_font_size),

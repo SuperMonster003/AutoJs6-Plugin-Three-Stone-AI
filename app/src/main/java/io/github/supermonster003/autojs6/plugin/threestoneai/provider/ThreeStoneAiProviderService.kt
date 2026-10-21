@@ -55,6 +55,7 @@ open class ThreeStoneAiProviderService : Service() {
         // can leave it calling next() after the iterator has been exhausted.
         sessions.forEach { session ->
             activeSession.compareAndSet(session, null)
+            RuntimeAccessSessions.remove(session)
             session.serviceDestroyed()
         }
         sessions.clear()
@@ -155,6 +156,7 @@ open class ThreeStoneAiProviderService : Service() {
                     onFinished = { finished ->
                         activeSession.compareAndSet(finished, null)
                         sessions.remove(finished)
+                        RuntimeAccessSessions.remove(finished)
                     },
                 )
             } catch (error: Throwable) {
@@ -162,7 +164,11 @@ open class ThreeStoneAiProviderService : Service() {
                 throw error
             }
             sessions += session
-            if (activeSession.compareAndSet(null, session)) session.start() else session.rejectBusy()
+            if (activeSession.compareAndSet(null, session)) {
+                if (runtimeEntry) RuntimeAccessSessions.register(session, ownerUid)
+                if (runtimeEntry && !RuntimeAccessStore(this@ThreeStoneAiProviderService).isGranted(ownerUid)) session.accessRevoked()
+                else session.start()
+            } else session.rejectBusy()
             return session
         }
     }

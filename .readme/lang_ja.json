@@ -97,5 +97,5 @@
   "h3_links": "リンク",
   "text_link_autojs6_docs": "AutoJs6 ドキュメント",
   "text_link_upstream": "LiteRT-LM プロジェクト",
-  "p_runtime_access": "独立署名アプリが Android の許可後に設定済み AI モデルを利用可能, セッション所有者の検証と許可取り消し後のキャンセルに対応. `org.autojs.permission.AI_RUNTIME`: この許可はローカルモデルと保存済みオンラインアカウントを対象とし, オンライン呼び出しは有料枠を消費する場合があります. Node.js, Bun と Worker では ai.hasAccess() と ai.requestAccess() を使います."
+  "p_runtime_access": "独立署名アプリがプラグインで AI アクセスを要求可能, アプリとインストールの識別情報に許可を結び付け, 設定で取り消すと実行中のリクエストも停止. この許可はローカルモデルと保存済みオンラインアカウントを対象とし, オンライン呼び出しは有料枠を消費する場合があります. Node.js, Bun と Worker では ai.hasAccess() と ai.requestAccess() を使います."
 }

@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ai_runtime_access_empty">許可したアプリはありません.</string>
+    <string name="ai_runtime_access_section">AI アクセス</string>
+    <string name="ai_runtime_access_summary">ローカルモデルと保存済みオンラインアカウントへのアクセスを管理します.</string>
+    <string name="ai_runtime_access_title">AI アクセスを許可したアプリ</string>
+    <string name="ai_runtime_allow">許可</string>
+    <string name="ai_runtime_deny">拒否</string>
     <string name="ai_runtime_permission_description">このアプリに 3-Stone AI のローカルモデルと保存済みオンライン AI アカウントの使用を許可します. オンライン呼び出しは有料枠を消費する場合があります.</string>
     <string name="ai_runtime_permission_label">設定済み AI モデルの使用</string>
+    <string name="ai_runtime_remove">許可を取り消す</string>
+    <string name="ai_runtime_remove_message">%1$s (%2$s) のアクセスを取り消し, 実行中のリクエストを停止しますか?</string>
+    <string name="ai_runtime_remove_title">AI アクセスを取り消しますか?</string>
+    <string name="ai_runtime_request_app">%1$s (%2$s) に AI アクセスを許可しますか?</string>
 </resources>

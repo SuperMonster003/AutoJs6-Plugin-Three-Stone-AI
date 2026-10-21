@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ai_runtime_access_empty">Нет авторизованных приложений.</string>
+    <string name="ai_runtime_access_section">Доступ к ИИ</string>
+    <string name="ai_runtime_access_summary">Управление доступом к локальным моделям и сохраненным сетевым учетным записям.</string>
+    <string name="ai_runtime_access_title">Приложения с доступом к ИИ</string>
+    <string name="ai_runtime_allow">Разрешить</string>
+    <string name="ai_runtime_deny">Отказать</string>
     <string name="ai_runtime_permission_description">Разрешить приложению использовать локальные модели и сохраненные сетевые учетные записи ИИ в 3-Stone AI. Сетевые запросы могут расходовать платную квоту.</string>
     <string name="ai_runtime_permission_label">Использовать настроенные модели ИИ</string>
+    <string name="ai_runtime_remove">Отозвать доступ</string>
+    <string name="ai_runtime_remove_message">Отозвать доступ для %1$s (%2$s) и остановить активные запросы?</string>
+    <string name="ai_runtime_remove_title">Отозвать доступ к ИИ?</string>
+    <string name="ai_runtime_request_app">Разрешить %1$s (%2$s) доступ к ИИ?</string>
 </resources>

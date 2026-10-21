@@ -186,6 +186,8 @@ internal class RemoteThreeStoneAiSession(
         cleanupSession(cancelBackend = false)
     }
 
+    fun accessRevoked() = failSession(AiErrorCode.PERMISSION_DENIED, "AI access was revoked")
+
     fun serviceDestroyed() = terminateSilently(cancelBackend = true, closeBackendDirectly = true)
 
     private fun runTurn(turn: Turn) {

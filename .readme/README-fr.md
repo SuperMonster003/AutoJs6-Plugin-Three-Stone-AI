@@ -135,7 +135,7 @@ La build hôte 5276 ou ultérieure et Android 7.0 ou ultérieur sont requis. Les
 
 > Dans AutoJs6 (build 5276 et suivants), `ai.catalog()` renvoie chaque modèle local importé et profile en ligne configuré dans un catalogue de cibles unique, avec ID exact, fournisseur, modèle, localité, configuration, disponibilité, capacités, contrôles, limites, origine et profiles backend locaux. Passez un `target` exact à `ai.ask`, `ai.chat`, `ai.stream` ou `ai.session` ; `target` seul sélectionne le plugin officiel 3-Stone AI, tandis que `plugin: true` utilise sa cible par défaut déclarée. Les cibles locales peuvent proposer `cpu`, `gpu` et `npu` indisponible ; les cibles en ligne n'ont aucun profile d'exécution local. Un backend ou une cible indisponible échoue sans repli et les routes locale/en ligne ne changent jamais automatiquement. Les réponses terminées et diffusées exposent target, plugin, profile, raisonnement, motif de fin, usage complet et durée mesurée par le fournisseur. Des erreurs stables distinguent fournisseur absent ou désactivé, cible inconnue, non configurée, indisponible ou aux capacités incompatibles et backend indisponible. `responseSchema` active la sortie structurée ; `structuredJson: true` sans schema utilise une racine object par défaut et les sessions persistantes fixent le même target, schema et backend facultatif pour tous les tours.
 
-Les applications signées séparément peuvent utiliser les modèles IA configurés après autorisation Android, avec contrôle du propriétaire et annulation après révocation. `org.autojs.permission.AI_RUNTIME`: Cette autorisation couvre les modèles locaux et les comptes en ligne enregistrés. Les appels en ligne peuvent consommer un quota payant. Utilisez ai.hasAccess() et ai.requestAccess() dans Node.js, Bun ou Workers.
+Les applications signées séparément demandent un accès IA explicite dans le module, lié à leur identité et installation; la révocation dans les réglages arrête les requêtes actives. Cette autorisation couvre les modèles locaux et les comptes en ligne enregistrés. Les appels en ligne peuvent consommer un quota payant. Utilisez ai.hasAccess() et ai.requestAccess() dans Node.js, Bun ou Workers.
 
 ******
 
@@ -200,7 +200,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 ###### 2026/10/22
 
-* `Fonctionnalité` Les applications signées séparément peuvent utiliser les modèles IA configurés après autorisation Android, avec contrôle du propriétaire et annulation après révocation
+* `Fonctionnalité` Les applications signées séparément demandent un accès IA explicite dans le module, lié à leur identité et installation; la révocation dans les réglages arrête les requêtes actives
 
 # v1.4.1
 

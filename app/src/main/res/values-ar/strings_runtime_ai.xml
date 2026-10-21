@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ai_runtime_access_empty">لا توجد تطبيقات مصرح لها.</string>
+    <string name="ai_runtime_access_section">الوصول إلى الذكاء الاصطناعي</string>
+    <string name="ai_runtime_access_summary">إدارة الوصول إلى النماذج المحلية والحسابات المحفوظة عبر الإنترنت.</string>
+    <string name="ai_runtime_access_title">التطبيقات المصرح لها بالذكاء الاصطناعي</string>
+    <string name="ai_runtime_allow">السماح</string>
+    <string name="ai_runtime_deny">رفض</string>
     <string name="ai_runtime_permission_description">السماح لهذا التطبيق باستخدام النماذج المحلية وحسابات الذكاء الاصطناعي المحفوظة في 3-Stone AI. قد تستهلك الطلبات عبر الإنترنت حصة مدفوعة.</string>
     <string name="ai_runtime_permission_label">استخدام نماذج الذكاء الاصطناعي المهيأة</string>
+    <string name="ai_runtime_remove">إلغاء الوصول</string>
+    <string name="ai_runtime_remove_message">إلغاء وصول %1$s (%2$s) وإيقاف طلباته النشطة?</string>
+    <string name="ai_runtime_remove_title">إلغاء الوصول إلى الذكاء الاصطناعي?</string>
+    <string name="ai_runtime_request_app">السماح للتطبيق %1$s (%2$s) بالوصول إلى الذكاء الاصطناعي?</string>
 </resources>

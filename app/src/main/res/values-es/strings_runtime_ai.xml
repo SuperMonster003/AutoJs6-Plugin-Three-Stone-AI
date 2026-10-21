@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ai_runtime_access_empty">No hay aplicaciones autorizadas.</string>
+    <string name="ai_runtime_access_section">Acceso a IA</string>
+    <string name="ai_runtime_access_summary">Gestionar acceso a modelos locales y cuentas en línea guardadas.</string>
+    <string name="ai_runtime_access_title">Aplicaciones autorizadas para IA</string>
+    <string name="ai_runtime_allow">Permitir</string>
+    <string name="ai_runtime_deny">Denegar</string>
     <string name="ai_runtime_permission_description">Permitir que esta aplicación use modelos locales y cuentas de IA en línea guardadas en 3-Stone AI. Las llamadas en línea pueden consumir cuota de pago.</string>
     <string name="ai_runtime_permission_label">Usar modelos de IA configurados</string>
+    <string name="ai_runtime_remove">Eliminar acceso</string>
+    <string name="ai_runtime_remove_message">Eliminar acceso de %1$s (%2$s) y detener sus solicitudes activas?</string>
+    <string name="ai_runtime_remove_title">Eliminar acceso a IA?</string>
+    <string name="ai_runtime_request_app">Permitir acceso a IA a %1$s (%2$s)?</string>
 </resources>

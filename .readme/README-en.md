@@ -202,6 +202,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 * `Feature` Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests
 * `Fix` Subsequent AI requests failed when service shutdown discarded a queued session cleanup
+* `Fix` Sequential AI requests were rejected while a cancelled model session was still closing
 
 # v1.4.1
 

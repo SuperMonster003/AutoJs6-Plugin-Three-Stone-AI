@@ -158,14 +158,17 @@ internal class RemoteThreeStoneAiSession(
         terminateSilently(cancelBackend = true)
     }
 
-    fun start() {
+    val isClosing: Boolean get() = closed.get()
+
+    fun start(whenReady: (() -> Unit) -> Unit = { it() }) {
+        if (closed.get()) return
         val turn = Turn(initialRequestEnvelope, initialDescriptors, firstTurn = true)
         if (!activeTurn.compareAndSet(null, turn)) {
             turn.dispose(cancelWorkers = true)
             terminateSilently(cancelBackend = true)
             return
         }
-        if (linkCallbackDeath()) turn.start()
+        if (linkCallbackDeath()) turn.start(whenReady)
     }
 
     fun rejectBusy() {
@@ -546,9 +549,9 @@ internal class RemoteThreeStoneAiSession(
         val isActive: Boolean
             get() = !terminal.get() && !closed.get() && activeTurn.get() === this
 
-        fun start() {
+        fun start(whenReady: (() -> Unit) -> Unit = { it() }) {
             scheduleTimeout()
-            submitWork(this) { runTurn(this) }
+            whenReady { submitWork(this) { runTurn(this) } }
         }
 
         fun grantCredits(count: Int) {

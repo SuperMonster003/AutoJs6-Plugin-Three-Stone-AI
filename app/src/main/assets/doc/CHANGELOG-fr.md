@@ -10,6 +10,7 @@
 
 * `Fonctionnalité` Les applications signées séparément demandent un accès IA explicite dans le module, lié à leur identité et installation; la révocation dans les réglages arrête les requêtes actives
 * `Correctif` Les requêtes AI suivantes échouaient lorsque l'arrêt du service abandonnait la fermeture d'une session
+* `Correctif` Les requêtes AI successives étaient rejetées pendant la fermeture de la session annulée précédente
 
 # v1.4.1
 

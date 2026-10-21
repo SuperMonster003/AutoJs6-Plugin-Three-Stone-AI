@@ -10,6 +10,7 @@
 
 * `Función` Las aplicaciones con firma independiente solicitan acceso a IA en el complemento, ligado a su identidad e instalación; revocarlo en los ajustes detiene las solicitudes activas
 * `Corrección` Las solicitudes AI siguientes fallaban si el servicio se detenía antes de cerrar la sesión anterior
+* `Corrección` Las solicitudes AI consecutivas se rechazaban mientras se cerraba la sesión del modelo cancelada
 
 # v1.4.1
 

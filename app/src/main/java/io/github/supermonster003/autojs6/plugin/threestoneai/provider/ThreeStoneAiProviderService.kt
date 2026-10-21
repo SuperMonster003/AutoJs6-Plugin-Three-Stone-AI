@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.atomic.AtomicReference
 
 open class ThreeStoneAiProviderService : Service() {
     protected open val runtimeEntry = false
@@ -153,7 +152,7 @@ open class ThreeStoneAiProviderService : Service() {
                     timeoutScheduler = timeoutScheduler,
                     callbackLane = callbackLane,
                     onFinished = { finished ->
-                        activeSession.compareAndSet(finished, null)
+                        admission.release(finished)
                         sessions.remove(finished)
                         RuntimeAccessSessions.remove(finished)
                     },
@@ -163,10 +162,10 @@ open class ThreeStoneAiProviderService : Service() {
                 throw error
             }
             sessions += session
-            if (activeSession.compareAndSet(null, session)) {
+            if (admission.reserve(session)) {
                 if (runtimeEntry) RuntimeAccessSessions.register(session, ownerUid)
                 if (runtimeEntry && !RuntimeAccessStore(this@ThreeStoneAiProviderService).isGranted(ownerUid)) session.accessRevoked()
-                else session.start()
+                else session.start { ready -> admission.whenReady(session, ready) }
             } else session.rejectBusy()
             return session
         }
@@ -212,6 +211,6 @@ open class ThreeStoneAiProviderService : Service() {
 
     private companion object {
         // Both permission entries run in :provider and retain the existing single-session policy.
-        val activeSession = AtomicReference<RemoteThreeStoneAiSession?>()
+        val admission = ClosingSessionAdmission<RemoteThreeStoneAiSession> { it.isClosing }
     }
 }

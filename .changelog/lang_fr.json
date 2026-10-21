@@ -5,6 +5,12 @@
   "changelog_label_improvement": "Amélioration",
   "changelog_label_dependency": "Dépendance",
   "$data": {
+    "v1.5.0": {
+      "released_date": "2026/10/22",
+      "feature": [
+        "Les applications signées séparément peuvent utiliser les modèles IA configurés après autorisation Android, avec contrôle du propriétaire et annulation après révocation"
+      ]
+    },
     "v1.4.1": {
       "released_date": "2026/10/20",
       "fix": [

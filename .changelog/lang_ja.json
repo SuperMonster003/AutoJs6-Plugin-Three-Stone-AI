@@ -5,6 +5,12 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.5.0": {
+      "released_date": "2026/10/22",
+      "feature": [
+        "独立署名アプリが Android の許可後に設定済み AI モデルを利用可能, セッション所有者の検証と許可取り消し後のキャンセルに対応"
+      ]
+    },
     "v1.4.1": {
       "released_date": "2026/10/20",
       "fix": [

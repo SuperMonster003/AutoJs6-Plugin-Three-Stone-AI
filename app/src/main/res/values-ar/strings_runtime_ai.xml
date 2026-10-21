@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_runtime_permission_description">السماح لهذا التطبيق باستخدام النماذج المحلية وحسابات الذكاء الاصطناعي المحفوظة في 3-Stone AI. قد تستهلك الطلبات عبر الإنترنت حصة مدفوعة.</string>
+    <string name="ai_runtime_permission_label">استخدام نماذج الذكاء الاصطناعي المهيأة</string>
+</resources>

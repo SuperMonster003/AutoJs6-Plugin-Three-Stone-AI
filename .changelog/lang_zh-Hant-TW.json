@@ -5,6 +5,12 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "相依性",
   "$data": {
+    "v1.5.0": {
+      "released_date": "2026/10/22",
+      "feature": [
+        "獨立簽章應用程式在 Android 授權後可使用已設定的 AI 模型, 支援工作階段歸屬驗證及撤銷授權後的取消清理"
+      ]
+    },
     "v1.4.1": {
       "released_date": "2026/10/20",
       "fix": [

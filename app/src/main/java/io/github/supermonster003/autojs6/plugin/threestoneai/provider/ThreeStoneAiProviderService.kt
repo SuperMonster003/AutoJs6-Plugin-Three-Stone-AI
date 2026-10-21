@@ -24,8 +24,9 @@ import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicReference
 
-class ThreeStoneAiProviderService : Service() {
-    private lateinit var callerVerifier: HostCallerVerifier
+open class ThreeStoneAiProviderService : Service() {
+    protected open val runtimeEntry = false
+    private lateinit var callerVerifier: ProviderCallerVerifier
     private lateinit var worker: ExecutorService
     private lateinit var timeoutScheduler: ScheduledExecutorService
     private lateinit var callbackLane: SerialCallbackLane
@@ -36,7 +37,7 @@ class ThreeStoneAiProviderService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        callerVerifier = HostCallerVerifier(this)
+        callerVerifier = if (runtimeEntry) RuntimeCallerVerifier(this) else HostCallerVerifier(this)
         worker = BoundedExecutors.worker()
         timeoutScheduler = Executors.newSingleThreadScheduledExecutor { runnable ->
             Thread(runnable, "three-stone-ai-timeout").apply { isDaemon = true }

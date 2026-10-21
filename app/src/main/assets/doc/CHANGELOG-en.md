@@ -4,6 +4,12 @@
 
 ******
 
+# v1.5.0
+
+###### 2026/10/22
+
+* `Feature` Independently signed applications can use configured AI models after Android permission approval, with session ownership and cancellation after revocation
+
 # v1.4.1
 
 ###### 2026/10/20

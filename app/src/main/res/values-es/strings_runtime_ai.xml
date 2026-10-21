@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_runtime_permission_description">Permitir que esta aplicación use modelos locales y cuentas de IA en línea guardadas en 3-Stone AI. Las llamadas en línea pueden consumir cuota de pago.</string>
+    <string name="ai_runtime_permission_label">Usar modelos de IA configurados</string>
+</resources>

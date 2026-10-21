@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_runtime_permission_description">允许此应用使用 3-Stone AI 的本地模型及已保存的在线 AI 账户. 在线调用可能消耗付费账户额度.</string>
+    <string name="ai_runtime_permission_label">使用已配置的 AI 模型</string>
+</resources>

@@ -4,6 +4,12 @@
 
 ******
 
+# v1.5.0
+
+###### 2026/10/22
+
+* `Fonctionnalité` Les applications signées séparément peuvent utiliser les modèles IA configurés après autorisation Android, avec contrôle du propriétaire et annulation après révocation
+
 # v1.4.1
 
 ###### 2026/10/20

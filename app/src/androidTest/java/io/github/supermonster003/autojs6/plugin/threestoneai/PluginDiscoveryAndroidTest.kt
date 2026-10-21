@@ -91,7 +91,8 @@ class PluginDiscoveryAndroidTest {
     @Test
     fun aiServiceStartsAndBindsWithoutNativeInferenceAndRejectsNonHostUid() {
         val intent = Intent("org.autojs.plugin.AI_PROVIDER").setPackage(context.packageName)
-        val service = context.packageManager.queryIntentServices(intent, 0).single().serviceInfo
+        val service = context.packageManager.queryIntentServices(intent, 0)
+            .single { it.serviceInfo.name.endsWith(".ThreeStoneAiProviderService") }.serviceInfo
         assertEquals("org.autojs.permission.PLUGIN", service.permission)
         assertEquals(context.packageName + ":provider", service.processName)
         intent.component = ComponentName(service.packageName, service.name)
@@ -115,5 +116,19 @@ class PluginDiscoveryAndroidTest {
         } finally {
             context.unbindService(connection)
         }
+    }
+
+    @Test
+    fun packagedEntryUsesASeparateDangerousPermission() {
+        val pm = context.packageManager
+        val services = pm.queryIntentServices(Intent("org.autojs.plugin.AI_PROVIDER").setPackage(context.packageName), 0)
+        assertEquals(2, services.size)
+        val runtime = services.single { it.serviceInfo.name.endsWith(".ThreeStoneAiRuntimeService") }.serviceInfo
+        assertTrue(runtime.exported)
+        assertEquals("org.autojs.permission.AI_RUNTIME", runtime.permission)
+        val permission = pm.getPermissionInfo(runtime.permission, 0)
+        assertEquals(context.packageName, permission.packageName)
+        assertEquals(android.content.pm.PermissionInfo.PROTECTION_DANGEROUS,
+            permission.protectionLevel and android.content.pm.PermissionInfo.PROTECTION_MASK_BASE)
     }
 }

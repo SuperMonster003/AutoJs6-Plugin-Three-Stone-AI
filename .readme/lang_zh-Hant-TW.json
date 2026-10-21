@@ -52,7 +52,7 @@
   "h3_host_integration_status": "主程式整合狀態",
   "p_host_integration_status": "在 AutoJs6 (組建 5276 及以上) 中, `ai.catalog()` 將全部已匯入本機模型與已設定線上 profile 作為統一目標目錄回傳, 包含精確 ID, 提供者, 模型, 本機/線上屬性, 設定與可用狀態, 能力, 控制項, 限制, 來源及本機 backend profile. 向 `ai.ask`, `ai.chat`, `ai.stream` 或 `ai.session` 傳入精確 `target`; 僅傳 `target` 會選擇官方 3-Stone AI 外掛, `plugin: true` 則使用其宣告的預設目標. 本機目標可提供 `cpu`, `gpu` 與不可用的 `npu`, 線上目標沒有本機執行 profile. backend 或目標不可用時會直接失敗且不回退, 本機與線上路由也絕不自動切換. 完成及串流回應公開 target, plugin, profile, reasoning, finish reason, 完整 usage 和提供端實測耗時. 穩定錯誤碼可區分提供者缺失或停用, 目標未知, 未設定, 不可用或能力不符, 以及 backend 不可用. `responseSchema` 會隱式啟用結構化輸出; 僅設定 `structuredJson: true` 時使用預設物件根 schema, 持久工作階段在所有輪次固定同一 target, schema 與可選 backend.",
   "h3_security": "安全性和隱私",
-  "p_security": "外掛為使用者主動發起的推薦模型下載, 使用者設定的線上目標請求, 以及線上 AI 設定中從 GitHub 更新公開預設模型目錄使用 `INTERNET` 權限. 目錄更新不需 API Key, 不呼叫推論服務, 外掛啟用及本機生成不會觸發目錄連網. 外掛不要求廣泛儲存權限. 推薦模型檔案下載使用不可變 HTTPS 版本及固定位元組數與 SHA-256, 僅寫入使用者選擇的 SAF 位置; LiteRT-LM 檔頭, 大小, 摘要, flush 與 fsync 全部通過後才算完成. 匯入仍只讀取系統選擇器授予的 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬, 雙方簽章, 目標中繼資料及宣告來源邊界. 語音功能不要求麥克風權限, 錄音由辨識應用程式完成; 辨識出的文字與朗讀的文字不寫入記錄檔, 語音輸入的訊息在會話記錄中與打字訊息相同.",
+  "p_security": "外掛為使用者主動發起的推薦模型下載, 使用者設定的線上目標請求, 以及線上 AI 設定中從 GitHub 更新公開預設模型目錄使用 `INTERNET` 權限. 目錄更新不需 API Key, 不呼叫推論服務, 外掛啟用及本機生成不會觸發目錄連網. 外掛不要求廣泛儲存權限. 推薦模型檔案下載使用不可變 HTTPS 版本及固定位元組數與 SHA-256, 僅寫入使用者選擇的 SAF 位置; LiteRT-LM 檔頭, 大小, 摘要, flush 與 fsync 全部通過後才算完成. 匯入仍只讀取系統選擇器授予的 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. 原宿主 Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬, 雙方簽章, 目標中繼資料及宣告來源邊界. 語音功能不要求麥克風權限, 錄音由辨識應用程式完成; 辨識出的文字與朗讀的文字不寫入記錄檔, 語音輸入的訊息在會話記錄中與打字訊息相同.",
   "h3_security_limits": "執行限制",
   "security_limits": [
     "模型匯入硬上限為 8 GiB, 且匯入後至少保留 256 MiB 可用空間.",
@@ -96,5 +96,6 @@
   "p_resource_layout": "`.python/generate_markdown.py` 從 JSON 來源產生 10 種語言的 README 和應用程式內更新日誌. Android 字串由各自資源目錄管理",
   "h3_links": "連結",
   "text_link_autojs6_docs": "AutoJs6 文件",
-  "text_link_upstream": "LiteRT-LM 專案"
+  "text_link_upstream": "LiteRT-LM 專案",
+  "p_runtime_access": "獨立簽章應用程式在 Android 授權後可使用已設定的 AI 模型, 支援工作階段歸屬驗證及撤銷授權後的取消清理. `org.autojs.permission.AI_RUNTIME`: 此授權涵蓋本機模型及已儲存的線上帳戶, 線上呼叫可能消耗付費額度. Node.js, Bun 和 Worker 使用 ai.hasAccess() 與 ai.requestAccess()."
 }

@@ -7,13 +7,18 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
 
 internal fun interface SessionOwnerVerifier {
     fun enforceSessionOwner(expectedUid: Int)
+    fun enforceSessionCleanup(expectedUid: Int) = enforceSessionOwner(expectedUid)
 }
 
-internal class HostCallerVerifier(context: Context) : SessionOwnerVerifier {
+internal interface ProviderCallerVerifier : SessionOwnerVerifier {
+    fun enforceAllowedCaller(): Int
+}
+
+internal class HostCallerVerifier(context: Context) : ProviderCallerVerifier {
     private val packageManager = context.applicationContext.packageManager
     private val providerPackageName = context.applicationContext.packageName
 
-    fun enforceAllowedCaller(): Int = Binder.getCallingUid().also(::enforceAllowedUid)
+    override fun enforceAllowedCaller(): Int = Binder.getCallingUid().also(::enforceAllowedUid)
 
     override fun enforceSessionOwner(expectedUid: Int) {
         val callingUid = Binder.getCallingUid()

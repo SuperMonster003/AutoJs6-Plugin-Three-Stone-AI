@@ -98,6 +98,8 @@ required host build: {{ required_host_build }}
 
 > {{ p_host_integration_status }}
 
+{{ p_runtime_access }}
+
 ******
 
 ### {{ h3_security }}

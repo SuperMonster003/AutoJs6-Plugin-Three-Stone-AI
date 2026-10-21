@@ -135,13 +135,15 @@ La build hôte 5276 ou ultérieure et Android 7.0 ou ultérieur sont requis. Les
 
 > Dans AutoJs6 (build 5276 et suivants), `ai.catalog()` renvoie chaque modèle local importé et profile en ligne configuré dans un catalogue de cibles unique, avec ID exact, fournisseur, modèle, localité, configuration, disponibilité, capacités, contrôles, limites, origine et profiles backend locaux. Passez un `target` exact à `ai.ask`, `ai.chat`, `ai.stream` ou `ai.session` ; `target` seul sélectionne le plugin officiel 3-Stone AI, tandis que `plugin: true` utilise sa cible par défaut déclarée. Les cibles locales peuvent proposer `cpu`, `gpu` et `npu` indisponible ; les cibles en ligne n'ont aucun profile d'exécution local. Un backend ou une cible indisponible échoue sans repli et les routes locale/en ligne ne changent jamais automatiquement. Les réponses terminées et diffusées exposent target, plugin, profile, raisonnement, motif de fin, usage complet et durée mesurée par le fournisseur. Des erreurs stables distinguent fournisseur absent ou désactivé, cible inconnue, non configurée, indisponible ou aux capacités incompatibles et backend indisponible. `responseSchema` active la sortie structurée ; `structuredJson: true` sans schema utilise une racine object par défaut et les sessions persistantes fixent le même target, schema et backend facultatif pour tous les tours.
 
+Les applications signées séparément peuvent utiliser les modèles IA configurés après autorisation Android, avec contrôle du propriétaire et annulation après révocation. `org.autojs.permission.AI_RUNTIME`: Cette autorisation couvre les modèles locaux et les comptes en ligne enregistrés. Les appels en ligne peuvent consommer un quota payant. Utilisez ai.hasAccess() et ai.requestAccess() dans Node.js, Bun ou Workers.
+
 ******
 
 ### Sécurité et confidentialité
 
 ******
 
-Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés déclenchés par l'utilisateur, les requêtes vers une cible en ligne configurée et les mises à jour du catalogue public de modèles prédéfinis depuis GitHub dans les paramètres IA en ligne. Ces mises à jour ne nécessitent aucune clé API, ne lancent aucune inférence et ne démarrent ni à l'activation du plugin ni pendant la génération locale. Les identifiants restent dans le stockage privé chiffré du plugin et ne traversent jamais Binder ni le catalogue de cibles. Le plugin ne demande aucune permission générale de stockage. Les téléchargements de fichiers de modèles utilisent des révisions HTTPS immuables, une taille et un SHA-256 épinglés, et n'écrivent que dans l'emplacement SAF choisi; en-tête LiteRT-LM, taille, empreinte, flush et fsync doivent tous réussir. Les services vérifient aussi le paquet AutoJs6, l'UID appelant et les signatures. Les fonctions vocales ne demandent pas l'autorisation du micro: c'est l'application de reconnaissance qui enregistre. Le texte reconnu et le texte lu ne sont pas journalisés, et les messages dictés sont enregistrés comme les messages saisis.
+Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés déclenchés par l'utilisateur, les requêtes vers une cible en ligne configurée et les mises à jour du catalogue public de modèles prédéfinis depuis GitHub dans les paramètres IA en ligne. Ces mises à jour ne nécessitent aucune clé API, ne lancent aucune inférence et ne démarrent ni à l'activation du plugin ni pendant la génération locale. Les identifiants restent dans le stockage privé chiffré du plugin et ne traversent jamais Binder ni le catalogue de cibles. Le plugin ne demande aucune permission générale de stockage. Les téléchargements de fichiers de modèles utilisent des révisions HTTPS immuables, une taille et un SHA-256 épinglés, et n'écrivent que dans l'emplacement SAF choisi; en-tête LiteRT-LM, taille, empreinte, flush et fsync doivent tous réussir. Le service Provider original de l'hôte vérifie aussi le paquet AutoJs6, l'UID appelant et les signatures. Les fonctions vocales ne demandent pas l'autorisation du micro: c'est l'application de reconnaissance qui enregistre. Le texte reconnu et le texte lu ne sont pas journalisés, et les messages dictés sont enregistrés comme les messages saisis.
 
 ******
 
@@ -194,6 +196,12 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 ******
 
+# v1.5.0
+
+###### 2026/10/22
+
+* `Fonctionnalité` Les applications signées séparément peuvent utiliser les modèles IA configurés après autorisation Android, avec contrôle du propriétaire et annulation après révocation
+
 # v1.4.1
 
 ###### 2026/10/20
@@ -210,21 +218,6 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Fonctionnalité` Appuyez longuement sur le micro pour une conversation vocale: ce que vous dites est envoyé aussitôt, et l'écoute reprend après la lecture de la réponse. Une barre d'état au-dessus du champ de saisie indique ce qui se passe et permet de quitter à tout moment; pendant la lecture, touchez-la pour interrompre et parler aussitôt
 * `Fonctionnalité` Posez vos questions via l'assistant numérique de 3-Macaw Speech: maintenez le bouton marche, parlez et touchez "3-Stone AI" pour obtenir la réponse dans une nouvelle conversation, lue à voix haute. Une autre question de ce type dans les 10 secondes est seulement placée dans le champ de saisie, pour éviter les abus
 * `Fonctionnalité` Nouveau groupe "Voix" dans les paramètres: lecture automatique, "Privilégier 3-Macaw Speech" et l'application qui assure actuellement la dictée et la lecture
-
-# v1.3.0
-
-###### 2026/10/15
-
-* `Fonctionnalité` Unifier les réglages avec des groupes plats, des lignes cohérentes et des dialogues arrondis centrés. La langue, le mode nuit, la couleur et l'icône ne changent qu'après validation; Annuler conserve les valeurs enregistrées. La couleur suit AutoJs6 par défaut et propose une palette commune, une saisie HEX/RGB et un aperçu local. Les fonds neutres restent stables et les contrôles suivent le thème. L'icône utilise le mode adaptatif automatique par défaut, tout en préservant les choix explicites lors des mises à jour.
-* `Correctif` Via une passerelle compatible OpenAI, les modèles Claude ou Gemini diffusent une chaîne vide au lieu de "{}" comme arguments d'un outil sans paramètres, et la session le rejetait comme réponse invalide en se terminant par ONLINE_INVALID_RESPONSE (le premier tour d'outils Claude Code Ex et un tour Gemini Ex de 3-Stove Agent sur la passerelle AIGoCode échouaient ainsi). Les arguments vides sont désormais traités comme un objet vide et le message assistant renvoyé au modèle porte la forme normalisée
-* `Correctif` Les tours de continuation des outils natifs soustrayaient du plafond de jetons de sortie de la première requête ce que les tours précédents avaient consommé, si bien que les longs tours se terminaient par ONLINE_INVALID_RESPONSE une fois le plafond épuisé après une dizaine de tours (le cas de la calculatrice de 3-Stove Agent échouait entre le 9e et le 14e appel sur Claude Code Ex comme sur Gemini Ex). Chaque continuation conserve désormais le plafond complet et le budget de tâche de l'appelant borne le total, conformément à la décision du 2026-09-29 de réinitialiser le délai de continuation
-* `Correctif` Le protocole Gemini GenerateContent envoyait les déclarations d'outils et le responseSchema avec leur JSON Schema intact, et l'API officielle répond HTTP 400 ("Unknown name additionalProperties") aux mots-clés qu'elle ne connaît pas, si bien que chaque tâche d'outils natifs de 3-Stove Agent échouait dès le premier appel avec ONLINE_REQUEST_REJECTED. Seul le sous-ensemble pris en charge par Gemini (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default et similaires) est envoyé désormais ; les appelants continuent de valider arguments et réponses avec le schéma complet
-* `Correctif` Compléter les traductions des paramètres d'échantillonnage et des fournisseurs de modèles en ligne
-* `Correctif` Dans l'interface en arabe, 3-Stone AI, 4-bit et les révisions de modèle commençant par un chiffre ne s'affichent plus à l'envers ni coupées (comme Stone AI-3 et bit-4)
-* `Amélioration` Conserver le cadre arrondi de l'icône À propos avec un intérieur transparent laissant voir le fond de la page. Afficher les choix du lanceur depuis le haut avec des notes plus petites.
-* `Amélioration` Taille visuelle harmonisée des icônes du lanceur et du Centre de plugins, avec des fonds transparents et des motifs noirs, blancs ou gris neutres
-* `Amélioration` Les icônes du centre de plugins utilisent les tailles, positions, images claires et sombres et fonds circulaires réglés dans Icon Studio, avec les sources et paramètres permettant de les reproduire
-* `Amélioration` Les icônes des informations d'application Android utilisent les illustrations et les fonds clairs et sombres d'Icon Studio, en conservant les images transparentes du centre de plugins et les choix du lanceur
 
 ##### Autres versions
 

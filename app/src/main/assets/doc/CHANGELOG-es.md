@@ -4,6 +4,12 @@
 
 ******
 
+# v1.5.0
+
+###### 2026/10/22
+
+* `Función` Las aplicaciones con firma independiente pueden usar modelos de IA configurados tras la autorización Android, con control de propietario y cancelación tras revocarla
+
 # v1.4.1
 
 ###### 2026/10/20

@@ -52,7 +52,7 @@
   "h3_host_integration_status": "ホスト統合状態",
   "p_host_integration_status": "AutoJs6 (build 5276 以降) では, `ai.catalog()` がインポート済みローカルモデルと設定済みオンライン profile を統一ターゲットカタログとして返し, 正確な ID, プロバイダー, モデル, ローカリティ, 設定/可用状態, 機能, 制御項目, 上限, オリジン, ローカル backend profile を含みます. `ai.ask`, `ai.chat`, `ai.stream`, `ai.session` に正確な `target` を渡します. `target` だけなら公式 3-Stone AI プラグインを選択し, `plugin: true` は宣言済みデフォルトターゲットを使います. ローカルターゲットは `cpu`, `gpu`, 利用不可の `npu` を公開できますが, オンラインターゲットにローカル実行 profile はありません. backend またはターゲットが利用不可ならフォールバックせず失敗し, ローカル/オンラインルートも自動切替しません. 完了/ストリーム応答は target, plugin, profile, reasoning, finish reason, 完全な usage, プロバイダー計測時間を公開します. 安定したエラーはプロバイダー欠落/無効, ターゲット不明/未設定/利用不可/機能不一致, backend 利用不可を区別します. `responseSchema` は構造化出力を有効にし, schema なしの `structuredJson: true` は既定の object ルートを使い, 永続セッションは全ターンで同じ target, schema, 任意 backend を固定します.",
   "h3_security": "セキュリティとプライバシー",
-  "p_security": "ユーザーが開始する推奨モデルのダウンロード, ユーザー設定済みオンラインターゲットへのリクエスト, オンライン AI 設定での GitHub 公開プリセットカタログの更新に `INTERNET` 権限を使用します. カタログ更新に API キーは不要で, 推論を呼び出さず, プラグインの有効化やローカル生成時には開始しません. 広範なストレージ権限は要求しません. モデルファイルのダウンロードは不変 HTTPS リビジョン, 固定サイズと SHA-256 を使い, 選択された SAF 保存先だけへ書き込みます; LiteRT-LM ヘッダー, サイズ, ダイジェスト, flush, fsync がすべて成功するまで完了扱いにしません. インポートは引き続きピッカー URI のみを読み, 検証済みコピーを `files/models` に書いて原子的に有効化します. Provider は AutoJs6 パッケージ, UID, 署名, target metadata, 宣言済み origin 境界も検証します. 音声機能はマイクの権限を求めず, 録音は認識アプリが行います. 認識した文字と読み上げる文字はログに記録せず, 音声入力したメッセージは入力したメッセージと同じく保存されます.",
+  "p_security": "ユーザーが開始する推奨モデルのダウンロード, ユーザー設定済みオンラインターゲットへのリクエスト, オンライン AI 設定での GitHub 公開プリセットカタログの更新に `INTERNET` 権限を使用します. カタログ更新に API キーは不要で, 推論を呼び出さず, プラグインの有効化やローカル生成時には開始しません. 広範なストレージ権限は要求しません. モデルファイルのダウンロードは不変 HTTPS リビジョン, 固定サイズと SHA-256 を使い, 選択された SAF 保存先だけへ書き込みます; LiteRT-LM ヘッダー, サイズ, ダイジェスト, flush, fsync がすべて成功するまで完了扱いにしません. インポートは引き続きピッカー URI のみを読み, 検証済みコピーを `files/models` に書いて原子的に有効化します. 元のホスト用 Provider は AutoJs6 パッケージ, UID, 署名, target metadata, 宣言済み origin 境界も検証します. 音声機能はマイクの権限を求めず, 録音は認識アプリが行います. 認識した文字と読み上げる文字はログに記録せず, 音声入力したメッセージは入力したメッセージと同じく保存されます.",
   "h3_security_limits": "動作制限",
   "security_limits": [
     "モデルのインポートには 8 GiB の厳格な上限があり, 完了後に 256 MiB 以上の空き容量が必要です.",
@@ -96,5 +96,6 @@
   "p_resource_layout": "`.python/generate_markdown.py` は JSON ソースから 10 言語の README とアプリ内 changelog を生成します. Android 文字列は各リソースディレクトリで管理されます",
   "h3_links": "リンク",
   "text_link_autojs6_docs": "AutoJs6 ドキュメント",
-  "text_link_upstream": "LiteRT-LM プロジェクト"
+  "text_link_upstream": "LiteRT-LM プロジェクト",
+  "p_runtime_access": "独立署名アプリが Android の許可後に設定済み AI モデルを利用可能, セッション所有者の検証と許可取り消し後のキャンセルに対応. `org.autojs.permission.AI_RUNTIME`: この許可はローカルモデルと保存済みオンラインアカウントを対象とし, オンライン呼び出しは有料枠を消費する場合があります. Node.js, Bun と Worker では ai.hasAccess() と ai.requestAccess() を使います."
 }

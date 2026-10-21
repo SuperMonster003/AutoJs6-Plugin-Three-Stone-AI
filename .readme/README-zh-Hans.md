@@ -135,13 +135,15 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 > 在 AutoJs6 (构建 5276 及以上) 中, `ai.catalog()` 将全部已导入本机模型与已配置在线 profile 作为统一目标目录返回, 包含精确 ID, 提供方, 模型, 本机/在线属性, 配置与可用状态, 能力, 控制项, 限制, 来源及本机 backend profile. 向 `ai.ask`, `ai.chat`, `ai.stream` 或 `ai.session` 传入精确 `target`; 仅传 `target` 会选择官方 3-Stone AI 插件, `plugin: true` 则使用其声明的默认目标. 本机目标可提供 `cpu`, `gpu` 与不可用的 `npu`, 在线目标没有本机执行 profile. backend 或目标不可用时会直接失败且不回退, 本机与在线路由也绝不自动切换. 完成及流式响应公开 target, plugin, profile, reasoning, finish reason, 完整 usage 和提供端实测耗时. 稳定错误码可区分提供方缺失或停用, 目标未知, 未配置, 不可用或能力不匹配, 以及 backend 不可用. `responseSchema` 会隐式启用结构化输出; 仅设置 `structuredJson: true` 时使用默认对象根 schema, 持久会话在所有轮次固定同一 target, schema 与可选 backend.
 
+独立签名应用在 Android 授权后可使用已配置的 AI 模型, 支持会话归属校验及撤销授权后的取消清理. `org.autojs.permission.AI_RUNTIME`: 该授权涵盖本地模型与已保存的在线账户, 在线调用可能消耗付费额度. Node.js, Bun 和 Worker 使用 ai.hasAccess() 与 ai.requestAccess().
+
 ******
 
 ### 安全性和隐私
 
 ******
 
-插件为用户主动发起的推荐模型下载, 用户配置的在线目标请求, 以及在线 AI 设置中从 GitHub 更新公开预置模型目录使用 `INTERNET` 权限. 目录更新无需 API Key, 不调用推理服务, 插件激活及本地生成不会触发目录联网. 插件不请求广泛存储权限. 推荐模型文件下载使用不可变 HTTPS 版本及固定字节数和 SHA-256, 仅写入用户选择的 SAF 位置; LiteRT-LM 文件头, 大小, 摘要, flush 与 fsync 全部通过后才算完成. 导入仍只读取系统选择器授予的 URI, 将验证副本流式写入应用私有 `files/models` 并原子激活. Provider 服务还会核验 AutoJs6 包名, 调用 UID 归属, 双方签名, 目标元数据及声明来源边界. 语音功能不申请麦克风权限, 录音由识别应用完成; 识别出的文字和朗读的文字不写入日志, 语音输入的消息在会话记录中与打字消息相同.
+插件为用户主动发起的推荐模型下载, 用户配置的在线目标请求, 以及在线 AI 设置中从 GitHub 更新公开预置模型目录使用 `INTERNET` 权限. 目录更新无需 API Key, 不调用推理服务, 插件激活及本地生成不会触发目录联网. 插件不请求广泛存储权限. 推荐模型文件下载使用不可变 HTTPS 版本及固定字节数和 SHA-256, 仅写入用户选择的 SAF 位置; LiteRT-LM 文件头, 大小, 摘要, flush 与 fsync 全部通过后才算完成. 导入仍只读取系统选择器授予的 URI, 将验证副本流式写入应用私有 `files/models` 并原子激活. 原宿主 Provider 服务还会核验 AutoJs6 包名, 调用 UID 归属, 双方签名, 目标元数据及声明来源边界. 语音功能不申请麦克风权限, 录音由识别应用完成; 识别出的文字和朗读的文字不写入日志, 语音输入的消息在会话记录中与打字消息相同.
 
 ******
 
@@ -194,6 +196,12 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 
 ******
 
+# v1.5.0
+
+###### 2026/10/22
+
+* `新增` 独立签名应用在 Android 授权后可使用已配置的 AI 模型, 支持会话归属校验及撤销授权后的取消清理
+
 # v1.4.1
 
 ###### 2026/10/20
@@ -210,21 +218,6 @@ AI Provider V2 通过分页目录统一公开 `local:*` 与 `profile:*` 目标. 
 * `新增` 长按麦克风进入语音对话: 说完自动发送, 回复读完后自动再听. 输入框上方的状态条显示当前状态, 可随时退出; 朗读时点状态条可打断并立刻说下一句
 * `新增` 可以经 3-Macaw Speech 的数字助理提问: 长按电源键说话后点 "3-Stone AI", 会在新对话中立即回答并读出来. 10 秒内再次这样提问时只填入输入框, 防止被误用
 * `新增` 设置新增 "语音" 分组: 自动朗读回复, 优先使用 3-Macaw Speech, 以及听写与朗读当前由谁提供的说明
-
-# v1.3.0
-
-###### 2026/10/15
-
-* `新增` 统一独立设置的平面分组, 行规格与居中圆角对话框. 语言, 夜间模式, 主题色与启动器图标均在确定后生效, 取消不改变已保存的设置. 主题色默认跟随 AutoJs6, 提供统一色板, HEX/RGB 输入与局部预览; 中性底色保持稳定, 控件遵循所选主题. 启动器默认自适应自动, 升级保留明确保存的选择.
-* `修复` 经 OpenAI 兼容网关调用 Claude 或 Gemini 等模型时, 无参数工具的原生调用会以空字符串而非 "{}" 作为 arguments 流出, 会话把它判为无效响应并以 ONLINE_INVALID_RESPONSE 结束 (3-Stove Agent 在 AIGoCode 网关上的 Claude Code Ex 首个工具轮与 Gemini Ex 的一轮均因此失败); 现在空白 arguments 按空对象处理, 回放给模型的助手消息也使用规范化后的形式
-* `修复` 原生工具续轮此前从首次请求的输出 token 上限中逐轮扣除已用输出, 长任务在约十轮后因上限耗尽而以 ONLINE_INVALID_RESPONSE 结束 (3-Stove Agent 的计算器用例在 Claude Code Ex 与 Gemini Ex 上均于第 9 到 14 次调用失败); 现在每个续轮都沿用完整的上限, 总量由调用方的任务预算约束, 与 2026-09-29 续轮超时重置的决定一致
-* `修复` Gemini GenerateContent 协议把工具声明与 responseSchema 中的 JSON Schema 原样发送, 官方接口对 additionalProperties 等它不认识的关键字直接返回 HTTP 400 ("Unknown name additionalProperties"), 3-Stove Agent 的每个原生工具任务都在第一次调用时以 ONLINE_REQUEST_REJECTED 失败; 现在只保留 Gemini 支持的子集 (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default 等), 调用方仍按完整 Schema 校验参数与回复
-* `修复` 补齐模型采样和在线提供方设置的多语言翻译
-* `修复` 阿拉伯语界面中, 3-Stone AI, 4-bit 与以数字开头的模型修订号不再被倒序或拆开显示 (例如 Stone AI-3, bit-4)
-* `优化` 关于页面保留图标圆角描边容器, 透明内部透出与容器外侧一致的页面底色; 启动器图标选项从顶部展示并采用较小的说明文字.
-* `优化` 启动器与插件中心图标按统一视觉尺寸标准调整, 插件中心采用透明背景和黑白或中性灰阶图案
-* `优化` 插件中心图标采用统一工作台调整后的尺寸, 位置, 亮暗图稿与圆形底色, 保留可重建原稿和参数
-* `优化` Android 系统应用信息图标与图标工作台共用图稿和亮暗底色, 保留插件中心透明图稿及现有启动器选项
 
 ##### 更多版本
 

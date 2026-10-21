@@ -149,12 +149,12 @@ internal class RemoteThreeStoneAiSession(
     }
 
     override fun cancel() {
-        callerVerifier.enforceSessionOwner(ownerUid)
+        callerVerifier.enforceSessionCleanup(ownerUid)
         activeTurn.get()?.cancelByUser() ?: terminateSilently(cancelBackend = true)
     }
 
     override fun close() {
-        callerVerifier.enforceSessionOwner(ownerUid)
+        callerVerifier.enforceSessionCleanup(ownerUid)
         terminateSilently(cancelBackend = true)
     }
 

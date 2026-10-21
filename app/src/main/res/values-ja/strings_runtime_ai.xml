@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_runtime_permission_description">このアプリに 3-Stone AI のローカルモデルと保存済みオンライン AI アカウントの使用を許可します. オンライン呼び出しは有料枠を消費する場合があります.</string>
+    <string name="ai_runtime_permission_label">設定済み AI モデルの使用</string>
+</resources>

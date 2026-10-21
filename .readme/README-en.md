@@ -135,13 +135,15 @@ Host build 5276 or later and Android 7.0 or later are required. Build outputs in
 
 > In AutoJs6 (build 5276 and later), `ai.catalog()` returns every imported local model and configured online profile as one target catalog, including exact ID, provider, model, locality, configuration, availability, capabilities, controls, limits, origin, and local backend profiles. Pass an exact `target` to `ai.ask`, `ai.chat`, `ai.stream`, or `ai.session`; `target` alone selects the official 3-Stone AI plugin, while `plugin: true` uses its declared default target. Local targets may expose `cpu`, `gpu`, and unavailable `npu`; online targets have no local execution profile. An unavailable backend or target fails without fallback, and local/online routes never switch automatically. Completed and streamed responses expose target, plugin, profile, reasoning, finish reason, complete usage, and provider-measured duration. Stable errors distinguish a missing or disabled provider, an unknown, unconfigured, unavailable, or capability-mismatched target, and an unavailable backend. `responseSchema` implies structured output; `structuredJson: true` without a schema uses a default object-root schema, and persistent sessions fix the same target, schema, and optional backend for every turn.
 
+Independently signed applications can use configured AI models after Android permission approval, with session ownership and cancellation after revocation. `org.autojs.permission.AI_RUNTIME`: This grant covers local models and saved online accounts. Online calls may consume paid quota. Use ai.hasAccess() and ai.requestAccess() in Node.js, Bun or Workers.
+
 ******
 
 ### Security and privacy
 
 ******
 
-The plugin requests `INTERNET` for user-triggered recommended-model downloads, requests to a user-configured online target, and public model-preset catalog updates from GitHub in Online AI settings. Catalog updates need no API key, make no inference calls, and never start during plugin activation or local generation. It requests no broad storage permission. Recommended model downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. Provider services also verify the AutoJs6 package name, calling UID ownership, matching signatures, target metadata, and declared origin boundaries. Voice features do not ask for the microphone permission; the recognition app records. Recognized and spoken text is not logged, and dictated messages are stored like typed ones.
+The plugin requests `INTERNET` for user-triggered recommended-model downloads, requests to a user-configured online target, and public model-preset catalog updates from GitHub in Online AI settings. Catalog updates need no API key, make no inference calls, and never start during plugin activation or local generation. It requests no broad storage permission. Recommended model downloads use immutable HTTPS revisions and pinned byte counts and SHA-256 digests, write only to the SAF location chosen by the user, and are never treated as complete until the LiteRT-LM header, size, digest, flush, and fsync all pass. Import still reads only a system-picker URI, streams a verified copy into app-private `files/models`, and activates it atomically. The original host provider service also verifies the AutoJs6 package name, calling UID ownership, matching signatures, target metadata, and declared origin boundaries. Voice features do not ask for the microphone permission; the recognition app records. Recognized and spoken text is not logged, and dictated messages are stored like typed ones.
 
 ******
 
@@ -194,6 +196,12 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.5.0
+
+###### 2026/10/22
+
+* `Feature` Independently signed applications can use configured AI models after Android permission approval, with session ownership and cancellation after revocation
+
 # v1.4.1
 
 ###### 2026/10/20
@@ -210,21 +218,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Feature` Long press the microphone for a voice conversation: what you say is sent at once, and the app listens again after the reply has been read. A status bar above the input box shows what is happening and lets you leave at any time; while a reply is read, tap it to interrupt and speak right away
 * `Feature` Ask through the 3-Macaw Speech digital assistant: hold the power button, speak and tap "3-Stone AI" to get the answer in a new conversation, read aloud. Another such question within 10 seconds only fills the input box, so it cannot be misused
 * `Feature` Settings have a new "Voice" group: automatic reading, "Prefer 3-Macaw Speech" and which app currently dictates and reads
-
-# v1.3.0
-
-###### 2026/10/15
-
-* `Feature` Unify standalone settings with flat groups, consistent rows and centered rounded dialogs. Language, night mode, theme color and launcher icon changes apply only after OK; Cancel leaves saved values unchanged. Theme color follows AutoJs6 by default, with a shared palette, HEX/RGB input and a local preview. Neutral surfaces keep stable colors and controls follow the selected theme. The launcher default is adaptive automatic, while upgrades preserve explicit saved choices.
-* `Fix` Through an OpenAI-compatible gateway, Claude or Gemini models stream an empty string instead of "{}" as the arguments of a tool without parameters; the session rejected it as an invalid response and ended with ONLINE_INVALID_RESPONSE (3-Stove Agent's first Claude Code Ex tool round and one Gemini Ex round on the AIGoCode gateway failed this way). Blank arguments are now treated as an empty object, and the assistant message replayed to the model carries the normalized form
-* `Fix` Native tool continuation rounds used to subtract the output tokens of earlier rounds from the first request's ceiling, so long turns ended with ONLINE_INVALID_RESPONSE once the ceiling ran out after about ten rounds (3-Stove Agent's calculator case failed between the 9th and 14th call on both Claude Code Ex and Gemini Ex). Every continuation now keeps the full ceiling and the caller's task budget bounds the total, matching the 2026-09-29 decision to reset the continuation timeout
-* `Fix` The Gemini GenerateContent protocol sent tool declarations and the responseSchema with their JSON Schema untouched, and the official API answers HTTP 400 ("Unknown name additionalProperties") for keywords it does not know, so every native tool task of 3-Stove Agent failed at its first call with ONLINE_REQUEST_REJECTED. Only the subset Gemini supports (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default and similar) is sent now; callers keep validating arguments and replies against the full schema
-* `Fix` Complete translations for model sampling and online provider settings
-* `Fix` In the Arabic interface, 3-Stone AI, 4-bit and model revisions that start with a digit no longer appear reversed or split (such as Stone AI-3 and bit-4)
-* `Improvement` Keep the About icon in a rounded frame while its transparent interior reveals the surrounding page background. Show the launcher icon choices from the top with smaller explanatory notes.
-* `Improvement` Consistent visual sizing for launcher and Plugin Center icons, with transparent backgrounds and neutral black, white or grayscale artwork
-* `Improvement` Plugin Center icons use the sizes, positions, light and dark artwork, and circular backgrounds adjusted in Icon Studio, retaining reproducible sources and parameters
-* `Improvement` Android App info icons share Icon Studio artwork and light/dark backgrounds while preserving transparent Plugin Center artwork and existing launcher choices
 
 ##### For more releases
 

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_runtime_permission_description">Allow this app to use local models and saved online AI accounts in 3-Stone AI. Online calls may consume paid account quota.</string>
+    <string name="ai_runtime_permission_label">Use configured AI models</string>
+</resources>

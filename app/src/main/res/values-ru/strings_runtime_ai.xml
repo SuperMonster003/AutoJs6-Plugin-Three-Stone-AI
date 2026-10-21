@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_runtime_permission_description">Разрешить приложению использовать локальные модели и сохраненные сетевые учетные записи ИИ в 3-Stone AI. Сетевые запросы могут расходовать платную квоту.</string>
+    <string name="ai_runtime_permission_label">Использовать настроенные модели ИИ</string>
+</resources>

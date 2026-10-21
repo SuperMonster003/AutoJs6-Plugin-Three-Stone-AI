@@ -135,13 +135,15 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 
 > 在 AutoJs6 (組建 5276 及以上) 中, `ai.catalog()` 將全部已匯入本機模型與已設定線上 profile 作為統一目標目錄回傳, 包含精確 ID, 提供者, 模型, 本機/線上屬性, 設定與可用狀態, 能力, 控制項, 限制, 來源及本機 backend profile. 向 `ai.ask`, `ai.chat`, `ai.stream` 或 `ai.session` 傳入精確 `target`; 僅傳 `target` 會選擇官方 3-Stone AI 外掛, `plugin: true` 則使用其宣告的預設目標. 本機目標可提供 `cpu`, `gpu` 與不可用的 `npu`, 線上目標沒有本機執行 profile. backend 或目標不可用時會直接失敗且不回退, 本機與線上路由也絕不自動切換. 完成及串流回應公開 target, plugin, profile, reasoning, finish reason, 完整 usage 和提供端實測耗時. 穩定錯誤碼可區分提供者缺失或停用, 目標未知, 未設定, 不可用或能力不符, 以及 backend 不可用. `responseSchema` 會隱式啟用結構化輸出; 僅設定 `structuredJson: true` 時使用預設物件根 schema, 持久工作階段在所有輪次固定同一 target, schema 與可選 backend.
 
+獨立簽章應用程式在 Android 授權後可使用已設定的 AI 模型, 支援工作階段歸屬驗證及撤銷授權後的取消清理. `org.autojs.permission.AI_RUNTIME`: 此授權涵蓋本機模型及已儲存的線上帳戶, 線上呼叫可能消耗付費額度. Node.js, Bun 和 Worker 使用 ai.hasAccess() 與 ai.requestAccess().
+
 ******
 
 ### 安全性和隱私
 
 ******
 
-外掛為使用者主動發起的推薦模型下載, 使用者設定的線上目標請求, 以及線上 AI 設定中從 GitHub 更新公開預設模型目錄使用 `INTERNET` 權限. 目錄更新不需 API Key, 不呼叫推論服務, 外掛啟用及本機生成不會觸發目錄連網. 外掛不要求廣泛儲存權限. 推薦模型檔案下載使用不可變 HTTPS 版本及固定位元組數與 SHA-256, 僅寫入使用者選擇的 SAF 位置; LiteRT-LM 檔頭, 大小, 摘要, flush 與 fsync 全部通過後才算完成. 匯入仍只讀取系統選擇器授予的 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬, 雙方簽章, 目標中繼資料及宣告來源邊界. 語音功能不要求麥克風權限, 錄音由辨識應用程式完成; 辨識出的文字與朗讀的文字不寫入記錄檔, 語音輸入的訊息在會話記錄中與打字訊息相同.
+外掛為使用者主動發起的推薦模型下載, 使用者設定的線上目標請求, 以及線上 AI 設定中從 GitHub 更新公開預設模型目錄使用 `INTERNET` 權限. 目錄更新不需 API Key, 不呼叫推論服務, 外掛啟用及本機生成不會觸發目錄連網. 外掛不要求廣泛儲存權限. 推薦模型檔案下載使用不可變 HTTPS 版本及固定位元組數與 SHA-256, 僅寫入使用者選擇的 SAF 位置; LiteRT-LM 檔頭, 大小, 摘要, flush 與 fsync 全部通過後才算完成. 匯入仍只讀取系統選擇器授予的 URI, 將驗證副本串流寫入私人 `files/models` 並原子啟用. 原宿主 Provider 服務也會核驗 AutoJs6 套件名稱, 呼叫 UID 歸屬, 雙方簽章, 目標中繼資料及宣告來源邊界. 語音功能不要求麥克風權限, 錄音由辨識應用程式完成; 辨識出的文字與朗讀的文字不寫入記錄檔, 語音輸入的訊息在會話記錄中與打字訊息相同.
 
 ******
 
@@ -194,6 +196,12 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 
 ******
 
+# v1.5.0
+
+###### 2026/10/22
+
+* `新增` 獨立簽章應用程式在 Android 授權後可使用已設定的 AI 模型, 支援工作階段歸屬驗證及撤銷授權後的取消清理
+
 # v1.4.1
 
 ###### 2026/10/20
@@ -210,21 +218,6 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 * `新增` 長按麥克風進入語音對話: 說完自動傳送, 回覆讀完後自動再聽. 輸入框上方的狀態列顯示目前狀態, 可隨時結束; 朗讀時輕觸狀態列可打斷並立即說下一句
 * `新增` 可以透過 3-Macaw Speech 的數位助理提問: 長按電源鍵說話後輕觸 "3-Stone AI", 會在新對話中立即回答並讀出來. 10 秒內再次這樣提問時只會填入輸入框, 防止被誤用
 * `新增` 設定新增 "語音" 群組: 自動朗讀回覆, 優先使用 3-Macaw Speech, 以及聽寫與朗讀目前由誰提供的說明
-
-# v1.3.0
-
-###### 2026/10/15
-
-* `新增` 統一獨立設定的平面分組, 列規格與置中圓角對話框. 語言, 夜間模式, 主題色與啟動器圖示均在確定後生效, 取消不改變已儲存的設定. 主題色預設跟隨 AutoJs6, 提供統一色盤, HEX/RGB 輸入與局部預覽; 中性底色保持穩定, 控制項遵循所選主題. 啟動器預設自適應自動, 升級保留明確儲存的選擇.
-* `修復` 經 OpenAI 相容閘道呼叫 Claude 或 Gemini 等模型時, 無參數工具的原生呼叫會以空字串而非 "{}" 作為 arguments 串流輸出, 工作階段把它判為無效回應並以 ONLINE_INVALID_RESPONSE 結束 (3-Stove Agent 在 AIGoCode 閘道上的 Claude Code Ex 首個工具輪與 Gemini Ex 的一輪均因此失敗); 現在空白 arguments 按空物件處理, 回放給模型的助理訊息也使用正規化後的形式
-* `修復` 原生工具續輪此前從首次請求的輸出 token 上限中逐輪扣除已用輸出, 長任務在約十輪後因上限耗盡而以 ONLINE_INVALID_RESPONSE 結束 (3-Stove Agent 的計算機用例在 Claude Code Ex 與 Gemini Ex 上均於第 9 到 14 次呼叫失敗); 現在每個續輪都沿用完整的上限, 總量由呼叫方的任務預算約束, 與 2026-09-29 續輪逾時重設的決定一致
-* `修復` Gemini GenerateContent 協定把工具宣告與 responseSchema 中的 JSON Schema 原樣送出, 官方介面對 additionalProperties 等它不認識的關鍵字直接回傳 HTTP 400 ("Unknown name additionalProperties"), 3-Stove Agent 的每個原生工具任務都在第一次呼叫時以 ONLINE_REQUEST_REJECTED 失敗; 現在只保留 Gemini 支援的子集 (type, enum, properties, required, items, anyOf, minimum / maximum, minLength / maxLength, default 等), 呼叫方仍按完整 Schema 校驗參數與回覆
-* `修復` 補齊模型取樣及線上供應商設定的多語言翻譯
-* `修復` 阿拉伯語介面中, 3-Stone AI, 4-bit 與以數字開頭的模型修訂號不再被倒序或拆開顯示 (例如 Stone AI-3, bit-4)
-* `優化` 關於頁面保留圖示圓角描邊容器, 透明內部透出與容器外側一致的頁面底色; 啟動器圖示選項從頂部顯示並採用較小的說明文字.
-* `優化` 啟動器與外掛中心圖示按統一視覺尺寸標準調整, 外掛中心採用透明背景和黑白或中性灰階圖案
-* `優化` 外掛程式中心圖示採用統一工作台調整後的尺寸, 位置, 明暗圖稿與圓形底色, 保留可重建原稿和參數
-* `優化` Android 系統應用程式資訊圖示與圖示工作台共用圖稿及明暗底色, 保留外掛程式中心透明圖稿與現有啟動器選項
 
 ##### 更多版本
 

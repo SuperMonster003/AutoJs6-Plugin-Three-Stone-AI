@@ -32,7 +32,6 @@ open class ThreeStoneAiProviderService : Service() {
     private lateinit var callbackLane: SerialCallbackLane
     private lateinit var targetPager: TargetPager
     private lateinit var aiBackend: AiBackend
-    private val activeSession = AtomicReference<RemoteThreeStoneAiSession?>()
     private val sessions = ConcurrentHashMap.newKeySet<RemoteThreeStoneAiSession>()
 
     override fun onCreate() {
@@ -51,11 +50,13 @@ open class ThreeStoneAiProviderService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
-        activeSession.set(null)
         // ConcurrentHashMap's weakly consistent traversal tolerates serviceDestroyed() removing
         // itself through onFinished. Kotlin's size-based toList() does not: a concurrent removal
         // can leave it calling next() after the iterator has been exhausted.
-        sessions.forEach(RemoteThreeStoneAiSession::serviceDestroyed)
+        sessions.forEach { session ->
+            activeSession.compareAndSet(session, null)
+            session.serviceDestroyed()
+        }
         sessions.clear()
         worker.shutdownNow()
         targetPager.close()
@@ -203,4 +204,9 @@ open class ThreeStoneAiProviderService : Service() {
     }
 
     private data class TargetListFailure(val code: Int, val message: String)
+
+    private companion object {
+        // Both permission entries run in :provider and retain the existing single-session policy.
+        val activeSession = AtomicReference<RemoteThreeStoneAiSession?>()
+    }
 }

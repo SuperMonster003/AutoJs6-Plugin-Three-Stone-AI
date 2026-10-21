@@ -54,7 +54,6 @@ open class ThreeStoneAiProviderService : Service() {
         // itself through onFinished. Kotlin's size-based toList() does not: a concurrent removal
         // can leave it calling next() after the iterator has been exhausted.
         sessions.forEach { session ->
-            activeSession.compareAndSet(session, null)
             RuntimeAccessSessions.remove(session)
             session.serviceDestroyed()
         }

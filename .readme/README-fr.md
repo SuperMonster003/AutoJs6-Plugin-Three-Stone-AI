@@ -201,6 +201,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 ###### 2026/10/22
 
 * `Fonctionnalité` Les applications signées séparément demandent un accès IA explicite dans le module, lié à leur identité et installation; la révocation dans les réglages arrête les requêtes actives
+* `Correctif` Les requêtes AI suivantes échouaient lorsque l'arrêt du service abandonnait la fermeture d'une session
 
 # v1.4.1
 

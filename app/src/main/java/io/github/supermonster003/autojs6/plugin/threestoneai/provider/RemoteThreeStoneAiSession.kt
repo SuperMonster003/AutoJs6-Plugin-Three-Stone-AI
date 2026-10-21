@@ -75,7 +75,7 @@ internal class RemoteThreeStoneAiSession(
     private val callbackDeathRecipient = IBinder.DeathRecipient(::callbackDied)
     private val callbackDeathLinked = AtomicBoolean(false)
     private val closed = AtomicBoolean(false)
-    private val cleanupClaimed = AtomicBoolean(false)
+    private val cleanup = DeferredSessionCleanup(worker)
     private val backendSession = AtomicReference<AiBackendSession?>()
     private val activeTurn = AtomicReference<Turn?>()
     private val fixedConfiguration = AtomicReference<FixedConfiguration?>()
@@ -393,7 +393,7 @@ internal class RemoteThreeStoneAiSession(
         cancelBackend: Boolean,
         closeBackendDirectly: Boolean = false,
     ) {
-        if (!closed.compareAndSet(false, true) && cleanupClaimed.get()) return
+        if (!closed.compareAndSet(false, true) && cleanup.isScheduled && !closeBackendDirectly) return
         activeTurn.getAndSet(null)?.dispose(cancelWorkers = true)
         initialDescriptors.close()
         cleanupSession(cancelBackend, closeBackendDirectly)
@@ -502,9 +502,8 @@ internal class RemoteThreeStoneAiSession(
     }
 
     private fun cleanupSession(cancelBackend: Boolean, closeBackendDirectly: Boolean = false) {
-        if (!cleanupClaimed.compareAndSet(false, true)) return
         unlinkCallbackDeath()
-        val action = {
+        cleanup.schedule(directly = closeBackendDirectly || backendSession.get() == null) {
             val activeBackend = backendSession.getAndSet(null)
             if (cancelBackend) {
                 runCatching { activeBackend?.cancelAndClose() }
@@ -512,15 +511,6 @@ internal class RemoteThreeStoneAiSession(
                 runCatching { activeBackend?.close() }
             }
             onFinished(this)
-        }
-        if (closeBackendDirectly || backendSession.get() == null) {
-            action()
-            return
-        }
-        try {
-            worker.execute(action)
-        } catch (_: RejectedExecutionException) {
-            Thread(action, "three-stone-ai-backend-close").apply { isDaemon = true }.start()
         }
     }
 

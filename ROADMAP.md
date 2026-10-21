@@ -356,3 +356,8 @@ ConversationContextCoordinator
 | `VOICE_COMMAND` 入口被其他应用滥用, 消耗模型额度 | D37: 总是可见, 新建对话, 10 s 限速; 调用方必须在前台才能启动界面 (Android 10+) |
 | 常驻唤醒与 Macaw 助理 / 弹层争用唯一的麦克风 | Macaw D57 临时接管并静默唤醒会话, 结束后自动继续, 对 Stone 透明; Stone 自己的 Binder 听写不在其范围, 按 D32 先暂停再重开; P6-6 联调 |
 | 回退 | P5 / P6 各条目独立提交; 语音入口全部由可解析判定控制, 关闭 "优先使用 3-Macaw Speech" 即回到系统默认行为 |
+
+
+## 2026-10-22 Runtime AI core
+
+Node.js, Bun and Worker use the existing native provider through a separate entry for independently signed applications. The normal AI_RUNTIME entry permission is supplemented by explicit per-app consent bound to package, UID, signer and installation. Settings can revoke access and interrupt active requests. Both entries share provider admission. Service destruction takes over queued session cleanup exactly once before discarding executor work. The original host signature entry remains. Exact source, device/package acceptance and restoration are recorded in the host docs/dev/runtime-ai-core-2026-10-22.md report. AI Agent runtime parity remains separate work.

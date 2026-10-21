@@ -9,6 +9,7 @@
 ###### 2026/10/22
 
 * `Feature` Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests
+* `Fix` Subsequent AI requests failed when service shutdown discarded a queued session cleanup
 
 # v1.4.1
 

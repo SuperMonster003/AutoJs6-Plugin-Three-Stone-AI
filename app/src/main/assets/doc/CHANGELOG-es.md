@@ -9,6 +9,7 @@
 ###### 2026/10/22
 
 * `Función` Las aplicaciones con firma independiente solicitan acceso a IA en el complemento, ligado a su identidad e instalación; revocarlo en los ajustes detiene las solicitudes activas
+* `Corrección` Las solicitudes AI siguientes fallaban si el servicio se detenía antes de cerrar la sesión anterior
 
 # v1.4.1
 

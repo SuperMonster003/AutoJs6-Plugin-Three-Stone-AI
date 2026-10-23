@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": 13,
-  "updatedAtEpochMillis": 1792484896870,
+  "revision": 14,
+  "updatedAtEpochMillis": 1792744154872,
   "providers": {
     "openai": {
       "defaultModelId": "gpt-5.6-sol",
@@ -24,12 +24,9 @@
         "gpt-5",
         "gpt-4o-mini",
         "gpt-4o",
-        "gpt-4.1-nano",
         "gpt-4.1-mini",
         "gpt-4.1",
-        "gpt-4-turbo",
-        "gpt-4",
-        "o4-mini"
+        "o3"
       ]
     },
     "anthropic": {
@@ -121,11 +118,11 @@
         "z-ai/glm-5.3-flash",
         "z-ai/glm-5.3",
         "z-ai/glm-5.2",
+        "minimax/minimax-m3.1-flash",
         "minimax/minimax-m3",
         "minimax/minimax-m2.7",
         "minimax/minimax-m2.5",
         "minimax/minimax-m2-her",
-        "minimax/minimax-m2.1",
         "bytedance-seed/seed-2-1-turbo",
         "bytedance-seed/seed-2.0-code",
         "bytedance-seed/seed-2.0-lite",

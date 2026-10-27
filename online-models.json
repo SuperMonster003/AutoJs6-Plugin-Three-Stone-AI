@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
-  "revision": 15,
-  "updatedAtEpochMillis": 1792829079484,
+  "revision": 16,
+  "updatedAtEpochMillis": 1793091343361,
   "providers": {
     "openai": {
       "defaultModelId": "gpt-5.6-sol",
       "models": [
+        "gpt-6.1-terra",
         "gpt-6.1-sol",
         "gpt-6-sol",
         "gpt-6-luna",
@@ -68,9 +69,9 @@
     "openrouter": {
       "defaultModelId": "openai/gpt-5.6-sol",
       "models": [
+        "openai/gpt-6.1-terra",
         "openai/gpt-6.1-sol",
         "openai/gpt-6-luna",
-        "openai/gpt-6-sol",
         "openai/gpt-6-astra",
         "openai/gpt-5.6-sol",
         "anthropic/claude-haiku-5.5",
@@ -149,7 +150,6 @@
         "nvidia/nemotron-3-ultra-550b-a55b",
         "nvidia/nemotron-3-super-120b-a12b",
         "ibm-granite/granite-4.2-8b",
-        "ibm-granite/granite-4.0-h-micro",
         "perplexity/sonar-pro-search",
         "perplexity/sonar-reasoning-pro",
         "perplexity/sonar-pro",

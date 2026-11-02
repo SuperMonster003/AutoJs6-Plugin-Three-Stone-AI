@@ -264,7 +264,7 @@ internal class OnlineAiSession(
             if (!committed) return
             releaseTurn()
             val statistics = progress.statistics(rawRequest.reportUsage, startedNanos)
-            if (calls.isEmpty()) delivery.complete(statistics) else delivery.tools(calls, statistics)
+            if (calls.isEmpty()) delivery.complete(statistics, progress.truncated) else delivery.tools(calls, statistics)
         } catch (error: Exception) {
             if (!isStopped()) {
                 releaseTurn()
@@ -310,6 +310,7 @@ internal class OnlineAiSession(
                 val event = reader.readEvent() ?: break
                 val chunk = adapter.parseEvent(event, progress.tools)
                 if (chunk.contentSeen) progress.recordContent()
+                if (chunk.truncated) progress.recordTruncation()
                 chunk.usage?.let(progress::recordUsage)
                 if (chunk.text.isNotEmpty()) {
                     progress.append(chunk.text)
@@ -331,6 +332,7 @@ internal class OnlineAiSession(
     ) {
         val response = adapter.parseJson(body, progress.tools)
         response.usage?.let(progress::recordUsage)
+        if (response.truncated) progress.recordTruncation()
         if (response.text.isNotEmpty()) {
             progress.append(response.text)
             delivery.text(response.text)
@@ -417,10 +419,10 @@ internal class OnlineAiSession(
             }
         }
 
-        fun complete(statistics: GenerationStatistics?) {
+        fun complete(statistics: GenerationStatistics?, truncated: Boolean) {
             if (!terminal.compareAndSet(false, true)) return
             callbackGate.runCallback {
-                if (!isStopped()) listener.onCompleted(statistics)
+                if (!isStopped()) listener.onCompleted(statistics, truncated)
             }
         }
 
@@ -448,6 +450,8 @@ internal class OnlineAiSession(
         private var cacheWriteInputTokens: Long? = null
         private var cacheEligibleInputTokens: Long? = null
         var contentSeen = false
+            private set
+        var truncated = false
             private set
 
         fun append(delta: String) {
@@ -478,6 +482,10 @@ internal class OnlineAiSession(
 
         fun recordContent() {
             contentSeen = true
+        }
+
+        fun recordTruncation() {
+            truncated = true
         }
 
         fun text(): String = output.toString()

@@ -361,3 +361,19 @@ ConversationContextCoordinator
 ## 2026-10-22 Runtime AI core
 
 Node.js, Bun and Worker use the existing native provider through a separate entry for independently signed applications. The normal AI_RUNTIME entry permission is supplemented by explicit per-app consent bound to package, UID, signer and installation. Settings can revoke access and interrupt active requests. Both entries share provider admission. Service destruction takes over queued session cleanup exactly once before discarding executor work. The original host signature entry remains. Exact source, device/package acceptance and restoration are recorded in the host docs/dev/runtime-ai-core-2026-10-22.md report. A single successor may wait while a terminal session releases its native backend; its original timeout and cancellation remain active, and concurrent inference stays rejected. AI Agent runtime parity remains separate work.
+
+## 2026-11-02 Anthropic 输出上限与截断标注
+
+维护者在 XQ-DQ72 上用 Anthropic 官方接口聊天时回复提前结束. 根因 (代码核实): Anthropic 适配器在 "最大输出 token" 不限制时固定发送 max_tokens=1024 (OpenAI 兼容与 Gemini 适配器则省略该字段), 且 message_delta 的 stop_reason=max_tokens 被当作正常结束; 当前 Claude 模型默认开启自适应思考并计入 max_tokens, 所以普通问答也会在约 1024 个 token 处被静默截断, 思考占满额度时则报 "响应无效".
+
+决策:
+
+1. Anthropic 默认 max_tokens 改为 16384: 请求始终流式, 该值与 64 KiB 传输输出上限相称; 不直接取 128K 模型上限, 以免自定义 base URL 后面的小模型返回 400. 用户仍可在生成设置里填写明确上限.
+2. 三种协议的输出上限结束 (Anthropic max_tokens / model_context_window_exceeded, OpenAI finish_reason=length, Gemini MAX_TOKENS) 统一作为 truncated 经 GenerationListener.onCompleted(statistics, truncated) 上报; 聊天页在消息下方标注 "已达输出上限" 并弹出提示, 标注随会话历史持久化 (历史格式 v5, 仍可读取 1.4.x 写出的 v4).
+3. 连接测试的 max_tokens 从 8 提高到 1024, 避免默认开启思考的模型把额度全部用于思考而被判为响应无效.
+
+未改, 待维护者决定:
+
+- Binder 路径 (宿主脚本) 仍只在字节上限处报 AiFinishReason.LENGTH, 提供方 max_tokens 截断暂不改写 finishReason: 宿主对 LENGTH 会关闭持久会话, 改动影响 3-Stove Agent 等调用方.
+- 自定义采样参数 (temperature / top_k / top_p) 在 Claude 4.7+ 上返回 400, 需要与 effort 选项一起设计.
+- effort / fast 模式 / 文件附件 / 设置页重组 / 生成跨越 Activity 重建等需求另行立项.

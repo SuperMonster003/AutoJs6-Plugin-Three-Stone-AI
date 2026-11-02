@@ -101,6 +101,7 @@
     <string name="chat_generation_failure_unknown">Выбранная цель не смогла выполнить этот запрос.</string>
     <string name="chat_generation_settings_help">Temperature должна быть не меньше 0, Top K должен быть положительным целым, а Top P должен быть от 0 до 1.</string>
     <string name="chat_generation_stopped">Генерация остановлена</string>
+    <string name="chat_generation_truncated">Достигнут лимит вывода</string>
     <string name="chat_history_clear_all">Очистить все</string>
     <string name="chat_history_clear_message">Удалить все сохраненные разговоры? Это действие нельзя отменить.</string>
     <string name="chat_history_clear_title">Очистить историю разговоров?</string>

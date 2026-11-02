@@ -101,6 +101,7 @@
     <string name="chat_generation_failure_unknown">選択したターゲットはこのリクエストを完了できませんでした.</string>
     <string name="chat_generation_settings_help">Temperature は 0 以上, Top K は正の整数, Top P は 0 から 1 の範囲にしてください.</string>
     <string name="chat_generation_stopped">生成を停止しました</string>
+    <string name="chat_generation_truncated">出力上限に達しました</string>
     <string name="chat_history_clear_all">すべて消去</string>
     <string name="chat_history_clear_message">保存済みの会話をすべて削除しますか? この操作は元に戻せません.</string>
     <string name="chat_history_clear_title">会話履歴を消去しますか?</string>

@@ -35,6 +35,8 @@ internal data class ChatMessage(
     val status: ChatMessageStatus = ChatMessageStatus.COMPLETE,
     val usage: ChatMessageUsage? = null,
     val target: ConversationTargetSnapshot? = null,
+    /** The provider stopped this completed reply at its output-token limit, so the text is incomplete. */
+    val truncated: Boolean = false,
 ) {
     init {
         require(id > 0L)
@@ -46,6 +48,9 @@ internal data class ChatMessage(
         }
         require((role == ChatMessageRole.ASSISTANT) == (target != null)) {
             "Every assistant message, and only an assistant message, must carry its actual target"
+        }
+        require(!truncated || (role == ChatMessageRole.ASSISTANT && status == ChatMessageStatus.COMPLETE)) {
+            "Only complete assistant messages may be marked as truncated"
         }
     }
 }

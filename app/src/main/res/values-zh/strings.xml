@@ -134,6 +134,7 @@
     <string name="chat_generation_failure_unknown">所选目标无法完成此请求.</string>
     <string name="chat_generation_settings_help">Temperature 必须不小于 0, Top K 必须为正整数, Top P 必须在 0 至 1 之间.</string>
     <string name="chat_generation_stopped">已停止生成</string>
+    <string name="chat_generation_truncated">已达输出上限</string>
     <string name="chat_history_clear_all">清空全部</string>
     <string name="chat_history_clear_message">删除所有已保存的会话? 此操作无法撤销.</string>
     <string name="chat_history_clear_title">清空会话历史?</string>

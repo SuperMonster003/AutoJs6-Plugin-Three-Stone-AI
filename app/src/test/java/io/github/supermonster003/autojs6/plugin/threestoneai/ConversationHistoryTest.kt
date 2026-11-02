@@ -1,6 +1,8 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import java.nio.ByteBuffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -19,6 +21,7 @@ class ConversationHistoryTest {
                 "**Answer**",
                 usage = ChatMessageUsage(12, 34, 567),
                 target = assistantTarget,
+                truncated = true,
             ),
         )
         val contextState = contextState(messages)
@@ -43,6 +46,7 @@ class ConversationHistoryTest {
         assertEquals(listOf(original), restored)
         assertEquals(AiTargetLocality.REMOTE, restored.single().target?.locality)
         assertEquals(assistantTarget, restored.single().messages.last().target)
+        assertTrue(restored.single().messages.last().truncated)
         assertEquals(contextState, restored.single().contextState)
     }
 
@@ -56,6 +60,65 @@ class ConversationHistoryTest {
                 ConversationHistoryCodec.decode(encoded)
             }
         }
+    }
+
+    @Test
+    fun `codec reads the published version 4 layout without the truncation flag`() {
+        // Byte for byte what 1.4.x wrote: a conversation without a target snapshot, one user and one
+        // assistant message with usage and target, and an empty context state.
+        val legacy = ByteArrayOutputStream().also { bytes ->
+            DataOutputStream(bytes).use { output ->
+                output.writeInt(0x33534143)
+                output.writeInt(4)
+                output.writeInt(1)
+                output.writeLegacyText("conversation-1")
+                output.writeLegacyText("First question")
+                output.writeLong(100L)
+                output.writeLong(200L)
+                output.writeBoolean(false)
+                output.writeInt(2)
+                output.writeLong(1L)
+                output.writeLegacyText("USER")
+                output.writeLegacyText("COMPLETE")
+                output.writeLegacyText("First question")
+                output.writeBoolean(false)
+                output.writeBoolean(false)
+                output.writeLong(2L)
+                output.writeLegacyText("ASSISTANT")
+                output.writeLegacyText("COMPLETE")
+                output.writeLegacyText("**Answer**")
+                output.writeBoolean(true)
+                output.writeLong(12L)
+                output.writeLong(34L)
+                output.writeLong(567L)
+                output.writeBoolean(true)
+                output.writeLegacyText(assistantTarget.targetId)
+                output.writeLegacyText(assistantTarget.providerId)
+                output.writeLegacyText(assistantTarget.modelId)
+                output.writeLegacyText(assistantTarget.displayName)
+                output.writeLegacyText(assistantTarget.locality.name)
+                output.writeInt(1)
+                output.writeBoolean(false)
+                output.writeInt(0)
+                output.writeInt(0)
+            }
+        }.toByteArray()
+
+        val restored = ConversationHistoryCodec.decode(legacy).single()
+
+        assertEquals("conversation-1", restored.id)
+        assertNull(restored.target)
+        assertEquals(listOf("First question", "**Answer**"), restored.messages.map { message -> message.text })
+        assertEquals(ChatMessageUsage(12, 34, 567), restored.messages.last().usage)
+        assertEquals(assistantTarget, restored.messages.last().target)
+        assertTrue(restored.messages.none { message -> message.truncated })
+        assertEquals(ConversationContextState(), restored.contextState)
+    }
+
+    private fun DataOutputStream.writeLegacyText(value: String) {
+        val bytes = value.toByteArray(Charsets.UTF_8)
+        writeInt(bytes.size)
+        write(bytes)
     }
 
     @Test

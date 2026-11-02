@@ -101,6 +101,7 @@
     <string name="chat_generation_failure_unknown">선택한 대상이 이 요청을 완료하지 못했습니다.</string>
     <string name="chat_generation_settings_help">Temperature는 0 이상, Top K는 양의 정수, Top P는 0부터 1 사이여야 합니다.</string>
     <string name="chat_generation_stopped">생성이 중지됨</string>
+    <string name="chat_generation_truncated">출력 한도에 도달했습니다</string>
     <string name="chat_history_clear_all">모두 지우기</string>
     <string name="chat_history_clear_message">저장된 모든 대화를 삭제할까요? 이 작업은 취소할 수 없습니다.</string>
     <string name="chat_history_clear_title">대화 기록을 지울까요?</string>

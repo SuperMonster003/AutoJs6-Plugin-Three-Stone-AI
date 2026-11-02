@@ -75,6 +75,12 @@ internal class OnlineAiConnectionTest(
 
     private companion object {
         const val TEST_PROMPT = "Reply with OK."
-        const val MAXIMUM_OUTPUT_TOKENS = 8
+
+        /**
+         * Leaves room for the adaptive thinking that current Claude models may run even on this prompt. With the
+         * former 8 tokens the thinking alone used up max_tokens, no text block arrived, and a correctly configured
+         * profile failed as an invalid response.
+         */
+        const val MAXIMUM_OUTPUT_TOKENS = 1_024
     }
 }

@@ -101,6 +101,7 @@
     <string name="chat_generation_failure_unknown">La cible sélectionnée n\'a pas pu traiter cette requête.</string>
     <string name="chat_generation_settings_help">Temperature doit être au moins 0, Top K doit être un entier positif et Top P doit être compris entre 0 et 1.</string>
     <string name="chat_generation_stopped">Génération arrêtée</string>
+    <string name="chat_generation_truncated">Limite de sortie atteinte</string>
     <string name="chat_history_clear_all">Tout effacer</string>
     <string name="chat_history_clear_message">Supprimer toutes les conversations enregistrées? Cette action est irréversible.</string>
     <string name="chat_history_clear_title">Effacer tout historique de conversation?</string>

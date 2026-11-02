@@ -77,6 +77,26 @@ class OpenAiCompatibleResponseTest {
     }
 
     @Test
+    fun lengthFinishReasonIsReportedAsTruncationNotFailure() {
+        val stream = OpenAiCompatibleResponseParser.parseEvent(
+            event("""{"choices":[{"delta":{"content":"partial"},"finish_reason":"length"}]}"""),
+        )
+        val stop = OpenAiCompatibleResponseParser.parseEvent(
+            event("""{"choices":[{"delta":{},"finish_reason":"stop"}]}"""),
+        )
+        val json = OpenAiCompatibleResponseParser.parseJson(
+            """{"choices":[{"message":{"content":"partial"},"finish_reason":"length"}]}"""
+                .toResponseBody("application/json".toMediaType()),
+        )
+
+        assertEquals("partial", stream.text)
+        assertTrue(stream.truncated)
+        assertFalse(stop.truncated)
+        assertEquals("partial", json.text)
+        assertTrue(json.truncated)
+    }
+
+    @Test
     fun jsonFallbackExtractsAssistantTextAndUsageAliases() {
         val response = OpenAiCompatibleResponseParser.parseJson(
             """

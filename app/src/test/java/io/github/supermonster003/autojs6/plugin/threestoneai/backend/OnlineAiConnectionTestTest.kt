@@ -24,7 +24,7 @@ class OnlineAiConnectionTestTest {
         assertTrue(request.history.isEmpty())
         assertEquals(GenerationRole.USER, request.prompt.role)
         assertEquals(listOf("Reply with OK."), request.prompt.textParts)
-        assertEquals(8, request.maximumOutputTokens)
+        assertEquals(1_024, request.maximumOutputTokens)
         assertFalse(request.reportUsage)
         assertTrue(session.closed)
     }

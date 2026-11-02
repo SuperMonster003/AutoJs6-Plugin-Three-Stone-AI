@@ -12,7 +12,9 @@
       ],
       "fix": [
         "Las solicitudes AI siguientes fallaban si el servicio se detenía antes de cerrar la sesión anterior",
-        "Las solicitudes AI consecutivas se rechazaban mientras se cerraba la sesión del modelo cancelada"
+        "Las solicitudes AI consecutivas se rechazaban mientras se cerraba la sesión del modelo cancelada",
+        "Los perfiles de Anthropic enviaban siempre max_tokens=1024 aunque el máximo de tokens de salida estuviera sin límite, por lo que las respuestas se cortaban hacia los 1024 tokens sin ningún aviso (los modelos Claude que razonan por defecto descuentan también su razonamiento); ahora el valor por defecto es 16384 tokens y una respuesta detenida en el límite de salida se marca bajo el mensaje como \"Límite de salida alcanzado\" (también en perfiles compatibles con OpenAI y Gemini)",
+        "La prueba de conexión solo permitía al modelo 8 tokens de salida; los modelos Claude que razonan por defecto los gastaban en razonar sin devolver texto, así que un perfil de Anthropic bien configurado se daba por respuesta no válida. Ahora se permiten 1024 tokens"
       ]
     },
     "v1.4.1": {

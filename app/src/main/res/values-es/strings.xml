@@ -101,6 +101,7 @@
     <string name="chat_generation_failure_unknown">El destino seleccionado no pudo completar esta solicitud.</string>
     <string name="chat_generation_settings_help">Temperature debe ser 0 o superior, Top K debe ser un entero positivo y Top P debe estar entre 0 y 1.</string>
     <string name="chat_generation_stopped">Generación detenida</string>
+    <string name="chat_generation_truncated">Límite de salida alcanzado</string>
     <string name="chat_history_clear_all">Borrar todo</string>
     <string name="chat_history_clear_message">Eliminar todas las conversaciones guardadas? Esta acción no se puede deshacer.</string>
     <string name="chat_history_clear_title">Borrar el historial de conversaciones?</string>

@@ -42,11 +42,14 @@ internal data class OnlineAiStreamChunk(
     val usage: OnlineAiUsageUpdate? = null,
     val contentSeen: Boolean = false,
     val done: Boolean = false,
+    /** The provider stopped at its output-token limit: the text so far is valid but incomplete. */
+    val truncated: Boolean = false,
 )
 
 internal data class OnlineAiJsonResponse(
     val text: String,
     val usage: OnlineAiUsageUpdate?,
+    val truncated: Boolean = false,
 )
 
 /** Converts the provider-neutral text session surface to one provider-native HTTP protocol. */

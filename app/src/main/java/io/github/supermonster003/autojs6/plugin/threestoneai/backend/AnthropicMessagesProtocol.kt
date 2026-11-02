@@ -134,10 +134,12 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
             "message_delta" -> {
                 val delta = OnlineAiResponseSupport.objectOrNull(root, "delta")
                     ?: OnlineAiResponseSupport.invalidResponse()
-                if (OnlineAiResponseSupport.stringOrNull(delta, "stop_reason") == "refusal") {
-                    OnlineAiResponseSupport.providerError()
-                }
-                OnlineAiStreamChunk(usage = usage(OnlineAiResponseSupport.objectOrNull(root, "usage")))
+                val stopReason = OnlineAiResponseSupport.stringOrNull(delta, "stop_reason")
+                if (stopReason == "refusal") OnlineAiResponseSupport.providerError()
+                OnlineAiStreamChunk(
+                    usage = usage(OnlineAiResponseSupport.objectOrNull(root, "usage")),
+                    truncated = isOutputLimitStop(stopReason),
+                )
             }
             "message_stop" -> OnlineAiStreamChunk(done = true)
             "ping", "content_block_stop" -> OnlineAiStreamChunk()
@@ -154,9 +156,8 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         ) {
             OnlineAiResponseSupport.providerError()
         }
-        if (OnlineAiResponseSupport.stringOrNull(root, "stop_reason") == "refusal") {
-            OnlineAiResponseSupport.providerError()
-        }
+        val stopReason = OnlineAiResponseSupport.stringOrNull(root, "stop_reason")
+        if (stopReason == "refusal") OnlineAiResponseSupport.providerError()
         val content = OnlineAiResponseSupport.arrayOrNull(root, "content")
             ?: OnlineAiResponseSupport.invalidResponse()
         var textBlockSeen = false
@@ -179,8 +180,13 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         return OnlineAiJsonResponse(
             text = text,
             usage = usage(OnlineAiResponseSupport.objectOrNull(root, "usage")),
+            truncated = isOutputLimitStop(stopReason),
         )
     }
+
+    /** Output stopped at max_tokens or at the model's context window: valid but incomplete text. */
+    private fun isOutputLimitStop(stopReason: String?): Boolean =
+        stopReason == "max_tokens" || stopReason == "model_context_window_exceeded"
 
     private fun usage(value: JsonObject?): OnlineAiUsageUpdate? {
         value ?: return null
@@ -218,5 +224,13 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
     }
 
     private const val ANTHROPIC_VERSION = "2023-06-01"
-    private const val DEFAULT_MAXIMUM_OUTPUT_TOKENS = 1024
+
+    /**
+     * Sent when the caller leaves the output limit open. The Messages API requires max_tokens, and the current
+     * Claude models run adaptive thinking by default and count it inside that limit, so the former 1024 cut
+     * ordinary replies mid-sentence without any notice (reported 2026-11-02). 16384 tokens leave room for
+     * thinking plus the answer while staying inside the 64 KiB transport output cap; a max_tokens stop is now
+     * reported as a truncation instead of a normal completion.
+     */
+    private const val DEFAULT_MAXIMUM_OUTPUT_TOKENS = 16_384
 }

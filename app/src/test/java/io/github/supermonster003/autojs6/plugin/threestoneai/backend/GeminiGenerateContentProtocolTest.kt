@@ -147,6 +147,7 @@ class GeminiGenerateContentProtocolTest {
         assertEquals(" world", final.text)
         assertTrue(final.contentSeen)
         assertTrue(final.done)
+        assertFalse(final.truncated)
         assertEquals(OnlineAiUsageUpdate(4L, 2L, 8L), final.usage)
     }
 
@@ -200,6 +201,7 @@ class GeminiGenerateContentProtocolTest {
 
         assertEquals("complete", response.text)
         assertEquals(OnlineAiUsageUpdate(3L, 2L, 5L), response.usage)
+        assertTrue(response.truncated)
 
         assertFailure(OnlineAiFailureReason.INVALID_RESPONSE) {
             GeminiGenerateContentProtocolAdapter.parseJson(

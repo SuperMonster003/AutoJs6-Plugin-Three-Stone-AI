@@ -327,5 +327,11 @@ internal interface GenerationListener {
         throw UnsupportedOperationException("This listener does not accept tool calls")
     }
     fun onCompleted(statistics: GenerationStatistics?)
+    /**
+     * Terminal event that also reports whether the provider stopped at its output-token limit (Anthropic
+     * stop_reason max_tokens, OpenAI finish_reason length, Gemini MAX_TOKENS). The streamed text is then
+     * valid but incomplete. Listeners without a truncation surface keep the plain [onCompleted].
+     */
+    fun onCompleted(statistics: GenerationStatistics?, truncated: Boolean) = onCompleted(statistics)
     fun onFailed(error: Throwable, statistics: GenerationStatistics?)
 }

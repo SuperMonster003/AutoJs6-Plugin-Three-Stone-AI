@@ -95,6 +95,48 @@ class OnlineAiSessionTest {
     }
 
     @Test
+    fun outputLimitStopsCompleteTheTurnAsTruncatedAndKeepTheText() {
+        val calls = ScriptedCallFactory(
+            response(
+                contentType = "text/event-stream",
+                body = sse(
+                    "{\"choices\":[{\"delta\":{\"content\":\"partial\"},\"finish_reason\":\"length\"}]}",
+                    "{\"choices\":[],\"usage\":{\"prompt_tokens\":7," +
+                        "\"completion_tokens\":2,\"total_tokens\":9}}",
+                    "[DONE]",
+                ),
+            ),
+            response(
+                contentType = "text/event-stream",
+                body = sse(
+                    "{\"choices\":[{\"delta\":{\"content\":\"whole\"},\"finish_reason\":\"stop\"}]}",
+                    "[DONE]",
+                ),
+            ),
+        )
+        val session = session(calls)
+        val first = RecordingListener()
+
+        session.stream(request(prompt = "first", reportUsage = true), first)
+
+        assertEquals(listOf("partial"), first.deltas)
+        assertTrue(first.truncated)
+        assertEquals(2L, first.completed?.outputTokens)
+        assertNull(first.failure)
+
+        val second = RecordingListener()
+        session.streamNext(request(prompt = "second"), second)
+
+        assertEquals(listOf("whole"), second.deltas)
+        assertFalse(second.truncated)
+        assertNull(second.failure)
+        assertEquals(
+            listOf("user" to "first", "assistant" to "partial", "user" to "second"),
+            calls.bodies[1].messages(),
+        )
+    }
+
+    @Test
     fun jsonFallbackCompletesThroughTheSameStreamingListener() {
         val calls = ScriptedCallFactory(
             response(
@@ -517,12 +559,20 @@ class OnlineAiSessionTest {
         @Volatile
         var failure: Throwable? = null
 
+        @Volatile
+        var truncated = false
+
         override fun onTextDelta(text: String) {
             deltas += text
         }
 
         override fun onCompleted(statistics: GenerationStatistics?) {
             completed = statistics
+        }
+
+        override fun onCompleted(statistics: GenerationStatistics?, truncated: Boolean) {
+            this.truncated = truncated
+            onCompleted(statistics)
         }
 
         override fun onFailed(error: Throwable, statistics: GenerationStatistics?) {

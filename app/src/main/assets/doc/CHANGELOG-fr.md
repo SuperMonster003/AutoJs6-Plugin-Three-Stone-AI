@@ -11,6 +11,8 @@
 * `Fonctionnalité` Les applications signées séparément demandent un accès IA explicite dans le module, lié à leur identité et installation; la révocation dans les réglages arrête les requêtes actives
 * `Correctif` Les requêtes AI suivantes échouaient lorsque l'arrêt du service abandonnait la fermeture d'une session
 * `Correctif` Les requêtes AI successives étaient rejetées pendant la fermeture de la session annulée précédente
+* `Correctif` Les profils Anthropic envoyaient toujours max_tokens=1024 même lorsque le maximum de jetons de sortie était illimité, si bien que les réponses étaient coupées vers 1024 jetons sans aucun avertissement (les modèles Claude qui réfléchissent par défaut y comptent aussi leur réflexion); la valeur par défaut passe à 16384 jetons et une réponse arrêtée à la limite de sortie est signalée sous le message par "Limite de sortie atteinte" (également pour les profils compatibles OpenAI et Gemini)
+* `Correctif` Le test de connexion n'accordait au modèle que 8 jetons de sortie; les modèles Claude qui réfléchissent par défaut les épuisaient en réflexion sans renvoyer de texte, si bien qu'un profil Anthropic correctement configuré était signalé comme réponse invalide. Le test accorde désormais 1024 jetons
 
 # v1.4.1
 

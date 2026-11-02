@@ -101,6 +101,7 @@
     <string name="chat_generation_failure_unknown">تعذر على الهدف المحدد إكمال هذا الطلب.</string>
     <string name="chat_generation_settings_help">يجب أن تكون Temperature صفرا أو أكثر, وأن يكون Top K عددا صحيحا موجبا, وأن يكون Top P بين 0 و1.</string>
     <string name="chat_generation_stopped">تم إيقاف التوليد</string>
+    <string name="chat_generation_truncated">تم بلوغ حد الإخراج</string>
     <string name="chat_history_clear_all">مسح الكل</string>
     <string name="chat_history_clear_message">هل تريد حذف كل المحادثات المحفوظة? لا يمكن التراجع عن هذا الإجراء.</string>
     <string name="chat_history_clear_title">هل تريد مسح سجل المحادثات?</string>

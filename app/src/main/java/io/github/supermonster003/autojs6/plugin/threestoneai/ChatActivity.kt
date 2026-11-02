@@ -2488,10 +2488,13 @@ class ChatActivity : ConfiguredActivity() {
                 ChatMessageStatus.STOPPED -> getString(R.string.chat_generation_stopped)
                 ChatMessageStatus.FAILED ->
                     getString(R.string.chat_generation_failure_choose_target)
-                ChatMessageStatus.COMPLETE -> if (uiSettings.showGenerationUsage) {
-                    message.usage?.let { usage -> formatUsage(message, usage) }.orEmpty()
-                } else {
-                    ""
+                ChatMessageStatus.COMPLETE -> {
+                    val limit = if (message.truncated) getString(R.string.chat_generation_truncated) else ""
+                    val usage = message.usage
+                        ?.takeIf { uiSettings.showGenerationUsage }
+                        ?.let { value -> formatUsage(message, value) }
+                        .orEmpty()
+                    listOf(limit, usage).filter { part -> part.isNotEmpty() }.joinToString(" | ")
                 }
             }
         }
@@ -3032,9 +3035,11 @@ class ChatActivity : ConfiguredActivity() {
             queueTextDelta(generationId, assistantMessageId, text)
         }
 
-        override fun onCompleted(statistics: GenerationStatistics?) {
+        override fun onCompleted(statistics: GenerationStatistics?) = onCompleted(statistics, truncated = false)
+
+        override fun onCompleted(statistics: GenerationStatistics?, truncated: Boolean) {
             mainHandler.post {
-                completeGeneration(generationId, assistantMessageId, actualTarget, statistics)
+                completeGeneration(generationId, assistantMessageId, actualTarget, statistics, truncated)
             }
         }
 
@@ -3128,6 +3133,7 @@ class ChatActivity : ConfiguredActivity() {
         assistantMessageId: Long,
         actualTarget: ConversationTargetSnapshot,
         statistics: GenerationStatistics?,
+        truncated: Boolean = false,
     ) {
         if (!isGenerationCurrent(generationId)) return
         flushTextDelta(generationId, assistantMessageId)
@@ -3143,8 +3149,10 @@ class ChatActivity : ConfiguredActivity() {
                         durationMillis = value.durationMillis,
                     )
                 },
+                truncated = truncated,
             ),
         )
+        if (truncated) showSnackbar(drawerLayout, getString(R.string.chat_generation_truncated))
         feedReading(assistantMessageId, final = true)
         // Nothing (more) to read, for example without an engine: listen again (D13).
         if (assistantMessageId == voiceReplyId && readingMessageId != assistantMessageId) {

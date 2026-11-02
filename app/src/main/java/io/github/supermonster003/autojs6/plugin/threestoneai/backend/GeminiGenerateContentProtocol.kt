@@ -99,7 +99,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         val chunk = parse(root, requireTerminal = true)
         tools?.json(root)
         if (!chunk.contentSeen) OnlineAiResponseSupport.invalidResponse()
-        return OnlineAiJsonResponse(text = chunk.text, usage = chunk.usage)
+        return OnlineAiJsonResponse(text = chunk.text, usage = chunk.usage, truncated = chunk.truncated)
     }
 
     private fun parse(root: JsonObject, requireTerminal: Boolean): OnlineAiStreamChunk {
@@ -148,6 +148,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
             usage = usage,
             contentSeen = textPartSeen,
             done = done,
+            truncated = finishReason == "MAX_TOKENS",
         )
     }
 

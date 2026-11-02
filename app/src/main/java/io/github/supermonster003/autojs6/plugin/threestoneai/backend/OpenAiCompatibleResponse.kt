@@ -27,6 +27,7 @@ internal object OpenAiCompatibleResponseParser {
             text = text,
             usage = root.usageOrNull(),
             contentSeen = choice != null,
+            truncated = choice.stoppedAtOutputLimit(),
         )
     }
 
@@ -47,8 +48,13 @@ internal object OpenAiCompatibleResponseParser {
         return OnlineAiJsonResponse(
             text = text,
             usage = root.usageOrNull(),
+            truncated = choice.stoppedAtOutputLimit(),
         )
     }
+
+    /** finish_reason "length": the provider stopped at max_tokens, so the text is valid but incomplete. */
+    private fun JsonObject?.stoppedAtOutputLimit(): Boolean =
+        this != null && OnlineAiResponseSupport.stringOrNull(this, "finish_reason") == "length"
 
     private fun JsonObject.firstChoice(): JsonObject? {
         val choices = get("choices") ?: return null

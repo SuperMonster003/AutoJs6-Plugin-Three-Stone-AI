@@ -81,7 +81,7 @@ class AnthropicMessagesProtocolTest {
             val json = prepared.request.bodyJson()
 
             assertEquals("https://api.anthropic.com/v1/messages", prepared.request.url.toString())
-            assertEquals(1024, json.get("max_tokens").asInt)
+            assertEquals(16_384, json.get("max_tokens").asInt)
             listOf("temperature", "top_k", "top_p", "output_config").forEach { name ->
                 assertFalse(json.has(name))
             }
@@ -207,6 +207,45 @@ class AnthropicMessagesProtocolTest {
                     .toResponseBody("application/json".toMediaType()),
             )
         }
+    }
+
+    @Test
+    fun outputLimitStopsAreReportedAsTruncationNotFailure() {
+        val maxTokens = AnthropicMessagesProtocolAdapter.parseEvent(
+            event(
+                "message_delta",
+                """{"type":"message_delta","delta":{"stop_reason":"max_tokens"},"usage":{"output_tokens":16384}}""",
+            ),
+        )
+        val contextWindow = AnthropicMessagesProtocolAdapter.parseEvent(
+            event(
+                "message_delta",
+                """{"type":"message_delta","delta":{"stop_reason":"model_context_window_exceeded"},"usage":{"output_tokens":5}}""",
+            ),
+        )
+        val endTurn = AnthropicMessagesProtocolAdapter.parseEvent(
+            event(
+                "message_delta",
+                """{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":5}}""",
+            ),
+        )
+        val json = AnthropicMessagesProtocolAdapter.parseJson(
+            """
+            {
+              "content":[{"type":"text","text":"partial"}],
+              "stop_reason":"max_tokens",
+              "usage":{"input_tokens":4,"output_tokens":16384}
+            }
+            """.trimIndent().toResponseBody("application/json".toMediaType()),
+        )
+
+        assertTrue(maxTokens.truncated)
+        assertFalse(maxTokens.done)
+        assertEquals(OnlineAiUsageUpdate(outputTokens = 16_384L), maxTokens.usage)
+        assertTrue(contextWindow.truncated)
+        assertFalse(endTurn.truncated)
+        assertEquals("partial", json.text)
+        assertTrue(json.truncated)
     }
 
     private fun profile(baseUrl: String = "https://api.anthropic.com/v1") = OnlineAiProfile(

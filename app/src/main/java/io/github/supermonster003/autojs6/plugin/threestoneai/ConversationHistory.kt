@@ -277,12 +277,15 @@ internal object ConversationHistoryCodec {
         require(bytes.size <= MAXIMUM_FILE_BYTES) { "Conversation history is too large" }
         return DataInputStream(ByteArrayInputStream(bytes)).use { input ->
             require(input.readInt() == MAGIC) { "Invalid conversation history magic" }
-            require(input.readInt() == VERSION) { "Unsupported conversation history version" }
+            val version = input.readInt()
+            require(version == VERSION || version == PUBLISHED_VERSION_WITHOUT_TRUNCATION) {
+                "Unsupported conversation history version"
+            }
             val count = input.readBoundedCount(
                 ConversationHistoryPolicy.MAXIMUM_SERIALIZED_CONVERSATIONS,
             )
             buildList(count) {
-                repeat(count) { add(readConversation(input)) }
+                repeat(count) { add(readConversation(input, version)) }
             }.also {
                 require(input.available() == 0) { "Unexpected trailing conversation history data" }
             }
@@ -323,12 +326,13 @@ internal object ConversationHistoryCodec {
                 output.writeLong(usage.outputTokens)
                 output.writeLong(usage.durationMillis)
             }
+            output.writeBoolean(message.truncated)
             output.writeNullableTarget(message.target)
         }
         output.writeContextState(conversation.contextState)
     }
 
-    private fun readConversation(input: DataInputStream): StoredConversation {
+    private fun readConversation(input: DataInputStream, version: Int): StoredConversation {
         val id = input.readText(MAXIMUM_ID_BYTES)
         val title = input.readText(MAXIMUM_TITLE_BYTES)
         val createdAt = input.readLong()
@@ -346,6 +350,7 @@ internal object ConversationHistoryCodec {
                 } else {
                     null
                 }
+                val truncated = version >= VERSION && input.readBoolean()
                 val messageTarget = input.readNullableTarget()
                 add(
                     ChatMessage(
@@ -355,6 +360,7 @@ internal object ConversationHistoryCodec {
                         status = status,
                         usage = usage,
                         target = messageTarget,
+                        truncated = truncated,
                     ),
                 )
             }
@@ -489,7 +495,10 @@ internal object ConversationHistoryCodec {
 
     const val MAXIMUM_FILE_BYTES = 32 * 1_024 * 1_024
     private const val MAGIC = 0x33534143 // 3SAC
-    private const val VERSION = 4
+    private const val VERSION = 5
+
+    /** Shipped in 1.4.x: the same layout as [VERSION] without the per-message truncation flag. */
+    private const val PUBLISHED_VERSION_WITHOUT_TRUNCATION = 4
     private const val MAXIMUM_SERIALIZED_MESSAGES_PER_CONVERSATION = 100_000
     private const val MAXIMUM_ID_BYTES = 128
     private const val MAXIMUM_TITLE_BYTES = 512

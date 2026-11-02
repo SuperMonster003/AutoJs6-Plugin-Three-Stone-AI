@@ -374,9 +374,9 @@ Node.js, Bun and Worker use the existing native provider through a separate entr
 
 未改, 待维护者决定:
 
-- Binder 路径 (宿主脚本) 仍只在字节上限处报 AiFinishReason.LENGTH, 提供方 max_tokens 截断暂不改写 finishReason: 宿主对 LENGTH 会关闭持久会话, 改动影响 3-Stove Agent 等调用方.
-- 自定义采样参数 (temperature / top_k / top_p) 在 Claude 4.7+ 上返回 400, 需要与 effort 选项一起设计.
-- effort / fast 模式 / 文件附件 / 设置页重组 / 生成跨越 Activity 重建等需求另行立项.
+- Binder 路径 (宿主脚本) 仍只在字节上限处报 AiFinishReason.LENGTH, 提供方 max_tokens 截断暂不改写 finishReason: 宿主对 LENGTH 会关闭持久会话, 改动影响 3-Stove Agent 等调用方. 已决 (2026-11-03, D76): 1.6.0 维持现状, 文档注明.
+- 自定义采样参数 (temperature / top_k / top_p) 在 Claude 4.7+ 上返回 400, 需要与 effort 选项一起设计. 已决 (2026-11-03, D75): Anthropic 协议不再发送采样参数, 随 1.6.0 P2 实施.
+- effort / fast 模式 / 文件附件 / 设置页重组 / 生成跨越 Activity 重建等需求另行立项. 已立项 (2026-11-03), 见下一节.
 
 补充 (同日): 维护者随后提出两项要求, 已随 1.5.0 一并落地.
 
@@ -384,3 +384,135 @@ Node.js, Bun and Worker use the existing native provider through a separate entr
 5. 生成期间聊天窗口持有 FLAG_KEEP_SCREEN_ON (isGenerating 的 setter 统一加减), 避免长回复被熄屏超时打断.
 
 真机证据 (XQ-DQ72, 调试版 build 302 覆盖安装在 1.4.1 之上, .python/device_chat_probe.py): Anthropic 资料 (额度耗尽) 发送 5 秒后失败并显示 "HTTP 400: invalid_request_error: Your credit balance is too low ..."; Codex 资料 93 秒完整回复 (输出 2606 token), 生成中窗口 fl 含 KEEP_SCREEN_ON, 结束后释放.
+
+## 2026-11-03 1.6.0 路线图: effort / fast, 附件, 思考卡片, 设置页重组, 生成脱离 Activity, 分支与导出
+
+### 1. 背景与需求来源
+
+维护者 2026-11-02 在 XQ-DQ72 上使用聊天页后提出六项需求: (1) 文件选择 (图片 / 文本等); (2) effort (Default / Low / Medium / High / Xhigh / Max); (3) fast 模式与 Ultracode; (4) 参考 RikkaHub (https://github.com/rikkahub/rikkahub) 补充功能与布局; (5) 重新设计设置页 (用户反馈经常迷路, 有的目标出现两次); (6) 生成过程中重建 Activity (如旋转) 会中止生成. 截断, 错误详情与屏幕常亮三项已随 1.5.0 修复 (见上一节).
+
+Ultracode 是 Claude Code 工具自身的多代理编排设置, 不是 Anthropic API 参数, 插件无法实现; API 侧对应的只有 fast 模式, 故需求 3 按 fast 处理.
+
+需求细化经三轮选择题 (2026-11-02 23:5x - 11-03 00:1x) 完成, 结论记为 D68 - D83. 调研底稿: RikkaHub 功能与布局清单 (master, 2026-11-02 抓取), 本插件设置页盘点与聊天页生成生命周期盘点 (两份都以 1.4.1 源码为准), 要点已并入本节与附录 A, 底稿不入库.
+
+调度: 看板 D:/idea-projects/.claude/boards/3-stone.md (主题 3-stone), 由 dispatch 环境的调度会话按阶段派 Opus 5.5 子会话; 子会话登记的新决策从 D84 起, 待决从 Q12 起.
+
+### 2. 已定决策 (D68 - D83)
+
+| 编号 | 决策 | 内容 |
+|---|---|---|
+| D68 | 发布节奏 | 1.5.0 先发 (三项修复已验证); 六项新需求进 1.6.0 路线图, 允许按阶段分批发 1.6.x (切点见 Q11) |
+| D69 | 调度与并行 | 看板 + 调度会话 + Opus 5.5 子会话. 本仓库是单模块应用且共用一个 checkout, 代码卡一律依次执行不并行 (并行编译会互相编到对方的半成品); P0 发布卡也先于 P1 单独执行, 避免发布提交与开发提交混在一个工作区 |
+| D70 | 附件范围 (需求 1) | 图片 (jpeg / png / gif / webp, 单张 <= 5 MB, 每条消息 <= 20 张) + 文本类文件 (按 UTF-8 读入, <= 256 KB, 以 "文件: 名称" 信封注入提示, 二进制或超限提示并拒收) + PDF (Anthropic document 块 <= 32 MB / 100 页, Gemini inline_data <= 20 MB; OpenAI 兼容资料提示不支持 PDF). 本地 LiteRT 目标不支持附件 (入口禁用并提示). 音频 / 视频不做 |
+| D71 | 附件持久化 | 文件复制到 filesDir/attachments/<会话 id>/<uuid>.<ext>; 历史记录附件元数据 (名称, MIME, 大小, 路径, 图片宽高) 与文件引用; 重开会话显示缩略图 / 文件名; 后续轮次在上下文预算内重新发送图片 / PDF (估算: 图片约 宽 x 高 / 750 token, PDF 约每页 2000 token); 删除会话时删目录; 单会话附件总量 <= 48 MB (与 MAXIMUM_IMAGE_REQUEST_BYTES 一致) |
+| D72 | effort / fast 的位置 (需求 2 / 3) | 在线资料保存默认 effort (DEFAULT / LOW / MEDIUM / HIGH / XHIGH / MAX) 与 fast 开关; 聊天页可对当前会话临时覆盖, 覆盖随会话历史保存; 新会话从资料默认值开始 |
+| D73 | effort 映射 | DEFAULT 不发任何字段 (模型自适应). Anthropic: output_config.effort = low / medium / high / xhigh / max (无需 beta 头). OpenAI 兼容: reasoning_effort = low / medium / high, XHIGH 与 MAX 发 xhigh. Gemini: thinkingConfig.thinkingLevel = low (LOW) / high (其余), 并 includeThoughts 按 D79. 实施前按各提供方当前文档复核, 不支持的值降到最近的支持值. Binder (宿主脚本) 路径不带 effort / fast, AIDL 不变 |
+| D74 | fast 范围 | 所有 Anthropic 资料可开 fast; GA 模型 (claude-opus-5-5 系列) 只发 speed: "fast", 其他 Anthropic 模型自动附加 anthropic-beta: fast-mode-2026-02-01; 其他协议不显示 fast. 不支持的模型或代理返回 400 时由错误详情显示原因 |
+| D75 | 采样参数 | Anthropic 协议一律不发送 temperature / top_k / top_p (Claude 4.7 及以后拒绝它们); 设置页采样小节注明 "Anthropic 模型忽略此项". 其他协议照旧 |
+| D76 | Binder 截断 | 1.6.0 维持现状: 提供方输出上限截断仍报 STOP, 插件文档注明 "达到输出上限时文本不完整且不单独标记"; AIDL 不动 |
+| D77 | 生成归属 (需求 6) | 进程级 ChatGenerationCoordinator (仿 ModelImportCoordinator): 生成线程, generationEpoch, 后端会话与目标, 流式缓冲与 32 ms 刷新, 上下文遥测, 摘要检查点, 进行中消息的持久化都移入协调器; ChatActivity 在 onStart 附着 (取回快照并重绘进行中的回复) 并在 onStop 分离; 旋转, 夜间模式, 语言切换, 字号切换都不中断; 停止 / 新建会话 / 切换会话 / 切换目标执行硬取消 (在独立线程调用 session.cancel(), 本地推理经 cancelProcess), 不再只是 epoch 软停止. 前台服务不做 (进程被系统杀掉仍会丢, 以后按需) |
+| D78 | RikkaHub 采纳 | 只借鉴设计与数据形状, 不复制代码 (AGPL-3.0). 本期采纳: 模型切换器底部面板; 思考过程卡片; 消息分支; 导出 Markdown / 长图. 不做: MCP, 语音模式 (已有 3-Macaw Speech), 搜索服务, 工作区, Web 服务, 媒体生成, 完整 LaTeX / Mermaid 渲染, 翻译, 收藏 |
+| D79 | 思考卡片默认 | 生成中展开并流式显示思考摘要, 结束后折叠为 "思考了 N 秒", 点按展开; 对话设置两个开关: 生成中显示思考内容 (默认开), 结束后自动折叠 (默认开); effort 默认 DEFAULT |
+| D80 | 设置页结构 (需求 5) | 两级结构. 首页 = 外观 4 行 (语言, 深色模式, 主题色, 启动图标, 按共享规范顺序) + 5 个子页入口: 模型与服务 (并入现有 "模型" 与 "在线服务", 含默认在线目标与计费网络), 对话 (显示, 输入, 推理限制, 思考显示), 语音, 隐私与权限 (AI 访问应用), 更新与关于. 每个设置只出现一次: 删除 "关于" 里重复的 "版本历史" (保留在 "更新与关于"), 删除 "模型" 页重复的 "添加在线资料" (保留在在线服务页); "生成" 改名 "输出长度与采样". 聊天页溢出菜单与抽屉底部各只保留一个 "设置" 入口, "模型" 入口移到模型切换器面板底部的 "管理模型与服务". 宿主 "AI 服务设置" 动作仍落到设置首页, 并经 "模型与服务" 到达在线服务 (修复 docs/dev/p4-p5-host-plugin-settings-smoke.md 第 4 步) |
+| D81 | 历史格式 v6 可扩展属性块 | v6 在会话级与消息级各加一个 "键 -> 字节" 属性表 (键为短 ASCII, 未知键跳过, 单条 <= 64 KiB); effort / fast 覆盖, 思考文本与用时, 附件元数据, 分支信息都以键写入, 之后新增字段不再升版; 继续读 v4 / v5 |
+| D82 | 消息分支模型 | 助手消息节点保存多个版本 (重新生成或编辑后重发产生新版本, 不再删除后续消息), 节点记录选中版本; 搜索, 导出, 上下文编译, 朗读, 用量累计都按选中分支; 删除版本只删该版本, 删除最后一个版本删除节点及其后续 |
+| D83 | 导出 | Markdown 文件 (CreateDocument text/markdown, 可选含思考摘要, 附件写文件名) 与长图 (离屏渲染现有消息视图为 PNG, 经 FileProvider 分享; 高度超过 16384 px 时按比例缩放), 入口在会话菜单 |
+
+### 3. 阶段条目
+
+每个条目一张卡片, 验收以写入本节的证据为准. 勾选用 `[x]`.
+
+P0 发布 1.5.0
+
+- [ ] P0.1 十个 .changelog/lang_*.json 的 v1.5.0 released_date 改为实际发布日 (当前是占位 2026/10/22), 重新生成文档, 单独提交.
+- [ ] P0.2 按既有发布流程: 推送 master, tag v1.5.0, 从 tag 的干净克隆构建签名 release (appendDigestToReleasedFiles), GitHub Release, 登记官方索引; 发布前正式包在 XQ-DQ72 覆盖安装冒烟 (Codex 资料: 完整回复 + 用量行; Anthropic 资料额度耗尽时跳过).
+- 验收: Release 资产与索引 hash 记入本节; 看板记录 tag 与 versionCode.
+
+P1 生成协调器与硬取消 (需求 6, D77)
+
+- [ ] P1.1 ChatGenerationCoordinator 进程单例: 从 ChatActivity 迁出生成线程, epoch, 后端会话, 流式缓冲, 上下文遥测, 摘要检查点与进行中消息的持久化; 观察者接口 (onDelta / onCompleted / onFailed / onStateChanged), attach 返回快照.
+- [ ] P1.2 ChatActivity 改为 onStart 附着 / onStop 分离; onDestroy 不再 bump epoch; ChatConversationPolicy.restore 只在协调器不持有该会话时把 GENERATING 改为 STOPPED; 屏幕常亮标志跟随协调器状态.
+- [ ] P1.3 硬取消: OnlineAiSession.cancel() / LiteRtLocalSession.cancelProcess 在独立线程调用; 停止, 新建会话, 切换会话, 切换目标, 删除消息都走硬取消; 停止后 1 s 内 OkHttp call 已取消 (单测 + 设备 logcat).
+- [ ] P1.4 测试: 协调器状态机单测; ChatConversationPolicyTest 更新; 仪器测试 (ScriptedAiBackend) 在流式中 recreate() 后回复继续; device_chat_probe.py 增加 --rotate-during (发送后用 settings put system user_rotation 旋转再转回) 并在 XQ-DQ72 用 Codex 资料取证: 旋转 / 切夜间模式期间回复不中断, 全文与用量行正常.
+- 依赖: P0 完成. 影响: ChatActivity.kt (约 4600 行) 大幅瘦身, 新文件 ChatGenerationCoordinator.kt.
+
+P2 effort / fast 与模型切换器面板 (需求 2 / 3, D72 - D75, D78 第 1 项)
+
+- [ ] P2.1 OnlineAiProfile 新增 defaultEffort 与 fastMode (资料编辑器增加两个字段; 导入 / 导出 JSON 兼容旧文件); GenerationRequest 新增 effort / fast (Binder 路径为 null).
+- [ ] P2.2 三个协议适配器按 D73 / D74 写请求体与请求头; Anthropic 按 D75 不再发采样参数; 单测覆盖每个 effort 值与 fast 的 GA / 非 GA 分支.
+- [ ] P2.3 历史格式 v6 (D81) 与会话级 effort / fast 覆盖; 兼容读 v4 / v5 的单测.
+- [ ] P2.4 模型切换器底部面板: 搜索, 按资料 / 提供方分组, 收藏置顶, 行内标签 (图片输入 / 推理 / fast), 当前会话的 effort 选项行与 fast 开关 (只在协议支持时显示), 底部 "管理模型与服务"; 目标条显示 effort 与 fast 徽标.
+- [ ] P2.5 排查 Q10 (新会话默认目标).
+- [ ] P2.6 真机: XQ-DQ72 上切换 effort / fast 后发送, 请求体经单测证实; Codex 资料用 reasoning_effort 发送一轮完整回复; Anthropic 资料额度恢复后补 fast 一轮.
+- 依赖: P1.
+
+P3 思考过程卡片 (D78 第 2 项, D79)
+
+- [ ] P3.1 核实 Q9 后实现: Anthropic 思考摘要 (thinking 块 / display), OpenAI 兼容 reasoning_content / reasoning 流式字段, Gemini thought 部分; GenerationListener 新增 onReasoningDelta (默认空实现).
+- [ ] P3.2 ChatMessage 保存思考文本与用时 (v6 属性键); 卡片组件 (折叠 / 流式展开 / 展开), 两个对话设置开关; 朗读与搜索不包含思考文本.
+- [ ] P3.3 单测 (三协议解析, 持久化) + 真机 (Codex 资料若返回推理字段则取证, 否则 ScriptedAiBackend 仪器测试).
+- 依赖: P2 (v6 与面板).
+
+P4 附件 (需求 1, D70, D71)
+
+- [ ] P4.1 选择入口 (输入框左侧 "+": 选择图片 PickVisualMedia 多选, 选择文件 OpenMultipleDocuments), 附件条 (缩略图 / 文件名 + 移除), 草稿与 onSaveInstanceState 保留待发附件; 不支持的目标禁用入口并提示.
+- [ ] P4.2 存储与限额 (D71), 文本类注入, 图片与 PDF 按协议编码 (复用 GenerationImages / OnlineAiImages, 新增 document 块与 Gemini inline PDF), 上下文编译回放与 token 估算.
+- [ ] P4.3 消息气泡显示附件 (缩略图点按用系统查看器打开, 文件芯片), 历史 v6 属性键, 删除会话删目录, "清理未引用文件" 覆盖附件目录.
+- [ ] P4.4 单测 (编码, 限额, 回放, codec) + 真机 (XQ-DQ72: 图片发给标记图片输入的 Codex 模型; PDF 与 Anthropic 待额度恢复, 先以单测与 ScriptedAiBackend 仪器测试为证据).
+- 依赖: P2.
+
+P5 设置页重组 (需求 5, D80)
+
+- [ ] P5.1 设置首页 (外观 4 行 + 5 入口) 与 5 个子页 Activity; 共享 hairline 插入逻辑移入 ui/Rows.kt; 新选择器用 confirmedChoiceDialog.
+- [ ] P5.2 去重与改名 (D80), 聊天页入口收口, 模型切换器面板底部入口; 宿主动作 org.autojs.plugin.AI_PROVIDER_SETTINGS 行为不变.
+- [ ] P5.3 更新仪器测试 (AppearanceSettingsTest, LauncherIconSelectionTest, SpeechSettingsDeviceTest) 与 docs/dev/p4-p5-host-plugin-settings-smoke.md; 新增脚本检查 "同一标题只出现一次" (遍历所有设置页字符串).
+- [ ] P5.4 真机: XQ-DQ72 浅色 / 深色各一组截图, 从宿主开发者选项进入并到达在线服务; 仪器测试通过.
+- 依赖: P2 (面板入口). 可按调度会话判断提前到 P3 之后.
+
+P6 消息分支 (D78 第 3 项, D82)
+
+- [ ] P6.1 数据模型与策略 (节点 / 版本 / 选中), 重新生成与编辑改为新建版本, 删除语义; v6 属性键; 搜索 / 导出 / 上下文编译 / 朗读 / 用量累计按选中分支.
+- [ ] P6.2 UI: 消息下方 "< 2/3 >" 切换, 切换时重绘后续消息; 分支数上限 (每节点 <= 8 个版本) 与提示.
+- [ ] P6.3 单测 (策略与 codec) + 真机 (重新生成两次后在 1/3 - 3/3 间切换, 重开会话保持选中).
+- 依赖: P4.
+
+P7 导出 Markdown / 长图 (D78 第 4 项, D83)
+
+- [ ] P7.1 Markdown 导出 (含附件文件名, 可选思考摘要) 与长图分享 (FileProvider 需在 Manifest 新增, 只暴露 cache/share 目录).
+- [ ] P7.2 单测 (Markdown 文本生成) + 真机 (导出文件可在其他应用打开; 50 条消息的会话 3 s 内生成长图并出现分享面板).
+- 依赖: P6.
+
+P8 发布 1.6.0
+
+- [ ] P8.1 十语言 changelog (通俗文案), VERSION_NAME 1.6.0, README 功能说明 (附件, effort / fast, 设置页) 与权限说明核对.
+- [ ] P8.2 发布门: 单测全绿; 仪器测试在 XQ-DQ72 通过; XQ-DQ72 与 OnePlus 63751f63 (ColorOS) 正式包冒烟; 发布与索引登记.
+- 依赖: P1 - P7 (或按 Q11 的切点提前).
+
+### 4. 顺序与批次
+
+P0 -> P1 -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8, 每次只跑一张卡 (D69). 调度会话可把 P1 拆成 P1a (协调器) 与 P1b (硬取消 + 探针) 两张顺序卡, 也可在 P3 之后插入 P5. 每张卡完成时子会话把勾选, 新决策 (D84 起) 与新待决 (Q12 起) 写回本节与看板.
+
+### 5. 待决事项 (Q9 起)
+
+- Q9 思考内容的请求参数: Anthropic 5.x 默认自适应思考下是否需要 thinking.display = "summarized" 才返回摘要, 以及 output_config.effort 与 thinking 块能否同时发送; P3 子会话实施前按官方文档核实, 结论登记为 D84 起的决策. 推荐: 以官方文档为准, 文档未写明时先按 RikkaHub 的做法 (adaptive + summarized) 实测.
+- Q10 新会话默认目标: 2026-11-02 在 1.4.1 上观察到新会话默认目标是 claude-opus-5-5 而不是资料默认模型 claude-fable-5-1; P2 子会话排查是 "上次使用" 记忆, 资料默认模型设置还是目录顺序; 若是缺陷则修并记决策.
+- Q11 1.6.x 切点: D68 允许分批发布; 推荐 P1 - P3 完成后发 1.6.0 (生成不中断 + effort / fast + 思考卡片), P4 - P7 发 1.7.0; 由调度会话在 P3 完成时请维护者拍板.
+
+### 6. 测试与证据要求
+
+- 每张代码卡: 单测全绿 (当前 517 项为基线), check_repository --pending-commit 通过, VERSION_BUILD 按规则递增, 10 语言 changelog 条目随卡写入 (release_date 留给 P8).
+- 真机以 XQ-DQ72 (QV770340J7) 为主, 用 .python/device_chat_probe.py 取证 (输出只留通过 / 失败与关键数值); Anthropic 真机验证受维护者额度限制, 额度恢复前以单测 + ScriptedAiBackend 仪器测试为证据, 并在看板登记 "待补 Anthropic 真机".
+- 发布门 (P8): 仪器测试在一台真机通过; XQ-DQ72 与 ColorOS 设备正式包冒烟; README 的网络与数据权限说明准确.
+
+### 7. 子会话约定
+
+- 共用 D:/idea-projects/AutoJs6-Plugin-Three-Stone-AI 这一个 checkout, 只提交自己的文件, 不切分支, 不 amend; 提交后可推送 master 以跑 CI (插件仓库推送策略), 发布只在 P0 / P8.
+- 设备占用登记 D:/idea-projects/locks.md; 手机上的确认对话框由维护者操作.
+- 完成时把结论追加到看板 "子会话结果" (勾选条目, 新决策 / 待决, 提交 hash, 可否归档), 并按会话清理规则清理临时文件.
+
+### 附录 A. 提供方 API 要点 (2026-11-02 核实, 实施前复核官方文档)
+
+- Anthropic Messages: max_tokens 必填 (插件默认 16384); Claude 5.x / Fable 默认自适应思考且思考计入 max_tokens; output_config.effort 取 low / medium / high / xhigh / max, 不需要 beta 头; speed: "fast" 为顶层字段, Opus 5.5 正式可用, Opus 5 / 4.8 需 anthropic-beta: fast-mode-2026-02-01, 价格高于普通请求; Claude 4.7 及以后拒绝 temperature / top_k / top_p (400); 图片块 {"type":"image","source":{"type":"base64","media_type":...,"data":...}} 单张 <= 5 MB; 文档块 {"type":"document","source":{"type":"base64","media_type":"application/pdf","data":...}} <= 32 MB / 100 页; stop_reason 取 end_turn / max_tokens / model_context_window_exceeded / refusal / tool_use / stop_sequence.
+- OpenAI 兼容: reasoning_effort (low / medium / high, 部分模型支持 xhigh); 图片用 image_url data URL; 推理文本的流式字段名因服务商而异 (reasoning_content / reasoning), 要按资料实测; finish_reason = length 表示输出上限.
+- Gemini generateContent: thinkingConfig { thinkingLevel 或 thinkingBudget, includeThoughts: true } 后 parts[] 带 thought: true; inline_data 支持 application/pdf (<= 20 MB, 更大需 Files API, 本期不做); finishReason = MAX_TOKENS 表示输出上限.
+- RikkaHub 参考位置 (master 2026-11-02): ChatInput.kt (effort 按钮只在模型有 REASONING 能力时显示), ReasoningPicker.kt (OFF / AUTO / LOW ... MAX 滑杆面板), ModelList.kt (搜索 + 收藏 + 分组的模型面板), ChatMessageReasoning.kt (思考卡片三态), ChatMessageBranch.kt 与 data/model/Conversation.kt (消息节点多版本), ConversationExport.kt (Markdown / PNG 导出), ChatAttachmentPicker.kt 与 FilesPicker.kt (附件入口), service/ChatService.kt 与 ChatVM.kt (生成归应用级单例, Activity 只订阅), SettingPage.kt 与 SettingPreferencesPage.kt (两级设置结构). RikkaHub 没有 fast 模式 / beta 头处理, 其 ClaudeStreamDecoder 把连接中断当正常结束, 这两点不作参考.

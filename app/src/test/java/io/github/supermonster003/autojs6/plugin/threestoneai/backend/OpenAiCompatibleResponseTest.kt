@@ -146,32 +146,36 @@ class OpenAiCompatibleResponseTest {
     }
 
     @Test
-    fun providerErrorsAndMalformedResponsesExposeOnlyFixedMessages() {
-        val secret = "credential-should-not-escape"
+    fun providerErrorsKeepFixedMessagesAndCarryTheProviderTextSeparately() {
+        // The parser cannot know the credential; the execution layer masks it before delivery.
+        val providerText = "quota exceeded for this key"
         val providerFailure = assertThrows(OnlineAiFailureException::class.java) {
             OpenAiCompatibleResponseParser.parseEvent(
-                event("{\"error\":{\"message\":\"$secret\"}}"),
+                event("{\"error\":{\"message\":\"$providerText\",\"type\":\"insufficient_quota\"}}"),
             )
         }
         assertEquals(OnlineAiFailureReason.PROVIDER_ERROR, providerFailure.reason)
-        assertFalse(providerFailure.toString().contains(secret))
+        assertFalse(providerFailure.toString().contains(providerText))
+        assertEquals("insufficient_quota: $providerText", providerFailure.providerDetail)
 
         val typedProviderFailure = assertThrows(OnlineAiFailureException::class.java) {
             OpenAiCompatibleResponseParser.parseEvent(
-                event("{\"type\":\"error\",\"message\":\"$secret\"}"),
+                event("{\"type\":\"error\",\"message\":\"$providerText\"}"),
             )
         }
         assertEquals(
             OnlineAiFailureReason.PROVIDER_ERROR,
             typedProviderFailure.reason,
         )
-        assertFalse(typedProviderFailure.toString().contains(secret))
+        assertFalse(typedProviderFailure.toString().contains(providerText))
+        assertEquals(providerText, typedProviderFailure.providerDetail)
 
         val malformedFailure = assertThrows(OnlineAiFailureException::class.java) {
-            OpenAiCompatibleResponseParser.parseEvent(event("not-json-$secret"))
+            OpenAiCompatibleResponseParser.parseEvent(event("not-json-$providerText"))
         }
         assertEquals(OnlineAiFailureReason.INVALID_RESPONSE, malformedFailure.reason)
-        assertFalse(malformedFailure.toString().contains(secret))
+        assertFalse(malformedFailure.toString().contains(providerText))
+        assertNull(malformedFailure.providerDetail)
 
         val missingChoice = assertThrows(OnlineAiFailureException::class.java) {
             OpenAiCompatibleResponseParser.parseJson(

@@ -95,6 +95,7 @@
     <string name="chat_generation_failed_short">فشل التوليد</string>
     <string name="chat_generation_failure_choose_target">فشل التوليد | اختيار هدف آخر</string>
     <string name="chat_generation_failure_cloud">فشل التوليد السحابي عبر %1$s. لم يتم اختيار هدف محلي تلقائيا.\n\n%2$s</string>
+    <string name="chat_generation_failure_detail">استجابة المزود: %1$s</string>
     <string name="chat_generation_failure_local">فشل التوليد المحلي عبر %1$s. لم يتم اختيار هدف سحابي تلقائيا.\n\n%2$s</string>
     <string name="chat_generation_failure_local_execution">تعذر على النموذج المحدد على الجهاز إكمال هذا الطلب.</string>
     <string name="chat_generation_failure_target_unavailable">الهدف المسجل لم يعد متاحا.</string>

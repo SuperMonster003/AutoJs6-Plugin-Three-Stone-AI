@@ -103,11 +103,11 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
     }
 
     private fun parse(root: JsonObject, requireTerminal: Boolean): OnlineAiStreamChunk {
-        if (OnlineAiResponseSupport.hasProviderError(root)) OnlineAiResponseSupport.providerError()
+        if (OnlineAiResponseSupport.hasProviderError(root)) OnlineAiResponseSupport.providerError(root)
         OnlineAiResponseSupport.objectOrNull(root, "promptFeedback")?.let { feedback ->
             val blockReason = OnlineAiResponseSupport.stringOrNull(feedback, "blockReason")
             if (blockReason != null && blockReason != "BLOCK_REASON_UNSPECIFIED") {
-                OnlineAiResponseSupport.providerError()
+                OnlineAiResponseSupport.providerError("blockReason: $blockReason")
             }
         }
         val usage = usage(OnlineAiResponseSupport.objectOrNull(root, "usageMetadata"))
@@ -123,7 +123,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         val done = when (finishReason) {
             null, "FINISH_REASON_UNSPECIFIED" -> false
             "STOP", "MAX_TOKENS" -> true
-            else -> OnlineAiResponseSupport.providerError()
+            else -> OnlineAiResponseSupport.providerError("finishReason: $finishReason")
         }
         if (requireTerminal && !done) OnlineAiResponseSupport.invalidResponse()
 

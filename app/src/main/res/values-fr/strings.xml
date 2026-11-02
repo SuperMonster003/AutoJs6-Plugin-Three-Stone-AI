@@ -95,6 +95,7 @@
     <string name="chat_generation_failed_short">Échec de la génération</string>
     <string name="chat_generation_failure_choose_target">Échec de la génération | Choisir une autre cible</string>
     <string name="chat_generation_failure_cloud">La génération cloud a échoué pour %1$s. Aucune cible locale n\'a été sélectionnée automatiquement.\n\n%2$s</string>
+    <string name="chat_generation_failure_detail">Réponse du fournisseur: %1$s</string>
     <string name="chat_generation_failure_local">La génération locale a échoué pour %1$s. Aucune cible cloud n\'a été sélectionnée automatiquement.\n\n%2$s</string>
     <string name="chat_generation_failure_local_execution">Le modèle sélectionné sur l\'appareil n\'a pas pu traiter cette requête.</string>
     <string name="chat_generation_failure_target_unavailable">La cible enregistrée n\'est plus disponible.</string>

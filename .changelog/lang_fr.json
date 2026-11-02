@@ -14,7 +14,8 @@
         "Les requêtes AI suivantes échouaient lorsque l'arrêt du service abandonnait la fermeture d'une session",
         "Les requêtes AI successives étaient rejetées pendant la fermeture de la session annulée précédente",
         "Les profils Anthropic envoyaient toujours max_tokens=1024 même lorsque le maximum de jetons de sortie était illimité, si bien que les réponses étaient coupées vers 1024 jetons sans aucun avertissement (les modèles Claude qui réfléchissent par défaut y comptent aussi leur réflexion); la valeur par défaut passe à 16384 jetons et une réponse arrêtée à la limite de sortie est signalée sous le message par \"Limite de sortie atteinte\" (également pour les profils compatibles OpenAI et Gemini)",
-        "Le test de connexion n'accordait au modèle que 8 jetons de sortie; les modèles Claude qui réfléchissent par défaut les épuisaient en réflexion sans renvoyer de texte, si bien qu'un profil Anthropic correctement configuré était signalé comme réponse invalide. Le test accorde désormais 1024 jetons"
+        "Le test de connexion n'accordait au modèle que 8 jetons de sortie; les modèles Claude qui réfléchissent par défaut les épuisaient en réflexion sans renvoyer de texte, si bien qu'un profil Anthropic correctement configuré était signalé comme réponse invalide. Le test accorde désormais 1024 jetons",
+        "Lorsque la génération dans le cloud ou le test de connexion échouait, seule une catégorie d'échec fixe était affichée et la cause réelle (par exemple un solde de compte épuisé) restait invisible; le statut HTTP et l'explication du fournisseur lui-même (300 caractères au plus, clés masquées) apparaissent désormais sous le message d'échec"
       ]
     },
     "v1.4.1": {

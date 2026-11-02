@@ -128,6 +128,7 @@
     <string name="chat_generation_failed_short">生成失败</string>
     <string name="chat_generation_failure_choose_target">生成失败 | 选择其他目标</string>
     <string name="chat_generation_failure_cloud">%1$s 的云端生成失败. 未自动选择任何本地目标.\n\n%2$s</string>
+    <string name="chat_generation_failure_detail">提供方返回: %1$s</string>
     <string name="chat_generation_failure_local">%1$s 的本地生成失败. 未自动选择任何云端目标.\n\n%2$s</string>
     <string name="chat_generation_failure_local_execution">所选设备端模型无法完成此请求.</string>
     <string name="chat_generation_failure_target_unavailable">记录的目标已不可用.</string>

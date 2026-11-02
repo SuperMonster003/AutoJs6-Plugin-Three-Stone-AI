@@ -91,13 +91,13 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         if (event.isDone) OnlineAiResponseSupport.invalidResponse()
         val root = OnlineAiResponseSupport.parseObject(event.data)
         if (event.event == "error" || OnlineAiResponseSupport.hasProviderError(root)) {
-            OnlineAiResponseSupport.providerError()
+            OnlineAiResponseSupport.providerError(root)
         }
         val type = OnlineAiResponseSupport.stringOrNull(root, "type")
             ?: event.event
             ?: OnlineAiResponseSupport.invalidResponse()
         if (event.event != null && event.event != type) OnlineAiResponseSupport.invalidResponse()
-        if (type == "error") OnlineAiResponseSupport.providerError()
+        if (type == "error") OnlineAiResponseSupport.providerError(root)
         tools?.event(root)
         return when (type) {
             "message_start" -> {
@@ -135,7 +135,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
                 val delta = OnlineAiResponseSupport.objectOrNull(root, "delta")
                     ?: OnlineAiResponseSupport.invalidResponse()
                 val stopReason = OnlineAiResponseSupport.stringOrNull(delta, "stop_reason")
-                if (stopReason == "refusal") OnlineAiResponseSupport.providerError()
+                if (stopReason == "refusal") OnlineAiResponseSupport.providerError(refusalDetail(delta))
                 OnlineAiStreamChunk(
                     usage = usage(OnlineAiResponseSupport.objectOrNull(root, "usage")),
                     truncated = isOutputLimitStop(stopReason),
@@ -157,7 +157,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
             OnlineAiResponseSupport.providerError()
         }
         val stopReason = OnlineAiResponseSupport.stringOrNull(root, "stop_reason")
-        if (stopReason == "refusal") OnlineAiResponseSupport.providerError()
+        if (stopReason == "refusal") OnlineAiResponseSupport.providerError(refusalDetail(root))
         val content = OnlineAiResponseSupport.arrayOrNull(root, "content")
             ?: OnlineAiResponseSupport.invalidResponse()
         var textBlockSeen = false
@@ -187,6 +187,14 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
     /** Output stopped at max_tokens or at the model's context window: valid but incomplete text. */
     private fun isOutputLimitStop(stopReason: String?): Boolean =
         stopReason == "max_tokens" || stopReason == "model_context_window_exceeded"
+
+    /** "refusal" plus the classifier category and explanation when the API attaches stop_details. */
+    private fun refusalDetail(container: JsonObject): String {
+        val details = runCatching { OnlineAiResponseSupport.objectOrNull(container, "stop_details") }.getOrNull()
+        val category = details?.let { runCatching { OnlineAiResponseSupport.stringOrNull(it, "category") }.getOrNull() }
+        val explanation = details?.let { runCatching { OnlineAiResponseSupport.stringOrNull(it, "explanation") }.getOrNull() }
+        return listOfNotNull("refusal", category, explanation).joinToString(": ")
+    }
 
     private fun usage(value: JsonObject?): OnlineAiUsageUpdate? {
         value ?: return null

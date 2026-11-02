@@ -95,6 +95,7 @@
     <string name="chat_generation_failed_short">Сбой генерации</string>
     <string name="chat_generation_failure_choose_target">Сбой генерации | Выбрать другую цель</string>
     <string name="chat_generation_failure_cloud">Облачная генерация для %1$s завершилась ошибкой. Локальная цель не была выбрана автоматически.\n\n%2$s</string>
+    <string name="chat_generation_failure_detail">Ответ провайдера: %1$s</string>
     <string name="chat_generation_failure_local">Локальная генерация для %1$s завершилась ошибкой. Облачная цель не была выбрана автоматически.\n\n%2$s</string>
     <string name="chat_generation_failure_local_execution">Выбранная модель на устройстве не смогла выполнить этот запрос.</string>
     <string name="chat_generation_failure_target_unavailable">Записанная цель больше недоступна.</string>

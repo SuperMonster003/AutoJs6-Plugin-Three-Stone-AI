@@ -95,6 +95,7 @@
     <string name="chat_generation_failed_short">La generación falló</string>
     <string name="chat_generation_failure_choose_target">La generación falló | Elegir otro destino</string>
     <string name="chat_generation_failure_cloud">La generación en la nube falló para %1$s. No se seleccionó automáticamente ningún destino local.\n\n%2$s</string>
+    <string name="chat_generation_failure_detail">Respuesta del proveedor: %1$s</string>
     <string name="chat_generation_failure_local">La generación local falló para %1$s. No se seleccionó automáticamente ningún destino en la nube.\n\n%2$s</string>
     <string name="chat_generation_failure_local_execution">El modelo seleccionado en el dispositivo no pudo completar esta solicitud.</string>
     <string name="chat_generation_failure_target_unavailable">El destino registrado ya no está disponible.</string>

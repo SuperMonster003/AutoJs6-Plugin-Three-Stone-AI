@@ -4232,11 +4232,13 @@ class ChatActivity : ConfiguredActivity() {
             AiTargetLocality.LOCAL -> R.string.chat_generation_failure_local
             AiTargetLocality.REMOTE -> R.string.chat_generation_failure_cloud
         }
-        return getString(
+        val summary = getString(
             template,
             targetSummary(target),
             getString(failure.kind.detailResource()),
         )
+        val detail = failure.detail ?: return summary
+        return summary + "\n\n" + getString(R.string.chat_generation_failure_detail, detail)
     }
 
     private fun ChatGenerationFailureKind.detailResource(): Int = when (this) {

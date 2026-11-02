@@ -1203,7 +1203,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 showSnackbar(screenRoot, getString(R.string.online_ai_test_cancelled))
             else -> materialDialog()
                 .setTitle(R.string.online_ai_test_failed)
-                .setMessage(getString(connectionFailureMessage(failure)))
+                .setMessage(connectionFailureText(failure))
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
                 .also(::tintDialogButtons)
@@ -1230,6 +1230,14 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         if (showFeedback && !isFinishing && !isDestroyed) {
             showSnackbar(screenRoot, getString(R.string.online_ai_test_cancelled))
         }
+    }
+
+    /** The fixed category plus, for online failures, the HTTP status and the provider's own explanation. */
+    private fun connectionFailureText(error: Exception): String {
+        val summary = getString(connectionFailureMessage(error))
+        val failure = error as? OnlineAiFailureException ?: return summary
+        val detail = ChatGenerationFailurePolicy.providerDetail(failure) ?: return summary
+        return summary + "\n\n" + getString(R.string.chat_generation_failure_detail, detail)
     }
 
     private fun connectionFailureMessage(error: Exception): Int = when (error) {

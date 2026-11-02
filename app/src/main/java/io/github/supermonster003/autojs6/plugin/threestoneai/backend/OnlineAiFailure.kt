@@ -23,15 +23,26 @@ internal enum class OnlineAiFailureReason {
 }
 
 /**
- * Stable online-generation failure that never retains a provider body, request URL, credential,
- * or lower-level exception. Those values must remain absent even if callers log this Throwable.
+ * Stable online-generation failure. [message] never retains a provider body, request URL, credential or
+ * lower-level exception, so logging this Throwable stays safe. [providerDetail] is the bounded,
+ * sanitised explanation the provider sent ([OnlineAiProviderDetail]); it is meant for user-facing
+ * surfaces only and is excluded from [message] and [toString].
  */
 internal class OnlineAiFailureException(
     val reason: OnlineAiFailureReason,
     val statusCode: Int? = null,
+    val providerDetail: String? = null,
 ) : IOException(message(reason, statusCode)) {
     init {
         require(statusCode == null || statusCode in 100..599)
+        require(providerDetail == null || providerDetail.length <= OnlineAiProviderDetail.MAXIMUM_LENGTH)
+    }
+
+    /** The same failure with every occurrence of [secret] masked in [providerDetail]. */
+    fun withoutSecret(secret: ByteArray): OnlineAiFailureException {
+        val detail = providerDetail ?: return this
+        val masked = OnlineAiProviderDetail.withoutSecret(detail, secret)
+        return if (masked == detail) this else OnlineAiFailureException(reason, statusCode, masked)
     }
 
     companion object {
@@ -76,7 +87,10 @@ internal class OnlineAiFailureException(
     }
 }
 
-internal fun failureForOnlineAiHttpStatus(statusCode: Int): OnlineAiFailureException {
+internal fun failureForOnlineAiHttpStatus(
+    statusCode: Int,
+    providerDetail: String? = null,
+): OnlineAiFailureException {
     val reason = when (statusCode) {
         in 300..399 -> OnlineAiFailureReason.REDIRECT_REFUSED
         401 -> OnlineAiFailureReason.AUTHENTICATION_FAILED
@@ -86,5 +100,5 @@ internal fun failureForOnlineAiHttpStatus(statusCode: Int): OnlineAiFailureExcep
         in 500..599 -> OnlineAiFailureReason.SERVICE_UNAVAILABLE
         else -> OnlineAiFailureReason.REQUEST_REJECTED
     }
-    return OnlineAiFailureException(reason, statusCode)
+    return OnlineAiFailureException(reason, statusCode, providerDetail)
 }

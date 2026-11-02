@@ -95,6 +95,7 @@
     <string name="chat_generation_failed_short">생성 실패</string>
     <string name="chat_generation_failure_choose_target">생성 실패 | 다른 대상 선택</string>
     <string name="chat_generation_failure_cloud">%1$s에서 클라우드 생성에 실패했습니다. 로컬 대상으로 자동 전환하지 않았습니다.\n\n%2$s</string>
+    <string name="chat_generation_failure_detail">제공자 응답: %1$s</string>
     <string name="chat_generation_failure_local">%1$s에서 로컬 생성에 실패했습니다. 클라우드 대상으로 자동 전환하지 않았습니다.\n\n%2$s</string>
     <string name="chat_generation_failure_local_execution">선택한 온디바이스 모델이 이 요청을 완료하지 못했습니다.</string>
     <string name="chat_generation_failure_target_unavailable">기록된 대상을 더 이상 사용할 수 없습니다.</string>

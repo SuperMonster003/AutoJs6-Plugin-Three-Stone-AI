@@ -210,6 +210,40 @@ class AnthropicMessagesProtocolTest {
     }
 
     @Test
+    fun providerErrorsAndRefusalsCarryTheirExplanationOutsideTheMessage() {
+        val overloaded = assertThrows(OnlineAiFailureException::class.java) {
+            AnthropicMessagesProtocolAdapter.parseEvent(
+                event(
+                    "error",
+                    """{"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}""",
+                ),
+            )
+        }
+        val refusal = assertThrows(OnlineAiFailureException::class.java) {
+            AnthropicMessagesProtocolAdapter.parseEvent(
+                event(
+                    "message_delta",
+                    """
+                    {"type":"message_delta","delta":{"stop_reason":"refusal",
+                     "stop_details":{"type":"refusal","category":"cyber","explanation":"Not this."}}}
+                    """.trimIndent(),
+                ),
+            )
+        }
+        val bareRefusal = assertThrows(OnlineAiFailureException::class.java) {
+            AnthropicMessagesProtocolAdapter.parseJson(
+                """{"content":[{"type":"text","text":"no"}],"stop_reason":"refusal"}"""
+                    .toResponseBody("application/json".toMediaType()),
+            )
+        }
+
+        assertEquals("overloaded_error: Overloaded", overloaded.providerDetail)
+        assertFalse(overloaded.toString().contains("Overloaded"))
+        assertEquals("refusal: cyber: Not this.", refusal.providerDetail)
+        assertEquals("refusal", bareRefusal.providerDetail)
+    }
+
+    @Test
     fun outputLimitStopsAreReportedAsTruncationNotFailure() {
         val maxTokens = AnthropicMessagesProtocolAdapter.parseEvent(
             event(

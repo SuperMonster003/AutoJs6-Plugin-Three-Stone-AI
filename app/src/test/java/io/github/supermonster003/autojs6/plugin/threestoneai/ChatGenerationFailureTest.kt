@@ -6,6 +6,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFai
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureReason
 import java.io.IOException
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ChatGenerationFailureTest {
@@ -55,6 +56,45 @@ class ChatGenerationFailureTest {
                 ),
             )
         }
+    }
+
+    @Test
+    fun `online failures carry the status and the provider explanation for display`() {
+        assertEquals(
+            ChatGenerationFailure(
+                AiTargetLocality.REMOTE,
+                ChatGenerationFailureKind.PROVIDER,
+                detail = "HTTP 400: invalid_request_error: credit balance is too low",
+            ),
+            ChatGenerationFailurePolicy.classify(
+                cloudTarget,
+                OnlineAiFailureException(
+                    OnlineAiFailureReason.REQUEST_REJECTED,
+                    statusCode = 400,
+                    providerDetail = "invalid_request_error: credit balance is too low",
+                ),
+            ),
+        )
+        assertEquals(
+            "HTTP 503",
+            ChatGenerationFailurePolicy.classify(
+                cloudTarget,
+                OnlineAiFailureException(OnlineAiFailureReason.SERVICE_UNAVAILABLE, statusCode = 503),
+            ).detail,
+        )
+        assertEquals(
+            "finishReason: SAFETY",
+            ChatGenerationFailurePolicy.classify(
+                cloudTarget,
+                OnlineAiFailureException(OnlineAiFailureReason.PROVIDER_ERROR, providerDetail = "finishReason: SAFETY"),
+            ).detail,
+        )
+        assertNull(
+            ChatGenerationFailurePolicy.classify(
+                localTarget,
+                OnlineAiFailureException(OnlineAiFailureReason.PROVIDER_ERROR, providerDetail = "ignored locally"),
+            ).detail,
+        )
     }
 
     @Test

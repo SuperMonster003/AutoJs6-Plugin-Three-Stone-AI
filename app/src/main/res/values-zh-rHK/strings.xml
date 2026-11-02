@@ -95,6 +95,7 @@
     <string name="chat_generation_failed_short">生成失敗</string>
     <string name="chat_generation_failure_choose_target">生成失敗 | 選擇其他目標</string>
     <string name="chat_generation_failure_cloud">%1$s 嘅雲端生成失敗. 未有自動選擇任何本機目標.\n\n%2$s</string>
+    <string name="chat_generation_failure_detail">提供方回應: %1$s</string>
     <string name="chat_generation_failure_local">%1$s 嘅本機生成失敗. 未有自動選擇任何雲端目標.\n\n%2$s</string>
     <string name="chat_generation_failure_local_execution">所選嘅裝置端模型無法完成呢個請求.</string>
     <string name="chat_generation_failure_target_unavailable">記錄嘅目標已經不可用.</string>

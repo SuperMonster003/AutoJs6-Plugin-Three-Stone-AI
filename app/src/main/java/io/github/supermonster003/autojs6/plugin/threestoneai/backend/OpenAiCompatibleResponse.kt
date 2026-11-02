@@ -10,7 +10,7 @@ internal object OpenAiCompatibleResponseParser {
     fun parseEvent(event: OnlineAiSseEvent, tools: OnlineAiToolCollector? = null): OnlineAiStreamChunk {
         if (event.isDone) return OnlineAiStreamChunk(done = true)
         val root = OnlineAiResponseSupport.parseObject(event.data)
-        if (event.event == "error" || root.isTypedError() || root.hasProviderError()) providerError()
+        if (event.event == "error" || root.isTypedError() || root.hasProviderError()) providerError(root)
         tools?.event(root)
 
         val choice = root.firstChoice()
@@ -33,7 +33,7 @@ internal object OpenAiCompatibleResponseParser {
 
     fun parseJson(body: ResponseBody, tools: OnlineAiToolCollector? = null): OnlineAiJsonResponse {
         val root = OnlineAiResponseSupport.readObject(body)
-        if (root.isTypedError() || root.hasProviderError()) providerError()
+        if (root.isTypedError() || root.hasProviderError()) providerError(root)
         tools?.json(root)
         val choice = root.firstChoice() ?: invalidResponse()
         val message = choice.get("message")?.let { element ->
@@ -147,7 +147,5 @@ internal object OpenAiCompatibleResponseParser {
         OnlineAiFailureReason.INVALID_RESPONSE,
     )
 
-    private fun providerError(): Nothing = throw OnlineAiFailureException(
-        OnlineAiFailureReason.PROVIDER_ERROR,
-    )
+    private fun providerError(root: JsonObject): Nothing = OnlineAiResponseSupport.providerError(root)
 }

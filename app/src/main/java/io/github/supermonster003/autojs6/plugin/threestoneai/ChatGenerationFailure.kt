@@ -24,11 +24,14 @@ internal enum class ChatGenerationFailureKind {
 internal data class ChatGenerationFailure(
     val locality: AiTargetLocality,
     val kind: ChatGenerationFailureKind,
+    /** "HTTP 400: type: message" for online failures that carried a status or provider text, else null. */
+    val detail: String? = null,
 )
 
 /**
  * Converts backend failures into a bounded presentation category. Raw exception text is never
- * retained or shown because it may contain a local path or transport detail.
+ * retained or shown because it may contain a local path or transport detail; the only passthrough is
+ * the provider's own bounded, credential-free explanation of an online failure.
  */
 internal object ChatGenerationFailurePolicy {
     fun classify(
@@ -43,7 +46,15 @@ internal object ChatGenerationFailurePolicy {
             error !is OnlineAiFailureException -> ChatGenerationFailureKind.UNKNOWN
             else -> error.reason.toChatFailureKind()
         },
+        detail = (error as? OnlineAiFailureException)
+            ?.takeIf { target.locality == AiTargetLocality.REMOTE }
+            ?.let(::providerDetail),
     )
+
+    fun providerDetail(failure: OnlineAiFailureException): String? = listOfNotNull(
+        failure.statusCode?.let { code -> "HTTP $code" },
+        failure.providerDetail,
+    ).joinToString(": ").ifEmpty { null }
 
     private fun OnlineAiFailureReason.toChatFailureKind(): ChatGenerationFailureKind = when (this) {
         OnlineAiFailureReason.CREDENTIAL_UNAVAILABLE -> ChatGenerationFailureKind.CREDENTIAL

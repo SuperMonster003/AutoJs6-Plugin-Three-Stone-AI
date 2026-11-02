@@ -95,6 +95,7 @@
     <string name="chat_generation_failed_short">生成に失敗しました</string>
     <string name="chat_generation_failure_choose_target">生成に失敗 | 別のターゲットを選択</string>
     <string name="chat_generation_failure_cloud">%1$s でのクラウド生成に失敗しました. ローカルターゲットへ自動的に切り替えていません.\n\n%2$s</string>
+    <string name="chat_generation_failure_detail">プロバイダーの応答: %1$s</string>
     <string name="chat_generation_failure_local">%1$s でのローカル生成に失敗しました. クラウドターゲットへ自動的に切り替えていません.\n\n%2$s</string>
     <string name="chat_generation_failure_local_execution">選択した端末上のモデルはこのリクエストを完了できませんでした.</string>
     <string name="chat_generation_failure_target_unavailable">記録されたターゲットは利用できなくなりました.</string>

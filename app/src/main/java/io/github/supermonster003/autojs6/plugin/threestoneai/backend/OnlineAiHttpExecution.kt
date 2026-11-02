@@ -226,7 +226,12 @@ internal class OnlineAiSession(
                             call.cancel()
                             return@use
                         }
-                        consume(call, progress, delivery)
+                        try {
+                            consume(call, progress, delivery)
+                        } catch (failure: OnlineAiFailureException) {
+                            // A provider that echoes the key must not reach the user through the detail text.
+                            throw failure.withoutSecret(credential)
+                        }
                     } finally {
                         activeCall.compareAndSet(call, null)
                     }
@@ -285,10 +290,10 @@ internal class OnlineAiSession(
     ) {
         call.execute().use { response ->
             if (!response.isSuccessful) {
-                runCatching {
-                    OnlineAiResponseSupport.discardErrorBody(response.body)
-                }
-                throw failureForOnlineAiHttpStatus(response.code)
+                val detail = runCatching {
+                    OnlineAiResponseSupport.readErrorDetail(response.body)
+                }.getOrNull()
+                throw failureForOnlineAiHttpStatus(response.code, detail)
             }
             val body = response.body ?: invalidResponse()
             when {

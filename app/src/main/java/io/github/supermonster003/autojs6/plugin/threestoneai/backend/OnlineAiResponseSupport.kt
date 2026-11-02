@@ -71,6 +71,38 @@ internal object OnlineAiResponseSupport {
         scratch.clear()
     }
 
+    /**
+     * Reads at most MAXIMUM_ERROR_RESPONSE_BYTES of an HTTP error body and returns the bounded provider
+     * explanation ([OnlineAiProviderDetail]): the JSON error envelope when the body parses, the plain text
+     * otherwise, null for empty, oversized or HTML bodies.
+     */
+    fun readErrorDetail(body: ResponseBody?): String? {
+        body ?: return null
+        val source = body.source()
+        val buffer = Buffer()
+        var remaining = OnlineAiTransportLimits.MAXIMUM_ERROR_RESPONSE_BYTES + 1L
+        while (remaining > 0L) {
+            val read = source.read(buffer, min(remaining, READ_CHUNK_BYTES))
+            if (read == -1L) break
+            remaining -= read
+        }
+        if (buffer.size > OnlineAiTransportLimits.MAXIMUM_ERROR_RESPONSE_BYTES) {
+            buffer.clear()
+            return null
+        }
+        val text = buffer.readUtf8().removePrefix("﻿")
+        val parsed = try {
+            STRICT_GSON.fromJson(text, JsonElement::class.java)
+        } catch (_: RuntimeException) {
+            null
+        }
+        return if (parsed != null && parsed.isJsonObject) {
+            OnlineAiProviderDetail.fromJson(parsed.asJsonObject)
+        } else {
+            OnlineAiProviderDetail.fromText(text)
+        }
+    }
+
     fun objectOrNull(root: JsonObject, name: String): JsonObject? {
         val value = root.get(name) ?: return null
         if (value.isJsonNull) return null
@@ -121,9 +153,14 @@ internal object OnlineAiResponseSupport {
         OnlineAiFailureReason.INVALID_RESPONSE,
     )
 
-    fun providerError(): Nothing = throw OnlineAiFailureException(
+    /** Provider-reported failure; [detail] is the bounded explanation shown to the user, if any. */
+    fun providerError(detail: String? = null): Nothing = throw OnlineAiFailureException(
         OnlineAiFailureReason.PROVIDER_ERROR,
+        providerDetail = detail,
     )
+
+    /** Provider-reported failure described by the error envelope in [root]. */
+    fun providerError(root: JsonObject): Nothing = providerError(OnlineAiProviderDetail.fromJson(root))
 
     private const val READ_CHUNK_BYTES = 8192L
 }

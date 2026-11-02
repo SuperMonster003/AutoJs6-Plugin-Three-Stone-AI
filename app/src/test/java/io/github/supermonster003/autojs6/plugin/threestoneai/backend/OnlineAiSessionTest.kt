@@ -223,14 +223,14 @@ class OnlineAiSessionTest {
     }
 
     @Test
-    fun httpAndProviderFailuresAreNormalizedWithoutResponseOrCredentialText() {
+    fun httpAndProviderFailuresKeepStableMessagesAndExposeTheRedactedProviderDetail() {
         val credential = "private-key"
         val responseSecret = "provider-echoed-private-key"
         val httpCalls = ScriptedCallFactory(
             response(
                 code = 401,
                 contentType = "application/json",
-                body = "{\"error\":{\"message\":\"$responseSecret\"}}",
+                body = "{\"error\":{\"type\":\"authentication_error\",\"message\":\"$responseSecret\"}}",
             ),
         )
         val httpListener = RecordingListener()
@@ -242,6 +242,7 @@ class OnlineAiSessionTest {
         assertEquals(401, httpFailure.statusCode)
         assertFalse(httpFailure.toString().contains(credential))
         assertFalse(httpFailure.toString().contains(responseSecret))
+        assertEquals("authentication_error: provider-echoed-[redacted]", httpFailure.providerDetail)
         assertNull(httpListener.completed)
 
         val providerCalls = ScriptedCallFactory(
@@ -260,6 +261,7 @@ class OnlineAiSessionTest {
         assertEquals(OnlineAiFailureReason.PROVIDER_ERROR, providerFailure.reason)
         assertFalse(providerFailure.toString().contains(credential))
         assertFalse(providerFailure.toString().contains(responseSecret))
+        assertEquals("provider-echoed-[redacted]", providerFailure.providerDetail)
     }
 
     @Test

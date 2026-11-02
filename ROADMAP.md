@@ -377,3 +377,10 @@ Node.js, Bun and Worker use the existing native provider through a separate entr
 - Binder 路径 (宿主脚本) 仍只在字节上限处报 AiFinishReason.LENGTH, 提供方 max_tokens 截断暂不改写 finishReason: 宿主对 LENGTH 会关闭持久会话, 改动影响 3-Stove Agent 等调用方.
 - 自定义采样参数 (temperature / top_k / top_p) 在 Claude 4.7+ 上返回 400, 需要与 effort 选项一起设计.
 - effort / fast 模式 / 文件附件 / 设置页重组 / 生成跨越 Activity 重建等需求另行立项.
+
+补充 (同日): 维护者随后提出两项要求, 已随 1.5.0 一并落地.
+
+4. 云端失败要让用户看到提供方的原话 (额度耗尽时此前只显示 "提供方拒绝了请求或当前不可用"). OnlineAiFailureException 新增 providerDetail: HTTP 错误体 (Anthropic / OpenAI / Gemini 的 error 信封或纯文本, 最多读 64 KiB, HTML 丢弃), 流内 error 事件, Anthropic refusal (含 stop_details) 与 Gemini blockReason / finishReason 都会填入; 文本折叠空白, 去控制字符, 截到 300 字符, 遮盖形似密钥的片段, 执行层再用请求凭据逐字节遮盖. message / toString 保持原样, 日志不含提供方文本. 聊天失败信息与连接测试对话框在类别下方追加 "提供方返回: HTTP <状态码>: <说明>". Binder 路径 (AiError 没有提供方文本字段) 未改.
+5. 生成期间聊天窗口持有 FLAG_KEEP_SCREEN_ON (isGenerating 的 setter 统一加减), 避免长回复被熄屏超时打断.
+
+真机证据 (XQ-DQ72, 调试版 build 302 覆盖安装在 1.4.1 之上, .python/device_chat_probe.py): Anthropic 资料 (额度耗尽) 发送 5 秒后失败并显示 "HTTP 400: invalid_request_error: Your credit balance is too low ..."; Codex 资料 93 秒完整回复 (输出 2606 token), 生成中窗口 fl 含 KEEP_SCREEN_ON, 结束后释放.

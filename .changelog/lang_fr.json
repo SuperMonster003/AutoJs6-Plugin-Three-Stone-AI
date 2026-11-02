@@ -8,7 +8,8 @@
     "v1.5.0": {
       "released_date": "2026/10/22",
       "feature": [
-        "Les applications signées séparément demandent un accès IA explicite dans le module, lié à leur identité et installation; la révocation dans les réglages arrête les requêtes actives"
+        "Les applications signées séparément demandent un accès IA explicite dans le module, lié à leur identité et installation; la révocation dans les réglages arrête les requêtes actives",
+        "L'écran reste allumé pendant la génération d'une réponse au lieu de s'éteindre à l'expiration du délai"
       ],
       "fix": [
         "Les requêtes AI suivantes échouaient lorsque l'arrêt du service abandonnait la fermeture d'une session",

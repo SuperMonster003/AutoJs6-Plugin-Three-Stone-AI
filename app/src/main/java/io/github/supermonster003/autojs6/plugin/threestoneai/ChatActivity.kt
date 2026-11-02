@@ -23,6 +23,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
@@ -181,7 +182,18 @@ class ChatActivity : ConfiguredActivity() {
     private var allowDeletedConversationRevival = false
     private var targetCatalogAvailability = TargetCatalogAvailability.LOADING
     private var targetCatalog: AiTargetCatalog? = null
+    // The screen stays on while a reply is being generated, so a long turn is not cut short by the
+    // screen timeout (maintainer request, 2026-11-02). The flag follows the generating state exactly:
+    // every start, completion, failure and stop goes through this property.
     private var isGenerating = false
+        set(value) {
+            field = value
+            if (value) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
     private var activeGenerationId: Long? = null
     private var activeAssistantMessageId: Long? = null
     private var activeBackend: AiBackendSession? = null

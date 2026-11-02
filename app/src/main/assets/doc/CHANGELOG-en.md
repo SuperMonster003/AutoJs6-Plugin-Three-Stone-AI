@@ -9,6 +9,7 @@
 ###### 2026/10/22
 
 * `Feature` Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests
+* `Feature` The screen stays on while a reply is being generated instead of turning off at the screen timeout
 * `Fix` Subsequent AI requests failed when service shutdown discarded a queued session cleanup
 * `Fix` Sequential AI requests were rejected while a cancelled model session was still closing
 * `Fix` Anthropic profiles always sent max_tokens=1024 while the maximum output tokens setting was unlimited, so replies were cut off around 1024 tokens without any notice (Claude models that think by default count their thinking against it); the default is now 16384 tokens, and a reply stopped at the output limit is marked "Output limit reached" under the message, for OpenAI-compatible and Gemini profiles as well

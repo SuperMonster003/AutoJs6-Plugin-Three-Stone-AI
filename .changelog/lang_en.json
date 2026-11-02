@@ -8,7 +8,8 @@
     "v1.5.0": {
       "released_date": "2026/10/22",
       "feature": [
-        "Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests"
+        "Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests",
+        "The screen stays on while a reply is being generated instead of turning off at the screen timeout"
       ],
       "fix": [
         "Subsequent AI requests failed when service shutdown discarded a queued session cleanup",

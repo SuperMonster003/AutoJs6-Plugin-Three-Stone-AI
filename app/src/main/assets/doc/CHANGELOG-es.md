@@ -9,6 +9,7 @@
 ###### 2026/10/22
 
 * `Función` Las aplicaciones con firma independiente solicitan acceso a IA en el complemento, ligado a su identidad e instalación; revocarlo en los ajustes detiene las solicitudes activas
+* `Función` La pantalla permanece encendida mientras se genera una respuesta en lugar de apagarse al agotarse el tiempo de espera
 * `Corrección` Las solicitudes AI siguientes fallaban si el servicio se detenía antes de cerrar la sesión anterior
 * `Corrección` Las solicitudes AI consecutivas se rechazaban mientras se cerraba la sesión del modelo cancelada
 * `Corrección` Los perfiles de Anthropic enviaban siempre max_tokens=1024 aunque el máximo de tokens de salida estuviera sin límite, por lo que las respuestas se cortaban hacia los 1024 tokens sin ningún aviso (los modelos Claude que razonan por defecto descuentan también su razonamiento); ahora el valor por defecto es 16384 tokens y una respuesta detenida en el límite de salida se marca bajo el mensaje como "Límite de salida alcanzado" (también en perfiles compatibles con OpenAI y Gemini)

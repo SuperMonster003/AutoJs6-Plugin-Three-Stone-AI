@@ -14,6 +14,11 @@ to match come from the app's own string resources: pass --locale for the values-
 device UI uses (the app follows the AutoJs6 host language, not the system locale).
 Confirmation dialogs are never tapped by this script. Written for the Anthropic max_tokens
 truncation fix of 2026-11-02 (ROADMAP "Anthropic 输出上限与截断标注").
+
+A failed reply also reports the provider explanation shown under the failure message (the
+"Provider response:" paragraph added the same day), and --check-keep-screen-on samples the chat
+window's FLAG_KEEP_SCREEN_ON right after Send and again once the reply has ended: it must be held
+while generating and released afterwards.
 """
 
 import argparse
@@ -34,6 +39,7 @@ STRING_NAMES = (
     "chat_generation_truncated",
     "chat_generation_stopped",
     "chat_generation_failure_choose_target",
+    "chat_generation_failure_detail",
     "chat_usage_format",
 )
 
@@ -135,6 +141,22 @@ def target_line(root):
     return next((text for text in texts(root) if " | " in text and "Token" not in text), "")
 
 
+def keep_screen_on(serial):
+    """True when the chat's base window holds FLAG_KEEP_SCREEN_ON, False when not, None when it is not listed."""
+    output = adb(serial, "shell", "dumpsys", "window", "windows", check=False)
+    blocks = re.split(r"\n(?=\s*Window #\d+ )", output)
+    candidates = [block for block in blocks if ".ChatActivity}" in block.splitlines()[0]]
+    base = [block for block in candidates if "ty=BASE_APPLICATION" in block]
+    for block in base or candidates:
+        named = re.search(r"\bfl=([A-Z_][A-Z0-9_ ]*)", block)
+        if named:
+            return "KEEP_SCREEN_ON" in named.group(1).split()
+        hexadecimal = re.search(r"\bfl=#?([0-9a-fA-F]+)", block)
+        if hexadecimal:
+            return bool(int(hexadecimal.group(1), 16) & 0x80)
+    return None
+
+
 def clear_field(serial, length):
     # Ctrl+A then Delete; fall back to one Delete per character when key combinations are unsupported.
     adb(serial, "shell", "input", "keycombination", "113", "29", check=False)
@@ -152,10 +174,16 @@ def main():
     parser.add_argument("--model", help="switch the new conversation to the switcher entry containing this text")
     parser.add_argument("--timeout", type=int, default=420, help="seconds to wait for the reply to end")
     parser.add_argument("--keep-conversation", action="store_true", help="append to the open conversation")
-    parser.add_argument("--expect", choices=["complete", "truncated"], help="fail unless the reply ended this way")
+    parser.add_argument("--expect", choices=["complete", "truncated", "failed"], help="fail unless the reply ended this way")
+    parser.add_argument(
+        "--check-keep-screen-on",
+        action="store_true",
+        help="fail unless FLAG_KEEP_SCREEN_ON is held while generating and released once the reply has ended",
+    )
     args = parser.parse_args()
     words = load_strings(args.locale)
     usage = usage_pattern(words["chat_usage_format"])
+    detail_prefix = words["chat_generation_failure_detail"].replace("%1$s", "")
     serial = args.serial
 
     version = adb(serial, "shell", "dumpsys", "package", PACKAGE)
@@ -221,11 +249,16 @@ def main():
     tap(serial, send)
     started = time.time()
     print("sent: waiting for the reply to end")
+    held_while_generating = None
+    if args.check_keep_screen_on:
+        time.sleep(0.5)
+        held_while_generating = keep_screen_on(serial)
 
     outcome = None
     meta = ""
     tail = ""
     counts = ""
+    detail = None
     while time.time() - started < args.timeout:
         time.sleep(3)
         root = dump(serial)
@@ -246,6 +279,11 @@ def main():
                     counts = f"input={match.group('input')} output={match.group('output')}"
                 body = [value for value in visible[:index] if value != args.prompt]
                 tail = body[-1][-120:] if body else ""
+                if outcome == "failed" and detail_prefix:
+                    for value in body:
+                        position = value.find(detail_prefix)
+                        if position >= 0:
+                            detail = value[position + len(detail_prefix):].split("\n")[0][:200]
                 break
         if outcome:
             break
@@ -256,8 +294,20 @@ def main():
     print(f"outcome: {outcome} after {elapsed:.0f} s {counts}".rstrip())
     print(f"meta: {escaped(meta)}")
     print(f"reply tail: {escaped(tail)}")
+    if outcome == "failed":
+        print(f"failure detail: {escaped(detail) if detail else 'not shown'}")
+    failed = False
+    if args.check_keep_screen_on:
+        time.sleep(1.0)
+        released = keep_screen_on(serial)
+        print(f"keep screen on: while generating={held_while_generating} after={released}")
+        if held_while_generating is not True or released is not False:
+            print("FAIL: FLAG_KEEP_SCREEN_ON was not held exactly while generating")
+            failed = True
     if args.expect and args.expect != outcome:
         print(f"FAIL: expected {args.expect}")
+        failed = True
+    if failed:
         return 1
     print("PASS")
     return 0

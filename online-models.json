@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "revision": 16,
-  "updatedAtEpochMillis": 1793091343361,
+  "revision": 17,
+  "updatedAtEpochMillis": 1793702798914,
   "providers": {
     "openai": {
       "defaultModelId": "gpt-5.6-sol",
@@ -114,11 +114,11 @@
         "moonshotai/kimi-k2.7-code",
         "moonshotai/kimi-k2.6",
         "moonshotai/kimi-k2.5",
+        "z-ai/glm-5.3-flashx-legal",
         "z-ai/glm-5.3-prime",
         "z-ai/glm-5.3-flashx",
         "z-ai/glm-5.3-flash",
         "z-ai/glm-5.3",
-        "z-ai/glm-5.2",
         "minimax/minimax-m3.1-flash",
         "minimax/minimax-m3",
         "minimax/minimax-m2.7",

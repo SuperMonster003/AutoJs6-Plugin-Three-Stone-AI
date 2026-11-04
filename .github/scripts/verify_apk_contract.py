@@ -79,7 +79,7 @@ if args.pagesize is not None:
                  metadata['applicationId'] + '.AbiCompatibilityAndroidTest',
                  test['applicationId'] + '/androidx.test.runner.AndroidJUnitRunner')
     print(output, flush=True)
-    passed = 'OK (6 tests)' in output and 'FAILURES!!!' not in output
+    passed = 'OK (7 tests)' in output and 'FAILURES!!!' not in output
     if not passed:
         print_failure_evidence(metadata['applicationId'])
     assert passed, 'Discovery and ABI compatibility tests failed'

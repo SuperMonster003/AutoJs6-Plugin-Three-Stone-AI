@@ -90,7 +90,7 @@ internal object OnlineAiResponseSupport {
             buffer.clear()
             return null
         }
-        val text = buffer.readUtf8().removePrefix("﻿")
+        val text = buffer.readUtf8().removePrefix("\uFEFF")
         val parsed = try {
             STRICT_GSON.fromJson(text, JsonElement::class.java)
         } catch (_: RuntimeException) {

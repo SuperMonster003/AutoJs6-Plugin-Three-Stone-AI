@@ -502,7 +502,8 @@ P8 发布 1.6.0
 
 Q11 = A: 1.6.0 = P1 - P3 (生成协调器与硬取消, effort / fast 与模型切换器面板, 思考过程卡片); P4 - P7 归 1.7.0, 由 P9 发布.
 
-- [ ] P8.1 十语言 changelog (通俗文案), VERSION_NAME 1.6.0, README 功能说明 (effort / fast, 模型切换器面板, 思考卡片, 生成不随界面重建中断与硬取消, 历史格式 v6; 原文的 "附件, 设置页" 划归 1.7.0, 见 P9.1) 与权限说明核对.
+- [x] P8.1 十语言 changelog (通俗文案), VERSION_NAME 1.6.0, README 功能说明 (effort / fast, 模型切换器面板, 思考卡片, 生成不随界面重建中断与硬取消, 历史格式 v6; 原文的 "附件, 设置页" 划归 1.7.0, 见 P9.1) 与权限说明核对.
+  - 证据 (2026-11-05, 子会话 3-stone-p8-release-160): 提交 a012633 (VERSION_NAME 1.6.0, VERSION_BUILD 313), 已推送 master; CI 四项全过 (Documentation, Build and plugin contract 由推送触发; Icon geometry, Icon Studio recipe 按路径过滤未触发, 手动 workflow_dispatch 于 a012633 跑过). changelog v1.6.0 十语言核对后未改 (各 3 条新功能 + 4 条修复, 无全角标点, 术语与界面字符串一致, released_date 保留占位 2026/11/05). README 十语言各加 5 条功能 (共 30 条), 安全一节加思考内容只存本机, 不回传在线服务, 不经插件接口返回脚本 (对应 OnlineAiSessionTest "思考不进下一轮上下文"), 能力限制一节写明插件接口不声明 reasoning; Manifest 自 v1.5.0 起无变化, 网络与权限说明无需改. 单测 572 全绿 (testDebugUnitTest --rerun 实跑), generate_markdown --check 与 check_repository (提交前 --pending-commit, 提交后不带) 均无错误.
 - [ ] P8.2 发布门: 单测全绿; 仪器测试在 XQ-DQ72 通过; XQ-DQ72 与 OnePlus 63751f63 (ColorOS) 正式包冒烟; 发布与索引登记. 发布前先补 Anthropic 真机两轮 (P2.6 fast, P3 思考卡片), 维护者额度预计 2026-11-11 恢复.
 - 备注 (2026-11-05 15:5x, 维护者拍板 "先做 P8.1 准备"): P8.1 提交在额度恢复前完成, released_date 保留占位 2026/11/05; 发布日再单独提交一笔 (10 语言 released_date 改为实际发布日并重新生成文档, VERSION_BUILD 届时递增), tag v1.6.0 指向这笔日期提交, 不指向 P8.1 提交. 若 Anthropic 补测发现请求形状要改, 修正提交 (D95 起) 也排在 tag 之前.
 - 依赖: P1 - P3 (Q11 = A).

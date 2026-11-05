@@ -424,9 +424,9 @@ Ultracode 是 Claude Code 工具自身的多代理编排设置, 不是 Anthropic
 
 P0 发布 1.5.0
 
-- [ ] P0.1 十个 .changelog/lang_*.json 的 v1.5.0 released_date 改为实际发布日 (当前是占位 2026/10/22), 重新生成文档, 单独提交.
-- [ ] P0.2 按既有发布流程: 推送 master, tag v1.5.0, 从 tag 的干净克隆构建签名 release (appendDigestToReleasedFiles), GitHub Release, 登记官方索引; 发布前正式包在 XQ-DQ72 覆盖安装冒烟 (Codex 资料: 完整回复 + 用量行; Anthropic 资料额度耗尽时跳过).
-- 验收: Release 资产与索引 hash 记入本节; 看板记录 tag 与 versionCode.
+- [x] P0.1 十个 .changelog/lang_*.json 的 v1.5.0 released_date 改为实际发布日 (当前是占位 2026/10/22), 重新生成文档, 单独提交.
+- [x] P0.2 按既有发布流程: 推送 master, tag v1.5.0, 从 tag 的干净克隆构建签名 release (appendDigestToReleasedFiles), GitHub Release, 登记官方索引; 发布前正式包在 XQ-DQ72 覆盖安装冒烟 (Codex 资料: 完整回复 + 用量行; Anthropic 资料额度耗尽时跳过).
+- 验收: Release 资产与索引 hash 记入本节; 看板记录 tag 与 versionCode. 证据 (2026-11-05 补记): tag v1.5.0 = d3db0bf, versionCode 305, GitHub Release 2026-11-04 06:27 UTC (维护者手动完成), 资产 5 个 ABI APK + SHA256SUMS, 官方索引 release-manifests/io.github.supermonster003.autojs6.plugin.threestoneai/305.json (索引提交 8f8c679); released_date 已改为 2026/11/04 并重新生成文档 (P0.1 提交). XQ-DQ72 正式包冒烟由维护者自行完成, 未留证据.
 
 P1 生成协调器与硬取消 (需求 6, D77)
 

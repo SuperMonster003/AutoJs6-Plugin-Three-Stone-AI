@@ -6,7 +6,7 @@
 
 # v1.5.0
 
-###### 2026/10/22
+###### 2026/11/04
 
 * `Fonctionnalité` Les applications signées séparément demandent un accès IA explicite dans le module, lié à leur identité et installation; la révocation dans les réglages arrête les requêtes actives
 * `Fonctionnalité` L'écran reste allumé pendant la génération d'une réponse au lieu de s'éteindre à l'expiration du délai

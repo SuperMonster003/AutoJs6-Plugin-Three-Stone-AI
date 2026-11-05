@@ -6,7 +6,7 @@
 
 # v1.5.0
 
-###### 2026/10/22
+###### 2026/11/04
 
 * `Feature` Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests
 * `Feature` The screen stays on while a reply is being generated instead of turning off at the screen timeout

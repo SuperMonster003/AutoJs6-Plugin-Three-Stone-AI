@@ -6,7 +6,7 @@
   "changelog_label_dependency": "Dependency",
   "$data": {
     "v1.5.0": {
-      "released_date": "2026/10/22",
+      "released_date": "2026/11/04",
       "feature": [
         "Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests",
         "The screen stays on while a reply is being generated instead of turning off at the screen timeout"

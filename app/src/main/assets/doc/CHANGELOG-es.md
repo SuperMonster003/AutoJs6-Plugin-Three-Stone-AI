@@ -6,7 +6,7 @@
 
 # v1.5.0
 
-###### 2026/10/22
+###### 2026/11/04
 
 * `Función` Las aplicaciones con firma independiente solicitan acceso a IA en el complemento, ligado a su identidad e instalación; revocarlo en los ajustes detiene las solicitudes activas
 * `Función` La pantalla permanece encendida mientras se genera una respuesta en lugar de apagarse al agotarse el tiempo de espera

@@ -43,6 +43,10 @@ internal data class ChatUiSettings(
     val autoReadReplies: Boolean = false,
     /** Pin dictation and reading to 3-Macaw Speech when it resolves (roadmap D12). */
     val preferMacawSpeech: Boolean = true,
+    /** Keep the thinking card open while a reply is generated (roadmap D79, P3.2). */
+    val showReasoningWhileGenerating: Boolean = true,
+    /** Fold the thinking card to "Thought for N s" when the reply ends (roadmap D79, P3.2). */
+    val collapseReasoningWhenDone: Boolean = true,
 ) {
     init {
         require(contextTokenBudget > 0)
@@ -119,6 +123,8 @@ internal class ChatUiSettingsStore(context: Context) {
             ?: AiProviderSamplingDefaults.TOP_P,
         autoReadReplies = preferences.getBoolean(KEY_AUTO_READ_REPLIES, false),
         preferMacawSpeech = preferences.getBoolean(KEY_PREFER_MACAW_SPEECH, true),
+        showReasoningWhileGenerating = preferences.getBoolean(KEY_SHOW_REASONING, true),
+        collapseReasoningWhenDone = preferences.getBoolean(KEY_COLLAPSE_REASONING, true),
     )
 
     fun save(settings: ChatUiSettings) {
@@ -142,6 +148,8 @@ internal class ChatUiSettingsStore(context: Context) {
             .putString(KEY_TOP_P, settings.topP.toString())
             .putBoolean(KEY_AUTO_READ_REPLIES, settings.autoReadReplies)
             .putBoolean(KEY_PREFER_MACAW_SPEECH, settings.preferMacawSpeech)
+            .putBoolean(KEY_SHOW_REASONING, settings.showReasoningWhileGenerating)
+            .putBoolean(KEY_COLLAPSE_REASONING, settings.collapseReasoningWhenDone)
             .apply()
     }
 
@@ -168,6 +176,8 @@ internal class ChatUiSettingsStore(context: Context) {
         const val KEY_TOP_P = "top-p"
         const val KEY_AUTO_READ_REPLIES = "auto-read-replies"
         const val KEY_PREFER_MACAW_SPEECH = "prefer-macaw-speech"
+        const val KEY_SHOW_REASONING = "show-reasoning-while-generating"
+        const val KEY_COLLAPSE_REASONING = "collapse-reasoning-when-done"
     }
 }
 

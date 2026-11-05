@@ -44,12 +44,19 @@ internal data class OnlineAiStreamChunk(
     val done: Boolean = false,
     /** The provider stopped at its output-token limit: the text so far is valid but incomplete. */
     val truncated: Boolean = false,
+    /**
+     * Visible reasoning text (Anthropic thinking_delta, OpenAI-compatible reasoning_content / reasoning,
+     * Gemini thought parts). Never part of [text] and never counted as answer content (P3.1).
+     */
+    val reasoning: String = "",
 )
 
 internal data class OnlineAiJsonResponse(
     val text: String,
     val usage: OnlineAiUsageUpdate?,
     val truncated: Boolean = false,
+    /** Visible reasoning text, kept apart from [text] (P3.1). */
+    val reasoning: String = "",
 )
 
 /** Converts the provider-neutral text session surface to one provider-native HTTP protocol. */

@@ -155,6 +155,18 @@ class AppSettingsActivity : ConfiguredActivity() {
             checked = chatSettings.followStreamingOutput,
         ) { checked -> saveChatSettings(chatSettings.copy(followStreamingOutput = checked)) }.view)
         content.addView(switchRow(
+            title = getString(R.string.app_settings_show_reasoning),
+            summary = getString(R.string.app_settings_show_reasoning_summary),
+            iconResource = R.drawable.ic_article_24,
+            checked = chatSettings.showReasoningWhileGenerating,
+        ) { checked -> saveChatSettings(chatSettings.copy(showReasoningWhileGenerating = checked)) }.view)
+        content.addView(switchRow(
+            title = getString(R.string.app_settings_collapse_reasoning),
+            summary = getString(R.string.app_settings_collapse_reasoning_summary),
+            iconResource = R.drawable.ic_chevron_right_24,
+            checked = chatSettings.collapseReasoningWhenDone,
+        ) { checked -> saveChatSettings(chatSettings.copy(collapseReasoningWhenDone = checked)) }.view)
+        content.addView(switchRow(
             title = getString(R.string.chat_show_generation_usage),
             summary = getString(R.string.app_settings_show_usage_summary),
             iconResource = R.drawable.ic_check_circle_24,

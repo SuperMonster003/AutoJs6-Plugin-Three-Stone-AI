@@ -52,6 +52,29 @@ class ChatUiSettingsTest {
     }
 
     @Test
+    fun `reasoning toggles default on and drive the thinking card (P3)`() {
+        val defaults = ChatUiSettings()
+        assertEquals(true, defaults.showReasoningWhileGenerating)
+        assertEquals(true, defaults.collapseReasoningWhenDone)
+
+        val generating = ChatMessageStatus.GENERATING
+        assertEquals(true, ChatReasoningCardPolicy.expanded(generating, defaults, null))
+        assertEquals(false, ChatReasoningCardPolicy.expanded(ChatMessageStatus.COMPLETE, defaults, null))
+        assertEquals(false, ChatReasoningCardPolicy.expanded(ChatMessageStatus.STOPPED, defaults, null))
+        assertEquals(false, ChatReasoningCardPolicy.expanded(generating, defaults, false))
+        assertEquals(true, ChatReasoningCardPolicy.expanded(ChatMessageStatus.COMPLETE, defaults, true))
+
+        val hidden = defaults.copy(showReasoningWhileGenerating = false, collapseReasoningWhenDone = false)
+        assertEquals(false, ChatReasoningCardPolicy.expanded(generating, hidden, null))
+        assertEquals(true, ChatReasoningCardPolicy.expanded(ChatMessageStatus.FAILED, hidden, null))
+
+        assertEquals(1L, ChatReasoningCardPolicy.seconds(0L))
+        assertEquals(1L, ChatReasoningCardPolicy.seconds(1_499L))
+        assertEquals(2L, ChatReasoningCardPolicy.seconds(1_500L))
+        assertEquals(61L, ChatReasoningCardPolicy.seconds(61_000L))
+    }
+
+    @Test
     fun `context token budget must remain positive`() {
         assertThrows(IllegalArgumentException::class.java) {
             ChatUiSettings(contextTokenBudget = 0)

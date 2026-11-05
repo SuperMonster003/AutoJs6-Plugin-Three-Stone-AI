@@ -78,6 +78,83 @@ class ChatGenerationCoordinatorTest {
     }
 
     @Test
+    fun `reasoning is buffered timed and survives a recreated screen (P3)`() {
+        val clock = AtomicLong(1_000L)
+        val coordinator = coordinator(clock = clock::get)
+        store.put(conversation("c1"))
+        val before = Screen("c1")
+        coordinator.attach(before)
+        coordinator.start(request("c1"))
+        val session = backend.sessions.single()
+        assertTrue(session.request.includeReasoning)
+
+        session.listener.onReasoningDelta("Plan")
+        session.listener.onReasoningDelta(" it")
+        scheduler.runAll()
+        assertEquals(listOf(ChatMessageReasoning("Plan it", null)), before.reasoning)
+        assertTrue(before.deltas.isEmpty())
+
+        coordinator.detach(before)
+        clock.set(3_400L)
+        session.listener.onTextDelta("Hi")
+        scheduler.runAll()
+        val after = Screen("c1")
+        val attachment = coordinator.attach(after)
+        assertEquals("Hi", attachment.active?.text)
+        assertEquals(ChatMessageReasoning("Plan it", 2_400L), attachment.active?.reasoning)
+
+        session.listener.onTextDelta("!")
+        session.listener.onCompleted(GenerationStatistics(1L, 2L, 3L))
+        scheduler.runAll()
+        assertTrue(after.reasoning.isEmpty())
+        assertEquals(listOf("!"), after.deltas)
+        val completion = after.completions.single()
+        assertEquals("Hi!", completion.text)
+        assertEquals(ChatMessageReasoning("Plan it", 2_400L), completion.reasoning)
+    }
+
+    @Test
+    fun `reasoning of a reply finishing without a screen is stored and capped (P3)`() {
+        val clock = AtomicLong(0L)
+        val coordinator = coordinator(clock = clock::get)
+        store.put(conversation("c1"))
+        val screen = Screen("c1")
+        coordinator.attach(screen)
+        coordinator.start(request("c1"))
+        val session = backend.sessions.single()
+        coordinator.detach(screen)
+
+        session.listener.onReasoningDelta("a".repeat(ChatMessageReasoning.MAXIMUM_BYTES - 1))
+        session.listener.onReasoningDelta("bcd")
+        clock.set(900L)
+        session.listener.onCompleted(GenerationStatistics(1L, 2L, 3L))
+        scheduler.runAll()
+
+        val stored = requireNotNull(store.reply("c1").reasoning)
+        assertEquals("", store.reply("c1").text)
+        assertEquals(ChatMessageReasoning.MAXIMUM_BYTES, stored.text.length)
+        assertTrue(stored.text.endsWith("ab"))
+        assertTrue(stored.truncated)
+        assertEquals(900L, stored.durationMillis)
+    }
+
+    @Test
+    fun `a stopped reply keeps the reasoning it had (P3)`() {
+        val clock = AtomicLong(0L)
+        val coordinator = coordinator(clock = clock::get)
+        coordinator.attach(Screen("c1"))
+        coordinator.start(request("c1"))
+        val session = backend.sessions.single()
+        session.listener.onReasoningDelta("half")
+        clock.set(250L)
+
+        val stopped = requireNotNull(coordinator.stop())
+
+        assertEquals(ChatMessageReasoning("half", 250L), stopped.reasoning)
+        assertEquals("", stopped.text)
+    }
+
+    @Test
     fun `a screen recreated during streaming continues the same reply`() {
         val coordinator = coordinator()
         val before = Screen("c1")
@@ -293,6 +370,7 @@ class ChatGenerationCoordinatorTest {
     private fun coordinator(
         backendExecutor: ExecutorService = DirectExecutorService(),
         cancelExecutor: Executor? = Executor { command -> command.run() },
+        clock: () -> Long = { System.nanoTime() / 1_000_000L },
     ): ChatGenerationCoordinator {
         val calibration = ContextTokenCalibrationStore(MemoryCalibration())
         val failureText: (ConversationTargetSnapshot, Throwable) -> String = { _, error ->
@@ -308,6 +386,7 @@ class ChatGenerationCoordinatorTest {
                 logger = logger,
                 backendExecutor = backendExecutor,
                 summaryExecutor = Executor { command -> command.run() },
+                clock = clock,
             )
         } else {
             ChatGenerationCoordinator(
@@ -320,6 +399,7 @@ class ChatGenerationCoordinatorTest {
                 backendExecutor = backendExecutor,
                 cancelExecutor = cancelExecutor,
                 summaryExecutor = Executor { command -> command.run() },
+                clock = clock,
             )
         }
     }
@@ -351,12 +431,17 @@ class ChatGenerationCoordinatorTest {
 
     private inner class Screen(private val conversationId: String) : ChatGenerationCoordinator.Observer {
         val deltas = mutableListOf<String>()
+        val reasoning = mutableListOf<ChatMessageReasoning?>()
         val completions = mutableListOf<ChatGenerationCompletion>()
         val failures = mutableListOf<Pair<ChatGenerationSnapshot, String>>()
         var lastState: ChatGenerationSnapshot? = null
 
         override fun onDelta(generation: ChatGenerationSnapshot, delta: String) {
             deltas += delta
+        }
+
+        override fun onReasoning(generation: ChatGenerationSnapshot) {
+            reasoning += generation.reasoning
         }
 
         override fun onCompleted(generation: ChatGenerationSnapshot, completion: ChatGenerationCompletion) {
@@ -496,8 +581,10 @@ class ChatGenerationCoordinatorTest {
         var cancelThreadName: String? = null
 
         lateinit var listener: GenerationListener
+        lateinit var request: GenerationRequest
 
         override fun stream(request: GenerationRequest, listener: GenerationListener) {
+            this.request = request
             this.listener = listener
             streamEntered.countDown()
             if (blockStreams) {

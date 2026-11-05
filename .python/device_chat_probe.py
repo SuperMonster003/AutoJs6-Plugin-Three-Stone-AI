@@ -37,6 +37,11 @@ clickable row containing the text (group headers are not clickable). --effort op
 taps that effort choice for the conversation, closes the sheet and checks the target bar badge; after
 the reply it reads "Generation start ... effort=<level> fast=<bool>" from the chat log (the level the
 adapters send after clamping) and compares the usage line with the logged output tokens.
+
+Roadmap P3.3 (2026-11-05, 1.6.0): --expect-reasoning shown / absent looks for the folded thinking
+card header ("Thought for N s", D94) of the finished reply and prints only whether it is shown and
+the seconds; the thinking text itself is never printed. Use a prompt with a short answer so the card
+stays on screen.
 """
 
 import argparse
@@ -59,6 +64,7 @@ STRING_NAMES = (
     "chat_generation_failure_choose_target",
     "chat_generation_failure_detail",
     "chat_usage_format",
+    "chat_reasoning_duration",
 )
 EFFORT_IDS = ("default", "low", "medium", "high", "xhigh", "max")
 EFFORT_NAMES = tuple("effort_" + effort for effort in EFFORT_IDS)
@@ -71,7 +77,7 @@ def load_strings(locale):
     wanted = STRING_NAMES + EFFORT_NAMES
     found = {}
     folder = ROOT / "app" / "src" / "main" / "res" / directory
-    for path in (folder / "strings.xml", folder / "strings_effort.xml"):
+    for path in sorted(folder.glob("strings*.xml")):
         root = ET.parse(path).getroot()
         for node in root.iter("string"):
             name = node.get("name")
@@ -298,6 +304,11 @@ def main():
         help="pick this effort for the conversation in the switcher (a level the model supports) and check the logged request",
     )
     parser.add_argument(
+        "--expect-reasoning",
+        choices=["shown", "absent"],
+        help="fail unless the finished reply shows (or does not show) the folded thinking card",
+    )
+    parser.add_argument(
         "--check-keep-screen-on",
         action="store_true",
         help="fail unless FLAG_KEEP_SCREEN_ON is held while generating and released once the reply has ended",
@@ -479,6 +490,15 @@ def main():
     if outcome == "failed":
         print(f"failure detail: {escaped(detail) if detail else 'not shown'}")
     failed = False
+    if args.expect_reasoning:
+        # The folded card header of the last reply ("Thought for N s"); its text is never printed.
+        folded = re.compile(re.escape(words["chat_reasoning_duration"]).replace(re.escape("%1$d"), r"(\d+)"))
+        seconds = [found.group(1) for found in (folded.fullmatch(value) for value in visible) if found]
+        shown = bool(seconds)
+        print(f"reasoning card: shown={shown} seconds={seconds[-1] if seconds else '-'}")
+        if (args.expect_reasoning == "shown") != shown:
+            print(f"FAIL: expected the thinking card {args.expect_reasoning}")
+            failed = True
     if args.check_keep_screen_on:
         time.sleep(1.0)
         released = keep_screen_on(serial)

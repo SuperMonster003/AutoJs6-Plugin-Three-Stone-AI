@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_collapse_reasoning">Collapse reasoning when done</string>
+    <string name="app_settings_collapse_reasoning_summary">Fold the thinking card into one line when the reply ends. Tap it to expand</string>
+    <string name="app_settings_show_reasoning">Show reasoning while generating</string>
+    <string name="app_settings_show_reasoning_summary">Keep the thinking card open and stream the reasoning of the model while a reply is generated</string>
+    <string name="chat_reasoning_collapse">Collapse reasoning</string>
+    <string name="chat_reasoning_duration">Thought for %1$d s</string>
+    <string name="chat_reasoning_expand">Expand reasoning</string>
+    <string name="chat_reasoning_thinking" tools:ignore="TypographyEllipsis">Thinking...</string>
+    <string name="chat_reasoning_title">Reasoning</string>
+    <string name="chat_reasoning_truncated">The reasoning was too long, so only the beginning is kept.</string>
+</resources>

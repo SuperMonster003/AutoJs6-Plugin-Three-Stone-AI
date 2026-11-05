@@ -96,6 +96,38 @@ class OnlineAiSessionTest {
     }
 
     @Test
+    fun reasoningStreamsApartFromTextAndStaysOutOfTheNextTurn() {
+        val calls = ScriptedCallFactory(
+            response(
+                contentType = "text/event-stream",
+                body = sse(
+                    "{\"choices\":[{\"delta\":{\"reasoning_content\":\"Think\"}}]}",
+                    "{\"choices\":[{\"delta\":{\"reasoning\":\" more\"}}]}",
+                    "{\"choices\":[{\"delta\":{\"content\":\"Answer\"}}]}",
+                    "[DONE]",
+                ),
+            ),
+            response(
+                contentType = "text/event-stream",
+                body = sse("{\"choices\":[{\"delta\":{\"content\":\"Next\"}}]}", "[DONE]"),
+            ),
+        )
+        val session = session(calls)
+        val first = RecordingListener()
+
+        session.stream(request(prompt = "first"), first)
+        session.streamNext(request(prompt = "second"), RecordingListener())
+
+        assertEquals(listOf("Think", " more"), first.reasoning)
+        assertEquals(listOf("Answer"), first.deltas)
+        assertNull(first.failure)
+        assertEquals(
+            listOf("first", "Answer", "second"),
+            calls.bodies[1].messages().map { it.second },
+        )
+    }
+
+    @Test
     fun outputLimitStopsCompleteTheTurnAsTruncatedAndKeepTheText() {
         val calls = ScriptedCallFactory(
             response(
@@ -586,6 +618,11 @@ class OnlineAiSessionTest {
 
     private class RecordingListener : GenerationListener {
         val deltas = CopyOnWriteArrayList<String>()
+        val reasoning = CopyOnWriteArrayList<String>()
+
+        override fun onReasoningDelta(text: String) {
+            reasoning += text
+        }
 
         @Volatile
         var completed: GenerationStatistics? = null

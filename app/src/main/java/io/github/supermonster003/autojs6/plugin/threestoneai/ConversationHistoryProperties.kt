@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.nio.ByteBuffer
 
 /**
  * "key -> bytes" property tables of conversation history format 6 (roadmap D81 / D91).
@@ -24,11 +25,21 @@ import java.io.DataOutputStream
  * - [CONVERSATION_EFFORT] "effort": [GenerationEffort.persistentId] as ASCII.
  * - [CONVERSATION_FAST] "fast": one byte, 0 = off, 1 = on.
  *
- * Message keys: none yet; format 6 writes empty message tables.
+ * Message keys (assistant replies only, roadmap P3 / D94; absent when the reply had no thinking text):
+ * - [MESSAGE_REASONING] "reasoning": the thinking text as UTF-8, at most [MAXIMUM_VALUE_BYTES] bytes,
+ *   cut on a code point boundary ([ChatMessageReasoning.bounded]).
+ * - [MESSAGE_REASONING_MILLIS] "reasoning.ms": the thinking time as a big-endian `Long` (8 bytes,
+ *   not negative); absent when it was not measured.
+ * - [MESSAGE_REASONING_TRUNCATED] "reasoning.cut": one byte 1 when the text was cut.
+ *
+ * The "reasoning.*" keys are ignored without "reasoning". Builds before 1.6.0 skip all three.
  */
 internal object ConversationHistoryProperties {
     const val CONVERSATION_EFFORT = "effort"
     const val CONVERSATION_FAST = "fast"
+    const val MESSAGE_REASONING = "reasoning"
+    const val MESSAGE_REASONING_MILLIS = "reasoning.ms"
+    const val MESSAGE_REASONING_TRUNCATED = "reasoning.cut"
 
     const val MAXIMUM_ENTRIES = 64
     const val MAXIMUM_KEY_BYTES = 32
@@ -40,6 +51,28 @@ internal object ConversationHistoryProperties {
             put(CONVERSATION_EFFORT, effort.persistentId.toByteArray(Charsets.US_ASCII))
         }
         conversation.fastOverride?.let { fast -> put(CONVERSATION_FAST, byteArrayOf(if (fast) 1 else 0)) }
+    }
+
+    fun messageTable(message: ChatMessage): Map<String, ByteArray> = buildMap {
+        val stored = message.reasoning
+            ?.let { value -> ChatMessageReasoning.bounded(value.text, value.durationMillis, value.truncated) }
+            ?.takeIf { value -> value.text.isNotEmpty() }
+            ?: return@buildMap
+        put(MESSAGE_REASONING, stored.text.toByteArray(Charsets.UTF_8))
+        stored.durationMillis?.let { millis ->
+            put(MESSAGE_REASONING_MILLIS, ByteBuffer.allocate(Long.SIZE_BYTES).putLong(millis).array())
+        }
+        if (stored.truncated) put(MESSAGE_REASONING_TRUNCATED, byteArrayOf(1))
+    }
+
+    fun reasoning(table: Map<String, ByteArray>): ChatMessageReasoning? {
+        val text = table[MESSAGE_REASONING]?.toString(Charsets.UTF_8)?.takeIf(String::isNotEmpty) ?: return null
+        val millis = table[MESSAGE_REASONING_MILLIS]
+            ?.takeIf { bytes -> bytes.size == Long.SIZE_BYTES }
+            ?.let { bytes -> ByteBuffer.wrap(bytes).long }
+            ?.takeIf { value -> value >= 0L }
+        val truncated = table[MESSAGE_REASONING_TRUNCATED]?.singleOrNull()?.toInt() == 1
+        return ChatMessageReasoning(text, millis, truncated)
     }
 
     fun effortOverride(table: Map<String, ByteArray>): GenerationEffort? =

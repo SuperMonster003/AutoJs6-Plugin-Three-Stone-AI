@@ -34,6 +34,8 @@ internal data class ChatGenerationSnapshot(
     /** Every character generated so far, including text not yet delivered through onDelta. */
     val text: String,
     val target: ConversationTargetSnapshot,
+    /** Thinking text so far (P3); its duration is null while the model is still thinking. */
+    val reasoning: ChatMessageReasoning? = null,
 )
 
 internal data class ChatGenerationCompletion(
@@ -41,6 +43,7 @@ internal data class ChatGenerationCompletion(
     val target: ConversationTargetSnapshot,
     val usage: ChatMessageUsage?,
     val truncated: Boolean,
+    val reasoning: ChatMessageReasoning? = null,
 )
 
 internal data class ChatGenerationAttachment(
@@ -211,6 +214,12 @@ internal class ChatGenerationCoordinator internal constructor(
         /** Newly generated text of [generation], delivered at most every 32 ms. */
         fun onDelta(generation: ChatGenerationSnapshot, delta: String)
 
+        /**
+         * The thinking text of [generation] grew or its thinking time became known; delivered with
+         * the same 32 ms pacing as [onDelta] and before it.
+         */
+        fun onReasoning(generation: ChatGenerationSnapshot) {}
+
         fun onCompleted(generation: ChatGenerationSnapshot, completion: ChatGenerationCompletion)
 
         fun onFailed(generation: ChatGenerationSnapshot, failureText: String)
@@ -233,14 +242,21 @@ internal class ChatGenerationCoordinator internal constructor(
         val settings: ChatUiSettings,
         var actualTarget: ConversationTargetSnapshot? = null,
     ) {
-        fun snapshot(text: String) = ChatGenerationSnapshot(
+        fun snapshot(output: GeneratedOutput) = ChatGenerationSnapshot(
             generationId = generationId,
             conversationId = conversationId,
             assistantMessageId = assistantMessageId,
-            text = text,
+            text = output.text,
             target = actualTarget ?: requestedTarget,
+            reasoning = output.reasoning,
         )
     }
+
+    /** Reply and thinking text of one generation at one moment. */
+    private data class GeneratedOutput(
+        val text: String,
+        val reasoning: ChatMessageReasoning?,
+    )
 
     private data class BackendContextTelemetry(
         val epoch: Long,
@@ -286,6 +302,13 @@ internal class ChatGenerationCoordinator internal constructor(
     private val generatedText = StringBuilder()
     private var deliveredLength = 0
     private var deltaFlushScheduled = false
+    // Thinking text (P3.1, D94): kept like the reply text so a re-attached screen gets all of it.
+    private val generatedReasoning = StringBuilder()
+    private var reasoningCut = false
+    private var reasoningChanged = false
+    /** Clock time the current thinking stretch began; null when the model is not thinking. */
+    private var reasoningOpenSince: Long? = null
+    private var reasoningMillis = 0L
 
     private var activeSummaryTask: SummaryCheckpointTask? = null
     private var activeSummaryEpoch = 0L
@@ -302,12 +325,13 @@ internal class ChatGenerationCoordinator internal constructor(
         val changed = changedWhileDetached.toSet()
         changedWhileDetached.clear()
         val current = active ?: return ChatGenerationAttachment(null, changed)
-        val text = synchronized(deltaLock) {
+        val output = synchronized(deltaLock) {
             // The snapshot carries all text so far; later deltas continue after it.
             deliveredLength = generatedText.length
-            generatedText.toString()
+            reasoningChanged = false
+            outputLocked()
         }
-        return ChatGenerationAttachment(current.snapshot(text), changed)
+        return ChatGenerationAttachment(current.snapshot(output), changed)
     }
 
     fun detach(value: Observer) {
@@ -318,7 +342,7 @@ internal class ChatGenerationCoordinator internal constructor(
     fun activeFor(conversationId: String): ChatGenerationSnapshot? {
         val current = active?.takeIf { generation -> generation.conversationId == conversationId }
             ?: return null
-        return current.snapshot(synchronized(deltaLock) { generatedText.toString() })
+        return current.snapshot(currentOutput())
     }
 
     /** Starts a turn; any other generation is cancelled first. Returns the generation ID. */
@@ -339,9 +363,7 @@ internal class ChatGenerationCoordinator internal constructor(
         active = generation
         synchronized(deltaLock) {
             deltaGenerationId = generationId
-            generatedText.clear()
-            deliveredLength = 0
-            deltaFlushScheduled = false
+            resetOutputLocked()
         }
         notifyState()
         // The level the adapters send after clamping (D73) and whether fast applies (D74); device evidence for P2.6.
@@ -361,12 +383,12 @@ internal class ChatGenerationCoordinator internal constructor(
      */
     fun stop(reason: String = "stopped"): ChatGenerationSnapshot? {
         val current = active ?: return null
-        val text = finishText(current.generationId)
+        val output = finishOutput(current.generationId)
         val backendTarget = synchronized(backendLock) { activeBackendTarget }
         generationEpoch.incrementAndGet()
         active = null
         closeBackend(reason)
-        val stopped = current.snapshot(text)
+        val stopped = current.snapshot(output)
             .copy(target = backendTarget ?: current.actualTarget ?: current.requestedTarget)
         if (observer?.conversationSnapshot(current.conversationId) == null) {
             persistOutside(stopped.conversationId, stopped.assistantMessageId) { message ->
@@ -375,6 +397,7 @@ internal class ChatGenerationCoordinator internal constructor(
                     status = ChatMessageStatus.STOPPED,
                     usage = null,
                     target = stopped.target,
+                    reasoning = stopped.reasoning,
                 )
             }
         }
@@ -618,6 +641,8 @@ internal class ChatGenerationCoordinator internal constructor(
         reportUsage = true,
         effort = request.effort,
         fast = request.fast,
+        // P3.1: the chat screen shows thinking text; scripts (Binder) never ask for it.
+        includeReasoning = true,
     )
 
     private fun recordActualTarget(generationId: Long, actualTarget: ConversationTargetSnapshot) {
@@ -773,6 +798,8 @@ internal class ChatGenerationCoordinator internal constructor(
     ) = object : GenerationListener {
         override fun onTextDelta(text: String) = queueTextDelta(generationId, text)
 
+        override fun onReasoningDelta(text: String) = queueReasoningDelta(generationId, text)
+
         override fun onCompleted(statistics: GenerationStatistics?) = onCompleted(statistics, truncated = false)
 
         override fun onCompleted(statistics: GenerationStatistics?, truncated: Boolean) {
@@ -806,40 +833,105 @@ internal class ChatGenerationCoordinator internal constructor(
         val schedule = synchronized(deltaLock) {
             if (deltaGenerationId != generationId) return
             generatedText.append(text)
-            if (deltaFlushScheduled) {
-                false
-            } else {
-                deltaFlushScheduled = true
-                true
-            }
+            // Reply text ends the current thinking stretch.
+            closeReasoningLocked()
+            scheduleFlushLocked()
         }
         if (schedule) scheduler.post(DELTA_FLUSH_INTERVAL_MILLIS) { flushTextDelta(generationId) }
     }
 
+    private fun queueReasoningDelta(generationId: Long, text: String) {
+        if (text.isEmpty() || !isGenerationCurrent(generationId)) return
+        val schedule = synchronized(deltaLock) {
+            if (deltaGenerationId != generationId) return
+            if (reasoningOpenSince == null) {
+                reasoningOpenSince = clock()
+                reasoningChanged = true
+            }
+            // Characters never exceed UTF-8 bytes, so this keeps enough to fill the stored value.
+            val room = ChatMessageReasoning.MAXIMUM_BYTES - generatedReasoning.length
+            if (room > 0) {
+                generatedReasoning.append(text, 0, minOf(room, text.length))
+                reasoningChanged = true
+            }
+            if (text.length > room && !reasoningCut) {
+                reasoningCut = true
+                reasoningChanged = true
+            }
+            scheduleFlushLocked()
+        }
+        if (schedule) scheduler.post(DELTA_FLUSH_INTERVAL_MILLIS) { flushTextDelta(generationId) }
+    }
+
+    /** Returns whether the caller must post a flush; guarded by deltaLock. */
+    private fun scheduleFlushLocked(): Boolean {
+        if (deltaFlushScheduled) return false
+        deltaFlushScheduled = true
+        return true
+    }
+
+    /** Ends the current thinking stretch, if any; guarded by deltaLock. */
+    private fun closeReasoningLocked() {
+        val since = reasoningOpenSince ?: return
+        reasoningMillis += (clock() - since).coerceAtLeast(0L)
+        reasoningOpenSince = null
+        reasoningChanged = true
+    }
+
+    private fun resetOutputLocked() {
+        generatedText.clear()
+        deliveredLength = 0
+        deltaFlushScheduled = false
+        generatedReasoning.clear()
+        reasoningCut = false
+        reasoningChanged = false
+        reasoningOpenSince = null
+        reasoningMillis = 0L
+    }
+
+    private fun outputLocked() = GeneratedOutput(
+        text = generatedText.toString(),
+        reasoning = generatedReasoning.takeIf { value -> value.isNotEmpty() }?.let { value ->
+            ChatMessageReasoning.bounded(
+                text = value.toString(),
+                durationMillis = if (reasoningOpenSince == null) reasoningMillis else null,
+                truncated = reasoningCut,
+            )
+        },
+    )
+
     private fun flushTextDelta(generationId: Long) {
+        var reasoning = false
         val delta = synchronized(deltaLock) {
             if (deltaGenerationId != generationId) return
             deltaFlushScheduled = false
             if (observer == null) return
+            reasoning = reasoningChanged && generatedReasoning.isNotEmpty()
+            reasoningChanged = false
             generatedText.substring(deliveredLength).also { deliveredLength = generatedText.length }
         }
-        if (delta.isEmpty() || !isGenerationCurrent(generationId)) return
+        if ((delta.isEmpty() && !reasoning) || !isGenerationCurrent(generationId)) return
         val current = active ?: return
-        observer?.onDelta(current.snapshot(currentText()), delta)
+        val snapshot = current.snapshot(currentOutput())
+        if (reasoning) observer?.onReasoning(snapshot)
+        if (delta.isNotEmpty()) observer?.onDelta(snapshot, delta)
     }
 
-    private fun currentText(): String = synchronized(deltaLock) { generatedText.toString() }
+    private fun currentOutput(): GeneratedOutput = synchronized(deltaLock) { outputLocked() }
 
     /** Delivers any undelivered text and ends the delta stream of [generationId]. */
-    private fun finishText(generationId: Long): String {
+    private fun finishOutput(generationId: Long): GeneratedOutput {
         flushTextDelta(generationId)
         return synchronized(deltaLock) {
-            val text = if (deltaGenerationId == generationId) generatedText.toString() else ""
+            val output = if (deltaGenerationId == generationId) {
+                closeReasoningLocked()
+                outputLocked()
+            } else {
+                GeneratedOutput("", null)
+            }
             deltaGenerationId = 0L
-            generatedText.clear()
-            deliveredLength = 0
-            deltaFlushScheduled = false
-            text
+            resetOutputLocked()
+            output
         }
     }
 
@@ -851,7 +943,8 @@ internal class ChatGenerationCoordinator internal constructor(
     ) {
         if (!isGenerationCurrent(generationId)) return
         val current = active ?: return
-        val text = finishText(generationId)
+        val output = finishOutput(generationId)
+        val text = output.text
         val completion = ChatGenerationCompletion(
             text = text,
             target = actualTarget,
@@ -863,6 +956,7 @@ internal class ChatGenerationCoordinator internal constructor(
                 )
             },
             truncated = truncated,
+            reasoning = output.reasoning,
         )
         val cumulativeInputTokens = conversationSource(current.conversationId)?.messages
             ?.map { message ->
@@ -879,7 +973,7 @@ internal class ChatGenerationCoordinator internal constructor(
             if (activeBackend != null) completedTurnsOnBackend++
         }
         active = null
-        val snapshot = current.snapshot(text).copy(target = actualTarget)
+        val snapshot = current.snapshot(output).copy(target = actualTarget)
         val displayed = observer?.takeIf { value -> value.conversationSnapshot(current.conversationId) != null }
         if (displayed != null) {
             displayed.onCompleted(snapshot, completion)
@@ -891,6 +985,7 @@ internal class ChatGenerationCoordinator internal constructor(
                     target = actualTarget,
                     usage = completion.usage,
                     truncated = truncated,
+                    reasoning = completion.reasoning,
                 )
             }
         }
@@ -905,13 +1000,14 @@ internal class ChatGenerationCoordinator internal constructor(
     ) {
         if (!isGenerationCurrent(generationId)) return
         val current = active ?: return
-        val text = finishText(generationId)
+        val output = finishOutput(generationId)
+        val text = output.text
         val failedTarget = actualTarget ?: current.actualTarget ?: current.requestedTarget
         val failure = failureText(failedTarget, error)
         active = null
         generationEpoch.incrementAndGet()
         closeBackend(reason = "failed")
-        val snapshot = current.snapshot(text).copy(target = failedTarget)
+        val snapshot = current.snapshot(output).copy(target = failedTarget)
         val displayed = observer?.takeIf { value -> value.conversationSnapshot(current.conversationId) != null }
         if (displayed != null) {
             displayed.onFailed(snapshot, failure)
@@ -922,6 +1018,7 @@ internal class ChatGenerationCoordinator internal constructor(
                     status = ChatMessageStatus.FAILED,
                     usage = null,
                     target = failedTarget,
+                    reasoning = output.reasoning,
                 )
             }
         }
@@ -1161,7 +1258,7 @@ internal class ChatGenerationCoordinator internal constructor(
 
     private fun notifyState() {
         val current = active
-        observer?.onStateChanged(current?.snapshot(currentText()))
+        observer?.onStateChanged(current?.snapshot(currentOutput()))
     }
 
     private fun isGenerationCurrent(generationId: Long): Boolean = generationEpoch.get() == generationId

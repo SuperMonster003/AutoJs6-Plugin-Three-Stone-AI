@@ -28,6 +28,47 @@ internal data class ChatMessageUsage(
     }
 }
 
+/**
+ * Thinking text an assistant reply came with (roadmap P3, D94). It is shown in a card above the reply
+ * but never sent back to a model, read aloud or searched.
+ */
+internal data class ChatMessageReasoning(
+    val text: String,
+    /** Thinking time; null while the model is still thinking. */
+    val durationMillis: Long? = null,
+    /** [text] was shortened to [MAXIMUM_BYTES] UTF-8 bytes. */
+    val truncated: Boolean = false,
+) {
+    init {
+        require(durationMillis == null || durationMillis >= 0L)
+    }
+
+    companion object {
+        /** One history property value (D91 / D94). */
+        const val MAXIMUM_BYTES = ConversationHistoryProperties.MAXIMUM_VALUE_BYTES
+
+        /** [text] cut to at most [MAXIMUM_BYTES] UTF-8 bytes on a code point boundary. */
+        fun bounded(text: String, durationMillis: Long?, truncated: Boolean = false): ChatMessageReasoning {
+            if (text.length <= MAXIMUM_BYTES / 3) return ChatMessageReasoning(text, durationMillis, truncated)
+            var bytes = 0
+            var end = 0
+            while (end < text.length) {
+                val codePoint = text.codePointAt(end)
+                val size = when {
+                    codePoint < 0x80 -> 1
+                    codePoint < 0x800 -> 2
+                    codePoint < 0x10000 -> 3
+                    else -> 4
+                }
+                if (bytes + size > MAXIMUM_BYTES) break
+                bytes += size
+                end += Character.charCount(codePoint)
+            }
+            return ChatMessageReasoning(text.substring(0, end), durationMillis, truncated || end < text.length)
+        }
+    }
+}
+
 internal data class ChatMessage(
     val id: Long,
     val role: ChatMessageRole,
@@ -37,6 +78,8 @@ internal data class ChatMessage(
     val target: ConversationTargetSnapshot? = null,
     /** The provider stopped this completed reply at its output-token limit, so the text is incomplete. */
     val truncated: Boolean = false,
+    /** Thinking text of an assistant reply (P3); null when the target returned none. */
+    val reasoning: ChatMessageReasoning? = null,
 ) {
     init {
         require(id > 0L)
@@ -51,6 +94,9 @@ internal data class ChatMessage(
         }
         require(!truncated || (role == ChatMessageRole.ASSISTANT && status == ChatMessageStatus.COMPLETE)) {
             "Only complete assistant messages may be marked as truncated"
+        }
+        require(reasoning == null || role == ChatMessageRole.ASSISTANT) {
+            "Only assistant messages may carry reasoning"
         }
     }
 }

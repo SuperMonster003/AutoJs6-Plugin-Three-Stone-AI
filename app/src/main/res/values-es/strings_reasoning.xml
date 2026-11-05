@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_collapse_reasoning">Contraer el razonamiento al terminar</string>
+    <string name="app_settings_collapse_reasoning_summary">Al terminar la respuesta, la tarjeta de razonamiento se contrae en una línea. Tócala para expandirla</string>
+    <string name="app_settings_show_reasoning">Mostrar el razonamiento durante la generación</string>
+    <string name="app_settings_show_reasoning_summary">La tarjeta de razonamiento permanece abierta y muestra en directo el razonamiento del modelo mientras se genera la respuesta</string>
+    <string name="chat_reasoning_collapse">Contraer el razonamiento</string>
+    <string name="chat_reasoning_duration">Pensó durante %1$d s</string>
+    <string name="chat_reasoning_expand">Expandir el razonamiento</string>
+    <string name="chat_reasoning_thinking" tools:ignore="TypographyEllipsis">Pensando...</string>
+    <string name="chat_reasoning_title">Razonamiento</string>
+    <string name="chat_reasoning_truncated">El razonamiento era demasiado largo y solo se conserva el principio.</string>
+</resources>

@@ -70,11 +70,15 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
                 generationConfig.addProperty("topK", sampling.topK)
                 generationConfig.addProperty("topP", sampling.topP)
             }
-            // D73 / D89: thinkingLevel low, medium or high per model; includeThoughts belongs to P3.
+            // D73 / D89: thinkingLevel low, medium or high per model; D93: the chat screen also asks
+            // thinking models for thought summaries (parts with thought: true).
+            val thinkingConfig = JsonObject()
             OnlineAiEffortSupport.wireValue(normalized.provider.protocol, normalized.modelId, turn.effort)
-                ?.let { effort ->
-                    generationConfig.add("thinkingConfig", JsonObject().apply { addProperty("thinkingLevel", effort) })
-                }
+                ?.let { effort -> thinkingConfig.addProperty("thinkingLevel", effort) }
+            if (turn.includeReasoning && OnlineAiEffortSupport.geminiIncludesThoughts(normalized.modelId)) {
+                thinkingConfig.addProperty("includeThoughts", true)
+            }
+            if (thinkingConfig.size() > 0) generationConfig.add("thinkingConfig", thinkingConfig)
             turn.responseJsonSchema?.let { schema ->
                 generationConfig.addProperty("responseMimeType", "application/json")
                 generationConfig.add(
@@ -104,7 +108,12 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         val chunk = parse(root, requireTerminal = true)
         tools?.json(root)
         if (!chunk.contentSeen) OnlineAiResponseSupport.invalidResponse()
-        return OnlineAiJsonResponse(text = chunk.text, usage = chunk.usage, truncated = chunk.truncated)
+        return OnlineAiJsonResponse(
+            text = chunk.text,
+            usage = chunk.usage,
+            truncated = chunk.truncated,
+            reasoning = chunk.reasoning,
+        )
     }
 
     private fun parse(root: JsonObject, requireTerminal: Boolean): OnlineAiStreamChunk {
@@ -137,18 +146,23 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         val parts = OnlineAiResponseSupport.arrayOrNull(content, "parts")
             ?: OnlineAiResponseSupport.invalidResponse()
         var textPartSeen = false
+        val reasoning = StringBuilder()
         val text = buildString {
             parts.forEach { element ->
                 if (!element.isJsonObject) OnlineAiResponseSupport.invalidResponse()
                 val part = element.asJsonObject
                 if (part.has("functionCall")) textPartSeen = true
-                if (OnlineAiResponseSupport.booleanOrNull(part, "thought") == true) return@forEach
+                if (OnlineAiResponseSupport.booleanOrNull(part, "thought") == true) {
+                    OnlineAiResponseSupport.stringOrNull(part, "text")?.let(reasoning::append)
+                    return@forEach
+                }
                 val partText = OnlineAiResponseSupport.stringOrNull(part, "text") ?: return@forEach
                 textPartSeen = true
                 append(partText)
             }
         }
         return OnlineAiStreamChunk(
+            reasoning = reasoning.toString(),
             text = text,
             usage = usage,
             contentSeen = textPartSeen,

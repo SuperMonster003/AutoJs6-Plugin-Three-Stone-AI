@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_collapse_reasoning">Сворачивать размышления после ответа</string>
+    <string name="app_settings_collapse_reasoning_summary">Когда ответ готов, карточка размышлений сворачивается в одну строку. Нажмите, чтобы развернуть</string>
+    <string name="app_settings_show_reasoning">Показывать размышления во время ответа</string>
+    <string name="app_settings_show_reasoning_summary">Карточка размышлений остается открытой и обновляется в реальном времени, пока модель отвечает</string>
+    <string name="chat_reasoning_collapse">Свернуть размышления</string>
+    <string name="chat_reasoning_duration">Размышления: %1$d с</string>
+    <string name="chat_reasoning_expand">Развернуть размышления</string>
+    <string name="chat_reasoning_thinking" tools:ignore="TypographyEllipsis">Размышляет...</string>
+    <string name="chat_reasoning_title">Размышления</string>
+    <string name="chat_reasoning_truncated">Размышления были слишком длинными, сохранено только начало.</string>
+</resources>

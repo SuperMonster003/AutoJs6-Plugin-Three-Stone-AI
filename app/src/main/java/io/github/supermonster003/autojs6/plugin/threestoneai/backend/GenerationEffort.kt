@@ -59,6 +59,7 @@ internal object OnlineAiEffortSupport {
     )
     private const val ANTHROPIC_HIGH_CEILING = "claude-opus-4-5"
     private const val ANTHROPIC_FAST_GA = "claude-opus-5-5"
+    private val ANTHROPIC_FAMILY_VERSION = Regex("^claude-[a-z]+-([0-9]+)")
     /**
      * OpenAI-compatible tiers (D90, revised 2026-11-05 by Q12 = A). The GPT-5.6 and GPT-6 families
      * document reasoning_effort "max"; GPT-5.5 / 5.4 / 5.3-codex / 5.2 and gpt-5.1-codex-max stop at
@@ -112,6 +113,25 @@ internal object OnlineAiEffortSupport {
         effective(requested, levels(protocol, modelId))
             .takeUnless { effort -> effort == GenerationEffort.DEFAULT }
             ?.persistentId
+
+    /**
+     * Claude 5 and later (and Claude Mythos Preview) think by default with display "omitted"; the chat
+     * screen opts into summaries with thinking {type: adaptive, display: summarized} (D93). Earlier models
+     * keep their request unchanged: Opus 4.6 - 4.8 / Sonnet 4.6 would start thinking only when asked,
+     * and Opus / Sonnet / Haiku 4.5 reject adaptive thinking.
+     */
+    fun anthropicSummarizedThinking(modelId: String): Boolean {
+        val model = canonicalModel(modelId)
+        if (model.startsWith("claude-mythos-preview")) return true
+        val major = ANTHROPIC_FAMILY_VERSION.find(model)?.groupValues?.get(1)?.toIntOrNull() ?: return false
+        return major >= 5
+    }
+
+    /** Gemini models with a thinking configuration accept includeThoughts (D89, D93). */
+    fun geminiIncludesThoughts(modelId: String): Boolean {
+        val model = canonicalModel(modelId)
+        return model.startsWith("gemini-") && GEMINI_WITHOUT_LEVELS.none(model::startsWith)
+    }
 
     /** Anthropic models outside the GA fast family need the research-preview beta header (D74). */
     fun anthropicFastNeedsBeta(modelId: String): Boolean = !canonicalModel(modelId).startsWith(ANTHROPIC_FAST_GA)

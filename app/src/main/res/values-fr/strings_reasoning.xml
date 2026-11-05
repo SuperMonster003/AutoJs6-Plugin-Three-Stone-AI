@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_collapse_reasoning">Réduire le raisonnement à la fin</string>
+    <string name="app_settings_collapse_reasoning_summary">À la fin de la réponse, la carte de raisonnement se réduit à une ligne. Touchez-la pour la développer</string>
+    <string name="app_settings_show_reasoning">Afficher le raisonnement pendant la génération</string>
+    <string name="app_settings_show_reasoning_summary">La carte de raisonnement reste ouverte et suit en direct le raisonnement du modèle pendant la réponse</string>
+    <string name="chat_reasoning_collapse">Réduire le raisonnement</string>
+    <string name="chat_reasoning_duration">Réflexion pendant %1$d s</string>
+    <string name="chat_reasoning_expand">Développer le raisonnement</string>
+    <string name="chat_reasoning_thinking" tools:ignore="TypographyEllipsis">Réflexion...</string>
+    <string name="chat_reasoning_title">Raisonnement</string>
+    <string name="chat_reasoning_truncated">Le raisonnement était trop long, seul le début est conservé.</string>
+</resources>

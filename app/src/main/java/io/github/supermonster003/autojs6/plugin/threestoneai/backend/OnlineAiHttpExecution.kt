@@ -323,6 +323,7 @@ internal class OnlineAiSession(
                 if (chunk.contentSeen) progress.recordContent()
                 if (chunk.truncated) progress.recordTruncation()
                 chunk.usage?.let(progress::recordUsage)
+                if (chunk.reasoning.isNotEmpty()) delivery.reasoning(chunk.reasoning)
                 if (chunk.text.isNotEmpty()) {
                     progress.append(chunk.text)
                     delivery.text(chunk.text)
@@ -344,6 +345,7 @@ internal class OnlineAiSession(
         val response = adapter.parseJson(body, progress.tools)
         response.usage?.let(progress::recordUsage)
         if (response.truncated) progress.recordTruncation()
+        if (response.reasoning.isNotEmpty()) delivery.reasoning(response.reasoning)
         if (response.text.isNotEmpty()) {
             progress.append(response.text)
             delivery.text(response.text)
@@ -435,6 +437,13 @@ internal class OnlineAiSession(
             if (terminal.get()) return
             callbackGate.runCallback {
                 if (!terminal.get() && !isStopped()) listener.onTextDelta(value)
+            }
+        }
+
+        fun reasoning(value: String) {
+            if (terminal.get()) return
+            callbackGate.runCallback {
+                if (!terminal.get() && !isStopped()) listener.onReasoningDelta(value)
             }
         }
 

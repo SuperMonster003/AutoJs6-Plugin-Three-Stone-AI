@@ -26,6 +26,10 @@ internal class ScriptedAiBackend : AiBackend {
 
     @Volatile var available: Boolean = true
     @Volatile var reply: List<String> = listOf("Done.")
+    /** Reasoning chunks streamed before [reply] through onReasoningDelta (P3). */
+    @Volatile var reasoning: List<String> = emptyList()
+    /** Whether each turn asked for visible reasoning (GenerationRequest.includeReasoning). */
+    val reasoningRequested: MutableList<Boolean> = Collections.synchronizedList(ArrayList())
     @Volatile var chunkDelayMillis: Long = 20L
     @Volatile var hold: Boolean = false
     @Volatile var failNext: Boolean = false
@@ -83,12 +87,18 @@ internal class ScriptedAiBackend : AiBackend {
         /** Returns at once like the real backends; the reply streams on its own thread. */
         override fun stream(request: GenerationRequest, listener: GenerationListener) {
             prompts += request.prompt.textParts.joinToString("")
+            reasoningRequested += request.includeReasoning
             released = false
             Thread({ run(listener) }, "speech-test-reply").apply { isDaemon = true }.start()
         }
 
         private fun run(listener: GenerationListener) {
             val started = SystemClock.elapsedRealtime()
+            for (chunk in reasoning) {
+                if (cancelled) return
+                listener.onReasoningDelta(chunk)
+                SystemClock.sleep(chunkDelayMillis)
+            }
             for (chunk in reply) {
                 if (cancelled) return
                 listener.onTextDelta(chunk)

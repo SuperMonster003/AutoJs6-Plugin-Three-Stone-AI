@@ -288,6 +288,12 @@ internal data class GenerationRequest(
     val effort: GenerationEffort? = null,
     /** Chat-screen fast output mode. Null and false both omit the fast fields (D73 / D74). */
     val fast: Boolean? = null,
+    /**
+     * Chat-screen request for visible reasoning text (P3.1, D93): Anthropic thinking display
+     * "summarized" and Gemini includeThoughts. Binder requests, summaries and connection tests keep
+     * false so script output and request bodies stay unchanged.
+     */
+    val includeReasoning: Boolean = false,
 )
 
 /** Exact provider-side counters for one generation turn. */
@@ -340,6 +346,11 @@ internal data class GenerationStatistics(
  */
 internal interface GenerationListener {
     fun onTextDelta(text: String)
+    /**
+     * Visible reasoning text streamed before or between answer text (P3.1). It is never part of the
+     * answer; listeners that do not show reasoning (Binder, summaries) ignore it.
+     */
+    fun onReasoningDelta(text: String) {}
     /** A pause, not a terminal event. Statistics cover this one model invocation. */
     fun onToolCalls(calls: List<GenerationToolCall>, statistics: GenerationStatistics?) {
         throw UnsupportedOperationException("This listener does not accept tool calls")

@@ -149,6 +149,8 @@ class ChatActivity : ConfiguredActivity() {
     private val messages = ArrayList<ChatMessage>()
     private val messageViews = HashMap<Long, MessageViewHolder>()
     private val markdownCache = HashMap<Long, CachedMarkdown>()
+    /** Thinking cards the user opened or closed during the current reply (D79). */
+    private val reasoningExpanded = HashMap<Long, Boolean>()
     private val mainHandler = Handler(Looper.getMainLooper())
     // The reply being generated belongs to the process-wide coordinator (roadmap D77), so a
     // configuration change or leaving the chat does not interrupt it.
@@ -345,8 +347,18 @@ class ChatActivity : ConfiguredActivity() {
                 ?: return
             if (current.status != ChatMessageStatus.GENERATING) return
             val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
-            replaceMessage(current.copy(text = generation.text))
+            replaceMessage(current.copy(text = generation.text, reasoning = generation.reasoning))
             feedReading(generation.assistantMessageId, final = false)
+            if (followOutput) scrollToBottom()
+        }
+
+        override fun onReasoning(generation: ChatGenerationSnapshot) {
+            if (generation.conversationId != currentConversationId) return
+            val current = messages.singleOrNull { message -> message.id == generation.assistantMessageId }
+                ?: return
+            if (current.status != ChatMessageStatus.GENERATING || current.reasoning == generation.reasoning) return
+            val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
+            replaceMessage(current.copy(reasoning = generation.reasoning))
             if (followOutput) scrollToBottom()
         }
 
@@ -578,8 +590,11 @@ class ChatActivity : ConfiguredActivity() {
             messages.singleOrNull { message -> message.id == generation.assistantMessageId }
                 ?.takeIf { message -> message.status == ChatMessageStatus.GENERATING }
         }
-        if (shown != null && message != null && (message.text != shown.text || message.target != shown.target)) {
-            replaceMessage(message.copy(text = shown.text, target = shown.target))
+        if (
+            shown != null && message != null &&
+            (message.text != shown.text || message.target != shown.target || message.reasoning != shown.reasoning)
+        ) {
+            replaceMessage(message.copy(text = shown.text, target = shown.target, reasoning = shown.reasoning))
         }
         val assistantMessageId = message?.id
         val changed = isGenerating != (assistantMessageId != null) || activeAssistantMessageId != assistantMessageId
@@ -597,8 +612,17 @@ class ChatActivity : ConfiguredActivity() {
             val bubbleStylesChanged =
                 latestSettings.userBubbleStyle != uiSettings.userBubbleStyle ||
                     latestSettings.assistantBubbleStyle != uiSettings.assistantBubbleStyle
+            val reasoningChanged =
+                latestSettings.showReasoningWhileGenerating != uiSettings.showReasoningWhileGenerating ||
+                    latestSettings.collapseReasoningWhenDone != uiSettings.collapseReasoningWhenDone
             uiSettings = latestSettings
-            if (bubbleStylesChanged && ::messagesColumn.isInitialized) renderTranscript()
+            if (bubbleStylesChanged && ::messagesColumn.isInitialized) {
+                renderTranscript()
+            } else if (reasoningChanged) {
+                messages.forEach { message ->
+                    messageViews[message.id]?.reasoning?.let { card -> updateReasoningCard(message, card) }
+                }
+            }
             applyUiSettings()
         }
         refreshTargetCatalog(importCoordinator.managerState())
@@ -2352,6 +2376,7 @@ class ChatActivity : ConfiguredActivity() {
         messagesColumn.removeAllViews()
         messageViews.clear()
         markdownCache.keys.retainAll(messages.map(ChatMessage::id).toSet())
+        reasoningExpanded.keys.retainAll(messages.map(ChatMessage::id).toSet())
         messages.forEach(::addMessageView)
         refreshOptionsMenuState()
         renderEmptyState()
@@ -2407,6 +2432,22 @@ class ChatActivity : ConfiguredActivity() {
             orientation = LinearLayout.VERTICAL
             gravity = if (userMessage) Gravity.END else Gravity.START
         }
+        val reasoningCard = if (message.role == ChatMessageRole.ASSISTANT) {
+            ReasoningCardView(this, appPalette).apply {
+                visibility = View.GONE
+                onToggle = { toggleReasoning(message.id) }
+            }.also { card ->
+                row.addView(
+                    card,
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ).apply { bottomMargin = dp(6) },
+                )
+            }
+        } else {
+            null
+        }
         val body = MarkdownMessageView(this, appPalette).apply {
             applyBubbleStyle(message.role, bubbleStyle)
             setMessageLongClickListener { showMessageActions(message.id) }
@@ -2439,8 +2480,43 @@ class ChatActivity : ConfiguredActivity() {
                 bottomMargin = if (userMessage) dp(4) else dp(14)
             },
         )
-        messageViews[message.id] = MessageViewHolder(body, meta)
+        messageViews[message.id] = MessageViewHolder(body, meta, reasoningCard)
         updateMessageView(message)
+    }
+
+    private fun toggleReasoning(messageId: Long) {
+        val message = messages.singleOrNull { candidate -> candidate.id == messageId } ?: return
+        val card = messageViews[messageId]?.reasoning ?: return
+        reasoningExpanded[messageId] =
+            !ChatReasoningCardPolicy.expanded(message.status, uiSettings, reasoningExpanded[messageId])
+        updateReasoningCard(message, card)
+    }
+
+    /** Thinking card of an assistant reply; reasoning is never searched or read aloud (P3.2). */
+    private fun updateReasoningCard(message: ChatMessage, card: ReasoningCardView) {
+        val reasoning = message.reasoning?.takeIf { value -> value.text.isNotEmpty() }
+        if (reasoning == null) {
+            card.visibility = View.GONE
+            return
+        }
+        card.visibility = View.VISIBLE
+        val duration = reasoning.durationMillis
+        val header = when {
+            duration != null -> getString(R.string.chat_reasoning_duration, ChatReasoningCardPolicy.seconds(duration))
+            message.status == ChatMessageStatus.GENERATING -> getString(R.string.chat_reasoning_thinking)
+            else -> getString(R.string.chat_reasoning_title)
+        }
+        val body = if (reasoning.truncated) {
+            reasoning.text + "\n\n" + getString(R.string.chat_reasoning_truncated)
+        } else {
+            reasoning.text
+        }
+        card.show(
+            headerText = header,
+            bodyText = body,
+            expanded = ChatReasoningCardPolicy.expanded(message.status, uiSettings, reasoningExpanded[message.id]),
+            textSizeSp = uiSettings.fontSize.messageSp * REASONING_TEXT_SCALE,
+        )
     }
 
     private fun noticeTextSizeSp(): Float = uiSettings.fontSize.messageSp * 0.8f
@@ -2560,6 +2636,7 @@ class ChatActivity : ConfiguredActivity() {
             message.text.isEmpty() && message.status == ChatMessageStatus.GENERATING
         ) PLACEHOLDER_ALPHA else 1f
         holder.meta?.let { meta -> updateMessageMeta(message, meta) }
+        holder.reasoning?.let { card -> updateReasoningCard(message, card) }
     }
 
     private fun markdownDocument(message: ChatMessage): MarkdownDocument {
@@ -2763,6 +2840,7 @@ class ChatActivity : ConfiguredActivity() {
         val assistantMessageId = generation.assistantMessageId
         val current = messages.singleOrNull { message -> message.id == assistantMessageId }
         if (current != null) {
+            reasoningExpanded.remove(assistantMessageId)
             replaceMessage(
                 current.copy(
                     text = completion.text,
@@ -2770,6 +2848,7 @@ class ChatActivity : ConfiguredActivity() {
                     target = completion.target,
                     usage = completion.usage,
                     truncated = completion.truncated,
+                    reasoning = completion.reasoning,
                 ),
             )
             if (completion.truncated) showSnackbar(drawerLayout, getString(R.string.chat_generation_truncated))
@@ -2787,12 +2866,14 @@ class ChatActivity : ConfiguredActivity() {
         dispatchVoice(VoiceEvent.GenerationFailed)
         val current = messages.singleOrNull { message -> message.id == generation.assistantMessageId }
         if (current != null) {
+            reasoningExpanded.remove(current.id)
             replaceMessage(
                 current.copy(
                     text = ChatGenerationText.withFailure(generation.text, failureText),
                     status = ChatMessageStatus.FAILED,
                     usage = null,
                     target = generation.target,
+                    reasoning = generation.reasoning,
                 ),
             )
         }
@@ -2833,12 +2914,14 @@ class ChatActivity : ConfiguredActivity() {
         if (stopped != null && stopped.conversationId == currentConversationId) {
             val current = messages.singleOrNull { message -> message.id == stopped.assistantMessageId }
             if (current != null) {
+                reasoningExpanded.remove(current.id)
                 replaceMessage(
                     current.copy(
                         text = stopped.text,
                         status = ChatMessageStatus.STOPPED,
                         usage = null,
                         target = stopped.target,
+                        reasoning = stopped.reasoning,
                     ),
                 )
             }
@@ -2863,6 +2946,7 @@ class ChatActivity : ConfiguredActivity() {
         messages.clear()
         messageViews.clear()
         markdownCache.clear()
+        reasoningExpanded.clear()
         messagesColumn.removeAllViews()
         nextMessageId = 1L
         currentConversationId = newConversationId()
@@ -3837,6 +3921,7 @@ class ChatActivity : ConfiguredActivity() {
     private data class MessageViewHolder(
         val body: MarkdownMessageView,
         val meta: TextView?,
+        val reasoning: ReasoningCardView? = null,
     )
 
     private data class CachedMarkdown(
@@ -3894,6 +3979,7 @@ class ChatActivity : ConfiguredActivity() {
         const val NEAR_BOTTOM_DP = 96
         const val DISABLED_ALPHA = 0.42f
         const val PLACEHOLDER_ALPHA = 0.65f
+        const val REASONING_TEXT_SCALE = 0.85f
         const val COMPOSER_CONTROL_MIN_HEIGHT_DP = 46
         const val COMPOSER_CORNER_RADIUS_DP = 22
         const val COMPOSER_MIC_SIZE_DP = 36

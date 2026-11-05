@@ -124,6 +124,63 @@ class ConversationHistoryTest {
     }
 
     @Test
+    fun `codec round trips assistant reasoning text duration and cut mark (P3)`() {
+        val longText = "\u601d".repeat(ChatMessageReasoning.MAXIMUM_BYTES / 3 + 10)
+        listOf(
+            ChatMessageReasoning("plan the answer", 4_200L),
+            ChatMessageReasoning("still thinking", null),
+            ChatMessageReasoning("cut earlier", 0L, truncated = true),
+            ChatMessageReasoning.bounded(longText, 61_000L),
+        ).forEach { reasoning ->
+            val original = conversation("reasoning", updatedAt = 10L).copy(
+                messages = listOf(
+                    ChatMessage(1L, ChatMessageRole.USER, "question"),
+                    assistant(2L, "answer").copy(reasoning = reasoning),
+                ),
+            )
+
+            val restored = ConversationHistoryCodec.decode(ConversationHistoryCodec.encode(listOf(original))).single()
+
+            assertEquals(original, restored)
+            assertEquals(reasoning, restored.messages.last().reasoning)
+            assertNull(restored.messages.first().reasoning)
+        }
+        val cut = ChatMessageReasoning.bounded(longText, 61_000L)
+        assertTrue(cut.truncated)
+        assertEquals(ChatMessageReasoning.MAXIMUM_BYTES / 3 * 3, cut.text.toByteArray(Charsets.UTF_8).size)
+    }
+
+    @Test
+    fun `codec reads reasoning keys only on assistant replies and skips bad values`() {
+        val millis = ByteBuffer.allocate(Long.SIZE_BYTES).putLong(1_500L).array()
+        val restored = ConversationHistoryCodec.decode(
+            publishedLayout(
+                version = 6,
+                messageProperties = listOf(
+                    "reasoning" to "weigh options".toByteArray(),
+                    "reasoning.cut" to byteArrayOf(1),
+                    "reasoning.ms" to millis,
+                ),
+            ),
+        ).single()
+
+        assertNull(restored.messages.first().reasoning)
+        assertEquals(ChatMessageReasoning("weigh options", 1_500L, truncated = true), restored.messages.last().reasoning)
+
+        val broken = ConversationHistoryCodec.decode(
+            publishedLayout(
+                version = 6,
+                messageProperties = listOf("reasoning" to "x".toByteArray(), "reasoning.ms" to byteArrayOf(1, 2)),
+            ),
+        ).single()
+        assertEquals(ChatMessageReasoning("x", null), broken.messages.last().reasoning)
+        val orphan = ConversationHistoryCodec.decode(
+            publishedLayout(version = 6, messageProperties = listOf("reasoning.ms" to millis)),
+        ).single()
+        assertNull(orphan.messages.last().reasoning)
+    }
+
+    @Test
     fun `codec reads known keys next to unknown ones`() {
         val bytes = publishedLayout(
             version = 6,

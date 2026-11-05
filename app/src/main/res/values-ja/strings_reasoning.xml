@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_collapse_reasoning">完了後に自動で折りたたむ</string>
+    <string name="app_settings_collapse_reasoning_summary">返信が完了したら思考カードを 1 行に折りたたみます. タップすると展開します</string>
+    <string name="app_settings_show_reasoning">生成中に思考内容を表示</string>
+    <string name="app_settings_show_reasoning_summary">返信の生成中は思考カードを開き, モデルの思考過程をリアルタイムで表示します</string>
+    <string name="chat_reasoning_collapse">思考内容を折りたたむ</string>
+    <string name="chat_reasoning_duration">%1$d 秒間思考しました</string>
+    <string name="chat_reasoning_expand">思考内容を展開</string>
+    <string name="chat_reasoning_thinking" tools:ignore="TypographyEllipsis">思考中...</string>
+    <string name="chat_reasoning_title">思考内容</string>
+    <string name="chat_reasoning_truncated">思考内容が長すぎるため, 先頭部分のみ保存しています.</string>
+</resources>

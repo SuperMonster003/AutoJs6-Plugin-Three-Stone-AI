@@ -28,6 +28,7 @@ internal object OpenAiCompatibleResponseParser {
             usage = root.usageOrNull(),
             contentSeen = choice != null,
             truncated = choice.stoppedAtOutputLimit(),
+            reasoning = delta.reasoningText(),
         )
     }
 
@@ -49,7 +50,24 @@ internal object OpenAiCompatibleResponseParser {
             text = text,
             usage = root.usageOrNull(),
             truncated = choice.stoppedAtOutputLimit(),
+            reasoning = message.reasoningText(),
         )
+    }
+
+    /**
+     * Reasoning text under either streaming field name (P3.1): reasoning_content (DeepSeek, many
+     * proxies) or reasoning (OpenRouter and others). When a provider mirrors the same text into both,
+     * reasoning_content wins so it is not shown twice. Structured reasoning_details is not read.
+     */
+    private fun JsonObject?.reasoningText(): String {
+        if (this == null) return ""
+        listOf("reasoning_content", "reasoning").forEach { name ->
+            val value = get(name) ?: return@forEach
+            if (value.isJsonPrimitive && value.asJsonPrimitive.isString && value.asString.isNotEmpty()) {
+                return value.asString
+            }
+        }
+        return ""
     }
 
     /** finish_reason "length": the provider stopped at max_tokens, so the text is valid but incomplete. */

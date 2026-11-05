@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_settings_collapse_reasoning">結束後自動摺疊</string>
+    <string name="app_settings_collapse_reasoning_summary">回覆完成後將思考卡片摺疊成一行, 點按即可展開</string>
+    <string name="app_settings_show_reasoning">生成時顯示思考內容</string>
+    <string name="app_settings_show_reasoning_summary">回覆生成時展開思考卡片, 即時顯示模型的思考過程</string>
+    <string name="chat_reasoning_collapse">收合思考內容</string>
+    <string name="chat_reasoning_duration">思考了 %1$d 秒</string>
+    <string name="chat_reasoning_expand">展開思考內容</string>
+    <string name="chat_reasoning_thinking" tools:ignore="TypographyEllipsis">思考中...</string>
+    <string name="chat_reasoning_title">思考內容</string>
+    <string name="chat_reasoning_truncated">思考內容過長, 只保留了開頭部分.</string>
+</resources>

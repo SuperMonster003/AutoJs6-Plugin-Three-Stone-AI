@@ -81,6 +81,14 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
                 })
             }
             if (fast) addProperty("speed", "fast")
+            // D93: Claude 5+ already thinks adaptively with display "omitted"; the chat screen asks for
+            // the summary. output_config.effort stays where it is (the documented combination).
+            if (turn.includeReasoning && OnlineAiEffortSupport.anthropicSummarizedThinking(normalized.modelId)) {
+                add("thinking", JsonObject().apply {
+                    addProperty("type", "adaptive")
+                    addProperty("display", "summarized")
+                })
+            }
         }
         val headers = buildMap {
             put("anthropic-version", ANTHROPIC_VERSION)
@@ -119,27 +127,33 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
             "content_block_start" -> {
                 val block = OnlineAiResponseSupport.objectOrNull(root, "content_block")
                     ?: OnlineAiResponseSupport.invalidResponse()
-                if (OnlineAiResponseSupport.stringOrNull(block, "type") == "text") {
-                    OnlineAiStreamChunk(
+                when (OnlineAiResponseSupport.stringOrNull(block, "type")) {
+                    "text" -> OnlineAiStreamChunk(
                         text = OnlineAiResponseSupport.stringOrNull(block, "text")
                             ?: OnlineAiResponseSupport.invalidResponse(),
                         contentSeen = true,
                     )
-                } else {
-                    OnlineAiStreamChunk(contentSeen = OnlineAiResponseSupport.stringOrNull(block, "type") == "tool_use")
+                    "thinking" -> OnlineAiStreamChunk(
+                        reasoning = OnlineAiResponseSupport.stringOrNull(block, "thinking").orEmpty(),
+                    )
+                    "tool_use" -> OnlineAiStreamChunk(contentSeen = true)
+                    else -> OnlineAiStreamChunk()
                 }
             }
             "content_block_delta" -> {
                 val delta = OnlineAiResponseSupport.objectOrNull(root, "delta")
                     ?: OnlineAiResponseSupport.invalidResponse()
-                if (OnlineAiResponseSupport.stringOrNull(delta, "type") == "text_delta") {
-                    OnlineAiStreamChunk(
+                when (OnlineAiResponseSupport.stringOrNull(delta, "type")) {
+                    "text_delta" -> OnlineAiStreamChunk(
                         text = OnlineAiResponseSupport.stringOrNull(delta, "text")
                             ?: OnlineAiResponseSupport.invalidResponse(),
                         contentSeen = true,
                     )
-                } else {
-                    OnlineAiStreamChunk()
+                    // Empty under display "omitted"; signature_delta and redacted_thinking carry no text.
+                    "thinking_delta" -> OnlineAiStreamChunk(
+                        reasoning = OnlineAiResponseSupport.stringOrNull(delta, "thinking").orEmpty(),
+                    )
+                    else -> OnlineAiStreamChunk()
                 }
             }
             "message_delta" -> {
@@ -172,6 +186,15 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         val content = OnlineAiResponseSupport.arrayOrNull(root, "content")
             ?: OnlineAiResponseSupport.invalidResponse()
         var textBlockSeen = false
+        val reasoning = buildString {
+            content.forEach { element ->
+                if (!element.isJsonObject) OnlineAiResponseSupport.invalidResponse()
+                val block = element.asJsonObject
+                if (OnlineAiResponseSupport.stringOrNull(block, "type") == "thinking") {
+                    append(OnlineAiResponseSupport.stringOrNull(block, "thinking").orEmpty())
+                }
+            }
+        }
         val text = buildString {
             content.forEach { element ->
                 if (!element.isJsonObject) OnlineAiResponseSupport.invalidResponse()
@@ -192,6 +215,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
             text = text,
             usage = usage(OnlineAiResponseSupport.objectOrNull(root, "usage")),
             truncated = isOutputLimitStop(stopReason),
+            reasoning = reasoning,
         )
     }
 

@@ -82,8 +82,7 @@ internal object ConversationHistoryPolicy {
         var retainedBytes = 0
         for (message in messages.asReversed()) {
             if (retainedReversed.size >= MAXIMUM_MESSAGES_PER_CONVERSATION) break
-            val messageBytes = message.text.toByteArray(Charsets.UTF_8).size +
-                message.target.estimatedBytes() + MESSAGE_OVERHEAD_BYTES
+            val messageBytes = message.estimatedBytes()
             if (
                 retainedReversed.isNotEmpty() &&
                 retainedBytes + messageBytes > MAXIMUM_CONVERSATION_MESSAGE_BYTES
@@ -102,10 +101,11 @@ internal object ConversationHistoryPolicy {
         return if (safeStart <= 0) this else copy(messages = messages.drop(safeStart))
     }
 
-    private fun StoredConversation.estimatedMessageBytes(): Int = messages.sumOf { message ->
-        message.text.toByteArray(Charsets.UTF_8).size + message.target.estimatedBytes() +
-            MESSAGE_OVERHEAD_BYTES
-    }
+    private fun StoredConversation.estimatedMessageBytes(): Int = messages.sumOf { message -> message.estimatedBytes() }
+
+    private fun ChatMessage.estimatedBytes(): Int = text.toByteArray(Charsets.UTF_8).size + target.estimatedBytes() +
+        (reasoning?.text?.toByteArray(Charsets.UTF_8)?.size?.coerceAtMost(ChatMessageReasoning.MAXIMUM_BYTES) ?: 0) +
+        MESSAGE_OVERHEAD_BYTES
 
     private fun StoredConversation.estimatedBytes(): Int = estimatedMessageBytes() +
         id.toByteArray(Charsets.UTF_8).size + title.toByteArray(Charsets.UTF_8).size +
@@ -333,7 +333,7 @@ internal object ConversationHistoryCodec {
             }
             output.writeBoolean(message.truncated)
             output.writeNullableTarget(message.target)
-            ConversationHistoryProperties.write(output, emptyMap())
+            ConversationHistoryProperties.write(output, ConversationHistoryProperties.messageTable(message))
         }
         output.writeContextState(conversation.contextState)
         ConversationHistoryProperties.write(output, ConversationHistoryProperties.conversationTable(conversation))
@@ -359,10 +359,9 @@ internal object ConversationHistoryCodec {
                 }
                 val truncated = version >= PUBLISHED_VERSION_WITH_TRUNCATION && input.readBoolean()
                 val messageTarget = input.readNullableTarget()
-                if (version >= VERSION) {
-                    // No message keys are known yet; later phases read theirs here (D91).
-                    ConversationHistoryProperties.read(input)
-                }
+                val messageProperties = if (version >= VERSION) ConversationHistoryProperties.read(input) else emptyMap()
+                val reasoning = ConversationHistoryProperties.reasoning(messageProperties)
+                    ?.takeIf { role == ChatMessageRole.ASSISTANT }
                 add(
                     ChatMessage(
                         id = messageId,
@@ -372,6 +371,7 @@ internal object ConversationHistoryCodec {
                         usage = usage,
                         target = messageTarget,
                         truncated = truncated,
+                        reasoning = reasoning,
                     ),
                 )
             }

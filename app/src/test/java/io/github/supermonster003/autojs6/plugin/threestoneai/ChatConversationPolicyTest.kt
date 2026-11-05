@@ -54,6 +54,26 @@ class ChatConversationPolicyTest {
         assertEquals(ChatMessageStatus.FAILED, restored[3].status)
     }
 
+    @Test
+    fun `restoring keeps the reply the coordinator is still generating`() {
+        val messages = listOf(
+            user(1, "question"),
+            assistant(2, "stale partial", ChatMessageStatus.GENERATING),
+            user(3, "again"),
+            assistant(4, "live partial", ChatMessageStatus.GENERATING),
+        )
+
+        val restored = ChatConversationPolicy.restore(messages, generatingMessageId = 4L)
+
+        assertEquals(ChatMessageStatus.STOPPED, restored[1].status)
+        assertEquals(ChatMessageStatus.GENERATING, restored[3].status)
+        assertEquals("live partial", restored[3].text)
+        assertEquals(
+            ChatMessageStatus.STOPPED,
+            ChatConversationPolicy.restore(messages, generatingMessageId = 2L)[3].status,
+        )
+    }
+
     private fun user(id: Int, text: String) = ChatMessage(
         id = id.toLong(),
         role = ChatMessageRole.USER,

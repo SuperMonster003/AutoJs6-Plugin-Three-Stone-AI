@@ -10,19 +10,23 @@ class UnifiedAiBackendWiringTest {
     fun launcherChatAndBinderProviderUseOnlyTheApplicationAiBackendBoundary() {
         val application = source("ThreeStoneAiApplication.kt")
         val chat = source("ChatActivity.kt")
+        // The launcher chat's generation lives in its process-wide coordinator (roadmap D77).
+        val chatGeneration = source("ChatGenerationCoordinator.kt")
         val service = source("provider/ThreeStoneAiProviderService.kt")
         val binderSession = source("provider/RemoteThreeStoneAiSession.kt")
 
         assertTrue(application.contains("CompositeAiBackend("))
         assertTrue(application.contains("internal val aiBackend: AiBackend"))
-        assertTrue(chat.contains(".aiBackend.createSession("))
+        assertTrue(chatGeneration.contains("backend = { application.aiBackend }"))
+        assertTrue(chatGeneration.contains("backend().createSession("))
+        assertTrue(chat.contains("ChatGenerationCoordinator.get("))
         assertTrue(service.contains("aiBackend = pluginApplication.aiBackend"))
         assertTrue(service.contains("aiBackend = aiBackend"))
         assertTrue(binderSession.contains("aiBackend.createSession("))
-        assertTrue(chat.contains("cancelAndClose"))
+        assertTrue(chatGeneration.contains("cancelAndClose"))
         assertTrue(binderSession.contains("cancelAndClose"))
 
-        listOf(chat, service, binderSession).forEach { entryPoint ->
+        listOf(chat, chatGeneration, service, binderSession).forEach { entryPoint ->
             DIRECT_IMPLEMENTATION_TYPES.forEach { implementation ->
                 assertFalse(
                     "AI entry points must not depend on $implementation directly",

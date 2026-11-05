@@ -5,6 +5,13 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.6.0": {
+      "released_date": "2026/11/05",
+      "fix": [
+        "A reply being generated was stopped when the screen was rotated or when dark mode, the language or the message font size was changed; the reply now keeps generating, and a reply that finishes while you are away from the chat is shown in full when you come back",
+        "After tapping \"Stop\", the online request kept running in the background until the reply was complete (and still counted toward usage); tapping Stop now ends the request within 1 second, and so do starting a new conversation, switching conversations, switching models and deleting messages"
+      ]
+    },
     "v1.5.0": {
       "released_date": "2026/11/04",
       "feature": [

@@ -55,7 +55,6 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.roundedFill
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.roundedRippleFill
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSession
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetCatalog
@@ -109,9 +108,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import java.util.concurrent.Executors
-import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.atomic.AtomicLong
 
 /** Launcher surface for explicit, multi-turn interaction with one conversation-bound AI target. */
 class ChatActivity : ConfiguredActivity() {
@@ -152,15 +148,10 @@ class ChatActivity : ConfiguredActivity() {
     private val messageViews = HashMap<Long, MessageViewHolder>()
     private val markdownCache = HashMap<Long, CachedMarkdown>()
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val generationEpoch = AtomicLong(0L)
-    private val backendLock = Any()
-    private val deltaLock = Any()
-    private val backendExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "three-stone-ai-chat").apply { isDaemon = true }
-    }
-    private val summaryExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "three-stone-ai-summary").apply { isDaemon = true }
-    }
+    // The reply being generated belongs to the process-wide coordinator (roadmap D77), so a
+    // configuration change or leaving the chat does not interrupt it.
+    private lateinit var generationCoordinator: ChatGenerationCoordinator
+    private val generationText by lazy(LazyThreadSafetyMode.NONE) { ChatGenerationText(this) }
 
     private var nextMessageId = 1L
     private var currentConversationId = newConversationId()
@@ -182,9 +173,10 @@ class ChatActivity : ConfiguredActivity() {
     private var allowDeletedConversationRevival = false
     private var targetCatalogAvailability = TargetCatalogAvailability.LOADING
     private var targetCatalog: AiTargetCatalog? = null
-    // The screen stays on while a reply is being generated, so a long turn is not cut short by the
-    // screen timeout (maintainer request, 2026-11-02). The flag follows the generating state exactly:
-    // every start, completion, failure and stop goes through this property.
+    // The screen stays on while a reply of the shown conversation is being generated, so a long turn
+    // is not cut short by the screen timeout (maintainer request, 2026-11-02). The property mirrors
+    // the generation coordinator's state: every start, completion, failure and stop reaches it
+    // through applyGenerationState.
     private var isGenerating = false
         set(value) {
             field = value
@@ -194,26 +186,13 @@ class ChatActivity : ConfiguredActivity() {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
-    private var activeGenerationId: Long? = null
     private var activeAssistantMessageId: Long? = null
-    private var activeBackend: AiBackendSession? = null
-    private var activeBackendTarget: ConversationTargetSnapshot? = null
-    private var activeBackendContextTelemetry: BackendContextTelemetry? = null
-    private var activeContextTurnObservation: ContextTurnObservation? = null
-    private var backendContextEpoch = 0L
-    private var completedTurnsOnBackend = 0
-    private lateinit var summaryCheckpointer: SummaryCheckpointer
-    private var activeSummaryTask: SummaryCheckpointTask? = null
-    private var activeSummaryEpoch = 0L
-    private var activeSummaryConversationId: String? = null
-    private var activeSummarySourceHash: String? = null
-    private var failedSummaryPlanKey: String? = null
     private var managerAttached = false
+    // Between onStart and onStop the chat observes the coordinator and alone persists the shown
+    // conversation; outside that window the coordinator writes a reply that finishes to history.
+    private var generationAttached = false
+    private var pendingConversationSwitch: String? = null
     private var destroyed = false
-    private var pendingDeltaGenerationId = 0L
-    private var pendingDeltaAssistantId = 0L
-    private val pendingDelta = StringBuilder()
-    private var deltaFlushScheduled = false
     private var speechAvailability: SpeechAvailability =
         SpeechAvailabilityPolicy.resolve(SpeechDeviceState.NONE, preferMacaw = true)
     private var pendingDictation: DictationMode? = null
@@ -243,6 +222,15 @@ class ChatActivity : ConfiguredActivity() {
     @VisibleForTesting
     internal val messageCountForTest: Int
         get() = messages.size
+
+    /** Instrumentation only: the open conversation's messages and whether a reply is generating (D77). */
+    @VisibleForTesting
+    internal val messagesForTest: List<ChatMessage>
+        get() = messages.toList()
+
+    @VisibleForTesting
+    internal val generatingForTest: Boolean
+        get() = isGenerating
 
     /** Instrumentation only: where the voice conversation stands. */
     @VisibleForTesting
@@ -345,17 +333,53 @@ class ChatActivity : ConfiguredActivity() {
         }
     }
 
+    private val generationObserver = object : ChatGenerationCoordinator.Observer {
+        override fun onDelta(generation: ChatGenerationSnapshot, delta: String) {
+            if (generation.conversationId != currentConversationId) return
+            val current = messages.singleOrNull { message -> message.id == generation.assistantMessageId }
+                ?: return
+            if (current.status != ChatMessageStatus.GENERATING) return
+            val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
+            replaceMessage(current.copy(text = generation.text))
+            feedReading(generation.assistantMessageId, final = false)
+            if (followOutput) scrollToBottom()
+        }
+
+        override fun onCompleted(generation: ChatGenerationSnapshot, completion: ChatGenerationCompletion) {
+            completeGeneration(generation, completion)
+        }
+
+        override fun onFailed(generation: ChatGenerationSnapshot, failureText: String) {
+            failGeneration(generation, failureText)
+        }
+
+        override fun onStateChanged(active: ChatGenerationSnapshot?) {
+            applyGenerationState(active)
+        }
+
+        override fun conversationSnapshot(conversationId: String): ChatConversationSnapshot? =
+            if (conversationId == currentConversationId) {
+                ChatConversationSnapshot(messages.toList(), conversationContextState)
+            } else {
+                null
+            }
+
+        override fun onContextStateChanged(conversationId: String, state: ConversationContextState) {
+            if (conversationId != currentConversationId || state == conversationContextState) return
+            conversationContextState = state
+            markConversationChanged()
+            renderContextUsage()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         importCoordinator = ModelImportCoordinator.get(applicationContext)
+        generationCoordinator = ChatGenerationCoordinator.get(applicationContext)
         historyStore = ConversationHistoryStore(applicationContext)
         uiSettingsStore = ChatUiSettingsStore(applicationContext)
         draftStore = ChatComposerDraftStore(applicationContext)
         contextTokenCalibrationStore = ContextTokenCalibrationStore(applicationContext)
-        summaryCheckpointer = SummaryCheckpointer(
-            backend = (application as ThreeStoneAiApplication).aiBackend,
-            executor = summaryExecutor,
-        )
         uiSettings = uiSettingsStore.load()
         speechAvailability = SpeechDeviceProbe.availability(this, uiSettings.preferMacawSpeech)
         speechOutput = SpeechOutput(this, speechListener)
@@ -399,6 +423,11 @@ class ChatActivity : ConfiguredActivity() {
         if (intent.getBooleanExtra(VoiceCommandInbox.EXTRA_CHECK_INBOX, false)) voiceCommandCheckPending = true
         val conversationId = intent.getStringExtra(ConversationNavigation.EXTRA_CONVERSATION_ID)
             ?: return
+        if (!generationAttached) {
+            // A stopped chat may hold an outdated copy of its conversation; switch once attached.
+            pendingConversationSwitch = conversationId
+            return
+        }
         if (conversationId != currentConversationId) switchConversation(conversationId)
     }
 
@@ -512,6 +541,48 @@ class ChatActivity : ConfiguredActivity() {
         super.onStart()
         managerAttached = true
         renderManagerState(importCoordinator.attachManager(managerObserver))
+        attachGeneration()
+    }
+
+    private fun attachGeneration() {
+        val attachment = generationCoordinator.attach(generationObserver)
+        generationAttached = true
+        if (currentConversationId in attachment.changedConversationIds) {
+            // A reply of this conversation finished while the chat was stopped.
+            historyStore.find(currentConversationId)?.let { stored ->
+                applyStoredConversation(stored)
+                renderTranscript()
+            }
+        }
+        applyGenerationState(attachment.active)
+        val switchTo = pendingConversationSwitch
+        pendingConversationSwitch = null
+        if (switchTo != null && switchTo != currentConversationId) switchConversation(switchTo)
+    }
+
+    private fun detachGeneration() {
+        if (!generationAttached) return
+        generationCoordinator.detach(generationObserver)
+        generationAttached = false
+    }
+
+    /** Mirrors the coordinator's [active] generation into the shown conversation. */
+    private fun applyGenerationState(active: ChatGenerationSnapshot?) {
+        val shown = active?.takeIf { generation -> generation.conversationId == currentConversationId }
+        val message = shown?.let { generation ->
+            messages.singleOrNull { message -> message.id == generation.assistantMessageId }
+                ?.takeIf { message -> message.status == ChatMessageStatus.GENERATING }
+        }
+        if (shown != null && message != null && (message.text != shown.text || message.target != shown.target)) {
+            replaceMessage(message.copy(text = shown.text, target = shown.target))
+        }
+        val assistantMessageId = message?.id
+        val changed = isGenerating != (assistantMessageId != null) || activeAssistantMessageId != assistantMessageId
+        activeAssistantMessageId = assistantMessageId
+        isGenerating = assistantMessageId != null
+        if (!::sendButton.isInitialized) return
+        if (changed) renderComposerState()
+        renderContextUsage()
     }
 
     override fun onResume() {
@@ -554,7 +625,10 @@ class ChatActivity : ConfiguredActivity() {
             stopReading()
         }
         persistComposerDraft()
+        // Store every character generated so far, not only what the last 32 ms delivery showed.
+        generationCoordinator.activeFor(currentConversationId)?.let(::applyGenerationState)
         persistConversationNow()
+        detachGeneration()
         if (managerAttached) {
             importCoordinator.detachManager(managerObserver)
             managerAttached = false
@@ -563,6 +637,8 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        // On API 28+ this runs after onStop, which already persisted; a detached chat must not
+        // overwrite a reply the coordinator may write meanwhile.
         persistConversationNow()
         val savedMessages = messagesForSavedState()
         outState.putLongArray(STATE_MESSAGE_IDS, savedMessages.map(ChatMessage::id).toLongArray())
@@ -636,25 +712,13 @@ class ChatActivity : ConfiguredActivity() {
             importCoordinator.detachManager(managerObserver)
             managerAttached = false
         }
-        generationEpoch.incrementAndGet()
-        cancelSummaryCheckpoint()
+        // The generation, its backend and summary checkpoints outlive this instance (roadmap D77):
+        // a recreated chat attaches to them again, and a reply that finishes meanwhile is written
+        // to history by the coordinator.
         persistConversationNow()
+        detachGeneration()
         mainHandler.removeCallbacksAndMessages(null)
-        synchronized(deltaLock) {
-            pendingDelta.clear()
-            deltaFlushScheduled = false
-        }
         if (::speechOutput.isInitialized) speechOutput.shutdown()
-        val detached = detachBackend()
-        if (detached != null) {
-            try {
-                backendExecutor.execute { runCatching(detached::cancelAndClose) }
-            } catch (_: RejectedExecutionException) {
-                closeOnFallbackThread(detached)
-            }
-        }
-        backendExecutor.shutdown()
-        summaryExecutor.shutdown()
         super.onDestroy()
     }
 
@@ -1780,13 +1844,7 @@ class ChatActivity : ConfiguredActivity() {
             applicationInputTokenBudget = uiSettings.contextTokenBudget,
             maximumOutputTokens = uiSettings.maximumOutputTokens,
         )
-        val active = synchronized(backendLock) {
-            activeBackendContextTelemetry
-                ?.takeIf {
-                    activeBackendTarget?.matchesExecutionIdentity(target) == true
-                }
-                ?.let { telemetry -> telemetry.accounting to telemetry.layerTokens }
-        }
+        val active = generationCoordinator.contextUsage(currentConversationId, target)
         if (active != null) {
             return ContextUsagePolicy.snapshot(
                 accounting = active.first,
@@ -1855,9 +1913,7 @@ class ChatActivity : ConfiguredActivity() {
             showSnackbar(drawerLayout, getString(R.string.chat_context_compact_busy))
             return
         }
-        val hadBackend = synchronized(backendLock) { activeBackend != null }
-        closeCurrentBackend()
-        renderContextUsage()
+        val hadBackend = closeCurrentBackend(reason = "manual-compaction")
         showSnackbar(
             drawerLayout,
             getString(
@@ -2275,20 +2331,6 @@ class ChatActivity : ConfiguredActivity() {
         refreshActiveSearchResults()
     }
 
-    private fun recordAssistantTarget(
-        generationId: Long,
-        assistantMessageId: Long,
-        actualTarget: ConversationTargetSnapshot,
-    ) {
-        if (!isGenerationCurrent(generationId)) return
-        val current = messages.singleOrNull { message -> message.id == assistantMessageId }
-            ?.takeIf { message -> message.role == ChatMessageRole.ASSISTANT }
-            ?: return
-        if (current.target != actualTarget) {
-            replaceMessage(current.copy(target = actualTarget))
-        }
-    }
-
     private fun addMessageView(message: ChatMessage) {
         if (message.role == ChatMessageRole.NOTICE) {
             val notice = MarkdownMessageView(this, appPalette).apply {
@@ -2620,13 +2662,11 @@ class ChatActivity : ConfiguredActivity() {
             status = ChatMessageStatus.GENERATING,
             target = ConversationTargetSnapshot.from(target),
         )
-        val generationId = generationEpoch.incrementAndGet()
-        activeGenerationId = generationId
         activeAssistantMessageId = assistantMessage.id
         isGenerating = true
         if (retainedPrefix != null) {
             invalidateConversationContextFrom(checkNotNull(messageBeingEdited))
-            closeCurrentBackend()
+            closeCurrentBackend(reason = "edit")
             messages.clear()
             messages.addAll(retainedPrefix)
             messages += userMessage
@@ -2640,12 +2680,6 @@ class ChatActivity : ConfiguredActivity() {
         } else {
             appendMessage(userMessage)
             appendMessage(assistantMessage)
-        }
-        synchronized(deltaLock) {
-            pendingDeltaGenerationId = generationId
-            pendingDeltaAssistantId = assistantMessage.id
-            pendingDelta.clear()
-            deltaFlushScheduled = false
         }
         if (
             ReadAloudPolicy.readsNewReply(
@@ -2661,713 +2695,72 @@ class ChatActivity : ConfiguredActivity() {
         renderComposerState()
         renderEmptyState()
         persistConversationNow()
-        startBackendTurn(target, promptText, assistantMessage.id, generationId)
+        generationCoordinator.start(
+            ChatTurnRequest(
+                conversationId = currentConversationId,
+                assistantMessageId = assistantMessage.id,
+                target = target,
+                executionProfileId = target.chatExecutionProfileId(),
+                prompt = promptText,
+                transcript = messages.toList(),
+                contextState = conversationContextState,
+                settings = uiSettings,
+            ),
+        )
         return assistantMessage.id
     }
 
-    private fun startBackendTurn(
-        target: AiTarget,
-        promptText: String,
-        assistantMessageId: Long,
-        generationId: Long,
-    ) {
-        val prompt = GenerationMessage(GenerationRole.USER, listOf(promptText))
-        val requestedTarget = ConversationTargetSnapshot.from(target)
-        val budget = ContextBudgetCalculator.calculate(
-            targetLimits = target.limits,
-            applicationInputTokenBudget = uiSettings.contextTokenBudget,
-            maximumOutputTokens = uiSettings.maximumOutputTokens,
-        )
-        val calibration = contextTokenCalibrationStore.current(requestedTarget.targetId)
-        val estimator = calibration.estimator()
-        val contextStateSnapshot = conversationContextState
-        val baseCompiled = ChatConversationPolicy.compileContext(
-            transcript = messages,
-            prompt = prompt,
-            policy = ContextCompilationPolicy(
-                estimator = estimator,
-                maximumInputTokens = budget.compactionTargetTokens,
-                contextState = contextStateSnapshot,
-            ),
-        )
-        val freshRecall = historyStore.recall(
-            conversationId = currentConversationId,
-            query = promptText,
-            excludedMessageIds = baseCompiled.coveredMessageIds.toSet(),
-        )
-        var reusableBackend: AiBackendSession? = null
-        var reusableTelemetry: BackendContextTelemetry? = null
-        var backendToReplace: AiBackendSession? = null
-        var emergencyDerivedContextDrop = false
-        var recallForRebuild = freshRecall
-        synchronized(backendLock) {
-            val telemetry = activeBackendContextTelemetry
-            val stateFingerprint = ConversationContextPolicy.fingerprint(contextStateSnapshot)
-            val targetMatches = activeBackendTarget?.let { activeTarget ->
-                activeTarget.matchesExecutionIdentity(target)
-            } == true
-            val stateMatches = telemetry?.contextStateFingerprint == stateFingerprint &&
-                targetMatches
-            val stickyRecall = telemetry?.recalledHistory
-                ?.takeIf { stateMatches }
-                .orEmpty()
-            val mergedRecall = ConversationRecallPolicy.mergeSticky(
-                sticky = stickyRecall,
-                fresh = freshRecall,
-            )
-            val expectedFingerprint = ConversationContextPolicy.compilationFingerprint(
-                state = contextStateSnapshot,
-                includeDerivedContext = true,
-                recalledHistoryFingerprint = stickyRecall.takeIf(List<*>::isNotEmpty)
-                    ?.let(ConversationRecallPolicy::fingerprint),
-            )
-            val installedContextMatches = stateMatches &&
-                telemetry?.contextFingerprint == expectedFingerprint
-            val reusable = target.capabilities.persistentSession &&
-                activeBackend != null && telemetry != null && installedContextMatches &&
-                ConversationRecallPolicy.sameChunks(stickyRecall, mergedRecall) &&
-                !ContextAccountingPolicy.shouldRotateBackend(
-                    accounting = telemetry.accounting,
-                    budget = budget,
-                    completedTurnsOnBackend = completedTurnsOnBackend,
-                )
-            if (reusable) {
-                reusableBackend = activeBackend
-                reusableTelemetry = telemetry
-            } else {
-                emergencyDerivedContextDrop = telemetry?.accounting?.tokens
-                    ?.let { tokens -> tokens >= budget.absoluteProtectionTokens } == true
-                recallForRebuild = when {
-                    emergencyDerivedContextDrop -> emptyList()
-                    target.capabilities.persistentSession && installedContextMatches ->
-                        mergedRecall
-                    else -> freshRecall
-                }
-                backendToReplace = activeBackend
-                activeBackend = null
-                activeBackendTarget = null
-                activeBackendContextTelemetry = null
-                activeContextTurnObservation = null
-                completedTurnsOnBackend = 0
-            }
-        }
-
-        val continuation = reusableBackend
-        if (continuation != null) {
-            val telemetry = checkNotNull(reusableTelemetry)
-            val actualTarget = ConversationTargetSnapshot.from(continuation.target)
-            observeContextTurnStart(
-                generationId = generationId,
-                backend = continuation,
-                target = actualTarget,
-                prompt = prompt,
-                telemetry = telemetry,
-                budget = budget,
-                rebuilt = false,
-            )
-            recordAssistantTarget(generationId, assistantMessageId, actualTarget)
-            val listener = generationListener(generationId, assistantMessageId, actualTarget)
-            submitBackendWork(generationId, assistantMessageId) {
-                if (!isGenerationCurrent(generationId)) return@submitBackendWork
-                continuation.streamNext(
-                    generationRequest(history = emptyList(), prompt = prompt),
-                    listener,
-                )
-            }
-            return
-        }
-
-        val compiled = ChatConversationPolicy.compileContext(
-            transcript = messages,
-            prompt = prompt,
-            policy = ContextCompilationPolicy(
-                estimator = estimator,
-                maximumInputTokens = budget.compactionTargetTokens,
-                contextState = contextStateSnapshot,
-                includeDerivedContext = !emergencyDerivedContextDrop,
-                recalledHistory = recallForRebuild,
-            ),
-        )
-        if (compiled.exceedsInputBudget) {
-            Log.w(
-                TAG,
-                "Compiled context exceeds target after minimum-turn retention " +
-                    "target=${requestedTarget.targetId} " +
-                    "estimatedInputTokens=${compiled.estimatedInputTokens} " +
-                    "compactionTargetTokens=${budget.compactionTargetTokens} " +
-                    "coveredMessages=${compiled.coveredMessageIds.size}",
-            )
-        }
-        val history = compiled.messages
-        val historyEstimate = estimator.estimateMessages(history)
-        Log.d(
-            TAG,
-            "Context compile target=${requestedTarget.targetId} " +
-                "estimatedInputTokens=${compiled.estimatedInputTokens} " +
-                "historyTokens=${historyEstimate.estimatedTokens} " +
-                "historyBytes=${historyEstimate.utf8Bytes} " +
-                "coveredMessages=${compiled.coveredMessageIds.size} " +
-                "workingMemoryItems=${compiled.workingMemoryItemsIncluded} " +
-                "summarySegments=${compiled.summarySegmentsIncluded} " +
-                "recallCandidates=${freshRecall.size} " +
-                "recalledChunks=${compiled.recalledChunksIncluded} " +
-                "emergencyDerivedDrop=$emergencyDerivedContextDrop " +
-                "trimmed=${compiled.requiresSessionRebuild} " +
-                "hardWatermarkTokens=${budget.hardWatermarkTokens} " +
-                "compactionTargetTokens=${budget.compactionTargetTokens}",
-        )
-        submitBackendWork(generationId, assistantMessageId) {
-            runCatching { backendToReplace?.close() }
-            if (!isGenerationCurrent(generationId)) return@submitBackendWork
-            val created = (application as ThreeStoneAiApplication).aiBackend.createSession(
-                AiBackendSessionRequest(
-                    targetId = requestedTarget.targetId,
-                    executionProfileId = target.chatExecutionProfileId(),
+    private fun completeGeneration(generation: ChatGenerationSnapshot, completion: ChatGenerationCompletion) {
+        val assistantMessageId = generation.assistantMessageId
+        val current = messages.singleOrNull { message -> message.id == assistantMessageId }
+        if (current != null) {
+            replaceMessage(
+                current.copy(
+                    text = completion.text,
+                    status = ChatMessageStatus.COMPLETE,
+                    target = completion.target,
+                    usage = completion.usage,
+                    truncated = completion.truncated,
                 ),
             )
-            val actualTarget = ConversationTargetSnapshot.from(created.target)
-            val installedTelemetry = synchronized(backendLock) {
-                if (!isGenerationCurrent(generationId) || activeBackend != null) {
-                    null
-                } else {
-                    backendContextEpoch = if (backendContextEpoch == Long.MAX_VALUE) {
-                        Long.MAX_VALUE
-                    } else {
-                        backendContextEpoch + 1L
-                    }
-                    val telemetry = BackendContextTelemetry(
-                        epoch = backendContextEpoch,
-                        committedMessages = history.map { message -> message.contextSnapshot() },
-                        accounting = ContextAccounting.initial(historyEstimate.estimatedTokens),
-                        contextFingerprint = compiled.contextFingerprint,
-                        contextStateFingerprint = ConversationContextPolicy.fingerprint(
-                            contextStateSnapshot,
-                        ),
-                        recalledHistory = compiled.recalledHistory,
-                        layerTokens = compiled.layerTokens,
-                    )
-                    activeBackend = created
-                    activeBackendTarget = actualTarget
-                    activeBackendContextTelemetry = telemetry
-                    activeContextTurnObservation = null
-                    completedTurnsOnBackend = 0
-                    telemetry
-                }
+            if (completion.truncated) showSnackbar(drawerLayout, getString(R.string.chat_generation_truncated))
+            feedReading(assistantMessageId, final = true)
+            // Nothing (more) to read, for example without an engine: listen again (D13).
+            if (assistantMessageId == voiceReplyId && readingMessageId != assistantMessageId) {
+                dispatchVoice(VoiceEvent.ReplyDone)
             }
-            if (installedTelemetry == null) {
-                runCatching(created::close)
-                return@submitBackendWork
-            }
-            observeContextTurnStart(
-                generationId = generationId,
-                backend = created,
-                target = actualTarget,
-                prompt = prompt,
-                telemetry = installedTelemetry,
-                budget = budget,
-                rebuilt = true,
-            )
-            mainHandler.post {
-                recordAssistantTarget(generationId, assistantMessageId, actualTarget)
-            }
-            val listener = generationListener(generationId, assistantMessageId, actualTarget)
-            created.stream(generationRequest(history, prompt), listener)
         }
+        finishGenerationUi()
     }
 
-    private fun generationRequest(
-        history: List<GenerationMessage>,
-        prompt: GenerationMessage,
-    ) = GenerationRequest(
-        history = history,
-        prompt = prompt,
-        maximumOutputTokens = uiSettings.maximumOutputTokens,
-        samplingOptions = uiSettings.samplingOptions(),
-        reportUsage = true,
-    )
-
-    private fun observeContextTurnStart(
-        generationId: Long,
-        backend: AiBackendSession,
-        target: ConversationTargetSnapshot,
-        prompt: GenerationMessage,
-        telemetry: BackendContextTelemetry,
-        budget: ContextBudget,
-        rebuilt: Boolean,
-    ) {
-        val calibration = contextTokenCalibrationStore.current(target.targetId)
-        val estimator = calibration.estimator()
-        val promptSnapshot = prompt.contextSnapshot()
-        val outbound = telemetry.committedMessages + promptSnapshot
-        val inputEstimate = estimator.estimateMessages(outbound)
-        // LiteRT reports only the newly processed prompt after its first turn. Online targets
-        // report the complete replayed request on every turn.
-        val calibrationInput = estimator.estimateMessages(
-            ContextTokenObservationPolicy.calibrationInputMessages(
-                locality = target.locality,
-                rebuilt = rebuilt,
-                committedMessages = telemetry.committedMessages,
-                prompt = promptSnapshot,
-            ),
-        )
-        val observation = ContextTurnObservation(
-            generationId = generationId,
-            backendEpoch = telemetry.epoch,
-            prompt = promptSnapshot,
-            rebuilt = rebuilt,
-            inputEstimate = inputEstimate,
-            calibrationInput = calibrationInput,
-            coefficientBefore = calibration.tokensPerUtf8Byte,
-            hardWatermarkTokens = budget.hardWatermarkTokens,
-        )
-        val installed = synchronized(backendLock) {
-            if (
-                activeBackend !== backend ||
-                activeBackendContextTelemetry?.epoch != telemetry.epoch ||
-                !isGenerationCurrent(generationId)
-            ) {
-                false
-            } else {
-                activeContextTurnObservation = observation
-                true
-            }
-        }
-        if (!installed) return
-        Log.d(
-            TAG,
-            "Context start target=${target.targetId} " +
-                "estimatedInputTokens=${inputEstimate.estimatedTokens} " +
-                "inputBytes=${inputEstimate.utf8Bytes} actualInputTokens=pending " +
-                "accountingTokens=${telemetry.accounting.tokens} " +
-                "accountingSource=${telemetry.accounting.source} " +
-                "hardWatermarkTokens=${budget.hardWatermarkTokens} " +
-                "compactionTargetTokens=${budget.compactionTargetTokens} " +
-                "backendEpoch=${telemetry.epoch} rebuilt=$rebuilt " +
-                "coefficient=${calibration.tokensPerUtf8Byte}",
-        )
-    }
-
-    private fun completeContextTurnObservation(
-        generationId: Long,
-        actualTarget: ConversationTargetSnapshot,
-        assistantText: String,
-        statistics: GenerationStatistics?,
-        cumulativeInputTokens: Long,
-    ) {
-        var observation: ContextTurnObservation? = null
-        var committedMessages: List<GenerationMessage>? = null
-        var previousAccounting: ContextAccounting? = null
-        synchronized(backendLock) {
-            val candidate = activeContextTurnObservation
-            val telemetry = activeBackendContextTelemetry
-            if (
-                candidate != null && candidate.generationId == generationId &&
-                telemetry != null && telemetry.epoch == candidate.backendEpoch
-            ) {
-                val committed = telemetry.committedMessages +
-                    candidate.prompt.contextSnapshot() +
-                    GenerationMessage(
-                        role = GenerationRole.ASSISTANT,
-                        textParts = listOf(assistantText),
-                    )
-                activeBackendContextTelemetry = telemetry.copy(committedMessages = committed)
-                observation = candidate
-                committedMessages = committed
-                previousAccounting = telemetry.accounting
-            }
-            activeContextTurnObservation = null
-        }
-        val completedObservation = observation ?: return
-        val completedMessages = committedMessages ?: return
-        val calibrationObservation = statistics?.let { usage ->
-            ContextTokenCalibrationObservation(
-                utf8Bytes = completedObservation.calibrationInput.utf8Bytes,
-                messageCount = completedObservation.calibrationInput.messageCount,
-                actualInputTokens = usage.inputTokens,
+    private fun failGeneration(generation: ChatGenerationSnapshot, failureText: String) {
+        stopReading()
+        dispatchVoice(VoiceEvent.GenerationFailed)
+        val current = messages.singleOrNull { message -> message.id == generation.assistantMessageId }
+        if (current != null) {
+            replaceMessage(
+                current.copy(
+                    text = ChatGenerationText.withFailure(generation.text, failureText),
+                    status = ChatMessageStatus.FAILED,
+                    usage = null,
+                    target = generation.target,
+                ),
             )
         }
-        val calibration = contextTokenCalibrationStore.record(
-            actualTarget.targetId,
-            calibrationObservation,
-        )
-        val estimatedAfterTurn = calibration.estimator()
-            .estimateMessages(completedMessages)
-            .estimatedTokens
-        val assistant = completedMessages.last()
-        val estimatedTurnTokens = calibration.estimator()
-            .estimateMessages(listOf(completedObservation.prompt, assistant))
-            .estimatedTokens
-        val accounting = ContextAccountingPolicy.afterSuccessfulTurn(
-            current = previousAccounting ?: ContextAccounting.initial(),
-            statistics = statistics,
-            estimatedContextTokensAfterTurn = estimatedAfterTurn,
-            estimatedTurnTokens = estimatedTurnTokens,
-        )
-        synchronized(backendLock) {
-            val telemetry = activeBackendContextTelemetry
-            if (telemetry?.epoch == completedObservation.backendEpoch) {
-                activeBackendContextTelemetry = telemetry.copy(
-                    accounting = accounting,
-                    layerTokens = telemetry.layerTokens.withAdditionalRecentTokens(
-                        estimatedTurnTokens,
-                    ),
-                )
-            }
-        }
-        renderContextUsage()
-        Log.d(
-            TAG,
-            "Context complete target=${actualTarget.targetId} " +
-                "estimatedInputTokens=${completedObservation.inputEstimate.estimatedTokens} " +
-                "actualInputTokens=${statistics?.inputTokens} " +
-                "actualOutputTokens=${statistics?.outputTokens} " +
-                "cacheReadInputTokens=${statistics?.cachedInputTokens} " +
-                "cacheWriteInputTokens=${statistics?.cacheWriteInputTokens} " +
-                "cacheEligibleInputTokens=${statistics?.cacheEligibleInputTokens} " +
-                "promptCacheHitRate=${statistics?.promptCacheHitRate} " +
-                "accountingTokens=${accounting.tokens} accountingSource=${accounting.source} " +
-                "hardWatermarkTokens=${completedObservation.hardWatermarkTokens} " +
-                "cumulativeInputTokens=$cumulativeInputTokens " +
-                "backendEpoch=${completedObservation.backendEpoch} " +
-                "rebuilt=${completedObservation.rebuilt} " +
-                "coefficientBefore=${completedObservation.coefficientBefore} " +
-                "coefficientAfter=${calibration.tokensPerUtf8Byte}",
-        )
+        finishGenerationUi()
+        persistConversationNow()
+        showSnackbar(drawerLayout, getString(R.string.chat_generation_failed_short), com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
     }
 
-    private fun GenerationMessage.contextSnapshot(): GenerationMessage =
-        copy(textParts = textParts.toList())
-
-    private fun generationListener(
-        generationId: Long,
-        assistantMessageId: Long,
-        actualTarget: ConversationTargetSnapshot,
-    ) = object : GenerationListener {
-        override fun onTextDelta(text: String) {
-            queueTextDelta(generationId, assistantMessageId, text)
-        }
-
-        override fun onCompleted(statistics: GenerationStatistics?) = onCompleted(statistics, truncated = false)
-
-        override fun onCompleted(statistics: GenerationStatistics?, truncated: Boolean) {
-            mainHandler.post {
-                completeGeneration(generationId, assistantMessageId, actualTarget, statistics, truncated)
-            }
-        }
-
-        override fun onFailed(error: Throwable, statistics: GenerationStatistics?) {
-            Log.e(TAG, "Launcher chat generation failed", error)
-            mainHandler.post {
-                failGeneration(
-                    generationId = generationId,
-                    assistantMessageId = assistantMessageId,
-                    error = error,
-                    actualTarget = actualTarget,
-                )
-            }
-        }
-    }
-
-    private fun submitBackendWork(
-        generationId: Long,
-        assistantMessageId: Long,
-        action: () -> Unit,
-    ) {
-        try {
-            backendExecutor.execute {
-                try {
-                    action()
-                } catch (error: Throwable) {
-                    Log.e(TAG, "Launcher chat generation crashed", error)
-                    mainHandler.post {
-                        failGeneration(generationId, assistantMessageId, error)
-                    }
-                }
-            }
-        } catch (error: RejectedExecutionException) {
-            Log.e(TAG, "Launcher chat worker rejected generation", error)
-            mainHandler.post { failGeneration(generationId, assistantMessageId, error) }
-        }
-    }
-
-    private fun queueTextDelta(generationId: Long, assistantMessageId: Long, text: String) {
-        if (text.isEmpty() || !isGenerationCurrent(generationId)) return
-        val schedule = synchronized(deltaLock) {
-            if (
-                pendingDeltaGenerationId != generationId ||
-                pendingDeltaAssistantId != assistantMessageId
-            ) {
-                return
-            }
-            pendingDelta.append(text)
-            if (deltaFlushScheduled) {
-                false
-            } else {
-                deltaFlushScheduled = true
-                true
-            }
-        }
-        if (schedule) {
-            mainHandler.postDelayed(
-                { flushTextDelta(generationId, assistantMessageId) },
-                DELTA_FLUSH_INTERVAL_MILLIS,
-            )
-        }
-    }
-
-    private fun flushTextDelta(generationId: Long, assistantMessageId: Long) {
-        val delta = takePendingDelta(generationId, assistantMessageId)
-        if (delta.isEmpty() || !isGenerationCurrent(generationId)) return
-        val current = messages.singleOrNull { message -> message.id == assistantMessageId } ?: return
-        if (current.status != ChatMessageStatus.GENERATING) return
-        val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
-        replaceMessage(current.copy(text = current.text + delta))
-        feedReading(assistantMessageId, final = false)
-        if (followOutput) scrollToBottom()
-    }
-
-    private fun takePendingDelta(generationId: Long, assistantMessageId: Long): String =
-        synchronized(deltaLock) {
-            if (
-                pendingDeltaGenerationId != generationId ||
-                pendingDeltaAssistantId != assistantMessageId
-            ) {
-                return@synchronized ""
-            }
-            val value = pendingDelta.toString()
-            pendingDelta.clear()
-            deltaFlushScheduled = false
-            value
-        }
-
-    private fun completeGeneration(
-        generationId: Long,
-        assistantMessageId: Long,
-        actualTarget: ConversationTargetSnapshot,
-        statistics: GenerationStatistics?,
-        truncated: Boolean = false,
-    ) {
-        if (!isGenerationCurrent(generationId)) return
-        flushTextDelta(generationId, assistantMessageId)
-        val current = messages.singleOrNull { message -> message.id == assistantMessageId } ?: return
-        replaceMessage(
-            current.copy(
-                status = ChatMessageStatus.COMPLETE,
-                target = actualTarget,
-                usage = statistics?.let { value ->
-                    ChatMessageUsage(
-                        inputTokens = value.inputTokens,
-                        outputTokens = value.outputTokens,
-                        durationMillis = value.durationMillis,
-                    )
-                },
-                truncated = truncated,
-            ),
-        )
-        if (truncated) showSnackbar(drawerLayout, getString(R.string.chat_generation_truncated))
-        feedReading(assistantMessageId, final = true)
-        // Nothing (more) to read, for example without an engine: listen again (D13).
-        if (assistantMessageId == voiceReplyId && readingMessageId != assistantMessageId) {
-            dispatchVoice(VoiceEvent.ReplyDone)
-        }
-        val cumulativeInputTokens = ChatConversationPolicy.cumulativeInputTokensThrough(
-            messages,
-            assistantMessageId,
-        )
-        completeContextTurnObservation(
-            generationId = generationId,
-            actualTarget = actualTarget,
-            assistantText = current.text,
-            statistics = statistics,
-            cumulativeInputTokens = cumulativeInputTokens,
-        )
-        synchronized(backendLock) {
-            if (activeBackend != null) completedTurnsOnBackend++
-        }
-        finishGenerationUi(generationId)
-        maybeScheduleSummaryCheckpoint(actualTarget)
-    }
-
-    private fun maybeScheduleSummaryCheckpoint(actualTarget: ConversationTargetSnapshot) {
-        if (destroyed || activeSummaryTask != null) return
-        val target = ConversationTargetPolicy.resolveExact(actualTarget, targetCatalog)
-            ?.takeIf(::isTargetReady)
-            ?: return
-        val chatBudget = ContextBudgetCalculator.calculate(
-            targetLimits = target.limits,
-            applicationInputTokenBudget = uiSettings.contextTokenBudget,
-            maximumOutputTokens = uiSettings.maximumOutputTokens,
-        )
-        val accounting = synchronized(backendLock) {
-            activeBackendContextTelemetry
-                ?.takeIf { telemetry ->
-                    telemetry.contextStateFingerprint ==
-                        ConversationContextPolicy.fingerprint(conversationContextState) &&
-                        activeBackendTarget?.matchesExecutionIdentity(target) == true
-                }
-                ?.accounting
-        }
-        if (!SummaryCheckpointTriggerPolicy.shouldSchedule(accounting, chatBudget)) return
-
-        val summaryBudget = ContextBudgetCalculator.calculate(
-            targetLimits = target.limits,
-            applicationInputTokenBudget = uiSettings.contextTokenBudget,
-            maximumOutputTokens = ContextPolicy.SUMMARY_MAXIMUM_OUTPUT_TOKENS,
-        )
-        val maximumSourceTokens = minOf(
-            ContextPolicy.SUMMARY_SOURCE_MAXIMUM_TOKENS.toLong(),
-            summaryBudget.effectiveInputTokens -
-                ContextPolicy.SUMMARY_INPUT_INSTRUCTION_RESERVE_TOKENS.toLong(),
-        )
-        if (maximumSourceTokens <= 0L) {
-            Log.w(
-                TAG,
-                "Context summary skipped target=${target.targetId} " +
-                    "effectiveInputTokens=${summaryBudget.effectiveInputTokens} reason=no-source-budget",
-            )
-            return
-        }
-
-        val transcriptSnapshot = messages.toList()
-        val stateSnapshot = conversationContextState
-        val estimator = contextTokenCalibrationStore.current(target.targetId).estimator()
-        val compacted = ChatConversationPolicy.compileContext(
-            transcript = transcriptSnapshot,
-            prompt = GenerationMessage(GenerationRole.USER, listOf("")),
-            policy = ContextCompilationPolicy(
-                estimator = estimator,
-                maximumInputTokens = chatBudget.compactionTargetTokens,
-                contextState = stateSnapshot,
-            ),
-        )
-        val plan = SummaryCheckpointPlanner.planWithinInputBudget(
-            transcript = transcriptSnapshot,
-            state = stateSnapshot,
-            retainedRawMessageIds = compacted.coveredMessageIds,
-            estimator = estimator,
-            maximumSourceTokens = maximumSourceTokens,
-            maximumInputTokens = summaryBudget.effectiveInputTokens,
-        ) ?: return
-        val planKey = summaryPlanKey(plan)
-        if (failedSummaryPlanKey == planKey) return
-
-        val conversationId = currentConversationId
-        val epoch = nextSummaryEpoch()
-        activeSummaryConversationId = conversationId
-        activeSummarySourceHash = plan.sourceHash
-        Log.d(
-            TAG,
-            "Context summary start target=${target.targetId} " +
-                "conversation=$conversationId range=${plan.firstMessageId}-${plan.lastMessageId} " +
-                "sourceMessages=${plan.sourceMessages.size} " +
-                "sourceTokens=${plan.sourceEstimate.estimatedTokens} " +
-                "accountingTokens=${accounting?.tokens} " +
-                "softWatermarkTokens=${chatBudget.softWatermarkTokens}",
-        )
-        activeSummaryTask = summaryCheckpointer.generate(
-            SummaryCheckpointRequest(
-                targetId = target.targetId,
-                executionProfileId = target.chatExecutionProfileId(),
-                structuredJson = target.capabilities.structuredJson,
-                plan = plan,
-                state = stateSnapshot,
-                transcript = transcriptSnapshot,
-                estimator = estimator,
-                maximumInputTokens = summaryBudget.effectiveInputTokens,
-            ),
-        ) { outcome ->
-            mainHandler.post {
-                completeSummaryCheckpoint(
-                    epoch = epoch,
-                    conversationId = conversationId,
-                    planKey = planKey,
-                    plan = plan,
-                    outcome = outcome,
-                )
-            }
-        }
-    }
-
-    private fun completeSummaryCheckpoint(
-        epoch: Long,
-        conversationId: String,
-        planKey: String,
-        plan: SummaryCheckpointPlan,
-        outcome: SummaryCheckpointOutcome,
-    ) {
-        if (
-            destroyed || epoch != activeSummaryEpoch ||
-            activeSummaryConversationId != conversationId ||
-            activeSummarySourceHash != plan.sourceHash ||
-            currentConversationId != conversationId
-        ) {
-            return
-        }
-        activeSummaryTask = null
-        activeSummaryConversationId = null
-        activeSummarySourceHash = null
-        when (outcome) {
-            is SummaryCheckpointOutcome.Failure -> {
-                failedSummaryPlanKey = planKey
-                Log.w(
-                    TAG,
-                    "Context summary failed conversation=$conversationId " +
-                        "range=${plan.firstMessageId}-${plan.lastMessageId} " +
-                        "attempts=${outcome.attempts}; keeping previous checkpoint",
-                    outcome.error,
-                )
-            }
-            is SummaryCheckpointOutcome.Success -> {
-                val validated = runCatching {
-                    SummaryCheckpointValidator.apply(
-                        state = conversationContextState,
-                        plan = plan,
-                        draft = outcome.draft,
-                        transcript = messages,
-                    )
-                }.onFailure { error ->
-                    Log.w(
-                        TAG,
-                        "Context summary became stale conversation=$conversationId " +
-                            "range=${plan.firstMessageId}-${plan.lastMessageId}; discarding result",
-                        error,
-                    )
-                }.getOrNull()
-                if (validated == null) {
-                    failedSummaryPlanKey = planKey
-                    return
-                }
-                if (validated != outcome.validatedState) {
-                    failedSummaryPlanKey = planKey
-                    Log.e(
-                        TAG,
-                        "Context summary validation was non-deterministic; discarding result " +
-                            "conversation=$conversationId range=${plan.firstMessageId}-${plan.lastMessageId}",
-                    )
-                    return
-                }
-                conversationContextState = validated
-                failedSummaryPlanKey = null
-                markConversationChanged()
-                if (!isGenerating) closeCurrentBackend()
-                Log.d(
-                    TAG,
-                    "Context summary complete conversation=$conversationId " +
-                        "range=${plan.firstMessageId}-${plan.lastMessageId} " +
-                        "segments=${validated.summarySegments.size} " +
-                        "workingMemoryItems=${validated.workingMemory.size} " +
-                        "attempts=${outcome.attempts} " +
-                        "inputTokens=${outcome.statistics?.inputTokens} " +
-                        "outputTokens=${outcome.statistics?.outputTokens} " +
-                        "fingerprint=${ConversationContextPolicy.fingerprint(validated)}",
-                )
-            }
-        }
+    private fun finishGenerationUi() {
+        applyGenerationState(null)
+        renderComposerState()
+        input.requestFocus()
     }
 
     private fun invalidateConversationContextFrom(messageId: Long) {
         cancelSummaryCheckpoint()
-        failedSummaryPlanKey = null
+        generationCoordinator.resetSummaryFailure()
         val invalidated = ConversationContextPolicy.invalidateFrom(
             state = conversationContextState,
             messageId = messageId,
@@ -3379,84 +2772,29 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun cancelSummaryCheckpoint() {
-        nextSummaryEpoch()
-        activeSummaryTask?.cancel()
-        activeSummaryTask = null
-        activeSummaryConversationId = null
-        activeSummarySourceHash = null
+        generationCoordinator.cancelSummaryCheckpoint()
     }
 
-    private fun nextSummaryEpoch(): Long {
-        activeSummaryEpoch = if (activeSummaryEpoch == Long.MAX_VALUE) 1L else activeSummaryEpoch + 1L
-        return activeSummaryEpoch
-    }
-
-    private fun summaryPlanKey(plan: SummaryCheckpointPlan): String =
-        "${plan.previousCoveredThroughMessageId ?: 0L}:${plan.firstMessageId}"
-
-    private fun failGeneration(
-        generationId: Long,
-        assistantMessageId: Long,
-        error: Throwable,
-        actualTarget: ConversationTargetSnapshot? = null,
-    ) {
-        if (!isGenerationCurrent(generationId)) return
-        flushTextDelta(generationId, assistantMessageId)
-        stopReading()
-        dispatchVoice(VoiceEvent.GenerationFailed)
-        val current = messages.singleOrNull { message -> message.id == assistantMessageId }
-        if (current != null) {
-            val failedTarget = actualTarget ?: checkNotNull(current.target)
-            val failureText = generationFailureText(failedTarget, error)
-            replaceMessage(
-                current.copy(
-                    text = current.text.withGenerationFailure(failureText),
-                    status = ChatMessageStatus.FAILED,
-                    usage = null,
-                    target = failedTarget,
-                ),
-            )
-        }
-        closeCurrentBackend()
-        finishGenerationUi(generationId)
-        persistConversationNow()
-        showSnackbar(drawerLayout, getString(R.string.chat_generation_failed_short), com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
-    }
-
-    private fun finishGenerationUi(generationId: Long) {
-        if (activeGenerationId != generationId) return
-        activeGenerationId = null
-        activeAssistantMessageId = null
-        isGenerating = false
-        renderComposerState()
-        input.requestFocus()
-    }
-
+    /** Stops the reply being generated with a hard cancel of its backend (roadmap D77). */
     private fun stopGeneration(showToast: Boolean = true) {
-        val generationId = activeGenerationId ?: return
+        if (!generationCoordinator.isGenerating) return
         stopReading()
         val followOutput = uiSettings.followStreamingOutput && !searchExpanded && isNearBottom()
-        val assistantMessageId = activeAssistantMessageId
-        val actualTarget = synchronized(backendLock) { activeBackendTarget }
-        if (assistantMessageId != null) {
-            val delta = takePendingDelta(generationId, assistantMessageId)
-            val current = messages.singleOrNull { message -> message.id == assistantMessageId }
+        val stopped = generationCoordinator.stop()
+        if (stopped != null && stopped.conversationId == currentConversationId) {
+            val current = messages.singleOrNull { message -> message.id == stopped.assistantMessageId }
             if (current != null) {
                 replaceMessage(
                     current.copy(
-                        text = current.text + delta,
+                        text = stopped.text,
                         status = ChatMessageStatus.STOPPED,
                         usage = null,
-                        target = actualTarget ?: current.target,
+                        target = stopped.target,
                     ),
                 )
             }
         }
-        generationEpoch.incrementAndGet()
-        activeGenerationId = null
-        activeAssistantMessageId = null
-        isGenerating = false
-        closeCurrentBackend()
+        applyGenerationState(null)
         renderComposerState()
         if (followOutput) scrollToBottom()
         persistConversationNow()
@@ -3470,9 +2808,9 @@ class ChatActivity : ConfiguredActivity() {
     ) {
         dispatchVoice(VoiceEvent.ConversationChanged)
         stopReading()
-        if (isGenerating) stopGeneration(showToast = false) else generationEpoch.incrementAndGet()
+        stopGeneration(showToast = false)
         persistConversationNow()
-        closeCurrentBackend()
+        closeCurrentBackend(reason = "new-conversation")
         messages.clear()
         messageViews.clear()
         markdownCache.clear()
@@ -3483,7 +2821,7 @@ class ChatActivity : ConfiguredActivity() {
         conversationUpdatedAtMillis = conversationCreatedAtMillis
         conversationTarget = target
         conversationContextState = ConversationContextState.EMPTY
-        failedSummaryPlanKey = null
+        generationCoordinator.resetSummaryFailure()
         cancelSummaryCheckpoint()
         allowDeletedConversationRevival = false
         cancelEditing(restoreDraft = false)
@@ -3494,36 +2832,12 @@ class ChatActivity : ConfiguredActivity() {
         renderTargetUi()
     }
 
-    private fun closeCurrentBackend() {
-        val detached = detachBackend()
+    /** Closes the backend session with a hard cancel on its own thread; returns whether one was open. */
+    private fun closeCurrentBackend(reason: String = "closed"): Boolean {
+        val hadBackend = generationCoordinator.closeBackend(reason)
         renderContextUsage()
-        detached ?: return
-        try {
-            backendExecutor.execute { runCatching(detached::cancelAndClose) }
-        } catch (_: RejectedExecutionException) {
-            closeOnFallbackThread(detached)
-        }
+        return hadBackend
     }
-
-    private fun detachBackend(): AiBackendSession? = synchronized(backendLock) {
-        activeBackend.also {
-            activeBackend = null
-            activeBackendTarget = null
-            activeBackendContextTelemetry = null
-            activeContextTurnObservation = null
-            completedTurnsOnBackend = 0
-        }
-    }
-
-    private fun closeOnFallbackThread(backend: AiBackendSession) {
-        Thread({ runCatching(backend::cancelAndClose) }, "three-stone-ai-chat-close").apply {
-            isDaemon = true
-            start()
-        }
-    }
-
-    private fun isGenerationCurrent(generationId: Long): Boolean =
-        !destroyed && generationEpoch.get() == generationId
 
     private fun requestEditMessage(messageId: Long) {
         if (isGenerating || editingMessageId != null) return
@@ -3703,7 +3017,8 @@ class ChatActivity : ConfiguredActivity() {
     private fun persistConversationNow() {
         mainHandler.removeCallbacks(persistConversationRunnable)
         persistenceScheduled = false
-        if (messages.isEmpty()) return
+        // Detached, this copy may be older than what the coordinator wrote (see onStop).
+        if (!generationAttached || messages.isEmpty()) return
         val conversation = StoredConversation(
             id = currentConversationId,
             title = ConversationHistoryPolicy.titleFor(
@@ -3750,13 +3065,16 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun applyStoredConversation(conversation: StoredConversation) {
         messages.clear()
-        messages += ChatConversationPolicy.restore(conversation.messages)
+        messages += ChatConversationPolicy.restore(
+            conversation.messages,
+            generatingMessageId = generationCoordinator.activeFor(conversation.id)?.assistantMessageId,
+        )
         currentConversationId = conversation.id
         conversationCreatedAtMillis = conversation.createdAtMillis
         conversationUpdatedAtMillis = conversation.updatedAtMillis
         conversationTarget = conversation.target
         conversationContextState = conversation.contextState
-        failedSummaryPlanKey = null
+        generationCoordinator.resetSummaryFailure()
         nextMessageId = (messages.maxOfOrNull(ChatMessage::id) ?: 0L) + 1L
         markdownCache.clear()
         allowDeletedConversationRevival = false
@@ -3773,7 +3091,7 @@ class ChatActivity : ConfiguredActivity() {
         stopReading()
         if (isGenerating) stopGeneration(showToast = false) else persistConversationNow()
         cancelSummaryCheckpoint()
-        closeCurrentBackend()
+        closeCurrentBackend(reason = "switch-conversation")
         cancelEditing(restoreDraft = false)
         closeSearch()
         input.text.clear()
@@ -3802,13 +3120,8 @@ class ChatActivity : ConfiguredActivity() {
         targetCatalogAvailability == TargetCatalogAvailability.READY &&
             target?.configured == true && target.available && target.capabilities.streaming
 
-    private fun targetSummary(snapshot: ConversationTargetSnapshot): String = getString(
-        R.string.chat_target_status_format,
-        targetLocalityLabel(snapshot.locality),
-        targetProviderLabel(snapshot.providerId, snapshot.locality),
-        targetDisplayName(snapshot),
-        snapshot.modelId,
-    )
+    private fun targetSummary(snapshot: ConversationTargetSnapshot): String =
+        generationText.targetSummary(snapshot)
 
     private fun targetBarSummary(snapshot: ConversationTargetSnapshot): String = getString(
         R.string.chat_model_switch_summary,
@@ -3817,32 +3130,13 @@ class ChatActivity : ConfiguredActivity() {
     )
 
     private fun targetDisplayName(snapshot: ConversationTargetSnapshot): String =
-        if (snapshot.locality == AiTargetLocality.LOCAL) {
-            AvailableLiteRtModelCatalog.displayNameForImportedModel(
-                snapshot.displayName,
-                snapshot.modelId,
-            )
-        } else {
-            snapshot.displayName
-        }
+        generationText.displayName(snapshot)
 
-    private fun targetLocalityLabel(locality: AiTargetLocality): String = getString(
-        when (locality) {
-            AiTargetLocality.LOCAL -> R.string.chat_target_locality_local
-            AiTargetLocality.REMOTE -> R.string.chat_target_locality_cloud
-        },
-    )
+    private fun targetLocalityLabel(locality: AiTargetLocality): String =
+        generationText.localityLabel(locality)
 
-    private fun targetProviderLabel(providerId: String, locality: AiTargetLocality): String {
-        if (locality == AiTargetLocality.LOCAL) return getString(R.string.app_name)
-        val provider = runCatching { OnlineAiProvider.fromProviderId(providerId) }.getOrNull()
-            ?: return providerId
-        return if (provider == OnlineAiProvider.OPENAI_COMPATIBLE) {
-            getString(R.string.online_ai_provider_custom)
-        } else {
-            OnlineAiProviderCatalog.templateFor(provider).displayName
-        }
-    }
+    private fun targetProviderLabel(providerId: String, locality: AiTargetLocality): String =
+        generationText.providerLabel(providerId, locality)
 
     private fun showTargetSelector() {
         val catalog = targetCatalog
@@ -3938,8 +3232,8 @@ class ChatActivity : ConfiguredActivity() {
         dispatchVoice(VoiceEvent.ConversationChanged)
         if (isGenerating) stopGeneration(showToast = false)
         cancelSummaryCheckpoint()
-        failedSummaryPlanKey = null
-        closeCurrentBackend()
+        generationCoordinator.resetSummaryFailure()
+        closeCurrentBackend(reason = "target-changed")
         val snapshot = ConversationTargetSnapshot.from(target)
         conversationTarget = snapshot
         if (announce && messages.isNotEmpty()) {
@@ -4013,16 +3307,6 @@ class ChatActivity : ConfiguredActivity() {
     private fun openTargetSettings(locality: AiTargetLocality) = when (locality) {
         AiTargetLocality.LOCAL -> openModelManager()
         AiTargetLocality.REMOTE -> openOnlineAiSettings()
-    }
-
-    private fun AiTarget.chatExecutionProfileId(): String? = when (locality) {
-        AiTargetLocality.REMOTE -> null
-        AiTargetLocality.LOCAL -> executionProfiles
-            .firstOrNull { profile ->
-                profile.profileId == AiProviderBackendProfile.CPU && profile.available
-            }
-            ?.profileId
-            ?: executionProfiles.firstOrNull { profile -> profile.available }?.profileId
     }
 
     private fun showKeyboard(target: View) {
@@ -4138,7 +3422,7 @@ class ChatActivity : ConfiguredActivity() {
         if (reading != null && retained.none { message -> message.id == reading }) stopReading()
         if (isGenerating) stopGeneration(showToast = false)
         invalidateConversationContextFrom(messageId)
-        closeCurrentBackend()
+        closeCurrentBackend(reason = "delete-messages")
         closeSearch()
         cancelEditing(restoreDraft = true)
         messages.clear()
@@ -4234,47 +3518,6 @@ class ChatActivity : ConfiguredActivity() {
             ChatConversationPolicy.cumulativeInputTokensThrough(messages, message.id),
         )
     }
-
-    private fun generationFailureText(
-        target: ConversationTargetSnapshot,
-        error: Throwable,
-    ): String {
-        val failure = ChatGenerationFailurePolicy.classify(target, error)
-        val template = when (failure.locality) {
-            AiTargetLocality.LOCAL -> R.string.chat_generation_failure_local
-            AiTargetLocality.REMOTE -> R.string.chat_generation_failure_cloud
-        }
-        val summary = getString(
-            template,
-            targetSummary(target),
-            getString(failure.kind.detailResource()),
-        )
-        val detail = failure.detail ?: return summary
-        return summary + "\n\n" + getString(R.string.chat_generation_failure_detail, detail)
-    }
-
-    private fun ChatGenerationFailureKind.detailResource(): Int = when (this) {
-        ChatGenerationFailureKind.TARGET_UNAVAILABLE ->
-            R.string.chat_generation_failure_target_unavailable
-        ChatGenerationFailureKind.LOCAL_EXECUTION ->
-            R.string.chat_generation_failure_local_execution
-        ChatGenerationFailureKind.CREDENTIAL -> R.string.online_ai_test_failure_credential
-        ChatGenerationFailureKind.PROFILE_CHANGED ->
-            R.string.online_ai_test_failure_profile_changed
-        ChatGenerationFailureKind.AUTHENTICATION ->
-            R.string.online_ai_test_failure_authentication
-        ChatGenerationFailureKind.RATE_LIMIT -> R.string.online_ai_test_failure_rate_limit
-        ChatGenerationFailureKind.PROVIDER -> R.string.online_ai_test_failure_provider
-        ChatGenerationFailureKind.NETWORK -> R.string.online_ai_test_failure_network
-        ChatGenerationFailureKind.METERED_NETWORK -> R.string.online_ai_test_failure_metered
-        ChatGenerationFailureKind.TIMEOUT -> R.string.online_ai_test_failure_timeout
-        ChatGenerationFailureKind.TLS -> R.string.online_ai_test_failure_tls
-        ChatGenerationFailureKind.RESPONSE -> R.string.online_ai_test_failure_response
-        ChatGenerationFailureKind.UNKNOWN -> R.string.chat_generation_failure_unknown
-    }
-
-    private fun String.withGenerationFailure(failureText: String): String =
-        if (isBlank()) failureText else trimEnd() + GENERATION_FAILURE_SEPARATOR + failureText
 
     private fun saveConversationTarget(outState: Bundle) {
         val snapshot = conversationTarget ?: return
@@ -4394,7 +3637,11 @@ class ChatActivity : ConfiguredActivity() {
                 require(values.map(ChatMessage::id).distinct().size == values.size)
             }
         }.getOrNull() ?: return false
-        messages += ChatConversationPolicy.restore(restored)
+        val restoredConversationId = storedId?.takeIf(String::isNotBlank) ?: currentConversationId
+        messages += ChatConversationPolicy.restore(
+            restored,
+            generatingMessageId = generationCoordinator.activeFor(restoredConversationId)?.assistantMessageId,
+        )
         val minimumNextId = (messages.maxOfOrNull(ChatMessage::id) ?: 0L) + 1L
         nextMessageId = state.getLong(STATE_NEXT_MESSAGE_ID, minimumNextId).coerceAtLeast(minimumNextId)
         currentConversationId = storedId?.takeIf(String::isNotBlank) ?: currentConversationId
@@ -4472,27 +3719,6 @@ class ChatActivity : ConfiguredActivity() {
         val meta: TextView?,
     )
 
-    private data class BackendContextTelemetry(
-        val epoch: Long,
-        val committedMessages: List<GenerationMessage>,
-        val accounting: ContextAccounting,
-        val contextFingerprint: String,
-        val contextStateFingerprint: String,
-        val recalledHistory: List<ConversationRecallChunk>,
-        val layerTokens: ContextLayerTokenUsage,
-    )
-
-    private data class ContextTurnObservation(
-        val generationId: Long,
-        val backendEpoch: Long,
-        val prompt: GenerationMessage,
-        val rebuilt: Boolean,
-        val inputEstimate: ContextTokenEstimate,
-        val calibrationInput: ContextTokenEstimate,
-        val coefficientBefore: Double,
-        val hardWatermarkTokens: Long,
-    )
-
     private data class CachedMarkdown(
         val source: String,
         val document: MarkdownDocument,
@@ -4567,7 +3793,6 @@ class ChatActivity : ConfiguredActivity() {
         const val MENU_SEARCH = 4
         const val MENU_APP_SETTINGS = 6
         const val MILLIS_PER_SECOND = 1_000L
-        const val DELTA_FLUSH_INTERVAL_MILLIS = 32L
         const val PERSISTENCE_DELAY_MILLIS = 750L
         const val KEYBOARD_REQUEST_DELAY_MILLIS = 180L
         const val NEAR_BOTTOM_DP = 96
@@ -4581,7 +3806,6 @@ class ChatActivity : ConfiguredActivity() {
         const val COMPOSER_TEXT_END_DP = 16
         const val COMPOSER_TEXT_END_WITH_MIC_DP = 44
         const val SEARCH_DEBOUNCE_MILLIS = 150L
-        const val GENERATION_FAILURE_SEPARATOR = "\n\n---\n\n"
         const val NO_USAGE = -1L
         const val MAXIMUM_SAVED_MESSAGES = 48
         const val MAXIMUM_SAVED_CHARACTERS = 128 * 1_024

@@ -397,7 +397,7 @@ Ultracode 是 Claude Code 工具自身的多代理编排设置, 不是 Anthropic
 
 调度: 看板 D:/idea-projects/.claude/boards/3-stone.md (主题 3-stone), 由 dispatch 环境的调度会话按阶段派 Opus 5.5 子会话; 子会话登记的新决策从 D84 起, 待决从 Q12 起.
 
-### 2. 已定决策 (D68 - D83)
+### 2. 已定决策 (D68 - D87)
 
 | 编号 | 决策 | 内容 |
 |---|---|---|
@@ -417,6 +417,10 @@ Ultracode 是 Claude Code 工具自身的多代理编排设置, 不是 Anthropic
 | D81 | 历史格式 v6 可扩展属性块 | v6 在会话级与消息级各加一个 "键 -> 字节" 属性表 (键为短 ASCII, 未知键跳过, 单条 <= 64 KiB); effort / fast 覆盖, 思考文本与用时, 附件元数据, 分支信息都以键写入, 之后新增字段不再升版; 继续读 v4 / v5 |
 | D82 | 消息分支模型 | 助手消息节点保存多个版本 (重新生成或编辑后重发产生新版本, 不再删除后续消息), 节点记录选中版本; 搜索, 导出, 上下文编译, 朗读, 用量累计都按选中分支; 删除版本只删该版本, 删除最后一个版本删除节点及其后续 |
 | D83 | 导出 | Markdown 文件 (CreateDocument text/markdown, 可选含思考摘要, 附件写文件名) 与长图 (离屏渲染现有消息视图为 PNG, 经 FileProvider 分享; 高度超过 16384 px 时按比例缩放), 入口在会话菜单 |
+| D84 | 进行中回复的持久化归属 (P1, 2026-11-05) | 聊天页附着时由 ChatActivity 按原有路径保存; 分离 (onStop 之后) 时由协调器直接写历史库 (upsert, reviveDeleted = false, 已删除的会话不复活), 再附着时 attach 快照带回 changedConversationIds, 聊天页据此重载. 进程被杀时仍按 restore 把残留的 GENERATING 改为 STOPPED |
+| D85 | 单一观察者 (P1) | 协调器同一时刻只服务一个附着的聊天页: attach 替换旧观察者, detach 只解除自己. 多窗口同时开两个聊天页时以后附着者为准, 前者回到前台时重新附着并拿快照 |
+| D86 | 进程内只有一个生成 (P1) | 发送新一轮前, 协调器先以 reason = superseded 硬取消正在生成的回复 (包括其他会话在后台的回复), 被取代的回复按 STOPPED 保存 |
+| D87 | 硬取消的执行线程与诊断 (P1) | 根因: 旧的停止把 close 排在同一单线程执行器里阻塞的 call.execute() 之后, 界面只是忽略回调, HTTP 请求一直跑到结束并计费. 现在 cancelAndClose 在新的守护线程 three-stone-ai-chat-cancel 上调用; AiBackendSession 新增默认返回 null 的 cancellationDiagnostics(), OnlineAiSession 报告 httpCall = cancelled / not-cancelled / none 供日志取证. Binder / AIDL 不变 (D73 / D76) |
 
 ### 3. 阶段条目
 
@@ -430,10 +434,12 @@ P0 发布 1.5.0
 
 P1 生成协调器与硬取消 (需求 6, D77)
 
-- [ ] P1.1 ChatGenerationCoordinator 进程单例: 从 ChatActivity 迁出生成线程, epoch, 后端会话, 流式缓冲, 上下文遥测, 摘要检查点与进行中消息的持久化; 观察者接口 (onDelta / onCompleted / onFailed / onStateChanged), attach 返回快照.
-- [ ] P1.2 ChatActivity 改为 onStart 附着 / onStop 分离; onDestroy 不再 bump epoch; ChatConversationPolicy.restore 只在协调器不持有该会话时把 GENERATING 改为 STOPPED; 屏幕常亮标志跟随协调器状态.
-- [ ] P1.3 硬取消: OnlineAiSession.cancel() / LiteRtLocalSession.cancelProcess 在独立线程调用; 停止, 新建会话, 切换会话, 切换目标, 删除消息都走硬取消; 停止后 1 s 内 OkHttp call 已取消 (单测 + 设备 logcat).
+- [x] P1.1 ChatGenerationCoordinator 进程单例: 从 ChatActivity 迁出生成线程, epoch, 后端会话, 流式缓冲, 上下文遥测, 摘要检查点与进行中消息的持久化; 观察者接口 (onDelta / onCompleted / onFailed / onStateChanged), attach 返回快照.
+- [x] P1.2 ChatActivity 改为 onStart 附着 / onStop 分离; onDestroy 不再 bump epoch; ChatConversationPolicy.restore 只在协调器不持有该会话时把 GENERATING 改为 STOPPED; 屏幕常亮标志跟随协调器状态.
+- [ ] P1.3 硬取消: OnlineAiSession.cancel() / LiteRtLocalSession.cancelProcess 在独立线程调用; 停止, 新建会话, 切换会话, 切换目标, 删除消息都走硬取消; 停止后 1 s 内 OkHttp call 已取消 (单测 + 设备 logcat). 代码与单测部分已完成, 只差设备 logcat.
+- 证据 (P1.1 - P1.3, 2026-11-05): 新文件 ChatGenerationCoordinator.kt (约 1220 行), ChatActivity.kt 从 4644 行降到 3868 行. 协调器用注入的 Store / Scheduler / Logger, JVM 单测不依赖 Android 框架. 硬取消: ChatActivity 的停止, 语音 "停止", 新建会话 (new-conversation), 切换会话 (switch-conversation), 切换目标 (target-changed), 删除消息 (delete-messages), 编辑重发 (edit), 手动压缩 (manual-compaction) 都经 ChatGenerationCoordinator.stop / closeBackend, 在守护线程 three-stone-ai-chat-cancel 上调用 cancelAndClose (D87). 日志 (标签 ThreeStoneAiChat) 先写 "Generation cancel requested reason=<原因> target=<目标>", 取消完成后写 "Generation cancel complete reason=<原因> elapsedMillis=<毫秒> success=<true|false> httpCall=<cancelled|not-cancelled|none>". 单测证据: OnlineAiSessionTest.cancelAndCloseOnAnotherThreadCancelsTheBlockedCallWithinOneSecond (阻塞在 execute() 的 OkHttp call 在 1000 ms 内被取消, 诊断由 httpCall=none 变为 httpCall=cancelled); ChatGenerationCoordinatorTest "stop hard-cancels a blocked backend" (真实单线程执行器上阻塞的会话, stop 在 1 s 内返回, cancel 在 1 s 内运行在 three-stone-ai-chat-cancel 线程, 日志带 success=true). 新单测在迁移中发现并修复一个缺陷: 完成时把用量写进仍为 GENERATING 的消息, 违反 "只有完成的消息带用量" 的不变量, 每次完成都会抛 IllegalArgumentException.
 - [ ] P1.4 测试: 协调器状态机单测; ChatConversationPolicyTest 更新; 仪器测试 (ScriptedAiBackend) 在流式中 recreate() 后回复继续; device_chat_probe.py 增加 --rotate-during (发送后用 settings put system user_rotation 旋转再转回) 并在 XQ-DQ72 用 Codex 资料取证: 旋转 / 切夜间模式期间回复不中断, 全文与用量行正常.
+- 证据 (P1.4, 2026-11-05, 设备部分待补): 单测 529 项全绿 (基线 517, 新增 ChatGenerationCoordinatorTest 10 项, ChatConversationPolicyTest 1 项, OnlineAiSessionTest 1 项; UnifiedAiBackendWiringTest 改为检查协调器). 仪器测试 ChatGenerationContinuityDeviceTest (ScriptedAiBackend, 3 项: 流式中 recreate() 后回复继续且用量正确, 重建后的页面停止仍能取消, 页面停在后台时完成的回复返回时显示) 已编译, 未在真机运行. device_chat_probe.py 新增 --rotate-during (accelerometer_rotation / user_rotation 旋转再转回, finally 恢复), --night-during (cmd uimode night 切换再恢复), --disturb-after, --stop-after 与 --expect stopped; 旋转 / 夜间检查要求重建后仍在生成, 日志里没有 "Generation cancel requested", 恰好一次 "Context complete" 且 actualOutputTokens 与用量行输出数一致; 停止检查要求 "Generation cancel complete reason=stopped" 的 elapsedMillis <= 1000, success=true, httpCall=cancelled. XQ-DQ72 (QV770340J7) 当时未连接, 仪器测试与 Codex 资料取证待补.
 - 依赖: P0 完成. 影响: ChatActivity.kt (约 4600 行) 大幅瘦身, 新文件 ChatGenerationCoordinator.kt.
 
 P2 effort / fast 与模型切换器面板 (需求 2 / 3, D72 - D75, D78 第 1 项)

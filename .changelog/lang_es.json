@@ -5,6 +5,13 @@
   "changelog_label_improvement": "Mejora",
   "changelog_label_dependency": "Dependencia",
   "$data": {
+    "v1.6.0": {
+      "released_date": "2026/11/05",
+      "fix": [
+        "Una respuesta en generación se detenía al girar la pantalla o al cambiar el modo oscuro, el idioma o el tamaño de letra de los mensajes; ahora la respuesta sigue generándose, y una respuesta que termina mientras estás fuera del chat se muestra completa al volver",
+        "Tras pulsar \"Detener\", la solicitud en línea seguía en segundo plano hasta completar la respuesta (y seguía contando en el uso); ahora pulsar Detener corta la solicitud en menos de 1 segundo, y lo mismo ocurre al crear una conversación, cambiar de conversación, cambiar de modelo o eliminar mensajes"
+      ]
+    },
     "v1.5.0": {
       "released_date": "2026/11/04",
       "feature": [

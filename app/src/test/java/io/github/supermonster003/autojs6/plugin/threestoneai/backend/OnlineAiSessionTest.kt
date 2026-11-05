@@ -23,6 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 class OnlineAiSessionTest {
     @Test
@@ -340,6 +341,37 @@ class OnlineAiSessionTest {
     }
 
     @Test
+    fun cancelAndCloseOnAnotherThreadCancelsTheBlockedCallWithinOneSecond() {
+        val entered = CountDownLatch(1)
+        val calls = BlockingCallFactory(entered, CountDownLatch(1))
+        val listener = RecordingListener()
+        val session = session(calls)
+        assertEquals("httpCall=none", session.cancellationDiagnostics())
+        val worker = Thread {
+            session.stream(request(), listener)
+        }
+        worker.start()
+        assertTrue(entered.await(2L, TimeUnit.SECONDS))
+
+        // The chat coordinator cancels from its own thread while the worker is blocked (roadmap D77).
+        val requestedAt = System.nanoTime()
+        val canceller = Thread(session::cancelAndClose, "three-stone-ai-chat-cancel")
+        canceller.start()
+        canceller.join(1_000L)
+        worker.join(1_000L)
+
+        assertFalse(canceller.isAlive)
+        assertFalse(worker.isAlive)
+        assertTrue(calls.cancelled.get())
+        val cancelMillis = (calls.cancelledAtNanos.get() - requestedAt) / 1_000_000L
+        assertTrue("HTTP call cancelled after ${cancelMillis}ms", cancelMillis in 0L..1_000L)
+        assertEquals("httpCall=cancelled", session.cancellationDiagnostics())
+        assertTrue(listener.deltas.isEmpty())
+        assertNull(listener.completed)
+        assertNull(listener.failure)
+    }
+
+    @Test
     fun partialFailedTurnIsNotCommittedToTheNextRequest() {
         val calls = ScriptedCallFactory(
             response(
@@ -625,10 +657,12 @@ class OnlineAiSessionTest {
         private val released: CountDownLatch,
     ) : Call.Factory {
         val cancelled = AtomicBoolean(false)
+        val cancelledAtNanos = AtomicLong(0L)
 
         override fun newCall(request: Request): Call = FakeCall(
             request = request,
             onCancel = {
+                cancelledAtNanos.set(System.nanoTime())
                 cancelled.set(true)
                 released.countDown()
             },

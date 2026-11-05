@@ -19,6 +19,15 @@ A failed reply also reports the provider explanation shown under the failure mes
 "Provider response:" paragraph added the same day), and --check-keep-screen-on samples the chat
 window's FLAG_KEEP_SCREEN_ON right after Send and again once the reply has ended: it must be held
 while generating and released afterwards.
+
+Roadmap D77 (2026-11-05, 1.6.0 P1): --rotate-during turns the screen to landscape and back while
+the reply streams (accelerometer_rotation 0, then user_rotation 1 and the original rotation, both
+settings restored afterwards); --night-during flips the system night mode with `cmd uimode night`
+and restores it. Either one checks that the reply is still generating after each recreation and
+that the chat log (tag ThreeStoneAiChat) shows no cancel. --stop-after taps the chat's own Stop
+button that many seconds after Send and checks the log: "Generation cancel complete reason=stopped"
+within 1000 ms and httpCall=cancelled for an online target. Log checks print only the matched
+fields, never prompts, replies or credentials.
 """
 
 import argparse
@@ -41,7 +50,10 @@ STRING_NAMES = (
     "chat_generation_failure_choose_target",
     "chat_generation_failure_detail",
     "chat_usage_format",
+    "chat_stop",
 )
+LOG_TAG = "ThreeStoneAiChat"
+SETTLE_SECONDS = 2.5
 
 
 def load_strings(locale):
@@ -166,6 +178,56 @@ def clear_field(serial, length):
         adb(serial, "shell", "input", "keyevent", "67")
 
 
+def stop_button(serial, words):
+    """The composer's Stop button while a reply is generating, else None."""
+    return find(dump(serial), **{"content-desc": words["chat_stop"]})
+
+
+def device_time(serial):
+    """Device clock in the format `logcat -T` accepts, so later reads skip older lines."""
+    return adb(serial, "shell", "date", "+%m-%d %H:%M:%S.000").strip()
+
+
+def chat_log(serial, since):
+    output = adb(serial, "logcat", "-d", "-v", "brief", "-T", since, "-s", f"{LOG_TAG}:D", check=False)
+    return [line for line in output.splitlines() if LOG_TAG in line]
+
+
+def recreate_events(serial, words, args):
+    """Recreates the chat while it streams; returns (event, still generating) pairs."""
+    events = []
+    if args.rotate_during:
+        accelerometer = adb(serial, "shell", "settings", "get", "system", "accelerometer_rotation").strip()
+        rotation = adb(serial, "shell", "settings", "get", "system", "user_rotation").strip()
+        original = rotation if rotation.isdigit() else "0"
+        landscape = "0" if original in ("1", "3") else "1"
+        try:
+            adb(serial, "shell", "settings", "put", "system", "accelerometer_rotation", "0")
+            adb(serial, "shell", "settings", "put", "system", "user_rotation", landscape)
+            time.sleep(SETTLE_SECONDS)
+            events.append((f"rotate to {landscape}", stop_button(serial, words) is not None))
+            adb(serial, "shell", "settings", "put", "system", "user_rotation", original)
+            time.sleep(SETTLE_SECONDS)
+            events.append((f"rotate back to {original}", stop_button(serial, words) is not None))
+        finally:
+            adb(serial, "shell", "settings", "put", "system", "user_rotation", original, check=False)
+            if accelerometer.isdigit():
+                adb(serial, "shell", "settings", "put", "system", "accelerometer_rotation", accelerometer, check=False)
+    if args.night_during:
+        current = adb(serial, "shell", "cmd", "uimode", "night").strip().split(":")[-1].strip()
+        original = current if current in ("yes", "no", "auto") else "no"
+        flipped = "no" if original == "yes" else "yes"
+        try:
+            adb(serial, "shell", "cmd", "uimode", "night", flipped)
+            time.sleep(SETTLE_SECONDS)
+            events.append((f"night mode {flipped}", stop_button(serial, words) is not None))
+        finally:
+            adb(serial, "shell", "cmd", "uimode", "night", original, check=False)
+        time.sleep(SETTLE_SECONDS)
+        events.append((f"night mode back to {original}", stop_button(serial, words) is not None))
+    return events
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--serial", required=True)
@@ -174,7 +236,20 @@ def main():
     parser.add_argument("--model", help="switch the new conversation to the switcher entry containing this text")
     parser.add_argument("--timeout", type=int, default=420, help="seconds to wait for the reply to end")
     parser.add_argument("--keep-conversation", action="store_true", help="append to the open conversation")
-    parser.add_argument("--expect", choices=["complete", "truncated", "failed"], help="fail unless the reply ended this way")
+    parser.add_argument(
+        "--expect",
+        choices=["complete", "truncated", "failed", "stopped"],
+        help="fail unless the reply ended this way",
+    )
+    parser.add_argument("--rotate-during", action="store_true", help="rotate to landscape and back while the reply streams")
+    parser.add_argument("--night-during", action="store_true", help="flip the system night mode and back while the reply streams")
+    parser.add_argument(
+        "--disturb-after",
+        type=float,
+        default=4.0,
+        help="seconds after Send before --rotate-during / --night-during start",
+    )
+    parser.add_argument("--stop-after", type=float, help="tap Stop this many seconds after Send and check the cancel log")
     parser.add_argument(
         "--check-keep-screen-on",
         action="store_true",
@@ -246,6 +321,7 @@ def main():
     if send is None:
         print("FAIL: send button not found")
         return 2
+    since = device_time(serial)
     tap(serial, send)
     started = time.time()
     print("sent: waiting for the reply to end")
@@ -253,6 +329,25 @@ def main():
     if args.check_keep_screen_on:
         time.sleep(0.5)
         held_while_generating = keep_screen_on(serial)
+    events = []
+    stop_requested = False
+    if args.stop_after is not None:
+        time.sleep(max(0.0, args.stop_after - (time.time() - started)))
+        button = stop_button(serial, words)
+        if button is None:
+            print("FAIL: Stop is not shown, the reply ended before --stop-after")
+            return 1
+        tap(serial, button)
+        stop_requested = True
+        print(f"stop: tapped {time.time() - started:.1f} s after Send")
+    elif args.rotate_during or args.night_during:
+        time.sleep(max(0.0, args.disturb_after - (time.time() - started)))
+        if stop_button(serial, words) is None:
+            print("FAIL: the reply ended before the screen was recreated, use a longer prompt")
+            return 1
+        events = recreate_events(serial, words, args)
+        for event, generating in events:
+            print(f"{event}: generating={generating}")
 
     outcome = None
     meta = ""
@@ -304,6 +399,47 @@ def main():
         if held_while_generating is not True or released is not False:
             print("FAIL: FLAG_KEEP_SCREEN_ON was not held exactly while generating")
             failed = True
+    if events or stop_requested:
+        time.sleep(1.0)
+        log = chat_log(serial, since)
+        cancels = [line for line in log if "Generation cancel requested" in line]
+        completes = [line for line in log if "Context complete" in line]
+        print(f"log: lines={len(log)} cancel requests={len(cancels)} context completions={len(completes)}")
+        if events:
+            if not events[0][1]:
+                print("FAIL: the reply was not generating after the first recreation")
+                failed = True
+            if cancels:
+                print("FAIL: recreating the screen requested a cancel")
+                failed = True
+            if outcome != "complete" or len(completes) != 1:
+                print("FAIL: expected exactly one completed turn")
+                failed = True
+            elif counts:
+                logged = re.search(r"actualOutputTokens=(\d+)", completes[-1])
+                shown = re.search(r"output=([\d,]+)", counts)
+                logged_value = logged.group(1) if logged else None
+                shown_value = shown.group(1).replace(",", "") if shown else None
+                print(f"usage check: shown output={shown_value} logged output={logged_value}")
+                if logged_value != shown_value:
+                    print("FAIL: the usage line does not match the logged output tokens")
+                    failed = True
+        if stop_requested:
+            done = [line for line in log if "Generation cancel complete reason=stopped " in line]
+            fields = re.search(r"elapsedMillis=(\d+) success=(\w+)(?: (httpCall=[\w-]+))?", done[-1]) if done else None
+            if fields is None:
+                print("FAIL: no cancel completion logged for the stop")
+                failed = True
+            else:
+                elapsed_millis = int(fields.group(1))
+                http = fields.group(3) or "httpCall=unreported"
+                print(f"cancel: elapsedMillis={elapsed_millis} success={fields.group(2)} {http}")
+                if elapsed_millis > 1000 or fields.group(2) != "true":
+                    print("FAIL: the backend was not cancelled within 1000 ms")
+                    failed = True
+                if http not in ("httpCall=cancelled", "httpCall=unreported"):
+                    print("FAIL: the HTTP call was not cancelled")
+                    failed = True
     if args.expect and args.expect != outcome:
         print(f"FAIL: expected {args.expect}")
         failed = True

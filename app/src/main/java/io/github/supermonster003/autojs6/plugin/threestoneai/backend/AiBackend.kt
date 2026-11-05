@@ -181,6 +181,9 @@ internal interface AiBackendSession : Closeable {
     }
 
     fun cancel()
+
+    /** What the last [cancel] did to in-flight work, for cancellation logs (roadmap D77); null when unknown. */
+    fun cancellationDiagnostics(): String? = null
 }
 
 internal class AiTargetUnavailableException(targetId: String) :

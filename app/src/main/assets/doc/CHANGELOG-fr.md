@@ -4,6 +4,13 @@
 
 ******
 
+# v1.6.0
+
+###### 2026/11/05
+
+* `Correctif` Une réponse en cours de génération était arrêtée lors de la rotation de l'écran ou du changement de mode sombre, de langue ou de taille du texte des messages; la réponse continue désormais à se générer, et une réponse terminée pendant que vous avez quitté la discussion s'affiche en entier à votre retour
+* `Correctif` Après avoir appuyé sur "Arrêter", la requête en ligne continuait en arrière-plan jusqu'à la fin de la réponse (et comptait toujours dans l'utilisation); appuyer sur Arrêter coupe désormais la requête en moins de 1 seconde, de même que créer une conversation, changer de conversation, changer de modèle ou supprimer des messages
+
 # v1.5.0
 
 ###### 2026/11/04

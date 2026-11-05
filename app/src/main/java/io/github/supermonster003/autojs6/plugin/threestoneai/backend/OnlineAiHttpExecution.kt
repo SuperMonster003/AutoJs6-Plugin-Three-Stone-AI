@@ -136,6 +136,10 @@ internal class OnlineAiSession(
     private val cancelled = AtomicBoolean(false)
     private val closed = AtomicBoolean(false)
     private val activeCall = AtomicReference<Call?>()
+
+    /** Whether the HTTP call in flight at the first cancel with one was cancelled; null when none was. */
+    @Volatile
+    private var httpCallCancelled: Boolean? = null
     private val conversation = mutableListOf<GenerationMessage>()
     private var pendingTools: PendingTools? = null
     private var toolRounds = 0
@@ -350,7 +354,15 @@ internal class OnlineAiSession(
             pendingTools = null
             conversation.clear()
         }
-        activeCall.get()?.cancel()
+        val call = activeCall.get() ?: return
+        call.cancel()
+        if (httpCallCancelled == null) httpCallCancelled = call.isCanceled()
+    }
+
+    override fun cancellationDiagnostics(): String = when (httpCallCancelled) {
+        null -> "httpCall=none"
+        true -> "httpCall=cancelled"
+        false -> "httpCall=not-cancelled"
     }
 
     override fun close() {

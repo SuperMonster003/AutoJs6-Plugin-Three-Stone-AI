@@ -196,6 +196,13 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.6.0
+
+###### 2026/11/05
+
+* `Fix` A reply being generated was stopped when the screen was rotated or when dark mode, the language or the message font size was changed; the reply now keeps generating, and a reply that finishes while you are away from the chat is shown in full when you come back
+* `Fix` After tapping "Stop", the online request kept running in the background until the reply was complete (and still counted toward usage); tapping Stop now ends the request within 1 second, and so do starting a new conversation, switching conversations, switching models and deleting messages
+
 # v1.5.0
 
 ###### 2026/11/04
@@ -213,17 +220,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 ###### 2026/10/20
 
 * `Fix` The 1.4.0 APKs declared only the 64-bit processor architectures (arm64-v8a, x86_64), so on 32-bit phones (armeabi-v7a, x86) the AutoJs6 Plugin Center could treat the plugin as incompatible; all four architectures are now declared correctly
-
-# v1.4.0
-
-###### 2026/10/20
-
-* `Hint` 3-Stone AI does not ask for the microphone permission; the recognition app records. 3-Macaw Speech works fully offline, other recognition or speech apps may use the network, and recognized text goes to the selected model just like typed text
-* `Feature` A microphone button inside the input box: tap and speak, and the recognized text is inserted at the cursor so you can check it before sending. With 3-Macaw Speech installed it recognizes offline; otherwise the phone's own speech recognition app is used
-* `Feature` Replies can be read aloud: long press a reply and choose "Read aloud", or turn on "Read replies aloud automatically" in Settings > Voice to hear new replies while they are generated. Heading and list markers are skipped, and code blocks and tables are announced in one sentence. The offline voices of 3-Macaw Speech are preferred when it is installed
-* `Feature` Long press the microphone for a voice conversation: what you say is sent at once, and the app listens again after the reply has been read. A status bar above the input box shows what is happening and lets you leave at any time; while a reply is read, tap it to interrupt and speak right away
-* `Feature` Ask through the 3-Macaw Speech digital assistant: hold the power button, speak and tap "3-Stone AI" to get the answer in a new conversation, read aloud. Another such question within 10 seconds only fills the input box, so it cannot be misused
-* `Feature` Settings have a new "Voice" group: automatic reading, "Prefer 3-Macaw Speech" and which app currently dictates and reads
 
 ##### For more releases
 

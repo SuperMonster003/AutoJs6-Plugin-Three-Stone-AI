@@ -313,14 +313,19 @@ internal object ChatConversationPolicy {
         return 0L
     }
 
-    /** A recreated Activity cannot retain a native generation callback, so make that state honest. */
-    fun restore(messages: List<ChatMessage>): List<ChatMessage> = messages.map { message ->
-        if (message.status == ChatMessageStatus.GENERATING) {
-            message.copy(status = ChatMessageStatus.STOPPED)
-        } else {
-            message
+    /**
+     * Restores a transcript for display. Only the reply the generation coordinator is still
+     * producing ([generatingMessageId], roadmap D77) stays GENERATING; any other GENERATING reply
+     * lost its generation (for example with the process) and becomes STOPPED.
+     */
+    fun restore(messages: List<ChatMessage>, generatingMessageId: Long? = null): List<ChatMessage> =
+        messages.map { message ->
+            if (message.status == ChatMessageStatus.GENERATING && message.id != generatingMessageId) {
+                message.copy(status = ChatMessageStatus.STOPPED)
+            } else {
+                message
+            }
         }
-    }
 
     fun completedTurns(messages: List<ChatMessage>): List<CompletedChatTurn> {
         val turns = ArrayList<CompletedChatTurn>()

@@ -196,6 +196,13 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ******
 
+# v1.6.0
+
+###### 2026/11/05
+
+* `Corrección` Una respuesta en generación se detenía al girar la pantalla o al cambiar el modo oscuro, el idioma o el tamaño de letra de los mensajes; ahora la respuesta sigue generándose, y una respuesta que termina mientras estás fuera del chat se muestra completa al volver
+* `Corrección` Tras pulsar "Detener", la solicitud en línea seguía en segundo plano hasta completar la respuesta (y seguía contando en el uso); ahora pulsar Detener corta la solicitud en menos de 1 segundo, y lo mismo ocurre al crear una conversación, cambiar de conversación, cambiar de modelo o eliminar mensajes
+
 # v1.5.0
 
 ###### 2026/11/04
@@ -213,17 +220,6 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 ###### 2026/10/20
 
 * `Corrección` Los APK de 1.4.0 solo declaraban las arquitecturas de procesador de 64 bits (arm64-v8a, x86_64), por lo que en teléfonos de 32 bits (armeabi-v7a, x86) el centro de plugins de AutoJs6 podía considerar el plugin incompatible; ahora se declaran correctamente las cuatro arquitecturas
-
-# v1.4.0
-
-###### 2026/10/20
-
-* `Aviso` 3-Stone AI no pide el permiso del micrófono: graba la aplicación de reconocimiento. 3-Macaw Speech funciona totalmente sin conexión, otras aplicaciones de reconocimiento o de voz pueden usar la red, y el texto reconocido se envía al modelo seleccionado igual que el texto escrito
-* `Función` Nuevo botón de micrófono dentro del cuadro de entrada: tócalo y habla, y el texto reconocido se inserta en el cursor para revisarlo antes de enviar. Con 3-Macaw Speech el reconocimiento es sin conexión; si no, se usa la aplicación de reconocimiento de voz del teléfono
-* `Función` Las respuestas se pueden leer en voz alta: mantén pulsada una respuesta y elige "Leer en voz alta", o activa "Leer las respuestas en voz alta" en Ajustes > Voz para escuchar las respuestas nuevas mientras se generan. Las marcas de títulos y listas no se leen, y los bloques de código y las tablas se anuncian con una frase. Se prefieren las voces sin conexión de 3-Macaw Speech si está instalado
-* `Función` Mantén pulsado el micrófono para una conversación por voz: lo que dices se envía enseguida y la aplicación vuelve a escuchar después de leer la respuesta. Una barra de estado sobre el cuadro de entrada muestra qué está pasando y permite salir en cualquier momento; mientras se lee una respuesta, tócala para interrumpir y hablar enseguida
-* `Función` Pregunta a través del asistente digital de 3-Macaw Speech: mantén pulsado el botón de encendido, habla y toca "3-Stone AI" para recibir la respuesta en una conversación nueva, leída en voz alta. Otra pregunta de este tipo en menos de 10 segundos solo se pone en el cuadro de entrada, para evitar abusos
-* `Función` Nuevo grupo "Voz" en Ajustes: lectura automática, "Preferir 3-Macaw Speech" y qué aplicación dicta y lee en este momento
 
 ##### Más versiones
 

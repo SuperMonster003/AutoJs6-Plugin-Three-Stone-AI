@@ -208,6 +208,10 @@
     <string name="download_source_unavailable">Aucune application ne peut ouvrir la page source du modèle</string>
     <string name="download_succeeded">Téléchargé et vérifié: %1$s (%2$s). Vous pouvez l\'importer maintenant ou conserver le fichier externe.</string>
     <string name="download_succeeded_toast">Modèle téléchargé et vérifié</string>
+    <string name="form_discard_changes_confirm">Abandonner</string>
+    <string name="form_discard_changes_message">Les modifications non enregistrées seront perdues.</string>
+    <string name="form_discard_changes_title">Abandonner les modifications?</string>
+    <string name="form_sheet_close">Fermer</string>
     <string name="import_cancelled">Import du modèle annulé</string>
     <string name="import_cancelling">Annulation de l\'importation du modèle</string>
     <string name="import_failed">Échec de l\'import du modèle</string>

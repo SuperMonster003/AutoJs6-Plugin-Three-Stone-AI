@@ -208,6 +208,10 @@
     <string name="download_source_unavailable">모델 출처 페이지를 열 수 있는 앱이 없습니다</string>
     <string name="download_succeeded">다운로드 및 검증 완료: %1$s (%2$s). 지금 가져오거나 외부 파일을 나중에 사용할 수 있습니다.</string>
     <string name="download_succeeded_toast">모델 다운로드 및 검증 완료</string>
+    <string name="form_discard_changes_confirm">버리기</string>
+    <string name="form_discard_changes_message">저장하지 않은 변경사항은 사라집니다.</string>
+    <string name="form_discard_changes_title">변경사항을 버릴까요?</string>
+    <string name="form_sheet_close">닫기</string>
     <string name="import_cancelled">모델 가져오기가 취소되었습니다</string>
     <string name="import_cancelling">모델 가져오기 취소 중</string>
     <string name="import_failed">모델 가져오기 실패</string>

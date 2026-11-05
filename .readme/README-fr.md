@@ -212,6 +212,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Correctif` Après avoir appuyé sur "Arrêter", la requête en ligne continuait en arrière-plan jusqu'à la fin de la réponse (et comptait toujours dans l'utilisation); appuyer sur Arrêter coupe désormais la requête en moins de 1 seconde, de même que créer une conversation, changer de conversation, changer de modèle ou supprimer des messages
 * `Correctif` Les modèles Claude récents refusaient les requêtes des profils Anthropic qui définissaient la température, Top K ou Top P; les profils Anthropic n'envoient plus ces trois paramètres, et la page des paramètres l'indique
 * `Correctif` Après la modification du modèle par défaut d'un profil, une nouvelle conversation déjà ouverte et sans message gardait l'ancien modèle par défaut; elle passe désormais au nouveau modèle par défaut (sauf si vous avez choisi un autre modèle dans cette conversation)
+* `Correctif` Lors de l'ajout ou de la modification d'un profil en ligne, balayer vers le bas sur le formulaire le fermait facilement et tout ce que vous aviez saisi était perdu; le formulaire ne se ferme désormais qu'avec le bouton de fermeture en haut à droite, "Annuler" ou Retour, demande confirmation avant d'abandonner les modifications non enregistrées et conserve votre saisie quand l'écran pivote
 
 # v1.5.0
 

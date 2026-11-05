@@ -9,8 +9,10 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.CheckedTextView
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.NestedScrollView
@@ -212,7 +214,16 @@ internal fun ConfiguredActivity.singleChoiceDialog(
 internal class SheetHandle(
     val dialog: BottomSheetDialog,
     val positiveButton: View?,
+    /** Closes the sheet the way the close button does (asks first when guarded and changed). */
+    val requestClose: () -> Unit,
 )
+
+/**
+ * Keeps a form sheet open until the user closes it on purpose (roadmap D105): no swipe down,
+ * no outside tap, a close button in the title row, and a discard confirmation for the close
+ * button, Cancel and Back while [hasUnsavedChanges] is true.
+ */
+internal class SheetCloseGuard(val hasUnsavedChanges: () -> Boolean)
 
 /**
  * Full-height bottom sheet used for the app's large forms. The content scrolls;
@@ -224,21 +235,57 @@ internal fun ConfiguredActivity.formBottomSheet(
     @StringRes positiveResource: Int? = null,
     onPositive: (() -> Boolean)? = null,
     onDismiss: (() -> Unit)? = null,
+    closeGuard: SheetCloseGuard? = null,
 ): SheetHandle {
     val dialog = BottomSheetDialog(this)
+    val requestClose: () -> Unit = {
+        if (closeGuard?.hasUnsavedChanges?.invoke() == true) {
+            confirmDialog(
+                title = getString(R.string.form_discard_changes_title),
+                message = getString(R.string.form_discard_changes_message),
+                positiveResource = R.string.form_discard_changes_confirm,
+                destructive = true,
+            ) { dialog.dismiss() }
+        } else {
+            dialog.dismiss()
+        }
+    }
     val column = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPaddingRelative(0, uiDp(Ui.SPACE_SM), 0, 0)
     }
-    column.addView(
-        TextView(this).apply {
-            text = title
-            textSize = Ui.TEXT_PAGE_TITLE
-            typeface = Ui.mediumTypeface
-            setTextColor(appPalette.primaryText)
-            setPaddingRelative(uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM), uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_MD))
-        },
-    )
+    val titleView = TextView(this).apply {
+        text = title
+        textSize = Ui.TEXT_PAGE_TITLE
+        typeface = Ui.mediumTypeface
+        setTextColor(appPalette.primaryText)
+        setPaddingRelative(uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM), uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_MD))
+    }
+    if (closeGuard == null) {
+        column.addView(titleView)
+    } else {
+        titleView.setPaddingRelative(uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM), uiDp(Ui.SPACE_SM), uiDp(Ui.SPACE_MD))
+        column.addView(
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                addView(
+                    ImageButton(context).apply {
+                        tag = FORM_SHEET_CLOSE_TAG
+                        setImageDrawable(tintedDrawable(R.drawable.ic_close_24, appPalette.secondaryText))
+                        contentDescription = getString(R.string.form_sheet_close)
+                        applyThemedSelectableBackground(borderless = true)
+                        setOnClickListener { requestClose() }
+                    },
+                    LinearLayout.LayoutParams(uiDp(48), uiDp(48)).apply {
+                        marginEnd = uiDp(Ui.SPACE_MD)
+                        bottomMargin = uiDp(Ui.SPACE_XS)
+                    },
+                )
+            },
+        )
+    }
     column.addView(
         NestedScrollView(this).apply {
             isFillViewport = false
@@ -258,7 +305,7 @@ internal fun ConfiguredActivity.formBottomSheet(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
             setPaddingRelative(uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM), uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_LG))
-            addView(textButton(android.R.string.cancel) { dialog.dismiss() })
+            addView(textButton(android.R.string.cancel) { requestClose() })
             val confirm = filledButton(positiveResource) {
                 if (onPositive()) dialog.dismiss()
             }
@@ -276,6 +323,19 @@ internal fun ConfiguredActivity.formBottomSheet(
     dialog.setContentView(column)
     dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
     dialog.behavior.skipCollapsed = true
+    if (closeGuard != null) {
+        // BottomSheetDialog also turns hiding off when it is not cancelable; outside taps and the
+        // framework back handling then do nothing, so the callback below owns Back.
+        dialog.setCancelable(false)
+        dialog.behavior.isHideable = false
+        dialog.behavior.isDraggable = false
+        dialog.onBackPressedDispatcher.addCallback(
+            dialog,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() = requestClose()
+            },
+        )
+    }
     dialog.window?.setSoftInputMode(
         WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
     )
@@ -283,8 +343,11 @@ internal fun ConfiguredActivity.formBottomSheet(
     dialog.show()
     // Give the sheet a comfortable minimum height for forms.
     (column.parent as? View)?.minimumHeight = (resources.displayMetrics.heightPixels * 0.5f).toInt()
-    return SheetHandle(dialog, positive)
+    return SheetHandle(dialog, positive, requestClose)
 }
+
+/** View tag of the close button that [SheetCloseGuard] adds to a form sheet's title row. */
+internal const val FORM_SHEET_CLOSE_TAG = "formSheetClose"
 
 /** Themed form field label used inside sheets and dialog forms. */
 internal fun ConfiguredActivity.formLabel(@StringRes textResource: Int): TextView =

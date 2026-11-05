@@ -15,6 +15,7 @@
 * `Corrección` Tras pulsar "Detener", la solicitud en línea seguía en segundo plano hasta completar la respuesta (y seguía contando en el uso); ahora pulsar Detener corta la solicitud en menos de 1 segundo, y lo mismo ocurre al crear una conversación, cambiar de conversación, cambiar de modelo o eliminar mensajes
 * `Corrección` Los modelos Claude más recientes rechazaban las solicitudes de perfiles de Anthropic que fijaban temperatura, Top K o Top P; ahora los perfiles de Anthropic ya no envían estos tres ajustes, y la página de ajustes lo indica
 * `Corrección` Tras cambiar el modelo predeterminado de un perfil, una conversación nueva ya abierta y sin mensajes seguía usando el modelo predeterminado anterior; ahora pasa al nuevo modelo predeterminado (salvo que hayas elegido otro modelo en esa conversación)
+* `Corrección` Al añadir o editar un perfil en línea, deslizar hacia abajo sobre el formulario lo cerraba con facilidad y se perdía todo lo escrito; ahora el formulario solo se cierra con el botón de cerrar de arriba a la derecha, "Cancelar" o Atrás, pregunta antes de descartar los cambios sin guardar y conserva lo escrito al girar la pantalla
 
 # v1.5.0
 

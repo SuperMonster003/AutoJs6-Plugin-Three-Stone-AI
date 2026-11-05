@@ -208,6 +208,10 @@
     <string name="download_source_unavailable">沒有應用程式可以開啟模型來源頁面</string>
     <string name="download_succeeded">已下載並驗證: %1$s (%2$s). 現在可以匯入, 也可以保留外部檔案稍後使用.</string>
     <string name="download_succeeded_toast">模型已下載並通過驗證</string>
+    <string name="form_discard_changes_confirm">捨棄</string>
+    <string name="form_discard_changes_message">尚未儲存的變更將會遺失.</string>
+    <string name="form_discard_changes_title">捨棄變更?</string>
+    <string name="form_sheet_close">關閉</string>
     <string name="import_cancelled">模型匯入已取消</string>
     <string name="import_cancelling">正在取消模型匯入</string>
     <string name="import_failed">模型匯入失敗</string>

@@ -260,6 +260,10 @@
     <string name="download_source_unavailable">No app could open the model source page</string>
     <string name="download_succeeded">Downloaded and verified: %1$s (%2$s). You can import it now or keep the external file for later.</string>
     <string name="download_succeeded_toast">Model downloaded and verified</string>
+    <string name="form_discard_changes_confirm">Discard</string>
+    <string name="form_discard_changes_message">Changes you have not saved will be lost.</string>
+    <string name="form_discard_changes_title">Discard changes?</string>
+    <string name="form_sheet_close">Close</string>
     <string name="import_cancelled">Model import cancelled</string>
     <string name="import_cancelling">Cancelling model import</string>
     <string name="import_failed">Model import failed</string>

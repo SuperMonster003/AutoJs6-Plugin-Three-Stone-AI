@@ -16,6 +16,7 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.VisibleForTesting
 import androidx.core.view.ViewCompat
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.checkbox.MaterialCheckBox
@@ -24,6 +25,8 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputLayout
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiEffortSupport
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SheetCloseGuard
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SheetHandle
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardContainer
@@ -94,6 +97,9 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
     }
     private var nextTestToken = 1L
     private var activeTest: ActiveConnectionTest? = null
+    private var profileEditor: ProfileEditorSession? = null
+    private var pendingProfileDraft: OnlineAiProfileEditorDraft? = null
+    private var pendingAddProfile = false
     private val profileImportPicker = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let(::importProfiles) }
@@ -109,10 +115,56 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         modelCatalog = createOnlineAiModelCatalogRepository(applicationContext)
         setContentView(createContentView())
         reloadSnapshot()
-        if (savedInstanceState == null && intent.getBooleanExtra(EXTRA_ADD_PROFILE, false)) {
+        val restoredDraft = savedInstanceState?.getBundle(KEY_PROFILE_EDITOR)
+            ?.let(OnlineAiProfileEditorDraft::fromBundle)
+        if (restoredDraft != null) {
+            pendingProfileDraft = restoredDraft
+            settingsContent.post(::restoreProfileEditor)
+        } else if (
+            savedInstanceState?.getBoolean(KEY_PENDING_ADD_PROFILE) == true ||
+            (savedInstanceState == null && intent.getBooleanExtra(EXTRA_ADD_PROFILE, false))
+        ) {
             intent.removeExtra(EXTRA_ADD_PROFILE)
-            settingsContent.post { showProfileEditor(null) }
+            pendingAddProfile = true
+            settingsContent.post(::openPendingAddProfile)
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // D105: only the saved-instance-state Bundle carries the draft, typed API key included.
+        val draft = profileEditor?.capture?.invoke() ?: pendingProfileDraft
+        draft?.let { outState.putBundle(KEY_PROFILE_EDITOR, it.toBundle()) }
+        if (pendingAddProfile) outState.putBoolean(KEY_PENDING_ADD_PROFILE, true)
+    }
+
+    /**
+     * Opens the editor requested with [EXTRA_ADD_PROFILE]. A recreation before the posted call runs
+     * hands the request to the new instance instead of opening the sheet on the destroyed one.
+     */
+    private fun openPendingAddProfile() {
+        if (!pendingAddProfile || isFinishing || isDestroyed) return
+        pendingAddProfile = false
+        showProfileEditor(null)
+    }
+
+    /** Reopens the profile editor with the draft saved before recreation (D105). */
+    private fun restoreProfileEditor() {
+        val draft = pendingProfileDraft ?: return
+        pendingProfileDraft = null
+        if (isFinishing || isDestroyed) {
+            draft.credential.fill('\u0000')
+            return
+        }
+        val existing = draft.profileId?.let { profileId ->
+            snapshot?.profiles?.firstOrNull { it.profile.profileId == profileId }
+        }
+        if (draft.profileId != null && existing == null) {
+            // The edited profile is gone (for example deleted by an import elsewhere).
+            draft.credential.fill('\u0000')
+            return
+        }
+        showProfileEditor(existing, draft)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -144,6 +196,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
     }
 
     override fun onDestroy() {
+        // The draft, if any, was saved by onSaveInstanceState; close the sheet so it does not leak.
+        profileEditor?.handle?.dialog?.dismiss()
         if (::modelCatalog.isInitialized) modelCatalog.cancelRefresh()
         catalogRefresh?.cancel(true)
         catalogExecutor.shutdownNow()
@@ -463,22 +517,32 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             .also(::tintDialogButtons)
     }
 
-    private fun showProfileEditor(existing: ConfiguredOnlineAiProfile?) {
+    /**
+     * Opens the add / edit profile sheet. [restored] is a draft saved before activity recreation;
+     * its values replace the profile's and its credential is moved into the field and wiped.
+     */
+    private fun showProfileEditor(
+        existing: ConfiguredOnlineAiProfile?,
+        restored: OnlineAiProfileEditorDraft? = null,
+    ) {
+        val restoredValues = restored?.current
         val templates = OnlineAiProviderCatalog.templates
         val initialProvider = existing?.profile?.provider ?: OnlineAiProvider.OPENAI
         val initialTemplate = OnlineAiProviderCatalog.templateFor(initialProvider)
-        var selectedProvider = initialProvider
-        var lastSuggestedName = existing?.profile?.displayName
+        var selectedProvider = restoredValues?.provider ?: initialProvider
+        var lastSuggestedName = restored?.lastSuggestedName
+            ?: existing?.profile?.displayName
             ?: uniqueSuggestedName(providerLabel(initialProvider))
         val (nameField, nameInput) = formTextField(
-            initialValue = existing?.profile?.displayName ?: lastSuggestedName,
+            initialValue = restoredValues?.name ?: existing?.profile?.displayName ?: lastSuggestedName,
             hint = getString(R.string.online_ai_profile_name),
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES,
             maxLength = PROFILE_TEXT_MAXIMUM_CHARACTERS,
         )
         nameField.placeholderText = getString(R.string.online_ai_profile_name_hint)
         val (baseUrlField, baseUrlInput) = formTextField(
-            initialValue = existing?.profile?.baseUrl
+            initialValue = restoredValues?.baseUrl
+                ?: existing?.profile?.baseUrl
                 ?: initialTemplate.defaultBaseUrl
                 ?: OnlineAiBaseUrlHistoryPolicy.HTTPS_PREFIX,
             hint = getString(R.string.online_ai_base_url),
@@ -512,17 +576,27 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             credentialInput.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
             credentialInput.setAutofillHints(null)
         }
-        var selectedModelIds = existing?.profile?.modelIds
+        restored?.credential?.let { characters ->
+            if (characters.isNotEmpty()) credentialInput.setText(characters, 0, characters.size)
+            characters.fill('\u0000')
+        }
+        var selectedModelIds = restoredValues?.modelIds
+            ?: existing?.profile?.modelIds
             ?: listOf(modelCatalog.snapshot().catalog.defaultForProvider(initialProvider))
-        var selectedDefaultModelId = existing?.profile?.modelId ?: selectedModelIds.first()
-        var selectedVisionModelIds = existing?.profile?.visionModelIds.orEmpty()
-        var selectedEffort = existing?.profile?.defaultEffort ?: GenerationEffort.DEFAULT
+        var selectedDefaultModelId = restoredValues?.defaultModelId
+            ?: existing?.profile?.modelId
+            ?: selectedModelIds.first()
+        var selectedVisionModelIds = restoredValues?.visionModelIds
+            ?: existing?.profile?.visionModelIds.orEmpty()
+        var selectedEffort = restoredValues?.effort
+            ?: existing?.profile?.defaultEffort
+            ?: GenerationEffort.DEFAULT
 
         var onProviderClick: () -> Unit = {}
         var onModelsClick: () -> Unit = {}
         var onDefaultModelClick: () -> Unit = {}
         var onVisionModelsClick: () -> Unit = {}
-        val providerField = pickerField(providerLabel(initialProvider)) { onProviderClick() }
+        val providerField = pickerField(providerLabel(selectedProvider)) { onProviderClick() }
         val modelsField = pickerField("") { onModelsClick() }
         val defaultModelField = pickerField("") { onDefaultModelClick() }
         val visionModelsField = pickerField("") { onVisionModelsClick() }
@@ -542,7 +616,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         effortField.first.contentDescription = getString(R.string.online_ai_default_effort)
         val fastBox = MaterialCheckBox(this).apply {
             text = getString(R.string.online_ai_fast_mode)
-            isChecked = existing?.profile?.fastMode == true
+            isChecked = restoredValues?.fastMode ?: (existing?.profile?.fastMode == true)
             minimumHeight = uiDp(48)
             buttonTintList = controlTintList()
             buttonIconTintList = android.content.res.ColorStateList.valueOf(appPalette.onAccent)
@@ -659,8 +733,23 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             addView(fastHelp)
             addView(fieldParamsWrap(credentialField))
         }
+
+        fun captureValues() = OnlineAiProfileEditorValues(
+            provider = selectedProvider,
+            name = nameInput.text?.toString().orEmpty(),
+            baseUrl = baseUrlInput.text?.toString().orEmpty(),
+            modelIds = selectedModelIds,
+            defaultModelId = selectedDefaultModelId,
+            visionModelIds = selectedVisionModelIds,
+            effort = selectedEffort,
+            fastMode = fastBox.isChecked,
+        )
+
+        // Taken after the controls normalized their values, so an untouched form is not "changed".
+        val baselineValues = restored?.initial ?: captureValues()
+        lateinit var session: ProfileEditorSession
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        formBottomSheet(
+        val handle = formBottomSheet(
             title = getString(
                 if (existing == null) R.string.online_ai_add_profile_title
                 else R.string.online_ai_edit_profile_title,
@@ -685,9 +774,38 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             onDismiss = {
                 credentialInput.text?.clear()
                 window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                if (profileEditor === session) profileEditor = null
+            },
+            closeGuard = SheetCloseGuard {
+                OnlineAiProfileEditorPolicy.hasUnsavedChanges(
+                    initial = baselineValues,
+                    current = captureValues(),
+                    credentialLength = credentialInput.text?.length ?: 0,
+                )
             },
         )
+        session = ProfileEditorSession(handle) {
+            OnlineAiProfileEditorDraft(
+                profileId = existing?.profile?.profileId,
+                initial = baselineValues,
+                current = captureValues(),
+                lastSuggestedName = lastSuggestedName,
+                credential = credentialInput.text?.let(::copyCharacters) ?: CharArray(0),
+            )
+        }
+        profileEditor = session
     }
+
+    /** The open profile editor sheet and how to capture its draft for recreation (D105). */
+    private class ProfileEditorSession(
+        val handle: SheetHandle,
+        val capture: () -> OnlineAiProfileEditorDraft,
+    )
+
+    /** The open profile editor sheet, for device tests only. */
+    @VisibleForTesting
+    internal val profileEditorSheetForTest: SheetHandle?
+        get() = profileEditor?.handle
 
     /** Outlined picker field visually consistent with the sheet's text fields. */
     private fun pickerField(
@@ -1341,6 +1459,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
 
     companion object {
         const val EXTRA_ADD_PROFILE = "addOnlineProfile"
+        private const val KEY_PROFILE_EDITOR = "profileEditorDraft"
+        private const val KEY_PENDING_ADD_PROFILE = "pendingAddProfile"
 
         private const val FORM_TEXT_SIZE_SP = 14f
         private const val PROFILE_TEXT_MAXIMUM_CHARACTERS = 256

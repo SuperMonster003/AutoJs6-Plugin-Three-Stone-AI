@@ -208,6 +208,10 @@
     <string name="download_source_unavailable">Ни одно приложение не смогло открыть страницу источника модели</string>
     <string name="download_succeeded">Скачано и проверено: %1$s (%2$s). Можно импортировать сейчас или сохранить внешний файл.</string>
     <string name="download_succeeded_toast">Модель скачана и проверена</string>
+    <string name="form_discard_changes_confirm">Не сохранять</string>
+    <string name="form_discard_changes_message">Несохраненные изменения будут потеряны.</string>
+    <string name="form_discard_changes_title">Не сохранять изменения?</string>
+    <string name="form_sheet_close">Закрыть</string>
     <string name="import_cancelled">Импорт модели отменён</string>
     <string name="import_cancelling">Отмена импорта модели</string>
     <string name="import_failed">Не удалось импортировать модель</string>

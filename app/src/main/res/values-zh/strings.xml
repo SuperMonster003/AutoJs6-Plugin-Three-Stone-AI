@@ -260,6 +260,10 @@
     <string name="download_source_unavailable">没有应用可以打开模型来源页面</string>
     <string name="download_succeeded">已下载并校验: %1$s (%2$s). 现在可以导入, 也可以保留外部文件以后再用.</string>
     <string name="download_succeeded_toast">模型已下载并通过校验</string>
+    <string name="form_discard_changes_confirm">放弃</string>
+    <string name="form_discard_changes_message">尚未保存的更改将会丢失.</string>
+    <string name="form_discard_changes_title">放弃更改?</string>
+    <string name="form_sheet_close">关闭</string>
     <string name="import_cancelled">模型导入已取消</string>
     <string name="import_cancelling">正在取消模型导入</string>
     <string name="import_failed">模型导入失败</string>

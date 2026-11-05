@@ -208,6 +208,10 @@
     <string name="download_source_unavailable">لا يوجد تطبيق يمكنه فتح صفحة مصدر النموذج</string>
     <string name="download_succeeded">اكتمل التنزيل والتحقق: %1$s (%2$s). يمكنك استيراده الآن أو الاحتفاظ بالملف الخارجي لاحقا.</string>
     <string name="download_succeeded_toast">اكتمل تنزيل النموذج والتحقق منه</string>
+    <string name="form_discard_changes_confirm">تجاهل</string>
+    <string name="form_discard_changes_message">ستفقد التغييرات غير المحفوظة.</string>
+    <string name="form_discard_changes_title">تجاهل التغييرات?</string>
+    <string name="form_sheet_close">إغلاق</string>
     <string name="import_cancelled">تم إلغاء استيراد النموذج</string>
     <string name="import_cancelling">جار إلغاء استيراد النموذج</string>
     <string name="import_failed">فشل استيراد النموذج</string>

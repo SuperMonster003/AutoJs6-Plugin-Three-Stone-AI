@@ -190,7 +190,7 @@ internal object OpenAiCompatibleRequestFactory {
                 require(maximumOutputTokens > 0) { "Online AI maximum output tokens must be positive" }
                 addProperty("max_tokens", maximumOutputTokens)
             }
-            // D73 / D90: low, medium, high or xhigh; MAX is sent as xhigh and DEFAULT omits the field.
+            // D73 / D90 (Q12 = A): low ... max capped per model family; DEFAULT omits the field.
             OnlineAiEffortSupport.wireValue(normalized.provider.protocol, normalized.modelId, turn.effort)
                 ?.let { effort -> addProperty("reasoning_effort", effort) }
             turn.samplingOptions?.let { sampling ->

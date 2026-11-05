@@ -132,19 +132,42 @@ class GenerationEffortRequestTest {
             GenerationEffort.MEDIUM to "medium",
             GenerationEffort.HIGH to "high",
             GenerationEffort.XHIGH to "xhigh",
-            GenerationEffort.MAX to "xhigh",
+            GenerationEffort.MAX to "max",
         )
         listOf(OnlineAiProvider.OPENAI, OnlineAiProvider.OPENAI_COMPATIBLE, OnlineAiProvider.OPENROUTER).forEach { provider ->
             expected.forEach { (effort, wire) ->
-                val profile = profile(provider, "https://example.com/v1", "gpt-6.1-sol")
-                val turn = request(effort = effort, fast = true)
-                OpenAiCompatibleRequestFactory.prepare(profile, listOf(turn.prompt), turn, key()).use { prepared ->
-                    val json = prepared.request.bodyJson()
+                assertEquals("$provider $effort", wire, openAi(provider, "gpt-6.1-sol", effort))
+            }
+        }
+    }
 
-                    assertEquals("$provider $effort", wire, json.get("reasoning_effort")?.asString)
-                    assertFalse(json.has("speed"))
-                    assertNull(prepared.request.header("anthropic-beta"))
-                }
+    @Test
+    fun openAiCompatibleCapsEffortPerModel() {
+        val cases = listOf(
+            Triple("gpt-6.1-sol", GenerationEffort.MAX, "max"),
+            Triple("gpt-6-astra", GenerationEffort.MAX, "max"),
+            Triple("gpt-6.1-terra", GenerationEffort.XHIGH, "xhigh"),
+            Triple("gpt-5.6", GenerationEffort.MAX, "max"),
+            Triple("gpt-5.6-terra", GenerationEffort.MAX, "max"),
+            Triple("openai/gpt-6.1-sol", GenerationEffort.MAX, "max"),
+            Triple("GPT-6-Luna", GenerationEffort.MAX, "max"),
+            Triple("gpt-5.5", GenerationEffort.MAX, "xhigh"),
+            Triple("gpt-5.4-mini", GenerationEffort.MAX, "xhigh"),
+            Triple("gpt-5.3-codex", GenerationEffort.MAX, "xhigh"),
+            Triple("gpt-5.2", GenerationEffort.XHIGH, "xhigh"),
+            Triple("gpt-5.1-codex-max", GenerationEffort.MAX, "xhigh"),
+            Triple("gpt-5.1", GenerationEffort.XHIGH, "high"),
+            Triple("gpt-5.1-codex", GenerationEffort.MAX, "high"),
+            Triple("gpt-5", GenerationEffort.MAX, "high"),
+            Triple("gpt-5-mini", GenerationEffort.XHIGH, "high"),
+            Triple("o3", GenerationEffort.MAX, "high"),
+            Triple("o4-mini", GenerationEffort.LOW, "low"),
+            Triple("deepseek-reasoner", GenerationEffort.MAX, "xhigh"),
+            Triple("qwen/qwq-32b", GenerationEffort.XHIGH, "xhigh"),
+        )
+        cases.forEach { (model, effort, wire) ->
+            listOf(OnlineAiProvider.OPENAI_COMPATIBLE, OnlineAiProvider.OPENROUTER).forEach { provider ->
+                assertEquals("$provider $model $effort", wire, openAi(provider, model, effort))
             }
         }
     }
@@ -189,6 +212,18 @@ class GenerationEffortRequestTest {
             listOf(GenerationEffort.LOW, GenerationEffort.MEDIUM, GenerationEffort.HIGH, GenerationEffort.XHIGH),
             OnlineAiEffortSupport.levels(OnlineAiProtocol.OPENAI_COMPATIBLE, "anything"),
         )
+        assertEquals(
+            GenerationEffort.entries - GenerationEffort.DEFAULT,
+            OnlineAiEffortSupport.levels(OnlineAiProtocol.OPENAI_COMPATIBLE, "gpt-6.1-sol"),
+        )
+        assertEquals(
+            listOf(GenerationEffort.LOW, GenerationEffort.MEDIUM, GenerationEffort.HIGH, GenerationEffort.XHIGH),
+            OnlineAiEffortSupport.levels(OnlineAiProtocol.OPENAI_COMPATIBLE, "gpt-5.5"),
+        )
+        assertEquals(
+            listOf(GenerationEffort.LOW, GenerationEffort.MEDIUM, GenerationEffort.HIGH),
+            OnlineAiEffortSupport.levels(OnlineAiProtocol.OPENAI_COMPATIBLE, "o3-mini"),
+        )
         assertTrue(OnlineAiEffortSupport.levels(OnlineAiProtocol.ANTHROPIC_MESSAGES, "claude-sonnet-4-5").isEmpty())
         assertTrue(OnlineAiEffortSupport.supportsFast(OnlineAiProtocol.ANTHROPIC_MESSAGES))
         assertFalse(OnlineAiEffortSupport.supportsFast(OnlineAiProtocol.OPENAI_COMPATIBLE))
@@ -212,6 +247,17 @@ class GenerationEffortRequestTest {
         return AnthropicMessagesProtocolAdapter.prepare(profile, listOf(turn.prompt), turn, key()).use { prepared ->
             val request = prepared.request
             request.bodyJson() to listOf("anthropic-beta", "anthropic-version").associateWith(request::header)
+        }
+    }
+
+    private fun openAi(provider: OnlineAiProvider, modelId: String, effort: GenerationEffort?): String? {
+        val profile = profile(provider, "https://example.com/v1", modelId)
+        val turn = request(effort = effort, fast = true)
+        return OpenAiCompatibleRequestFactory.prepare(profile, listOf(turn.prompt), turn, key()).use { prepared ->
+            val json = prepared.request.bodyJson()
+            assertFalse(json.has("speed"))
+            assertNull(prepared.request.header("anthropic-beta"))
+            json.get("reasoning_effort")?.asString
         }
     }
 

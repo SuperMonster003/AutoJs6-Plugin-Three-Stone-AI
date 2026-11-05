@@ -59,12 +59,15 @@ internal object OnlineAiEffortSupport {
     )
     private const val ANTHROPIC_HIGH_CEILING = "claude-opus-4-5"
     private const val ANTHROPIC_FAST_GA = "claude-opus-5-5"
-    private val OPENAI_LEVELS = listOf(
-        GenerationEffort.LOW,
-        GenerationEffort.MEDIUM,
-        GenerationEffort.HIGH,
-        GenerationEffort.XHIGH,
-    )
+    /**
+     * OpenAI-compatible tiers (D90, revised 2026-11-05 by Q12 = A). The GPT-5.6 and GPT-6 families
+     * document reasoning_effort "max"; GPT-5.5 / 5.4 / 5.3-codex / 5.2 and gpt-5.1-codex-max stop at
+     * "xhigh"; GPT-5, GPT-5.1 and the o-series stop at "high". Unknown models (DeepSeek, proxy-only
+     * models) keep the earlier LOW - XHIGH table so their behavior does not change.
+     */
+    private val OPENAI_MAX_FAMILIES = listOf("gpt-5.6", "gpt-6")
+    private val OPENAI_XHIGH_CEILING = listOf("gpt-5.5", "gpt-5.4", "gpt-5.3", "gpt-5.2", "gpt-5.1-codex-max")
+    private val OPENAI_HIGH_CEILING_PREFIXES = listOf("gpt-5-", "gpt-5.1", "o1", "o3", "o4")
     private val GEMINI_LEVELS = listOf(GenerationEffort.LOW, GenerationEffort.MEDIUM, GenerationEffort.HIGH)
     private val GEMINI_WITHOUT_LEVELS = listOf("gemini-1.", "gemini-2.0")
 
@@ -78,7 +81,12 @@ internal object OnlineAiEffortSupport {
                 ANTHROPIC_WITHOUT_XHIGH.any(model::startsWith) -> ALL_LEVELS - GenerationEffort.XHIGH
                 else -> ALL_LEVELS
             }
-            OnlineAiProtocol.OPENAI_COMPATIBLE -> OPENAI_LEVELS
+            OnlineAiProtocol.OPENAI_COMPATIBLE -> when {
+                OPENAI_MAX_FAMILIES.any(model::startsWith) -> ALL_LEVELS
+                OPENAI_XHIGH_CEILING.any(model::startsWith) -> ALL_LEVELS - GenerationEffort.MAX
+                model == "gpt-5" || OPENAI_HIGH_CEILING_PREFIXES.any(model::startsWith) -> ALL_LEVELS.take(3)
+                else -> ALL_LEVELS - GenerationEffort.MAX
+            }
             OnlineAiProtocol.GEMINI_GENERATE_CONTENT -> when {
                 GEMINI_WITHOUT_LEVELS.any(model::startsWith) -> emptyList()
                 model.startsWith("gemini-3-pro-preview") -> listOf(GenerationEffort.LOW, GenerationEffort.HIGH)

@@ -8,6 +8,8 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetIds
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLimits
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiEffortSupport
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProtocol
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -84,6 +86,15 @@ class ModelPickerPolicyTest {
         assertEquals(GenerationEffort.XHIGH, ModelPickerPolicy.highlightedEffort(gpt, GenerationEffort.MAX))
         assertEquals(GenerationEffort.DEFAULT, ModelPickerPolicy.highlightedEffort(gpt, null))
         assertEquals(GenerationEffort.HIGH, ModelPickerPolicy.highlightedEffort(opus, GenerationEffort.HIGH))
+    }
+
+    @Test
+    fun `gpt-6 targets from the support table offer max (Q12)`() {
+        val levels = OnlineAiEffortSupport.levels(OnlineAiProtocol.OPENAI_COMPATIBLE, "gpt-6.1-sol")
+        val sol = remoteTarget(PROFILE_B, "gpt-6.1-sol", "gpt-6.1-sol", openAi.copy(effortLevels = levels))
+
+        assertEquals(GenerationEffort.MAX, ModelPickerPolicy.effortChoices(sol).last())
+        assertEquals(GenerationEffort.MAX, ModelPickerPolicy.highlightedEffort(sol, GenerationEffort.MAX))
     }
 
     private fun searchText(target: AiTarget): String =

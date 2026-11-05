@@ -500,13 +500,22 @@ P7 导出 Markdown / 长图 (D78 第 4 项, D83)
 
 P8 发布 1.6.0
 
-- [ ] P8.1 十语言 changelog (通俗文案), VERSION_NAME 1.6.0, README 功能说明 (附件, effort / fast, 设置页) 与权限说明核对.
-- [ ] P8.2 发布门: 单测全绿; 仪器测试在 XQ-DQ72 通过; XQ-DQ72 与 OnePlus 63751f63 (ColorOS) 正式包冒烟; 发布与索引登记.
-- 依赖: P1 - P7 (或按 Q11 的切点提前).
+Q11 = A: 1.6.0 = P1 - P3 (生成协调器与硬取消, effort / fast 与模型切换器面板, 思考过程卡片); P4 - P7 归 1.7.0, 由 P9 发布.
+
+- [ ] P8.1 十语言 changelog (通俗文案), VERSION_NAME 1.6.0, README 功能说明 (effort / fast, 模型切换器面板, 思考卡片, 生成不随界面重建中断与硬取消, 历史格式 v6; 原文的 "附件, 设置页" 划归 1.7.0, 见 P9.1) 与权限说明核对.
+- [ ] P8.2 发布门: 单测全绿; 仪器测试在 XQ-DQ72 通过; XQ-DQ72 与 OnePlus 63751f63 (ColorOS) 正式包冒烟; 发布与索引登记. 发布前先补 Anthropic 真机两轮 (P2.6 fast, P3 思考卡片), 维护者额度预计 2026-11-11 恢复.
+- 备注 (2026-11-05 15:5x, 维护者拍板 "先做 P8.1 准备"): P8.1 提交在额度恢复前完成, released_date 保留占位 2026/11/05; 发布日再单独提交一笔 (10 语言 released_date 改为实际发布日并重新生成文档, VERSION_BUILD 届时递增), tag v1.6.0 指向这笔日期提交, 不指向 P8.1 提交. 若 Anthropic 补测发现请求形状要改, 修正提交 (D95 起) 也排在 tag 之前.
+- 依赖: P1 - P3 (Q11 = A).
+
+P9 发布 1.7.0 (P4 - P7, Q11 = A)
+
+- [ ] P9.1 十语言 changelog 的 v1.7.0 条目 (P4 卡新建, 之后各卡随卡写入, 通俗文案), VERSION_NAME 1.7.0, README 功能说明 (附件, 设置页重组, 消息分支, 导出) 与权限说明核对 (P7 新增 FileProvider 只暴露 cache/share).
+- [ ] P9.2 发布门同 P8: 单测全绿; 仪器测试在 XQ-DQ72 通过; XQ-DQ72 与 OnePlus 63751f63 (ColorOS) 正式包冒烟; 发布与索引登记.
+- 依赖: P8 (1.6.0 已发布), P4 - P7.
 
 ### 4. 顺序与批次
 
-P0 -> P1 -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8, 每次只跑一张卡 (D69). 调度会话可把 P1 拆成 P1a (协调器) 与 P1b (硬取消 + 探针) 两张顺序卡, 也可在 P3 之后插入 P5. 每张卡完成时子会话把勾选, 新决策 (D84 起) 与新待决 (Q12 起) 写回本节与看板.
+P0 -> P1 -> P2 -> P3 -> P8 -> P4 -> P5 -> P6 -> P7 -> P9, 每次只跑一张卡 (D69; 原顺序 P0 -> P1 -> ... -> P7 -> P8, 2026-11-05 按 Q11 = A 改). 单 master 分支: P8 发布 (打 tag) 前 P4 不开工, 避免半成品进 1.6.0. 调度会话可把 P1 拆成 P1a (协调器) 与 P1b (硬取消 + 探针) 两张顺序卡, 也可在 P3 之后插入 P5. 每张卡完成时子会话把勾选, 新决策 (D84 起) 与新待决 (Q12 起) 写回本节与看板.
 
 ### 5. 待决事项 (Q9 起)
 
@@ -514,15 +523,15 @@ P0 -> P1 -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8, 每次只跑一张卡 (D69).
 - Q10 新会话默认目标: 2026-11-02 在 1.4.1 上观察到新会话默认目标是 claude-opus-5-5 而不是资料默认模型 claude-fable-5-1; P2 子会话排查是 "上次使用" 记忆, 资料默认模型设置还是目录顺序; 若是缺陷则修并记决策. 已决 (P2.5 子会话核实, 2026-11-05): 来源是资料默认模型设置, 不是 "上次使用" 记忆, 也不是目录顺序. 新会话的默认目标就是默认资料的 "默认模型" 字段; XQ-DQ72 上默认资料 Anthropic 的模型列表为 [claude-opus-5-5, claude-fable-5-1], 默认模型为 claude-opus-5-5 (run-as 只读取证). 原因是资料编辑器新建 Anthropic 资料时按内置目录预填默认模型 claude-opus-5-5 (1.4.1 与当前一致), 之后添加 claude-fable-5-1 不会改默认模型; 默认目标逻辑自 1.4.1 未变, 不算缺陷. 维护者要以 fable 为默认, 在资料里把默认模型改为 claude-fable-5-1 即可. 排查中发现并修复一个关联缺口: 改默认模型后回到已打开的空会话, 目标不跟随 (D92).
 - Q12 已决 (2026-11-05 14:2x, 维护者选 A 按模型分档并发 max; 调度会话多来源核实 max 是 gpt-5.6 / gpt-6 系列的正式档位, 原推荐的 "官方最高档是 xhigh" 有误; P3 子会话落地, 分档表与出处见 D90). 原问题: OpenAI 兼容的 MAX 是否改发 max (P2, 不阻塞): 选项 (a) 保持发 xhigh (推荐, 已实施): 符合 D73 / D90, 官方文档列出的最高档是 xhigh; (b) 发 max: 个别代理也许接受, 官方接口会拒绝. 影响 P2.2 (OnlineAiEffortSupport 的 OpenAI 支持表). 改选返工量: 支持表 1 行 + 单测 1 项.
 - Q13 已决 (2026-11-05 14:2x, 维护者选 A 1.6.0 保持现状, 未改动). 原问题: 资料第一个模型改变时裸目标 ID 的含义漂移 (P2.5 排查中发现, 不阻塞): 资料的第一个模型用裸 ID profile:<资料 id>, 其他模型用 profile:<资料 id>.model.<哈希>; 维护者调整模型顺序使第一个模型改变后, 裸 ID 指向新的第一个模型, refreshTargetCatalog 会把有消息的会话的目标快照静默更新为新模型并保存. 选项 (a) 1.6.0 保持现状 (推荐, 未改动): 只在调整模型顺序时出现, 改目标 ID 方案牵涉 Binder 已发布的目标 ID; (b) 有消息的会话遇到模型 ID 变化时不再静默更新, 改为提示重新选择目标: 约半天, 影响 ConversationTargetPolicy 与 ChatActivity; (c) 目标 ID 一律带模型哈希: 需兼容已发布的 Binder 目标 ID 与历史, 约 1 - 2 天. 影响条目: 无 (可放进 P4 之后任意卡). 改选返工量见各选项.
-- Q14 Opus 4.6 - 4.8 / Sonnet 4.6 是否也请求思考摘要 (P3.1 发现, 不阻塞): 这些模型不发 thinking 时不思考, Claude 5+ 默认就思考. 选项 (a) 不发 (推荐, 已实施): 行为与费用不变, 这些模型没有思考卡片; (b) 聊天页对它们也发 adaptive + summarized: 有思考卡片, 但每轮开始思考, 用时与输出 token 增加 (思考按输出计费). 影响条目: P3.1 (D93 第 1 项). 改选返工量: 约 15 分钟 (anthropicSummarizedThinking 增加这些前缀并补单测), 不涉及存储与界面.
-- Q15 Gemini 2.5 是否继续发 thinkingLevel (P3.1 核实 D89 时发现, 不阻塞, 未真机验证): generateContent API 参考页写 thinkingLevel "用于 Gemini 3 之前的模型会报错", 思考指南的模型表却列出 gemini-2.5-pro / 2.5-flash / 2.5-flash-lite 支持 low / medium / high (该页示例都是 Interactions API). 只在用户选了非 DEFAULT 的 effort 时发送, DEFAULT 不发. 选项 (a) 保持现状 (推荐, 未改动): 等有 Gemini 资料时真机一轮确认, 若返回 400 再改; (b) gemini-2.5 不发 thinkingLevel (仍发 includeThoughts), 2.5 的 effort 选项行隐藏: 约半小时 + 单测. 影响条目: P2.2 (D89). 出处: https://aistudio.google.com/api-reference/generate-content , https://aistudio.google.com/docs/thinking
-- Q11 1.6.x 切点: D68 允许分批发布; 推荐 P1 - P3 完成后发 1.6.0 (生成不中断 + effort / fast + 思考卡片), P4 - P7 发 1.7.0; 由调度会话在 P3 完成时请维护者拍板.
+- Q14 已决 (2026-11-05 15:3x, 维护者选 A 不发, 已实施, 无改动). 原问题: Opus 4.6 - 4.8 / Sonnet 4.6 是否也请求思考摘要 (P3.1 发现, 不阻塞): 这些模型不发 thinking 时不思考, Claude 5+ 默认就思考. 选项 (a) 不发 (推荐, 已实施): 行为与费用不变, 这些模型没有思考卡片; (b) 聊天页对它们也发 adaptive + summarized: 有思考卡片, 但每轮开始思考, 用时与输出 token 增加 (思考按输出计费). 影响条目: P3.1 (D93 第 1 项). 改选返工量: 约 15 分钟 (anthropicSummarizedThinking 增加这些前缀并补单测), 不涉及存储与界面.
+- Q15 已决 (2026-11-05 15:3x, 维护者选 A 保持现状, 未改动; 有 Gemini 资料时真机一轮, 返回 400 再改). 原问题: Gemini 2.5 是否继续发 thinkingLevel (P3.1 核实 D89 时发现, 不阻塞, 未真机验证): generateContent API 参考页写 thinkingLevel "用于 Gemini 3 之前的模型会报错", 思考指南的模型表却列出 gemini-2.5-pro / 2.5-flash / 2.5-flash-lite 支持 low / medium / high (该页示例都是 Interactions API). 只在用户选了非 DEFAULT 的 effort 时发送, DEFAULT 不发. 选项 (a) 保持现状 (推荐, 未改动): 等有 Gemini 资料时真机一轮确认, 若返回 400 再改; (b) gemini-2.5 不发 thinkingLevel (仍发 includeThoughts), 2.5 的 effort 选项行隐藏: 约半小时 + 单测. 影响条目: P2.2 (D89). 出处: https://aistudio.google.com/api-reference/generate-content , https://aistudio.google.com/docs/thinking
+- Q11 已决 (2026-11-05 15:3x, 维护者选 A: P1 - P3 发 1.6.0, P4 - P7 发 1.7.0 (P9); P8 发布前先补 Anthropic 真机两轮, 期间 P4 不开工; 15:5x 又定额度恢复前先做 P8.1 准备, 见 P8 备注). 原问题: 1.6.x 切点: D68 允许分批发布; 推荐 P1 - P3 完成后发 1.6.0 (生成不中断 + effort / fast + 思考卡片), P4 - P7 发 1.7.0; 由调度会话在 P3 完成时请维护者拍板.
 
 ### 6. 测试与证据要求
 
-- 每张代码卡: 单测全绿 (当前 572 项为基线, P3 完成时), check_repository --pending-commit 通过, VERSION_BUILD 按规则递增, 10 语言 changelog 条目随卡写入 (release_date 留给 P8).
+- 每张代码卡: 单测全绿 (当前 572 项为基线, P8.1 完成时, 与 P3 相同), check_repository --pending-commit 通过, VERSION_BUILD 按规则递增, 10 语言 changelog 条目随卡写入 (release_date 留给 P8).
 - 真机以 XQ-DQ72 (QV770340J7) 为主, 用 .python/device_chat_probe.py 取证 (输出只留通过 / 失败与关键数值); Anthropic 真机验证受维护者额度限制, 额度恢复前以单测 + ScriptedAiBackend 仪器测试为证据, 并在看板登记 "待补 Anthropic 真机".
-- 发布门 (P8): 仪器测试在一台真机通过; XQ-DQ72 与 ColorOS 设备正式包冒烟; README 的网络与数据权限说明准确.
+- 发布门 (P8 / P9): 仪器测试在一台真机通过; XQ-DQ72 与 ColorOS 设备正式包冒烟; README 的网络与数据权限说明准确.
 
 ### 7. 子会话约定
 

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_settings_generation_anthropic_ignored">Los modelos de Anthropic ignoran la temperatura, Top K y Top P.</string>
+    <string name="chat_target_fast_badge">Rápido</string>
+    <string name="effort_default">Predeterminado</string>
+    <string name="effort_high">Alto</string>
+    <string name="effort_low">Bajo</string>
+    <string name="effort_max">Máximo</string>
+    <string name="effort_medium">Medio</string>
+    <string name="effort_xhigh">Muy alto</string>
+    <string name="model_picker_effort">Esfuerzo de esta conversación</string>
+    <string name="model_picker_empty">No hay modelos coincidentes</string>
+    <string name="model_picker_fast">Modo rápido en esta conversación</string>
+    <string name="model_picker_favorite">Añadir a favoritos</string>
+    <string name="model_picker_favorites">Favoritos</string>
+    <string name="model_picker_local">En este dispositivo</string>
+    <string name="model_picker_manage">Administrar modelos y servicios</string>
+    <string name="model_picker_search">Buscar modelos</string>
+    <string name="model_picker_tag_fast">Rápido</string>
+    <string name="model_picker_tag_reasoning">Razonamiento</string>
+    <string name="model_picker_tag_vision">Entrada de imágenes</string>
+    <string name="model_picker_unfavorite">Quitar de favoritos</string>
+    <string name="online_ai_default_effort">Esfuerzo predeterminado</string>
+    <string name="online_ai_default_effort_help">Las conversaciones nuevas empiezan en este nivel. Si el modelo no admite un nivel, se usa el nivel admitido más cercano por debajo.</string>
+    <string name="online_ai_fast_mode">Modo rápido de forma predeterminada</string>
+    <string name="online_ai_fast_mode_help">Solo Anthropic. Las respuestas llegan antes a un precio mayor. Los modelos sin modo rápido devuelven un error.</string>
+</resources>

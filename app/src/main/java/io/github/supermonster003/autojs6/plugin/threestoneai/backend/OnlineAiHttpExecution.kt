@@ -65,6 +65,8 @@ internal class OnlineAiHttpExecution private constructor(
         return baseCapabilities.copy(
             structuredJson = OnlineAiProviderCatalog.templateFor(normalized.provider).structuredJson,
             vision = normalized.modelId in normalized.visionModelIds,
+            effortLevels = OnlineAiEffortSupport.levels(normalized.provider.protocol, normalized.modelId),
+            fastMode = OnlineAiEffortSupport.supportsFast(normalized.provider.protocol),
         )
     }
 

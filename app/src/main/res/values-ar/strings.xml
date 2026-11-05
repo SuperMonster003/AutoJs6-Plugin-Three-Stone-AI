@@ -171,7 +171,6 @@
     <string name="chat_target_locality_local">محلي</string>
     <string name="chat_target_selector_empty_message">أعد نموذجا محليا أو خدمة عبر الإنترنت ثم عد إلى هنا لاختيارها.</string>
     <string name="chat_target_selector_empty_title">لا توجد أهداف ذكاء اصطناعي متاحة</string>
-    <string name="chat_target_selector_item">%1$s | ⁨%2$s⁩\n⁨%3$s⁩ | ⁨%4$s⁩%5$s</string>
     <string name="chat_target_start_new">بدء محادثة جديدة</string>
     <string name="chat_target_status_format">%1$s | ⁨%2$s⁩ | ⁨%3$s⁩ | ⁨%4$s⁩</string>
     <string name="chat_target_unavailable_description">لا يمكن استخدام %1$s بالإعداد الحالي. اختر هدفا آخر أو حدث إعداداته.</string>

@@ -397,7 +397,7 @@ Ultracode 是 Claude Code 工具自身的多代理编排设置, 不是 Anthropic
 
 调度: 看板 D:/idea-projects/.claude/boards/3-stone.md (主题 3-stone), 由 dispatch 环境的调度会话按阶段派 Opus 5.5 子会话; 子会话登记的新决策从 D84 起, 待决从 Q12 起.
 
-### 2. 已定决策 (D68 - D87)
+### 2. 已定决策 (D68 - D92)
 
 | 编号 | 决策 | 内容 |
 |---|---|---|
@@ -421,6 +421,11 @@ Ultracode 是 Claude Code 工具自身的多代理编排设置, 不是 Anthropic
 | D85 | 单一观察者 (P1) | 协调器同一时刻只服务一个附着的聊天页: attach 替换旧观察者, detach 只解除自己. 多窗口同时开两个聊天页时以后附着者为准, 前者回到前台时重新附着并拿快照 |
 | D86 | 进程内只有一个生成 (P1) | 发送新一轮前, 协调器先以 reason = superseded 硬取消正在生成的回复 (包括其他会话在后台的回复), 被取代的回复按 STOPPED 保存 |
 | D87 | 硬取消的执行线程与诊断 (P1) | 根因: 旧的停止把 close 排在同一单线程执行器里阻塞的 call.execute() 之后, 界面只是忽略回调, HTTP 请求一直跑到结束并计费. 现在 cancelAndClose 在新的守护线程 three-stone-ai-chat-cancel 上调用; AiBackendSession 新增默认返回 null 的 cancellationDiagnostics(), OnlineAiSession 报告 httpCall = cancelled / not-cancelled / none 供日志取证. Binder / AIDL 不变 (D73 / D76) |
+| D88 | Anthropic effort 支持表与降级 (P2, 2026-11-05) | 按 2026-11-05 的 Anthropic 官方文档复核 D73, 文档为准: output_config.effort 不需要 beta 头; 不支持 effort 的旧模型 (claude-3 系列, claude-opus-4-0 / 4-1, claude-sonnet-4-0 / 4-5, claude-haiku-4-5) 不发该字段; claude-opus-4-5 只有 low / medium / high; claude-opus-4-6, claude-sonnet-4-6, claude-mythos-preview 没有 xhigh; 其他模型五档全有. 模型 ID 先去掉代理前缀 (取最后一个 / 之后) 并转小写再按前缀匹配. 统一降级规则 (三协议共用): 取不高于所选档位的最高支持档位, 没有时取最低支持档位; 面板高亮与目标条徽标都显示降级后的档位. fast: claude-opus-5-5 系列只发 speed: "fast", 其他 Anthropic 模型加 anthropic-beta: fast-mode-2026-02-01 (与 D74 一致) |
+| D89 | Gemini thinkingLevel 按模型 (P2) | 与 D73 原文 "low (LOW) / high (其余)" 不同, 以官方文档为准: thinkingConfig.thinkingLevel 发 low / medium / high (XHIGH / MAX 降为 high); gemini-3-pro-preview 只有 low / high (MEDIUM 降为 low); gemini-3.1-flash-lite-image 只有 high; gemini-1.x 与 gemini-2.0 不发 (它们用 thinkingBudget, 本期不做) |
+| D90 | OpenAI 兼容 reasoning_effort (P2) | 发 low / medium / high / xhigh, MAX 按 D73 发 xhigh; 不发 minimal / none. 是否改发 max 见 Q12 |
+| D91 | 历史格式 v6 编码 (P2, D81 的落地) | 每个会话在上下文状态之后, 每条消息在目标之后各写一个属性表: 大端 Int 条目数 (0 - 64), 条目按键排序, 键为 [a-z][a-z0-9_.]* 且 <= 32 字节 (表内唯一, 重复或格式错误按损坏处理), 值为大端 Int 长度 (0 - 64 KiB) + 原始字节. 读取时跳过未知键和无法解析的已知键值 (例如将来新增的 effort 档位), 跳过的条目不回写. 会话键: effort = GenerationEffort.persistentId (ASCII), fast = 1 字节 (0 关 / 1 开); 键不存在表示用资料默认值. 消息键暂无. 继续读 v4 / v5. 规则同时写在 ConversationHistoryProperties.kt 注释里 |
+| D92 | 空会话跟随新的默认目标 (P2.5, Q10) | 刷新目标目录时, 若当前会话还没有消息且仍停在旧的默认目标上, 改为新的默认目标 (例如在资料里把默认模型改成 claude-fable-5-1 后回到已打开的新会话); 用户在空会话里手动选过其他目标时保持不变; 有消息的会话不受影响 (ConversationTargetPolicy.afterCatalogRefresh) |
 
 ### 3. 阶段条目
 
@@ -444,12 +449,14 @@ P1 生成协调器与硬取消 (需求 6, D77)
 
 P2 effort / fast 与模型切换器面板 (需求 2 / 3, D72 - D75, D78 第 1 项)
 
-- [ ] P2.1 OnlineAiProfile 新增 defaultEffort 与 fastMode (资料编辑器增加两个字段; 导入 / 导出 JSON 兼容旧文件); GenerationRequest 新增 effort / fast (Binder 路径为 null).
-- [ ] P2.2 三个协议适配器按 D73 / D74 写请求体与请求头; Anthropic 按 D75 不再发采样参数; 单测覆盖每个 effort 值与 fast 的 GA / 非 GA 分支.
-- [ ] P2.3 历史格式 v6 (D81) 与会话级 effort / fast 覆盖; 兼容读 v4 / v5 的单测.
-- [ ] P2.4 模型切换器底部面板: 搜索, 按资料 / 提供方分组, 收藏置顶, 行内标签 (图片输入 / 推理 / fast), 当前会话的 effort 选项行与 fast 开关 (只在协议支持时显示), 底部 "管理模型与服务"; 目标条显示 effort 与 fast 徽标.
-- [ ] P2.5 排查 Q10 (新会话默认目标).
-- [ ] P2.6 真机: XQ-DQ72 上切换 effort / fast 后发送, 请求体经单测证实; Codex 资料用 reasoning_effort 发送一轮完整回复; Anthropic 资料额度恢复后补 fast 一轮.
+- [x] P2.1 OnlineAiProfile 新增 defaultEffort 与 fastMode (资料编辑器增加两个字段; 导入 / 导出 JSON 兼容旧文件); GenerationRequest 新增 effort / fast (Binder 路径为 null).
+- [x] P2.2 三个协议适配器按 D73 / D74 写请求体与请求头; Anthropic 按 D75 不再发采样参数; 单测覆盖每个 effort 值与 fast 的 GA / 非 GA 分支.
+- [x] P2.3 历史格式 v6 (D81) 与会话级 effort / fast 覆盖; 兼容读 v4 / v5 的单测.
+- [x] P2.4 模型切换器底部面板: 搜索, 按资料 / 提供方分组, 收藏置顶, 行内标签 (图片输入 / 推理 / fast), 当前会话的 effort 选项行与 fast 开关 (只在协议支持时显示), 底部 "管理模型与服务"; 目标条显示 effort 与 fast 徽标.
+- [x] P2.5 排查 Q10 (新会话默认目标).
+- 证据 (P2.1 - P2.5, 2026-11-05): (1) 资料 JSON schema 5 新增 defaultEffort (default / low / medium / high / xhigh / max) 与 fastMode; schema 3 / 4 的旧文件缺字段时按 DEFAULT / false 读入, schema 5 两个字段必须同时存在且取值已知; 非 Anthropic 资料的 fastMode 归一化为 false. 资料编辑器新增 "默认 effort" 选择项与 "默认开启 fast 模式" 开关 (只对 Anthropic 显示). GenerationRequest 新增 effort / fast, 默认 null, Binder 路径不设置, AIDL 不变. 新文件 backend/GenerationEffort.kt (GenerationEffort 与 OnlineAiEffortSupport 支持表, D88 - D90). (2) Anthropic: output_config.effort (与结构化输出的 output_config.format 合并), fast 写 speed: "fast", claude-opus-5-5 系列不带 beta 头, 其他模型加 anthropic-beta: fast-mode-2026-02-01; 一律不发 temperature / top_k / top_p (D75), 设置页 "输出长度与采样" 加注 "Anthropic 模型忽略此项". OpenAI 兼容: reasoning_effort, MAX 发 xhigh (D90). Gemini: generationConfig.thinkingConfig.thinkingLevel (D89). DEFAULT 三个协议都不发字段. 单测 GenerationEffortRequestTest 11 项 (每个 effort 值 x 三协议, 降级, 无 effort 的旧模型, fast 的 GA / 非 GA / 关闭, Anthropic 不发采样参数, 支持表), AnthropicMessagesProtocolTest 改为断言不发采样参数, OnlineAiProfilePolicyTest 3 项. (3) 历史格式 v6 (D91): 会话级与消息级属性表, 写会话键 effort / fast, 未知键与无法解析的值跳过; ConversationHistoryTest 新增 5 项 (读已发布的 v5 布局, 每个 effort / fast 覆盖往返, 跳过未知键, 已知键与未知键并存, 拒绝损坏的属性表), 原有 v4 兼容单测保持通过. 聊天页覆盖随历史保存, 新会话从资料默认值开始 (ChatActivity 的保存状态键 chatEffortOverride / chatFastOverride 保证旋转不丢). (4) 新文件 ModelPicker.kt: 底部面板只借鉴 RikkaHub 的设计 (搜索, 收藏置顶, 分组, 行内标签, 推理档位行), 未使用其代码 (AGPL-3.0); 收藏只存本机 (SharedPreferences model_picker); effort 选项行在目标支持 effort 时显示, fast 开关只在 Anthropic 目标显示, 高亮显示降级后实际发送的档位; 底部 "管理模型与服务" 打开现有 "模型" 设置页; 目标条在 effort 不是 DEFAULT 时显示档位徽标, fast 开启时显示 Fast 徽标, 本地 LiteRT 目标两者都不显示. 旧的对话框选择器 (TargetChoiceAdapter) 与字符串 chat_target_selector_item 已删除. 单测 ModelPickerPolicyTest 6 项. (5) Q10 结论见第 5 节, 关联修复 D92, 单测 ConversationTargetTest 1 项. 单测合计 555 项全绿 (基线 529).
+- [x] P2.6 真机: XQ-DQ72 上切换 effort / fast 后发送, 请求体经单测证实; Codex 资料用 reasoning_effort 发送一轮完整回复; Anthropic 资料额度恢复后补 fast 一轮.
+- 证据 (P2.6, 2026-11-05): 请求体由 GenerationEffortRequestTest 证实 (见上). 协调器每轮先写日志 "Generation start target=<目标> effort=<降级后实际发送的档位> fast=<true|false>" 供真机取证. device_chat_probe.py 适配底部面板 (--model 点包含该文字的可点按行, 首屏没有时经面板搜索框过滤) 并新增 --effort (在面板里选档位, 关闭面板后核对目标条徽标, 回复结束后核对日志档位与用量). 真机 XQ-DQ72 (QV770340J7, 调试包 VERSION_BUILD 309, Gboard 英文布局经维护者确认, 2026-11-05 14:0x): --model gpt-6.1-sol --effort high --expect complete --check-keep-screen-on, 目标 AIGoCode (Codex) | gpt-6.1-sol, 目标条显示 "高" 徽标; 回复 12 s 正常完成, 用量行 输入 4404 / 输出 192, 日志 effort=high fast=false 恰好 1 轮, actualOutputTokens=192 与用量行一致; 屏幕常亮生成中 true / 结束后 false; PASS. 强制停止后冷启动, 聊天页恢复同一会话, 目标仍为 Codex, "高" 徽标仍在 (覆盖经 v6 历史恢复). Anthropic fast 一轮按卡片要求未发送 (未用 Anthropic 资料发任何请求), 看板登记 "[维护者待办] 待补 Anthropic 真机: P2.6 fast 一轮".
 - 依赖: P1.
 
 P3 思考过程卡片 (D78 第 2 项, D79)
@@ -501,12 +508,14 @@ P0 -> P1 -> P2 -> P3 -> P4 -> P5 -> P6 -> P7 -> P8, 每次只跑一张卡 (D69).
 ### 5. 待决事项 (Q9 起)
 
 - Q9 思考内容的请求参数: Anthropic 5.x 默认自适应思考下是否需要 thinking.display = "summarized" 才返回摘要, 以及 output_config.effort 与 thinking 块能否同时发送; P3 子会话实施前按官方文档核实, 结论登记为 D84 起的决策. 推荐: 以官方文档为准, 文档未写明时先按 RikkaHub 的做法 (adaptive + summarized) 实测.
-- Q10 新会话默认目标: 2026-11-02 在 1.4.1 上观察到新会话默认目标是 claude-opus-5-5 而不是资料默认模型 claude-fable-5-1; P2 子会话排查是 "上次使用" 记忆, 资料默认模型设置还是目录顺序; 若是缺陷则修并记决策.
+- Q10 新会话默认目标: 2026-11-02 在 1.4.1 上观察到新会话默认目标是 claude-opus-5-5 而不是资料默认模型 claude-fable-5-1; P2 子会话排查是 "上次使用" 记忆, 资料默认模型设置还是目录顺序; 若是缺陷则修并记决策. 已决 (P2.5 子会话核实, 2026-11-05): 来源是资料默认模型设置, 不是 "上次使用" 记忆, 也不是目录顺序. 新会话的默认目标就是默认资料的 "默认模型" 字段; XQ-DQ72 上默认资料 Anthropic 的模型列表为 [claude-opus-5-5, claude-fable-5-1], 默认模型为 claude-opus-5-5 (run-as 只读取证). 原因是资料编辑器新建 Anthropic 资料时按内置目录预填默认模型 claude-opus-5-5 (1.4.1 与当前一致), 之后添加 claude-fable-5-1 不会改默认模型; 默认目标逻辑自 1.4.1 未变, 不算缺陷. 维护者要以 fable 为默认, 在资料里把默认模型改为 claude-fable-5-1 即可. 排查中发现并修复一个关联缺口: 改默认模型后回到已打开的空会话, 目标不跟随 (D92).
+- Q12 OpenAI 兼容的 MAX 是否改发 max (P2, 不阻塞): 选项 (a) 保持发 xhigh (推荐, 已实施): 符合 D73 / D90, 官方文档列出的最高档是 xhigh; (b) 发 max: 个别代理也许接受, 官方接口会拒绝. 影响 P2.2 (OnlineAiEffortSupport 的 OpenAI 支持表). 改选返工量: 支持表 1 行 + 单测 1 项.
+- Q13 资料第一个模型改变时裸目标 ID 的含义漂移 (P2.5 排查中发现, 不阻塞): 资料的第一个模型用裸 ID profile:<资料 id>, 其他模型用 profile:<资料 id>.model.<哈希>; 维护者调整模型顺序使第一个模型改变后, 裸 ID 指向新的第一个模型, refreshTargetCatalog 会把有消息的会话的目标快照静默更新为新模型并保存. 选项 (a) 1.6.0 保持现状 (推荐, 未改动): 只在调整模型顺序时出现, 改目标 ID 方案牵涉 Binder 已发布的目标 ID; (b) 有消息的会话遇到模型 ID 变化时不再静默更新, 改为提示重新选择目标: 约半天, 影响 ConversationTargetPolicy 与 ChatActivity; (c) 目标 ID 一律带模型哈希: 需兼容已发布的 Binder 目标 ID 与历史, 约 1 - 2 天. 影响条目: 无 (可放进 P4 之后任意卡). 改选返工量见各选项.
 - Q11 1.6.x 切点: D68 允许分批发布; 推荐 P1 - P3 完成后发 1.6.0 (生成不中断 + effort / fast + 思考卡片), P4 - P7 发 1.7.0; 由调度会话在 P3 完成时请维护者拍板.
 
 ### 6. 测试与证据要求
 
-- 每张代码卡: 单测全绿 (当前 517 项为基线), check_repository --pending-commit 通过, VERSION_BUILD 按规则递增, 10 语言 changelog 条目随卡写入 (release_date 留给 P8).
+- 每张代码卡: 单测全绿 (当前 555 项为基线, P2 完成时), check_repository --pending-commit 通过, VERSION_BUILD 按规则递增, 10 语言 changelog 条目随卡写入 (release_date 留给 P8).
 - 真机以 XQ-DQ72 (QV770340J7) 为主, 用 .python/device_chat_probe.py 取证 (输出只留通过 / 失败与关键数值); Anthropic 真机验证受维护者额度限制, 额度恢复前以单测 + ScriptedAiBackend 仪器测试为证据, 并在看板登记 "待补 Anthropic 真机".
 - 发布门 (P8): 仪器测试在一台真机通过; XQ-DQ72 与 ColorOS 设备正式包冒烟; README 的网络与数据权限说明准确.
 

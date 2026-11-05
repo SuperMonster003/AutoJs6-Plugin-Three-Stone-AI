@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_settings_generation_anthropic_ignored">Anthropic のモデルでは温度, Top K, Top P は無視されます.</string>
+    <string name="chat_target_fast_badge">高速</string>
+    <string name="effort_default">既定</string>
+    <string name="effort_high">高</string>
+    <string name="effort_low">低</string>
+    <string name="effort_max">最大</string>
+    <string name="effort_medium">中</string>
+    <string name="effort_xhigh">特高</string>
+    <string name="model_picker_effort">この会話の推論強度</string>
+    <string name="model_picker_empty">一致するモデルはありません</string>
+    <string name="model_picker_fast">この会話で高速モードを使う</string>
+    <string name="model_picker_favorite">お気に入りに追加</string>
+    <string name="model_picker_favorites">お気に入り</string>
+    <string name="model_picker_local">この端末</string>
+    <string name="model_picker_manage">モデルとサービスを管理</string>
+    <string name="model_picker_search">モデルを検索</string>
+    <string name="model_picker_tag_fast">高速</string>
+    <string name="model_picker_tag_reasoning">推論</string>
+    <string name="model_picker_tag_vision">画像入力</string>
+    <string name="model_picker_unfavorite">お気に入りから削除</string>
+    <string name="online_ai_default_effort">既定の推論強度</string>
+    <string name="online_ai_default_effort_help">新しい会話はこのレベルから始まります. モデルが対応しないレベルは, 下にある最も近い対応レベルに下がります.</string>
+    <string name="online_ai_fast_mode">既定で高速モードを使う</string>
+    <string name="online_ai_fast_mode_help">Anthropic のみ. 応答が速くなり, 料金は高くなります. 高速モードに対応しないモデルはエラーを返します.</string>
+</resources>

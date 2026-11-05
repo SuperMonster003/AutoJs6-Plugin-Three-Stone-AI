@@ -70,6 +70,11 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
                 generationConfig.addProperty("topK", sampling.topK)
                 generationConfig.addProperty("topP", sampling.topP)
             }
+            // D73 / D89: thinkingLevel low, medium or high per model; includeThoughts belongs to P3.
+            OnlineAiEffortSupport.wireValue(normalized.provider.protocol, normalized.modelId, turn.effort)
+                ?.let { effort ->
+                    generationConfig.add("thinkingConfig", JsonObject().apply { addProperty("thinkingLevel", effort) })
+                }
             turn.responseJsonSchema?.let { schema ->
                 generationConfig.addProperty("responseMimeType", "application/json")
                 generationConfig.add(

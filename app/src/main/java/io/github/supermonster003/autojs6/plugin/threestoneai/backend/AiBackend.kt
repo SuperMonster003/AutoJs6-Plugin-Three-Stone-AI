@@ -23,6 +23,10 @@ internal data class AiTargetCapabilities(
     val reasoning: Boolean,
     val tools: Boolean,
     val vision: Boolean = false,
+    /** Effort levels the target distinguishes, lowest first; empty hides effort controls (D73). */
+    val effortLevels: List<GenerationEffort> = emptyList(),
+    /** Whether the chat screen may offer the fast output mode for this target (D74). */
+    val fastMode: Boolean = false,
 )
 
 internal data class AiTargetLimits(
@@ -68,6 +72,10 @@ internal data class AiTarget(
     val capabilities: AiTargetCapabilities,
     val limits: AiTargetLimits,
     val executionProfiles: List<AiExecutionProfile>,
+    /** Profile default a new chat conversation starts from (D72); local targets keep DEFAULT. */
+    val defaultEffort: GenerationEffort = GenerationEffort.DEFAULT,
+    /** Profile fast-mode default a new chat conversation starts from (D72 / D74). */
+    val defaultFast: Boolean = false,
 ) {
     init {
         require(targetId.isNotBlank())
@@ -273,6 +281,13 @@ internal data class GenerationRequest(
     val responseJsonSchema: String? = null,
     val tools: List<GenerationToolDefinition> = emptyList(),
     val maximumToolRounds: Int = 0,
+    /**
+     * Chat-screen effort for this turn. Null (Binder requests, summaries, connection tests) and
+     * [GenerationEffort.DEFAULT] both omit every effort field (D73).
+     */
+    val effort: GenerationEffort? = null,
+    /** Chat-screen fast output mode. Null and false both omit the fast fields (D73 / D74). */
+    val fast: Boolean? = null,
 )
 
 /** Exact provider-side counters for one generation turn. */

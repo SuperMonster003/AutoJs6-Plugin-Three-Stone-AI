@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -15,6 +16,10 @@ internal data class StoredConversation(
     val target: ConversationTargetSnapshot?,
     val messages: List<ChatMessage>,
     val contextState: ConversationContextState = ConversationContextState.EMPTY,
+    /** Effort chosen for this conversation in the model switcher; null follows the profile (D72). */
+    val effortOverride: GenerationEffort? = null,
+    /** Fast mode chosen for this conversation in the model switcher; null follows the profile (D72). */
+    val fastOverride: Boolean? = null,
 ) {
     init {
         require(id.isNotBlank())
@@ -278,7 +283,7 @@ internal object ConversationHistoryCodec {
         return DataInputStream(ByteArrayInputStream(bytes)).use { input ->
             require(input.readInt() == MAGIC) { "Invalid conversation history magic" }
             val version = input.readInt()
-            require(version == VERSION || version == PUBLISHED_VERSION_WITHOUT_TRUNCATION) {
+            require(version in PUBLISHED_VERSION_WITHOUT_TRUNCATION..VERSION) {
                 "Unsupported conversation history version"
             }
             val count = input.readBoundedCount(
@@ -328,8 +333,10 @@ internal object ConversationHistoryCodec {
             }
             output.writeBoolean(message.truncated)
             output.writeNullableTarget(message.target)
+            ConversationHistoryProperties.write(output, emptyMap())
         }
         output.writeContextState(conversation.contextState)
+        ConversationHistoryProperties.write(output, ConversationHistoryProperties.conversationTable(conversation))
     }
 
     private fun readConversation(input: DataInputStream, version: Int): StoredConversation {
@@ -350,8 +357,12 @@ internal object ConversationHistoryCodec {
                 } else {
                     null
                 }
-                val truncated = version >= VERSION && input.readBoolean()
+                val truncated = version >= PUBLISHED_VERSION_WITH_TRUNCATION && input.readBoolean()
                 val messageTarget = input.readNullableTarget()
+                if (version >= VERSION) {
+                    // No message keys are known yet; later phases read theirs here (D91).
+                    ConversationHistoryProperties.read(input)
+                }
                 add(
                     ChatMessage(
                         id = messageId,
@@ -366,6 +377,7 @@ internal object ConversationHistoryCodec {
             }
         }
         val contextState = input.readContextState()
+        val properties = if (version >= VERSION) ConversationHistoryProperties.read(input) else emptyMap()
         return StoredConversation(
             id = id,
             title = title,
@@ -374,6 +386,8 @@ internal object ConversationHistoryCodec {
             target = target,
             messages = messages,
             contextState = contextState,
+            effortOverride = ConversationHistoryProperties.effortOverride(properties),
+            fastOverride = ConversationHistoryProperties.fastOverride(properties),
         )
     }
 
@@ -495,9 +509,14 @@ internal object ConversationHistoryCodec {
 
     const val MAXIMUM_FILE_BYTES = 32 * 1_024 * 1_024
     private const val MAGIC = 0x33534143 // 3SAC
-    private const val VERSION = 5
 
-    /** Shipped in 1.4.x: the same layout as [VERSION] without the per-message truncation flag. */
+    /** Adds message and conversation property tables ([ConversationHistoryProperties], roadmap D81 / D91). */
+    private const val VERSION = 6
+
+    /** Shipped in 1.5.x: the layout of [VERSION] without property tables. */
+    private const val PUBLISHED_VERSION_WITH_TRUNCATION = 5
+
+    /** Shipped in 1.4.x: the layout of version 5 without the per-message truncation flag. */
     private const val PUBLISHED_VERSION_WITHOUT_TRUNCATION = 4
     private const val MAXIMUM_SERIALIZED_MESSAGES_PER_CONVERSATION = 100_000
     private const val MAXIMUM_ID_BYTES = 128

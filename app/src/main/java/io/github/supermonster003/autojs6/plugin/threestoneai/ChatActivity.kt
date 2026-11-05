@@ -26,10 +26,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.ArrayAdapter
-import android.widget.AbsListView
 import android.widget.Button
-import android.widget.CheckedTextView
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -59,11 +56,13 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSe
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationMessage
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRole
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationStatistics
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiEffortSupport
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.AvailableLiteRtModelCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportState
@@ -122,6 +121,9 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var toolbar: Toolbar
     private lateinit var targetLocalityStatus: TextView
     private lateinit var targetStatus: TextView
+    private lateinit var targetEffortBadge: TextView
+    private lateinit var targetFastBadge: TextView
+    private val modelPickerFavorites by lazy { ModelPickerFavoritesStore(this) }
     private lateinit var contextUsageStatus: TextView
     private lateinit var searchInput: EditText
     private lateinit var messagesScroll: ScrollView
@@ -159,6 +161,9 @@ class ChatActivity : ConfiguredActivity() {
     private var conversationUpdatedAtMillis = conversationCreatedAtMillis
     private var conversationTarget: ConversationTargetSnapshot? = null
     private var conversationContextState = ConversationContextState.EMPTY
+    // Model switcher choices for this conversation; null follows the target's profile default (D72).
+    private var conversationEffortOverride: GenerationEffort? = null
+    private var conversationFastOverride: Boolean? = null
     private var uiSettings = ChatUiSettings()
     private var editingMessageId: Long? = null
     private var draftBeforeEditing: String? = null
@@ -691,6 +696,8 @@ class ChatActivity : ConfiguredActivity() {
         outState.putLong(STATE_CONVERSATION_CREATED_AT, conversationCreatedAtMillis)
         outState.putLong(STATE_CONVERSATION_UPDATED_AT, conversationUpdatedAtMillis)
         saveConversationTarget(outState)
+        outState.putString(STATE_EFFORT_OVERRIDE, conversationEffortOverride?.persistentId)
+        outState.putString(STATE_FAST_OVERRIDE, conversationFastOverride?.toString())
         outState.putString(STATE_COMPOSER_TEXT, input.text.toString())
         outState.putString(
             STATE_SEARCH_QUERY,
@@ -958,6 +965,27 @@ class ChatActivity : ConfiguredActivity() {
                 targetStatus,
                 LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
             )
+            // Effort and fast badges of the conversation (P2.4); local targets never show them.
+            fun generationBadge() = TextView(context).apply {
+                textSize = 10.5f
+                typeface = Ui.mediumTypeface
+                maxLines = 1
+                setTextColor(appPalette.secondaryText)
+                background = roundedFill(Color.TRANSPARENT, Ui.RADIUS_BUBBLE, appPalette.outline)
+                setPaddingRelative(dp(6), dp(1), dp(6), dp(1))
+                visibility = View.GONE
+            }
+            targetEffortBadge = generationBadge()
+            targetFastBadge = generationBadge()
+            listOf(targetEffortBadge, targetFastBadge).forEach { badge ->
+                addView(
+                    badge,
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ).apply { marginStart = dp(6) },
+                )
+            }
             addView(
                 ImageView(context).apply {
                     setImageDrawable(
@@ -1764,15 +1792,23 @@ class ChatActivity : ConfiguredActivity() {
         val catalogResult = runCatching {
             (application as ThreeStoneAiApplication).aiBackend.catalog()
         }
+        val previousCatalog = targetCatalog
         targetCatalog = catalogResult.getOrNull()
         targetCatalogAvailability = when {
             catalogResult.isSuccess -> TargetCatalogAvailability.READY
             state.importState === ModelImportState.Preparing -> TargetCatalogAvailability.LOADING
             else -> TargetCatalogAvailability.UNAVAILABLE
         }
-        if (conversationTarget == null && messages.isEmpty()) {
-            conversationTarget = targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot)
+        val followedTarget = ConversationTargetPolicy.afterCatalogRefresh(
+            current = conversationTarget,
+            previousCatalog = previousCatalog,
+            catalog = targetCatalog,
+            hasMessages = messages.isNotEmpty(),
+        )
+        if (conversationTarget != null && followedTarget?.targetId != conversationTarget?.targetId) {
+            closeCurrentBackend(reason = "target-changed")
         }
+        conversationTarget = followedTarget
         val refreshedSnapshot = conversationTarget?.let { current ->
             targetCatalog?.targets
                 ?.singleOrNull { target -> target.targetId == current.targetId }
@@ -1806,6 +1842,17 @@ class ChatActivity : ConfiguredActivity() {
             )
             else -> targetBarSummary(snapshot)
         }
+        val ready = resolved?.takeIf { snapshot != null && isTargetReady(it) }
+        val effort = ready?.let { target ->
+            conversationEffort(target)?.let { requested ->
+                OnlineAiEffortSupport.effective(requested, target.capabilities.effortLevels)
+            }
+        }?.takeUnless { level -> level == GenerationEffort.DEFAULT }
+        targetEffortBadge.text = effort?.let(::effortLabel).orEmpty()
+        targetEffortBadge.visibility = if (effort == null) View.GONE else View.VISIBLE
+        val fast = ready?.let(::conversationFast) == true
+        targetFastBadge.text = getString(R.string.chat_target_fast_badge)
+        targetFastBadge.visibility = if (fast) View.VISIBLE else View.GONE
         renderEmptyState()
         renderComposerState()
         renderContextUsage()
@@ -2705,6 +2752,8 @@ class ChatActivity : ConfiguredActivity() {
                 transcript = messages.toList(),
                 contextState = conversationContextState,
                 settings = uiSettings,
+                effort = conversationEffort(target),
+                fast = conversationFast(target),
             ),
         )
         return assistantMessage.id
@@ -2821,6 +2870,9 @@ class ChatActivity : ConfiguredActivity() {
         conversationUpdatedAtMillis = conversationCreatedAtMillis
         conversationTarget = target
         conversationContextState = ConversationContextState.EMPTY
+        // A new conversation starts from the profile defaults again (D72).
+        conversationEffortOverride = null
+        conversationFastOverride = null
         generationCoordinator.resetSummaryFailure()
         cancelSummaryCheckpoint()
         allowDeletedConversationRevival = false
@@ -3030,6 +3082,8 @@ class ChatActivity : ConfiguredActivity() {
             target = conversationTarget,
             messages = messages.toList(),
             contextState = conversationContextState,
+            effortOverride = conversationEffortOverride,
+            fastOverride = conversationFastOverride,
         )
         val persisted = runCatching {
             historyStore.upsert(
@@ -3074,6 +3128,8 @@ class ChatActivity : ConfiguredActivity() {
         conversationUpdatedAtMillis = conversation.updatedAtMillis
         conversationTarget = conversation.target
         conversationContextState = conversation.contextState
+        conversationEffortOverride = conversation.effortOverride
+        conversationFastOverride = conversation.fastOverride
         generationCoordinator.resetSummaryFailure()
         nextMessageId = (messages.maxOfOrNull(ChatMessage::id) ?: 0L) + 1L
         markdownCache.clear()
@@ -3147,43 +3203,87 @@ class ChatActivity : ConfiguredActivity() {
             showTargetConfigurationDialog()
             return
         }
-        val targets = catalog.targets
-        val labels = targets.map(::targetSelectorLabel).toTypedArray()
-        val adapter = TargetChoiceAdapter(labels)
-        val selectedIndex = targets.indexOfFirst { target ->
-            target.targetId == conversationTarget?.targetId
-        }
-        materialDialog()
-            .setTitle(R.string.chat_model_switch_title)
-            .setSingleChoiceItems(adapter, selectedIndex) { dialog, index ->
-                val target = targets[index]
-                dialog.dismiss()
-                if (!target.configured || !target.available || !target.capabilities.streaming) {
-                    showUnavailableTargetDialog(target)
-                } else {
-                    requestTargetSelection(target)
-                }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also(::tintDialogButtons)
+        val current = resolvedConversationTarget()?.takeIf(::isTargetReady)
+        showModelPickerSheet(
+            ModelPickerState(
+                targets = catalog.targets,
+                selectedTargetId = conversationTarget?.targetId,
+                favorites = modelPickerFavorites.load(),
+                currentTarget = current,
+                effort = current?.let(::conversationEffort),
+                fast = current?.let(::conversationFast),
+            ),
+            ModelPickerActions(
+                rowTitle = { target ->
+                    if (target.locality == AiTargetLocality.LOCAL) {
+                        targetDisplayName(ConversationTargetSnapshot.from(target))
+                    } else {
+                        target.modelId
+                    }
+                },
+                rowSubtitle = ::targetPickerSubtitle,
+                groupTitle = { section ->
+                    when (section.kind) {
+                        ModelPickerSectionKind.FAVORITES -> getString(R.string.model_picker_favorites)
+                        ModelPickerSectionKind.LOCAL -> getString(R.string.model_picker_local)
+                        ModelPickerSectionKind.PROFILE -> section.targets.first().let { target ->
+                            getString(
+                                R.string.chat_model_switch_summary,
+                                targetDisplayName(ConversationTargetSnapshot.from(target)),
+                                targetProviderLabel(target.providerId, target.locality),
+                            )
+                        }
+                    }
+                },
+                searchText = { target ->
+                    listOf(
+                        target.modelId,
+                        targetDisplayName(ConversationTargetSnapshot.from(target)),
+                        targetProviderLabel(target.providerId, target.locality),
+                        targetLocalityLabel(target.locality),
+                    ).joinToString(" ")
+                },
+                isReady = ::isTargetReady,
+                onSelect = { target ->
+                    if (!target.configured || !target.available || !target.capabilities.streaming) {
+                        showUnavailableTargetDialog(target)
+                    } else {
+                        requestTargetSelection(target)
+                    }
+                },
+                onToggleFavorite = modelPickerFavorites::toggle,
+                onEffort = { effort ->
+                    conversationEffortOverride = effort
+                    generationOverridesChanged()
+                },
+                onFast = { fast ->
+                    conversationFastOverride = fast
+                    generationOverridesChanged()
+                },
+                onManage = ::openModelManager,
+            ),
+        )
     }
 
-    private fun targetSelectorLabel(target: AiTarget): String {
-        val snapshot = ConversationTargetSnapshot.from(target)
-        val suffix = buildString {
+    /** Local models show their ID under the name; unavailable targets say so. */
+    private fun targetPickerSubtitle(target: AiTarget): String? {
+        val parts = buildList {
+            if (target.locality == AiTargetLocality.LOCAL &&
+                target.modelId != targetDisplayName(ConversationTargetSnapshot.from(target))
+            ) {
+                add(target.modelId)
+            }
             if (!target.configured || !target.available || !target.capabilities.streaming) {
-                append(getString(R.string.chat_target_unavailable_suffix))
+                add(getString(R.string.chat_target_unavailable_suffix).trimStart(' ', '|'))
             }
         }
-        return getString(
-            R.string.chat_target_selector_item,
-            targetLocalityLabel(target.locality),
-            targetProviderLabel(target.providerId, target.locality),
-            targetDisplayName(snapshot),
-            snapshot.modelId,
-            suffix,
-        )
+        return parts.joinToString(" | ").ifEmpty { null }
+    }
+
+    /** Effort or fast changed for this conversation (D72): saved with the history, shown in the target bar. */
+    private fun generationOverridesChanged() {
+        if (messages.isNotEmpty()) persistConversationNow()
+        renderTargetUi()
     }
 
     private fun requestTargetSelection(target: AiTarget) {
@@ -3559,6 +3659,7 @@ class ChatActivity : ConfiguredActivity() {
         val stored = historyStore.find(storedId)
         if (stored != null) {
             applyStoredConversation(stored)
+            restoreGenerationOverrides(state)
             if (messages.none { message -> message.id == editingMessageId }) editingMessageId = null
             return true
         }
@@ -3654,9 +3755,28 @@ class ChatActivity : ConfiguredActivity() {
             conversationCreatedAtMillis,
         ).coerceAtLeast(conversationCreatedAtMillis)
         conversationTarget = restoreConversationTarget(state)
+        restoreGenerationOverrides(state)
         if (messages.none { message -> message.id == editingMessageId }) editingMessageId = null
         return true
     }
+
+    /** The saved instance state is newer than history when the choice changed before the first send. */
+    private fun restoreGenerationOverrides(state: Bundle) {
+        if (state.containsKey(STATE_EFFORT_OVERRIDE)) {
+            conversationEffortOverride = state.getString(STATE_EFFORT_OVERRIDE)?.let(GenerationEffort::fromPersistentId)
+        }
+        if (state.containsKey(STATE_FAST_OVERRIDE)) {
+            conversationFastOverride = state.getString(STATE_FAST_OVERRIDE)?.toBooleanStrictOrNull()
+        }
+    }
+
+    /** Effort sent with the next turn: the conversation choice or the profile default, if supported. */
+    private fun conversationEffort(target: AiTarget): GenerationEffort? =
+        if (target.capabilities.effortLevels.isEmpty()) null else conversationEffortOverride ?: target.defaultEffort
+
+    /** Fast mode sent with the next turn: the conversation choice or the profile default, if supported. */
+    private fun conversationFast(target: AiTarget): Boolean? =
+        if (!target.capabilities.fastMode) null else conversationFastOverride ?: target.defaultFast
 
     private fun messagesForSavedState(): List<ChatMessage> {
         val retained = ArrayList<ChatMessage>()
@@ -3761,30 +3881,6 @@ class ChatActivity : ConfiguredActivity() {
         DELETE(R.string.chat_history_delete_selected),
     }
 
-    private inner class TargetChoiceAdapter(labels: Array<String>) : ArrayAdapter<String>(
-        this,
-        android.R.layout.simple_list_item_single_choice,
-        labels,
-    ) {
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
-            super.getView(position, convertView, parent).apply {
-                (this as? CheckedTextView)?.apply {
-                    layoutParams = AbsListView.LayoutParams(
-                        AbsListView.LayoutParams.MATCH_PARENT,
-                        AbsListView.LayoutParams.WRAP_CONTENT,
-                    )
-                    minHeight = dp(64)
-                    isSingleLine = false
-                    maxLines = Int.MAX_VALUE
-                    ellipsize = null
-                    setLineSpacing(0f, 1.08f)
-                    setPaddingRelative(dp(16), dp(10), dp(16), dp(10))
-                    setTextColor(appPalette.primaryText)
-                    checkMarkTintList = controlTintList()
-                }
-            }
-    }
-
     private companion object {
         const val TAG = "ThreeStoneAiChat"
         const val MENU_NEW_CONVERSATION = 1
@@ -3826,6 +3922,8 @@ class ChatActivity : ConfiguredActivity() {
         const val STATE_CONVERSATION_CREATED_AT = "chatConversationCreatedAt"
         const val STATE_CONVERSATION_UPDATED_AT = "chatConversationUpdatedAt"
         const val STATE_CONVERSATION_TARGET_ID = "chatConversationTargetId"
+        const val STATE_EFFORT_OVERRIDE = "chatEffortOverride"
+        const val STATE_FAST_OVERRIDE = "chatFastOverride"
         const val STATE_CONVERSATION_TARGET_PROVIDER_ID = "chatConversationTargetProviderId"
         const val STATE_CONVERSATION_TARGET_MODEL_ID = "chatConversationTargetModelId"
         const val STATE_CONVERSATION_TARGET_NAME = "chatConversationTargetName"

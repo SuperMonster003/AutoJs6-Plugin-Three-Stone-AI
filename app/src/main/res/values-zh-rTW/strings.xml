@@ -171,7 +171,6 @@
     <string name="chat_target_locality_local">本機</string>
     <string name="chat_target_selector_empty_message">請設定本機模型或線上服務, 然後返回此處選取.</string>
     <string name="chat_target_selector_empty_title">沒有可用的 AI 目標</string>
-    <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_start_new">新增對話</string>
     <string name="chat_target_status_format">%1$s | %2$s | %3$s | %4$s</string>
     <string name="chat_target_unavailable_description">目前設定無法使用 %1$s. 請選取其他目標或更新其設定.</string>

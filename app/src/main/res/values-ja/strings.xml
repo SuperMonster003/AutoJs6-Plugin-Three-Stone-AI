@@ -171,7 +171,6 @@
     <string name="chat_target_locality_local">ローカル</string>
     <string name="chat_target_selector_empty_message">ローカルモデルまたはオンラインサービスを設定し, ここに戻って選択してください.</string>
     <string name="chat_target_selector_empty_title">利用できる AI ターゲットがありません</string>
-    <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_start_new">新しい会話を開始</string>
     <string name="chat_target_status_format">%1$s | %2$s | %3$s | %4$s</string>
     <string name="chat_target_unavailable_description">現在の設定では %1$s を利用できません. 別のターゲットを選択するか設定を更新してください.</string>

@@ -171,7 +171,6 @@
     <string name="chat_target_locality_local">Local</string>
     <string name="chat_target_selector_empty_message">Configurez un modèle local ou un service en ligne, puis revenez ici pour le choisir.</string>
     <string name="chat_target_selector_empty_title">Aucune cible d\'IA disponible</string>
-    <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_start_new">Nouvelle conversation</string>
     <string name="chat_target_status_format">%1$s | %2$s | %3$s | %4$s</string>
     <string name="chat_target_unavailable_description">%1$s ne peut pas être utilisé avec la configuration actuelle. Choisissez une autre cible ou mettez ses paramètres à jour.</string>

@@ -7,9 +7,15 @@
   "$data": {
     "v1.6.0": {
       "released_date": "2026/11/05",
+      "feature": [
+        "Los perfiles en línea pueden fijar un esfuerzo predeterminado (Bajo, Medio, Alto, Muy alto o Máximo; con \"Predeterminado\" decide el modelo), y los perfiles de Anthropic pueden usar el modo rápido de forma predeterminada (respuestas más rápidas a un precio mayor); ambos también se pueden cambiar solo para la conversación actual, el cambio se guarda con la conversación y las conversaciones nuevas empiezan con los valores del perfil. Si un modelo no admite el nivel elegido, se usa el nivel inferior más cercano",
+        "Cambiar de modelo ahora abre un panel desde abajo: búsqueda, modelos agrupados por perfil, favoritos fijados arriba y etiquetas que indican qué modelos admiten entrada de imágenes, razonamiento y modo rápido; el panel también cambia el esfuerzo y el modo rápido de la conversación actual, y \"Administrar modelos y servicios\" abajo abre los ajustes de modelos. La barra superior del chat muestra el esfuerzo y el modo rápido de la conversación actual"
+      ],
       "fix": [
         "Una respuesta en generación se detenía al girar la pantalla o al cambiar el modo oscuro, el idioma o el tamaño de letra de los mensajes; ahora la respuesta sigue generándose, y una respuesta que termina mientras estás fuera del chat se muestra completa al volver",
-        "Tras pulsar \"Detener\", la solicitud en línea seguía en segundo plano hasta completar la respuesta (y seguía contando en el uso); ahora pulsar Detener corta la solicitud en menos de 1 segundo, y lo mismo ocurre al crear una conversación, cambiar de conversación, cambiar de modelo o eliminar mensajes"
+        "Tras pulsar \"Detener\", la solicitud en línea seguía en segundo plano hasta completar la respuesta (y seguía contando en el uso); ahora pulsar Detener corta la solicitud en menos de 1 segundo, y lo mismo ocurre al crear una conversación, cambiar de conversación, cambiar de modelo o eliminar mensajes",
+        "Los modelos Claude más recientes rechazaban las solicitudes de perfiles de Anthropic que fijaban temperatura, Top K o Top P; ahora los perfiles de Anthropic ya no envían estos tres ajustes, y la página de ajustes lo indica",
+        "Tras cambiar el modelo predeterminado de un perfil, una conversación nueva ya abierta y sin mensajes seguía usando el modelo predeterminado anterior; ahora pasa al nuevo modelo predeterminado (salvo que hayas elegido otro modelo en esa conversación)"
       ]
     },
     "v1.5.0": {

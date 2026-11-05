@@ -222,7 +222,6 @@
     <string name="chat_target_locality_local">本地</string>
     <string name="chat_target_selector_empty_message">请配置本地模型或在线服务, 然后返回此处选择.</string>
     <string name="chat_target_selector_empty_title">没有可用的 AI 目标</string>
-    <string name="chat_target_selector_item">%1$s | %2$s\n%3$s | %4$s%5$s</string>
     <string name="chat_target_start_new">新建会话</string>
     <string name="chat_target_status_format">%1$s | %2$s | %3$s | %4$s</string>
     <string name="chat_target_unavailable_description">当前配置无法使用 %1$s. 请选择其他目标或更新其设置.</string>

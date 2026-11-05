@@ -31,6 +31,12 @@ fields, never prompts, replies or credentials. uiautomator cannot dump a chat th
 idle state, the dump fails after about 11 s), so "still generating" is read from the window's
 FLAG_KEEP_SCREEN_ON, Stop is tapped where Send was (the keyboard is closed first so the composer
 does not move), and every dump removes the previous file so a failed dump is never read as current.
+
+Roadmap P2.4 / P2.6 (2026-11-05, 1.6.0): the switcher is a bottom sheet, so --model taps the first
+clickable row containing the text (group headers are not clickable). --effort opens the sheet again,
+taps that effort choice for the conversation, closes the sheet and checks the target bar badge; after
+the reply it reads "Generation start ... effort=<level> fast=<bool>" from the chat log (the level the
+adapters send after clamping) and compares the usage line with the logged output tokens.
 """
 
 import argparse
@@ -54,23 +60,27 @@ STRING_NAMES = (
     "chat_generation_failure_detail",
     "chat_usage_format",
 )
+EFFORT_IDS = ("default", "low", "medium", "high", "xhigh", "max")
+EFFORT_NAMES = tuple("effort_" + effort for effort in EFFORT_IDS)
 LOG_TAG = "ThreeStoneAiChat"
 SETTLE_SECONDS = 2.5
 
 
 def load_strings(locale):
     directory = "values" if locale in ("", "en") else f"values-{locale}"
-    path = ROOT / "app" / "src" / "main" / "res" / directory / "strings.xml"
-    root = ET.parse(path).getroot()
+    wanted = STRING_NAMES + EFFORT_NAMES
     found = {}
-    for node in root.iter("string"):
-        name = node.get("name")
-        if name in STRING_NAMES:
-            text = node.text or ""
-            found[name] = text.replace('\\"', '"').replace("\\'", "'").replace("\\n", "\n")
-    missing = [name for name in STRING_NAMES if name not in found]
+    folder = ROOT / "app" / "src" / "main" / "res" / directory
+    for path in (folder / "strings.xml", folder / "strings_effort.xml"):
+        root = ET.parse(path).getroot()
+        for node in root.iter("string"):
+            name = node.get("name")
+            if name in wanted:
+                text = node.text or ""
+                found[name] = text.replace('\\"', '"').replace("\\'", "'").replace("\\n", "\n")
+    missing = [name for name in wanted if name not in found]
     if missing:
-        raise SystemExit(f"strings missing in {path}: {', '.join(missing)}")
+        raise SystemExit(f"strings missing in {folder}: {', '.join(missing)}")
     return found
 
 
@@ -137,6 +147,26 @@ def find_text_containing(root, fragment, class_suffix=None):
         if fragment in (node.get("text") or ""):
             return node
     return None
+
+
+def find_clickable_containing(root, fragment):
+    """The first clickable node with a descendant whose text contains [fragment]: a switcher row,
+    never its group header (headers are not clickable)."""
+    for node in nodes(root):
+        if node.get("clickable") != "true":
+            continue
+        if any(fragment in (child.get("text") or "") for child in node.iter("node")):
+            return node
+    return None
+
+
+def close_sheet(serial):
+    """BACK closes the keyboard first when the search field opened it, then the bottom sheet."""
+    if ime_shown(serial):
+        adb(serial, "shell", "input", "keyevent", "4")
+        time.sleep(0.8)
+    adb(serial, "shell", "input", "keyevent", "4")
+    time.sleep(1.5)
 
 
 def texts(root):
@@ -263,6 +293,11 @@ def main():
     )
     parser.add_argument("--stop-after", type=float, help="tap Stop this many seconds after Send and check the cancel log")
     parser.add_argument(
+        "--effort",
+        choices=EFFORT_IDS,
+        help="pick this effort for the conversation in the switcher (a level the model supports) and check the logged request",
+    )
+    parser.add_argument(
         "--check-keep-screen-on",
         action="store_true",
         help="fail unless FLAG_KEEP_SCREEN_ON is held while generating and released once the reply has ended",
@@ -297,9 +332,18 @@ def main():
             return 2
         tap(serial, switcher)
         time.sleep(1.5)
-        entry = find_text_containing(dump(serial), args.model, class_suffix="CheckedTextView")
+        sheet = dump(serial)
+        entry = find_clickable_containing(sheet, args.model)
+        search = find(sheet, **{"class": "android.widget.EditText"})
+        if entry is None and search is not None and args.model.isascii():
+            # The row may lie below the fold: filter the list through the sheet's search field.
+            tap(serial, search)
+            time.sleep(0.5)
+            adb(serial, "shell", "input", "text", args.model.replace(" ", "%s"))
+            time.sleep(1.0)
+            entry = find_clickable_containing(dump(serial), args.model)
         if entry is None:
-            adb(serial, "shell", "input", "keyevent", "4")
+            close_sheet(serial)
             print(f"FAIL: no switcher entry contains {args.model}")
             return 2
         tap(serial, entry)
@@ -310,6 +354,28 @@ def main():
     if args.model and args.model not in target:
         print("FAIL: target did not switch")
         return 2
+    if args.effort:
+        switcher = find(root, **{"content-desc": words["chat_open_model_switcher"]})
+        if switcher is None:
+            print("FAIL: model switcher not found")
+            return 2
+        tap(serial, switcher)
+        time.sleep(1.5)
+        label = words["effort_" + args.effort]
+        pill = find(dump(serial), text=label, clickable="true")
+        if pill is None:
+            close_sheet(serial)
+            print(f"FAIL: no effort choice {args.effort} for this target")
+            return 2
+        tap(serial, pill)
+        time.sleep(1.0)
+        close_sheet(serial)
+        root = dump(serial)
+        badge = find(root, text=label)
+        print(f"effort: chose {args.effort}, target bar badge shown={badge is not None}")
+        if (badge is not None) != (args.effort != "default"):
+            print("FAIL: the target bar badge does not match the chosen effort")
+            return 2
 
     field = find(root, **{"class": "android.widget.EditText"})
     if field is None:
@@ -463,6 +529,29 @@ def main():
                 if http not in ("httpCall=cancelled", "httpCall=unreported"):
                     print("FAIL: the HTTP call was not cancelled")
                     failed = True
+    if args.effort:
+        time.sleep(1.0)
+        log = chat_log(serial, since)
+        starts = [line for line in log if "Generation start " in line]
+        completes = [line for line in log if "Context complete" in line]
+        fields = re.search(r"effort=(\w+) fast=(\w+)", starts[-1]) if starts else None
+        if fields is None:
+            print("FAIL: no generation start logged")
+            failed = True
+        else:
+            print(f"request: effort={fields.group(1)} fast={fields.group(2)} starts={len(starts)}")
+            if len(starts) != 1 or fields.group(1) != args.effort:
+                print(f"FAIL: expected exactly one turn sent with effort={args.effort}")
+                failed = True
+        if outcome == "complete" and counts:
+            logged = re.search(r"actualOutputTokens=(\d+)", completes[-1]) if completes else None
+            shown = re.search(r"output=([\d,]+)", counts)
+            logged_value = logged.group(1) if logged else None
+            shown_value = shown.group(1).replace(",", "") if shown else None
+            print(f"usage check: shown output={shown_value} logged output={logged_value}")
+            if logged_value != shown_value:
+                print("FAIL: the usage line does not match the logged output tokens")
+                failed = True
     if args.expect and args.expect != outcome:
         print(f"FAIL: expected {args.expect}")
         failed = True

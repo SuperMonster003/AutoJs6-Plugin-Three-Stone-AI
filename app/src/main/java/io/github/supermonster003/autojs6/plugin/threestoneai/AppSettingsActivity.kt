@@ -505,6 +505,13 @@ class AppSettingsActivity : ConfiguredActivity() {
         )
         container.addView(sheetField(topPField))
         container.addView(TextView(this).apply {
+            text = getString(R.string.app_settings_generation_anthropic_ignored)
+            textSize = Ui.TEXT_CAPTION
+            setTextColor(appPalette.secondaryText)
+            setLineSpacing(0f, 1.15f)
+            setPaddingRelative(0, uiDp(Ui.SPACE_MD), 0, 0)
+        })
+        container.addView(TextView(this).apply {
             text = getString(R.string.chat_generation_settings_help)
             textSize = Ui.TEXT_CAPTION
             setTextColor(appPalette.secondaryText)

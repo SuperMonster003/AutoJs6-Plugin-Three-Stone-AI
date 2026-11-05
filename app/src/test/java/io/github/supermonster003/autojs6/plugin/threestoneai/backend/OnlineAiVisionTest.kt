@@ -15,7 +15,8 @@ class OnlineAiVisionTest {
     fun imageCapabilitiesAreExactModelOptInsAndOldProfilesStayTextOnly() {
         val source = profile(OnlineAiProvider.OPENAI_COMPATIBLE).copy(modelIds = listOf("model", "text-model"))
         val encoded = OnlineAiProfileCodec.encode(OnlineAiProfileDocument(1, listOf(source))).toString(Charsets.UTF_8)
-        val schema3 = encoded.replace("\"schema\":4", "\"schema\":3").replace(",\"visionModelIds\":[\"model\"]", "")
+        val schema3 = encoded.replace("\"schema\":5", "\"schema\":3").replace(",\"visionModelIds\":[\"model\"]", "")
+            .replace(",\"defaultEffort\":\"default\",\"fastMode\":false", "")
         val migrated = OnlineAiProfileCodec.decode(schema3.toByteArray()).profiles.single()
         assertTrue(migrated.visionModelIds.isEmpty())
         val execution = OnlineAiHttpExecution(Call.Factory { error("Must not call HTTP") })
@@ -27,7 +28,7 @@ class OnlineAiVisionTest {
             assertThrows(IllegalArgumentException::class.java) { OnlineAiProfilePolicy.normalizeProfile(source.copy(visionModelIds = ids)) }
         }
         assertThrows(IllegalArgumentException::class.java) {
-            OnlineAiProfileCodec.decode(encoded.replace("\"schema\":4", "\"schema\":3").toByteArray())
+            OnlineAiProfileCodec.decode(encoded.replace("\"schema\":5", "\"schema\":3").toByteArray())
         }
         assertThrows(IllegalArgumentException::class.java) {
             OnlineAiProfileCodec.decode(encoded.replace(",\"visionModelIds\":[\"model\"]", "").toByteArray())

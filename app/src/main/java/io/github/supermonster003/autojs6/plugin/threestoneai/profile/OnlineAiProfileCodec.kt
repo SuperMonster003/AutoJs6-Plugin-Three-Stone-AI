@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.profile
 
 import com.google.gson.Strictness
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
 import java.io.StringReader
@@ -25,7 +26,10 @@ internal object OnlineAiProfileCodec {
         "modelId",
     )
     private val MULTI_MODEL_KEYS = LEGACY_PROFILE_KEYS + "modelIds"
-    private val PROFILE_KEYS = MULTI_MODEL_KEYS + "visionModelIds"
+    private val VISION_PROFILE_KEYS = MULTI_MODEL_KEYS + "visionModelIds"
+
+    /** Schema 5: "defaultEffort" is a [GenerationEffort.persistentId], "fastMode" a boolean. */
+    private val PROFILE_KEYS = VISION_PROFILE_KEYS + "defaultEffort" + "fastMode"
 
     fun encode(document: OnlineAiProfileDocument): ByteArray {
         val normalized = OnlineAiProfilePolicy.normalize(document)
@@ -37,7 +41,9 @@ internal object OnlineAiProfileCodec {
                 "\"baseUrl\":${quote(profile.baseUrl)}," +
                 "\"modelId\":${quote(profile.modelId)}," +
                 "\"modelIds\":${profile.modelIds.joinToString(",", "[", "]", transform = ::quote)}," +
-                "\"visionModelIds\":${profile.visionModelIds.joinToString(",", "[", "]", transform = ::quote)}" +
+                "\"visionModelIds\":${profile.visionModelIds.joinToString(",", "[", "]", transform = ::quote)}," +
+                "\"defaultEffort\":${quote(profile.defaultEffort.persistentId)}," +
+                "\"fastMode\":${profile.fastMode}" +
                 "}"
         }
         return ("{" +
@@ -87,7 +93,7 @@ internal object OnlineAiProfileCodec {
         val decodedProfiles = requireNotNull(profiles)
         require(
             keys == DOCUMENT_KEYS &&
-                schema in setOf(OnlineAiProfilePolicy.LEGACY_SCHEMA, OnlineAiProfilePolicy.MULTI_MODEL_SCHEMA, OnlineAiProfilePolicy.SCHEMA) &&
+                schema in SUPPORTED_SCHEMAS &&
                 defaultProfileIdRead,
         ) {
             "Online AI profile document is incomplete"
@@ -97,8 +103,12 @@ internal object OnlineAiProfileCodec {
                 "Online AI profile model IDs are incomplete"
             }
         }
-        require(decodedProfiles.all { it.hasVisionModelIds == (schema == OnlineAiProfilePolicy.SCHEMA) }) {
+        val decodedSchema = requireNotNull(schema)
+        require(decodedProfiles.all { it.hasVisionModelIds == (decodedSchema >= OnlineAiProfilePolicy.VISION_SCHEMA) }) {
             "Online AI image capabilities do not match the document schema"
+        }
+        require(decodedProfiles.all { it.hasEffortSettings == (decodedSchema >= OnlineAiProfilePolicy.SCHEMA) }) {
+            "Online AI effort settings do not match the document schema"
         }
         return OnlineAiProfilePolicy.normalize(
             OnlineAiProfileDocument(
@@ -133,6 +143,8 @@ internal object OnlineAiProfileCodec {
         var modelId: String? = null
         var modelIds: List<String>? = null
         var visionModelIds: List<String>? = null
+        var defaultEffort: GenerationEffort? = null
+        var fastMode: Boolean? = null
         val keys = linkedSetOf<String>()
         beginObject()
         while (hasNext()) {
@@ -146,10 +158,16 @@ internal object OnlineAiProfileCodec {
                 "modelId" -> modelId = nextStrictString("Online AI model ID")
                 "modelIds" -> modelIds = readModelIds()
                 "visionModelIds" -> visionModelIds = readModelIds()
+                "defaultEffort" -> defaultEffort = GenerationEffort.fromPersistentId(
+                    nextStrictString("Online AI default effort"),
+                ) ?: throw IllegalArgumentException("Online AI default effort is unsupported")
+                "fastMode" -> fastMode = nextStrictBoolean("Online AI fast mode")
             }
         }
         endObject()
-        require(keys == LEGACY_PROFILE_KEYS || keys == MULTI_MODEL_KEYS || keys == PROFILE_KEYS) {
+        require(
+            keys == LEGACY_PROFILE_KEYS || keys == MULTI_MODEL_KEYS || keys == VISION_PROFILE_KEYS || keys == PROFILE_KEYS,
+        ) {
             "Online AI profile is incomplete"
         }
         val requiredModelId = requireNotNull(modelId)
@@ -162,9 +180,12 @@ internal object OnlineAiProfileCodec {
                 modelId = requiredModelId,
                 modelIds = modelIds ?: listOf(requiredModelId),
                 visionModelIds = visionModelIds ?: emptyList(),
+                defaultEffort = defaultEffort ?: GenerationEffort.DEFAULT,
+                fastMode = fastMode ?: false,
             ),
             hasModelIds = modelIds != null,
             hasVisionModelIds = visionModelIds != null,
+            hasEffortSettings = defaultEffort != null,
         )
     }
 
@@ -219,11 +240,9 @@ internal object OnlineAiProfileCodec {
 
     private fun JsonReader.nextSupportedSchema(): Int {
         val schema = nextStrictLong("Online AI profile schema")
-        require(
-            schema == OnlineAiProfilePolicy.LEGACY_SCHEMA.toLong() ||
-                schema == OnlineAiProfilePolicy.SCHEMA.toLong() ||
-                schema == OnlineAiProfilePolicy.MULTI_MODEL_SCHEMA.toLong(),
-        ) { "Online AI profile schema is unsupported" }
+        require(SUPPORTED_SCHEMAS.any { supported -> supported.toLong() == schema }) {
+            "Online AI profile schema is unsupported"
+        }
         return schema.toInt()
     }
 
@@ -248,5 +267,13 @@ internal object OnlineAiProfileCodec {
         val profile: OnlineAiProfile,
         val hasModelIds: Boolean,
         val hasVisionModelIds: Boolean,
+        val hasEffortSettings: Boolean,
+    )
+
+    private val SUPPORTED_SCHEMAS = setOf(
+        OnlineAiProfilePolicy.LEGACY_SCHEMA,
+        OnlineAiProfilePolicy.MULTI_MODEL_SCHEMA,
+        OnlineAiProfilePolicy.VISION_SCHEMA,
+        OnlineAiProfilePolicy.SCHEMA,
     )
 }

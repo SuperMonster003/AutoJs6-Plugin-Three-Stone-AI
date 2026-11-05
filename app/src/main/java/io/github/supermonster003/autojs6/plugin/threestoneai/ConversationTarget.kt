@@ -70,6 +70,26 @@ internal object ConversationTargetPolicy {
         snapshot?.matchesExecutionIdentity(target) == true
     }
 
+    /**
+     * Target of a conversation after the catalog was reloaded (roadmap D92, Q10). A conversation with
+     * messages keeps its target. An empty conversation without a target takes the default; one that
+     * still holds the previous catalog's default follows the new default, so changing a profile's
+     * default model also applies to the new conversation already on screen. A target the user picked
+     * in the empty conversation differs from the previous default and stays.
+     */
+    fun afterCatalogRefresh(
+        current: ConversationTargetSnapshot?,
+        previousCatalog: AiTargetCatalog?,
+        catalog: AiTargetCatalog?,
+        hasMessages: Boolean,
+    ): ConversationTargetSnapshot? {
+        if (hasMessages) return current
+        val latestDefault = catalog?.let(::defaultSnapshot) ?: return current
+        if (current == null) return latestDefault
+        val previousDefaultId = previousCatalog?.defaultTargetId ?: return current
+        return if (current.targetId == previousDefaultId) latestDefault else current
+    }
+
     fun selectionDisposition(
         current: ConversationTargetSnapshot?,
         candidate: AiTarget,

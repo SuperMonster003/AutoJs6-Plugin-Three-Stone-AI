@@ -49,9 +49,9 @@ class AnthropicMessagesProtocolTest {
             assertEquals("claude-test", json.get("model").asString)
             assertTrue(json.get("stream").asBoolean)
             assertEquals(321, json.get("max_tokens").asInt)
-            assertEquals(0.2, json.get("temperature").asDouble, 0.0)
-            assertEquals(17, json.get("top_k").asInt)
-            assertEquals(0.8, json.get("top_p").asDouble, 0.0)
+            // D75: Anthropic never receives sampling options, even when the settings carry them.
+            listOf("temperature", "top_k", "top_p", "speed").forEach { name -> assertFalse(json.has(name)) }
+            assertNull(outgoing.header("anthropic-beta"))
 
             val system = json.getAsJsonArray("system")
             assertEquals(1, system.size())

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_settings_generation_anthropic_ignored">Anthropic models ignore temperature, Top K and Top P.</string>
+    <string name="chat_target_fast_badge">Fast</string>
+    <string name="effort_default">Default</string>
+    <string name="effort_high">High</string>
+    <string name="effort_low">Low</string>
+    <string name="effort_max">Max</string>
+    <string name="effort_medium">Medium</string>
+    <string name="effort_xhigh">Extra high</string>
+    <string name="model_picker_effort">Effort for this conversation</string>
+    <string name="model_picker_empty">No matching models</string>
+    <string name="model_picker_fast">Fast mode for this conversation</string>
+    <string name="model_picker_favorite">Add to favorites</string>
+    <string name="model_picker_favorites">Favorites</string>
+    <string name="model_picker_local">On this device</string>
+    <string name="model_picker_manage">Manage models and services</string>
+    <string name="model_picker_search">Search models</string>
+    <string name="model_picker_tag_fast">Fast</string>
+    <string name="model_picker_tag_reasoning">Reasoning</string>
+    <string name="model_picker_tag_vision">Image input</string>
+    <string name="model_picker_unfavorite">Remove from favorites</string>
+    <string name="online_ai_default_effort">Default effort</string>
+    <string name="online_ai_default_effort_help">New conversations start at this level. A level the model does not support falls back to the nearest supported level below it.</string>
+    <string name="online_ai_fast_mode">Fast mode by default</string>
+    <string name="online_ai_fast_mode_help">Anthropic only. Replies arrive faster at a higher price. Models without fast mode return an error.</string>
+</resources>

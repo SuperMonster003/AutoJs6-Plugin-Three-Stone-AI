@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_settings_generation_anthropic_ignored">Модели Anthropic игнорируют температуру, Top K и Top P.</string>
+    <string name="chat_target_fast_badge">Быстро</string>
+    <string name="effort_default">По умолчанию</string>
+    <string name="effort_high">Высокий</string>
+    <string name="effort_low">Низкий</string>
+    <string name="effort_max">Максимальный</string>
+    <string name="effort_medium">Средний</string>
+    <string name="effort_xhigh">Очень высокий</string>
+    <string name="model_picker_effort">Глубина рассуждений в этом диалоге</string>
+    <string name="model_picker_empty">Нет подходящих моделей</string>
+    <string name="model_picker_fast">Быстрый режим в этом диалоге</string>
+    <string name="model_picker_favorite">Добавить в избранное</string>
+    <string name="model_picker_favorites">Избранное</string>
+    <string name="model_picker_local">На этом устройстве</string>
+    <string name="model_picker_manage">Управление моделями и сервисами</string>
+    <string name="model_picker_search">Поиск моделей</string>
+    <string name="model_picker_tag_fast">Быстро</string>
+    <string name="model_picker_tag_reasoning">Рассуждения</string>
+    <string name="model_picker_tag_vision">Ввод изображений</string>
+    <string name="model_picker_unfavorite">Удалить из избранного</string>
+    <string name="online_ai_default_effort">Глубина рассуждений по умолчанию</string>
+    <string name="online_ai_default_effort_help">Новые диалоги начинаются с этого уровня. Если модель не поддерживает уровень, используется ближайший поддерживаемый уровень ниже.</string>
+    <string name="online_ai_fast_mode">Быстрый режим по умолчанию</string>
+    <string name="online_ai_fast_mode_help">Только Anthropic. Ответы приходят быстрее, но стоят дороже. Модели без быстрого режима вернут ошибку.</string>
+</resources>

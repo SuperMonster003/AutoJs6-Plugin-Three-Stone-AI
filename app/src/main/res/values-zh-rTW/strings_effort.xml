@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_settings_generation_anthropic_ignored">Anthropic 模型會忽略溫度, Top K 與 Top P.</string>
+    <string name="chat_target_fast_badge">快速</string>
+    <string name="effort_default">預設</string>
+    <string name="effort_high">高</string>
+    <string name="effort_low">低</string>
+    <string name="effort_max">最高</string>
+    <string name="effort_medium">中</string>
+    <string name="effort_xhigh">超高</string>
+    <string name="model_picker_effort">本對話的推理強度</string>
+    <string name="model_picker_empty">沒有符合的模型</string>
+    <string name="model_picker_fast">本對話使用快速模式</string>
+    <string name="model_picker_favorite">加入收藏</string>
+    <string name="model_picker_favorites">收藏</string>
+    <string name="model_picker_local">本機</string>
+    <string name="model_picker_manage">管理模型與服務</string>
+    <string name="model_picker_search">搜尋模型</string>
+    <string name="model_picker_tag_fast">快速</string>
+    <string name="model_picker_tag_reasoning">推理</string>
+    <string name="model_picker_tag_vision">圖片輸入</string>
+    <string name="model_picker_unfavorite">取消收藏</string>
+    <string name="online_ai_default_effort">預設推理強度</string>
+    <string name="online_ai_default_effort_help">新對話從這一檔開始. 模型不支援的檔位會降到下方最接近的支援檔位.</string>
+    <string name="online_ai_fast_mode">預設使用快速模式</string>
+    <string name="online_ai_fast_mode_help">僅限 Anthropic. 回覆更快, 價格更高. 不支援快速模式的模型會傳回錯誤.</string>
+</resources>

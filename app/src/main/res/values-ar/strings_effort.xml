@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_settings_generation_anthropic_ignored">تتجاهل نماذج Anthropic درجة الحرارة و Top K و Top P.</string>
+    <string name="chat_target_fast_badge">سريع</string>
+    <string name="effort_default">افتراضي</string>
+    <string name="effort_high">عال</string>
+    <string name="effort_low">منخفض</string>
+    <string name="effort_max">أقصى</string>
+    <string name="effort_medium">متوسط</string>
+    <string name="effort_xhigh">عال جدا</string>
+    <string name="model_picker_effort">مستوى الاستدلال لهذه المحادثة</string>
+    <string name="model_picker_empty">لا توجد نماذج مطابقة</string>
+    <string name="model_picker_fast">الوضع السريع لهذه المحادثة</string>
+    <string name="model_picker_favorite">إضافة إلى المفضلة</string>
+    <string name="model_picker_favorites">المفضلة</string>
+    <string name="model_picker_local">على هذا الجهاز</string>
+    <string name="model_picker_manage">إدارة النماذج والخدمات</string>
+    <string name="model_picker_search">البحث عن نموذج</string>
+    <string name="model_picker_tag_fast">سريع</string>
+    <string name="model_picker_tag_reasoning">استدلال</string>
+    <string name="model_picker_tag_vision">إدخال الصور</string>
+    <string name="model_picker_unfavorite">إزالة من المفضلة</string>
+    <string name="online_ai_default_effort">مستوى الاستدلال الافتراضي</string>
+    <string name="online_ai_default_effort_help">تبدأ المحادثات الجديدة بهذا المستوى. إذا لم يدعم النموذج مستوى ما فسينخفض إلى أقرب مستوى مدعوم أدناه.</string>
+    <string name="online_ai_fast_mode">الوضع السريع افتراضيا</string>
+    <string name="online_ai_fast_mode_help">لنماذج Anthropic فقط. تصل الردود أسرع بسعر أعلى. تعيد النماذج التي لا تدعم الوضع السريع خطأ.</string>
+</resources>

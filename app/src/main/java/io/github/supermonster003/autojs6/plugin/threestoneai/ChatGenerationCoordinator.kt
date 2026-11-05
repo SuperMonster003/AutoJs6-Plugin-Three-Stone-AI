@@ -9,11 +9,13 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSe
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationMessage
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRole
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationStatistics
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiEffortSupport
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.AvailableLiteRtModelCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
@@ -62,6 +64,10 @@ internal data class ChatTurnRequest(
     val transcript: List<ChatMessage>,
     val contextState: ConversationContextState,
     val settings: ChatUiSettings,
+    /** Conversation override or the target default; adapters clamp it per model (roadmap D72 / D73). */
+    val effort: GenerationEffort? = null,
+    /** Conversation override or the target default; only Anthropic targets send it (roadmap D74). */
+    val fast: Boolean? = null,
 )
 
 /** History access the coordinator needs when no screen holds the conversation (roadmap D77). */
@@ -338,6 +344,12 @@ internal class ChatGenerationCoordinator internal constructor(
             deltaFlushScheduled = false
         }
         notifyState()
+        // The level the adapters send after clamping (D73) and whether fast applies (D74); device evidence for P2.6.
+        logger.debug(
+            "Generation start target=${request.target.targetId} " +
+                "effort=${OnlineAiEffortSupport.effective(request.effort, request.target.capabilities.effortLevels).persistentId} " +
+                "fast=${request.fast == true && request.target.capabilities.fastMode}",
+        )
         startBackendTurn(generation, request)
         return generationId
     }
@@ -502,7 +514,7 @@ internal class ChatGenerationCoordinator internal constructor(
             val listener = generationListener(generationId, actualTarget)
             submitBackendWork(generationId) {
                 if (!isGenerationCurrent(generationId)) return@submitBackendWork
-                continuation.streamNext(generationRequest(emptyList(), prompt, settings), listener)
+                continuation.streamNext(generationRequest(emptyList(), prompt, request), listener)
             }
             return
         }
@@ -590,20 +602,22 @@ internal class ChatGenerationCoordinator internal constructor(
             observeContextTurnStart(generationId, created, actualTarget, prompt, installedTelemetry, budget, rebuilt = true)
             scheduler.post(0L) { recordActualTarget(generationId, actualTarget) }
             val listener = generationListener(generationId, actualTarget)
-            created.stream(generationRequest(history, prompt, settings), listener)
+            created.stream(generationRequest(history, prompt, request), listener)
         }
     }
 
     private fun generationRequest(
         history: List<GenerationMessage>,
         prompt: GenerationMessage,
-        settings: ChatUiSettings,
+        request: ChatTurnRequest,
     ) = GenerationRequest(
         history = history,
         prompt = prompt,
-        maximumOutputTokens = settings.maximumOutputTokens,
-        samplingOptions = settings.samplingOptions(),
+        maximumOutputTokens = request.settings.maximumOutputTokens,
+        samplingOptions = request.settings.samplingOptions(),
         reportUsage = true,
+        effort = request.effort,
+        fast = request.fast,
     )
 
     private fun recordActualTarget(generationId: Long, actualTarget: ConversationTargetSnapshot) {

@@ -22,6 +22,8 @@ import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputLayout
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiEffortSupport
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardContainer
@@ -514,6 +516,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             ?: listOf(modelCatalog.snapshot().catalog.defaultForProvider(initialProvider))
         var selectedDefaultModelId = existing?.profile?.modelId ?: selectedModelIds.first()
         var selectedVisionModelIds = existing?.profile?.visionModelIds.orEmpty()
+        var selectedEffort = existing?.profile?.defaultEffort ?: GenerationEffort.DEFAULT
 
         var onProviderClick: () -> Unit = {}
         var onModelsClick: () -> Unit = {}
@@ -524,6 +527,34 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         val defaultModelField = pickerField("") { onDefaultModelClick() }
         val visionModelsField = pickerField("") { onVisionModelsClick() }
         visionModelsField.first.contentDescription = getString(R.string.online_ai_vision_models)
+        var onEffortClick: () -> Unit = {}
+        val effortField = pickerField(effortLabel(selectedEffort)) { onEffortClick() }
+        onEffortClick = {
+            singleChoiceDialog(
+                title = getString(R.string.online_ai_default_effort),
+                labels = GenerationEffort.entries.map { effort -> effortLabel(effort) },
+                checkedIndex = GenerationEffort.entries.indexOf(selectedEffort),
+            ) { index ->
+                selectedEffort = GenerationEffort.entries[index]
+                effortField.second.text = effortLabel(selectedEffort)
+            }
+        }
+        effortField.first.contentDescription = getString(R.string.online_ai_default_effort)
+        val fastBox = MaterialCheckBox(this).apply {
+            text = getString(R.string.online_ai_fast_mode)
+            isChecked = existing?.profile?.fastMode == true
+            minimumHeight = uiDp(48)
+            buttonTintList = controlTintList()
+            buttonIconTintList = android.content.res.ColorStateList.valueOf(appPalette.onAccent)
+            setTextColor(appPalette.primaryText)
+        }
+        val fastHelp = secondaryText(getString(R.string.online_ai_fast_mode_help), 12.5f)
+
+        fun refreshFastControl() {
+            val supported = OnlineAiEffortSupport.supportsFast(selectedProvider.protocol)
+            fastBox.visibility = if (supported) View.VISIBLE else View.GONE
+            fastHelp.visibility = fastBox.visibility
+        }
 
         fun refreshModelControls() {
             modelsField.second.text = selectedModelIds.joinToString("\n")
@@ -555,6 +586,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 nameInput.setSelection(nameInput.text?.length ?: 0)
             }
             providerField.second.text = providerLabel(provider)
+            refreshFastControl()
         }
 
         onProviderClick = {
@@ -605,6 +637,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             }
         }
         refreshModelControls()
+        refreshFastControl()
 
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -619,6 +652,11 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             addView(defaultModelField.first)
             addView(formLabel(R.string.online_ai_vision_models))
             addView(visionModelsField.first)
+            addView(formLabel(R.string.online_ai_default_effort))
+            addView(effortField.first)
+            addView(secondaryText(getString(R.string.online_ai_default_effort_help), 12.5f))
+            addView(fastBox)
+            addView(fastHelp)
             addView(fieldParamsWrap(credentialField))
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -638,6 +676,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                     modelIds = selectedModelIds,
                     visionModelIds = selectedVisionModelIds,
                     defaultModelId = selectedDefaultModelId,
+                    defaultEffort = selectedEffort,
+                    fastMode = fastBox.isChecked,
                     credentialField = credentialField,
                     credentialInput = credentialInput,
                 )
@@ -816,6 +856,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         modelIds: List<String>,
         visionModelIds: List<String>,
         defaultModelId: String,
+        defaultEffort: GenerationEffort,
+        fastMode: Boolean,
         credentialField: TextInputLayout,
         credentialInput: android.widget.EditText,
     ): Boolean {
@@ -827,6 +869,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 modelId = defaultModelId,
                 modelIds = modelIds,
                 visionModelIds = visionModelIds,
+                defaultEffort = defaultEffort,
+                fastMode = fastMode,
             ) ?: OnlineAiProfile.create(
                 displayName = nameInput.text.toString(),
                 provider = provider,
@@ -834,6 +878,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 modelId = defaultModelId,
                 modelIds = modelIds,
                 visionModelIds = visionModelIds,
+                defaultEffort = defaultEffort,
+                fastMode = fastMode,
             )
             OnlineAiProfilePolicy.normalizeProfile(raw)
         }.getOrElse {
@@ -966,6 +1012,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 modelId = profile.modelId,
                 modelIds = profile.modelIds,
                 visionModelIds = profile.visionModelIds,
+                defaultEffort = profile.defaultEffort,
+                fastMode = profile.fastMode,
             )
         }.getOrElse {
             showSnackbar(screenRoot, getString(R.string.online_ai_profile_clone_failed), Snackbar.LENGTH_LONG)
@@ -1036,6 +1084,8 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                         modelId = source.modelId,
                         modelIds = source.modelIds,
                         visionModelIds = source.visionModelIds,
+                        defaultEffort = source.defaultEffort,
+                        fastMode = source.fastMode,
                     ),
                     OnlineAiCredentialUpdate.Clear,
                 )

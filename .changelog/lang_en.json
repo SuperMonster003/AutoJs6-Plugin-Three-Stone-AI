@@ -7,9 +7,15 @@
   "$data": {
     "v1.6.0": {
       "released_date": "2026/11/05",
+      "feature": [
+        "Online profiles can set a default effort (Low, Medium, High, Extra high or Max; with \"Default\" the model decides), and Anthropic profiles can use fast mode by default (faster replies at a higher price); both can also be changed for the current conversation only, the change is saved with the conversation, and new conversations start from the profile defaults. When a model does not support the chosen level, the closest lower level is used",
+        "Switching models now opens a panel from the bottom: search, models grouped by profile, favorites pinned on top, and labels showing which models support image input, reasoning and fast mode; the panel also changes the effort and fast mode of the current conversation, and \"Manage models and services\" at the bottom opens the model settings. The bar at the top of the chat shows the effort and fast mode of the current conversation"
+      ],
       "fix": [
         "A reply being generated was stopped when the screen was rotated or when dark mode, the language or the message font size was changed; the reply now keeps generating, and a reply that finishes while you are away from the chat is shown in full when you come back",
-        "After tapping \"Stop\", the online request kept running in the background until the reply was complete (and still counted toward usage); tapping Stop now ends the request within 1 second, and so do starting a new conversation, switching conversations, switching models and deleting messages"
+        "After tapping \"Stop\", the online request kept running in the background until the reply was complete (and still counted toward usage); tapping Stop now ends the request within 1 second, and so do starting a new conversation, switching conversations, switching models and deleting messages",
+        "Newer Claude models rejected requests from Anthropic profiles that set temperature, Top K or Top P; Anthropic profiles no longer send these three settings, and the settings page says so",
+        "After the default model of a profile was changed, a new conversation that was already open but had no messages kept the old default model; it now switches to the new default model (unless you picked another model in that conversation)"
       ]
     },
     "v1.5.0": {

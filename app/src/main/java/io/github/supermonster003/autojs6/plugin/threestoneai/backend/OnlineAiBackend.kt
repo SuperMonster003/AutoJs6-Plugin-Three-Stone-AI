@@ -108,6 +108,8 @@ internal class OnlineAiBackend(
             capabilities = executor?.capabilities(effectiveProfile) ?: UNIMPLEMENTED_CAPABILITIES,
             limits = executor?.limits(effectiveProfile) ?: UNKNOWN_LIMITS,
             executionProfiles = emptyList(),
+            defaultEffort = configured.profile.defaultEffort,
+            defaultFast = configured.profile.fastMode,
         )
     }
 
@@ -131,6 +133,11 @@ internal class OnlineAiBackend(
                 output.writeBoolean(target.capabilities.reasoning)
                 output.writeBoolean(target.capabilities.tools)
                 output.writeBoolean(target.capabilities.vision)
+                output.writeInt(target.capabilities.effortLevels.size)
+                target.capabilities.effortLevels.forEach { level -> output.writeLengthPrefixed(level.persistentId) }
+                output.writeBoolean(target.capabilities.fastMode)
+                output.writeLengthPrefixed(target.defaultEffort.persistentId)
+                output.writeBoolean(target.defaultFast)
                 output.writeNullableLong(target.limits.maximumContextBytes)
                 output.writeNullableLong(target.limits.maximumOutputBytes)
                 output.writeNullableInt(target.limits.maximumOutputTokens)
@@ -161,7 +168,7 @@ internal class OnlineAiBackend(
 
     companion object {
         const val BACKEND_ID = "online"
-        private const val CATALOG_GENERATION_SCHEMA = 3
+        private const val CATALOG_GENERATION_SCHEMA = 4
 
         private val UNIMPLEMENTED_CAPABILITIES = AiTargetCapabilities(
             streaming = false,

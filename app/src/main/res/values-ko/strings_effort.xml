@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_settings_generation_anthropic_ignored">Anthropic 모델은 온도, Top K, Top P를 무시합니다.</string>
+    <string name="chat_target_fast_badge">빠름</string>
+    <string name="effort_default">기본값</string>
+    <string name="effort_high">높음</string>
+    <string name="effort_low">낮음</string>
+    <string name="effort_max">최대</string>
+    <string name="effort_medium">중간</string>
+    <string name="effort_xhigh">매우 높음</string>
+    <string name="model_picker_effort">이 대화의 추론 강도</string>
+    <string name="model_picker_empty">일치하는 모델이 없습니다</string>
+    <string name="model_picker_fast">이 대화에서 빠른 모드 사용</string>
+    <string name="model_picker_favorite">즐겨찾기에 추가</string>
+    <string name="model_picker_favorites">즐겨찾기</string>
+    <string name="model_picker_local">이 기기</string>
+    <string name="model_picker_manage">모델 및 서비스 관리</string>
+    <string name="model_picker_search">모델 검색</string>
+    <string name="model_picker_tag_fast">빠름</string>
+    <string name="model_picker_tag_reasoning">추론</string>
+    <string name="model_picker_tag_vision">이미지 입력</string>
+    <string name="model_picker_unfavorite">즐겨찾기에서 제거</string>
+    <string name="online_ai_default_effort">기본 추론 강도</string>
+    <string name="online_ai_default_effort_help">새 대화는 이 단계에서 시작합니다. 모델이 지원하지 않는 단계는 아래쪽의 가장 가까운 지원 단계로 내려갑니다.</string>
+    <string name="online_ai_fast_mode">기본으로 빠른 모드 사용</string>
+    <string name="online_ai_fast_mode_help">Anthropic 전용입니다. 응답이 빨라지고 요금이 높아집니다. 빠른 모드를 지원하지 않는 모델은 오류를 반환합니다.</string>
+</resources>

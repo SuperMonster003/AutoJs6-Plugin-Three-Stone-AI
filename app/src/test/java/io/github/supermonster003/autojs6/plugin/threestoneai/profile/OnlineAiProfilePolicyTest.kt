@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.profile
 
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -134,7 +135,7 @@ class OnlineAiProfilePolicyTest {
         }
         assertThrows(IllegalArgumentException::class.java) {
             OnlineAiProfileCodec.decode(
-                text.replace("\"schema\":4", "\"schema\":1").toByteArray(),
+                text.replace("\"schema\":5", "\"schema\":1").toByteArray(),
             )
         }
     }
@@ -154,9 +155,10 @@ class OnlineAiProfilePolicyTest {
         assertEquals(listOf("model-a", "model-b", "model-c"), decoded.profiles.single().modelIds)
 
         val legacy = encoded.toString(Charsets.UTF_8)
-            .replace("\"schema\":4", "\"schema\":2")
+            .replace("\"schema\":5", "\"schema\":2")
             .replace(",\"modelIds\":[\"model-a\",\"model-b\",\"model-c\"]", "")
             .replace(",\"visionModelIds\":[]", "")
+            .replace(",\"defaultEffort\":\"default\",\"fastMode\":false", "")
             .toByteArray()
         val migrated = OnlineAiProfileCodec.decode(legacy).profiles.single()
 
@@ -179,7 +181,7 @@ class OnlineAiProfilePolicyTest {
         ).toString(Charsets.UTF_8)
         assertThrows(IllegalArgumentException::class.java) {
             OnlineAiProfileCodec.decode(
-                encoded.replace("\"schema\":4", "\"schema\":4294967299").toByteArray(),
+                encoded.replace("\"schema\":5", "\"schema\":4294967299").toByteArray(),
             )
         }
     }
@@ -246,6 +248,59 @@ class OnlineAiProfilePolicyTest {
 
         assertNotEquals(first.toList(), second.toList())
         assertArrayEquals(second, storage.snapshotBytes())
+    }
+
+    @Test
+    fun schemaFiveRoundTripsDefaultEffortAndFastModeAndOlderSchemasUseDefaults() {
+        GenerationEffort.entries.forEach { effort ->
+            val configured = profile(
+                provider = OnlineAiProvider.ANTHROPIC,
+                baseUrl = "https://api.anthropic.com/v1",
+            ).copy(defaultEffort = effort, fastMode = effort.ordinal % 2 == 1)
+            val encoded = OnlineAiProfileCodec.encode(OnlineAiProfileDocument(1L, listOf(configured)))
+
+            assertEquals(configured, OnlineAiProfileCodec.decode(encoded).profiles.single())
+        }
+        val encoded = OnlineAiProfileCodec.encode(OnlineAiProfileDocument(1L, listOf(profile())))
+            .toString(Charsets.UTF_8)
+        val schema4 = encoded.replace("\"schema\":5", "\"schema\":4")
+            .replace(",\"defaultEffort\":\"default\",\"fastMode\":false", "")
+        val migrated = OnlineAiProfileCodec.decode(schema4.toByteArray()).profiles.single()
+
+        assertEquals(GenerationEffort.DEFAULT, migrated.defaultEffort)
+        assertFalse(migrated.fastMode)
+    }
+
+    @Test
+    fun schemaFiveRequiresBothEffortFieldsWithKnownValues() {
+        val encoded = OnlineAiProfileCodec.encode(OnlineAiProfileDocument(1L, listOf(profile())))
+            .toString(Charsets.UTF_8)
+        listOf(
+            encoded.replace(",\"defaultEffort\":\"default\",\"fastMode\":false", ""),
+            encoded.replace(",\"fastMode\":false", ""),
+            encoded.replace("\"defaultEffort\":\"default\"", "\"defaultEffort\":\"ultra\""),
+            encoded.replace("\"fastMode\":false", "\"fastMode\":0"),
+            encoded.replace("\"schema\":5", "\"schema\":4"),
+        ).forEach { document ->
+            assertThrows(IllegalArgumentException::class.java) {
+                OnlineAiProfileCodec.decode(document.toByteArray())
+            }
+        }
+    }
+
+    @Test
+    fun fastModeIsKeptOnlyForAnthropicProfiles() {
+        val anthropic = profile(provider = OnlineAiProvider.ANTHROPIC, baseUrl = "https://api.anthropic.com/v1")
+            .copy(fastMode = true, defaultEffort = GenerationEffort.HIGH)
+        val gemini = profile(
+            provider = OnlineAiProvider.GEMINI,
+            baseUrl = "https://generativelanguage.googleapis.com/v1beta",
+        ).copy(fastMode = true, defaultEffort = GenerationEffort.HIGH)
+
+        assertTrue(OnlineAiProfilePolicy.normalizeProfile(anthropic).fastMode)
+        assertFalse(OnlineAiProfilePolicy.normalizeProfile(gemini).fastMode)
+        assertEquals(GenerationEffort.HIGH, OnlineAiProfilePolicy.normalizeProfile(gemini).defaultEffort)
+        assertFalse(OnlineAiProfilePolicy.normalizeProfile(profile().copy(fastMode = true)).fastMode)
     }
 
     private fun profile(

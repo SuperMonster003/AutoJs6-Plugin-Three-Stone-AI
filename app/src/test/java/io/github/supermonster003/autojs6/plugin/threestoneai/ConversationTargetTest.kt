@@ -4,6 +4,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiExecution
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetCapabilities
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetCatalog
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetIds
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetCredentialMode
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLimits
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
@@ -85,6 +86,47 @@ class ConversationTargetTest {
             ConversationTargetSelectionDisposition.CONFIRM_EXISTING_CONVERSATION,
             ConversationTargetPolicy.selectionDisposition(current, candidate, hasMessages = true),
         )
+    }
+
+    @Test
+    fun `empty conversation follows a changed default unless the user picked another target`() {
+        val opus = remoteTarget(displayName = "Anthropic", modelId = "claude-opus-5-5")
+        val fable = opus.copy(
+            targetId = AiTargetIds.profileModel(opus.profileId!!, "claude-opus-5-5", "claude-fable-5-1"),
+            modelId = "claude-fable-5-1",
+        )
+        val local = localTarget()
+        val before = catalog(opus.targetId, listOf(opus, fable, local))
+        val after = catalog(fable.targetId, listOf(opus, fable, local))
+        val opusSnapshot = ConversationTargetSnapshot.from(opus)
+        val fableSnapshot = ConversationTargetSnapshot.from(fable)
+        val localSnapshot = ConversationTargetSnapshot.from(local)
+
+        assertEquals(
+            fableSnapshot,
+            ConversationTargetPolicy.afterCatalogRefresh(opusSnapshot, before, after, hasMessages = false),
+        )
+        assertEquals(
+            localSnapshot,
+            ConversationTargetPolicy.afterCatalogRefresh(localSnapshot, before, after, hasMessages = false),
+        )
+        assertEquals(
+            opusSnapshot,
+            ConversationTargetPolicy.afterCatalogRefresh(opusSnapshot, before, after, hasMessages = true),
+        )
+        assertEquals(
+            fableSnapshot,
+            ConversationTargetPolicy.afterCatalogRefresh(null, null, after, hasMessages = false),
+        )
+        assertEquals(
+            opusSnapshot,
+            ConversationTargetPolicy.afterCatalogRefresh(opusSnapshot, null, after, hasMessages = false),
+        )
+        assertEquals(
+            opusSnapshot,
+            ConversationTargetPolicy.afterCatalogRefresh(opusSnapshot, before, null, hasMessages = false),
+        )
+        assertNull(ConversationTargetPolicy.afterCatalogRefresh(null, before, catalog(null, listOf(opus)), false))
     }
 
     private fun catalog(defaultTargetId: String?, targets: List<AiTarget>) = AiTargetCatalog(

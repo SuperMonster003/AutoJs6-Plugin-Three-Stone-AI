@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.nio.ByteBuffer
@@ -64,47 +65,7 @@ class ConversationHistoryTest {
 
     @Test
     fun `codec reads the published version 4 layout without the truncation flag`() {
-        // Byte for byte what 1.4.x wrote: a conversation without a target snapshot, one user and one
-        // assistant message with usage and target, and an empty context state.
-        val legacy = ByteArrayOutputStream().also { bytes ->
-            DataOutputStream(bytes).use { output ->
-                output.writeInt(0x33534143)
-                output.writeInt(4)
-                output.writeInt(1)
-                output.writeLegacyText("conversation-1")
-                output.writeLegacyText("First question")
-                output.writeLong(100L)
-                output.writeLong(200L)
-                output.writeBoolean(false)
-                output.writeInt(2)
-                output.writeLong(1L)
-                output.writeLegacyText("USER")
-                output.writeLegacyText("COMPLETE")
-                output.writeLegacyText("First question")
-                output.writeBoolean(false)
-                output.writeBoolean(false)
-                output.writeLong(2L)
-                output.writeLegacyText("ASSISTANT")
-                output.writeLegacyText("COMPLETE")
-                output.writeLegacyText("**Answer**")
-                output.writeBoolean(true)
-                output.writeLong(12L)
-                output.writeLong(34L)
-                output.writeLong(567L)
-                output.writeBoolean(true)
-                output.writeLegacyText(assistantTarget.targetId)
-                output.writeLegacyText(assistantTarget.providerId)
-                output.writeLegacyText(assistantTarget.modelId)
-                output.writeLegacyText(assistantTarget.displayName)
-                output.writeLegacyText(assistantTarget.locality.name)
-                output.writeInt(1)
-                output.writeBoolean(false)
-                output.writeInt(0)
-                output.writeInt(0)
-            }
-        }.toByteArray()
-
-        val restored = ConversationHistoryCodec.decode(legacy).single()
+        val restored = ConversationHistoryCodec.decode(publishedLayout(4)).single()
 
         assertEquals("conversation-1", restored.id)
         assertNull(restored.target)
@@ -113,6 +74,150 @@ class ConversationHistoryTest {
         assertEquals(assistantTarget, restored.messages.last().target)
         assertTrue(restored.messages.none { message -> message.truncated })
         assertEquals(ConversationContextState(), restored.contextState)
+        assertNull(restored.effortOverride)
+        assertNull(restored.fastOverride)
+    }
+
+    @Test
+    fun `codec reads the published version 5 layout without property tables`() {
+        val restored = ConversationHistoryCodec.decode(publishedLayout(5)).single()
+
+        assertEquals(listOf(false, true), restored.messages.map { message -> message.truncated })
+        assertEquals(assistantTarget, restored.messages.last().target)
+        assertEquals(ConversationContextState(), restored.contextState)
+        assertNull(restored.effortOverride)
+        assertNull(restored.fastOverride)
+    }
+
+    @Test
+    fun `codec round trips every conversation effort and fast override`() {
+        val overrides = GenerationEffort.entries.map { effort -> effort to (effort.ordinal % 2 == 0) } +
+            listOf<Pair<GenerationEffort?, Boolean?>>(null to null, GenerationEffort.HIGH to null, null to false)
+        overrides.forEach { (effort, fast) ->
+            val original = conversation("override", updatedAt = 10L).copy(effortOverride = effort, fastOverride = fast)
+
+            val restored = ConversationHistoryCodec.decode(ConversationHistoryCodec.encode(listOf(original))).single()
+
+            assertEquals(original, restored)
+            assertEquals(effort, restored.effortOverride)
+            assertEquals(fast, restored.fastOverride)
+        }
+    }
+
+    @Test
+    fun `codec skips unknown property keys and unparseable known values`() {
+        val bytes = publishedLayout(
+            version = 6,
+            messageProperties = listOf("thinking" to ByteArray(64 * 1_024) { 7 }),
+            conversationProperties = listOf(
+                "effort" to "ultra".toByteArray(),
+                "fast" to byteArrayOf(2),
+                "future.key_2" to byteArrayOf(1, 2, 3),
+            ),
+        )
+
+        val restored = ConversationHistoryCodec.decode(bytes).single()
+
+        assertEquals(listOf("First question", "**Answer**"), restored.messages.map { message -> message.text })
+        assertNull(restored.effortOverride)
+        assertNull(restored.fastOverride)
+    }
+
+    @Test
+    fun `codec reads known keys next to unknown ones`() {
+        val bytes = publishedLayout(
+            version = 6,
+            conversationProperties = listOf(
+                "effort" to "xhigh".toByteArray(),
+                "fast" to byteArrayOf(1),
+                "later" to byteArrayOf(),
+            ),
+        )
+
+        val restored = ConversationHistoryCodec.decode(bytes).single()
+
+        assertEquals(GenerationEffort.XHIGH, restored.effortOverride)
+        assertEquals(true, restored.fastOverride)
+    }
+
+    @Test
+    fun `codec rejects malformed property tables`() {
+        listOf(
+            listOf("fast" to byteArrayOf(1), "fast" to byteArrayOf(0)),
+            listOf("Effort" to "high".toByteArray()),
+            listOf("1key" to byteArrayOf()),
+            listOf("k".repeat(33) to byteArrayOf()),
+            listOf("big" to ByteArray(64 * 1_024 + 1)),
+            List(65) { index -> "key$index" to byteArrayOf() },
+        ).forEach { properties ->
+            assertThrows(IllegalArgumentException::class.java) {
+                ConversationHistoryCodec.decode(publishedLayout(version = 6, conversationProperties = properties))
+            }
+            assertThrows(IllegalArgumentException::class.java) {
+                ConversationHistoryCodec.decode(publishedLayout(version = 6, messageProperties = properties))
+            }
+        }
+    }
+
+    /**
+     * Byte for byte what each published format writes: a conversation without a target snapshot, one
+     * user and one truncated assistant message with usage and target, and an empty context state.
+     * Version 4 (1.4.x) has no truncation flag; version 6 adds raw property tables.
+     */
+    private fun publishedLayout(
+        version: Int,
+        messageProperties: List<Pair<String, ByteArray>> = emptyList(),
+        conversationProperties: List<Pair<String, ByteArray>> = emptyList(),
+    ): ByteArray = ByteArrayOutputStream().also { bytes ->
+        DataOutputStream(bytes).use { output ->
+            output.writeInt(0x33534143)
+            output.writeInt(version)
+            output.writeInt(1)
+            output.writeLegacyText("conversation-1")
+            output.writeLegacyText("First question")
+            output.writeLong(100L)
+            output.writeLong(200L)
+            output.writeBoolean(false)
+            output.writeInt(2)
+            output.writeLong(1L)
+            output.writeLegacyText("USER")
+            output.writeLegacyText("COMPLETE")
+            output.writeLegacyText("First question")
+            output.writeBoolean(false)
+            if (version >= 5) output.writeBoolean(false)
+            output.writeBoolean(false)
+            if (version >= 6) output.writeRawProperties(messageProperties)
+            output.writeLong(2L)
+            output.writeLegacyText("ASSISTANT")
+            output.writeLegacyText("COMPLETE")
+            output.writeLegacyText("**Answer**")
+            output.writeBoolean(true)
+            output.writeLong(12L)
+            output.writeLong(34L)
+            output.writeLong(567L)
+            if (version >= 5) output.writeBoolean(true)
+            output.writeBoolean(true)
+            output.writeLegacyText(assistantTarget.targetId)
+            output.writeLegacyText(assistantTarget.providerId)
+            output.writeLegacyText(assistantTarget.modelId)
+            output.writeLegacyText(assistantTarget.displayName)
+            output.writeLegacyText(assistantTarget.locality.name)
+            if (version >= 6) output.writeRawProperties(messageProperties)
+            output.writeInt(1)
+            output.writeBoolean(false)
+            output.writeInt(0)
+            output.writeInt(0)
+            if (version >= 6) output.writeRawProperties(conversationProperties)
+        }
+    }.toByteArray()
+
+    private fun DataOutputStream.writeRawProperties(properties: List<Pair<String, ByteArray>>) {
+        writeInt(properties.size)
+        properties.forEach { (key, value) ->
+            writeLegacyText(key)
+            writeInt(value.size)
+            write(value)
+        }
     }
 
     private fun DataOutputStream.writeLegacyText(value: String) {

@@ -26,6 +26,10 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         val messageBytes = OnlineAiTools.requireRequest(turn, OnlineAiRequestSupport.requireConversation(messages))
         val maximumOutputTokens = turn.maximumOutputTokens ?: DEFAULT_MAXIMUM_OUTPUT_TOKENS
         require(maximumOutputTokens > 0) { "Online AI maximum output tokens must be positive" }
+        // D73 / D74: DEFAULT and unsupported models omit effort; fast adds speed and, outside the GA
+        // Claude Opus 5.5 family, the research-preview beta header.
+        val effort = OnlineAiEffortSupport.wireValue(normalized.provider.protocol, normalized.modelId, turn.effort)
+        val fast = turn.fast == true
         val body = JsonObject().apply {
             addProperty("model", normalized.modelId)
             addProperty("stream", true)
@@ -63,18 +67,25 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
                         })
                     }
             })
-            turn.samplingOptions?.let { sampling ->
-                addProperty("temperature", sampling.temperature)
-                addProperty("top_k", sampling.topK)
-                addProperty("top_p", sampling.topP)
-            }
-            turn.responseJsonSchema?.let { schema ->
+            // Sampling options are never sent: current Claude models reject or ignore them (D75).
+            val schema = turn.responseJsonSchema
+            if (effort != null || schema != null) {
                 add("output_config", JsonObject().apply {
-                    add("format", JsonObject().apply {
-                        addProperty("type", "json_schema")
-                        add("schema", OnlineAiRequestSupport.parseSchema(schema, messageBytes))
-                    })
+                    effort?.let { value -> addProperty("effort", value) }
+                    schema?.let { value ->
+                        add("format", JsonObject().apply {
+                            addProperty("type", "json_schema")
+                            add("schema", OnlineAiRequestSupport.parseSchema(value, messageBytes))
+                        })
+                    }
                 })
+            }
+            if (fast) addProperty("speed", "fast")
+        }
+        val headers = buildMap {
+            put("anthropic-version", ANTHROPIC_VERSION)
+            if (fast && OnlineAiEffortSupport.anthropicFastNeedsBeta(normalized.modelId)) {
+                put("anthropic-beta", OnlineAiEffortSupport.ANTHROPIC_FAST_BETA)
             }
         }
         return OnlineAiRequestSupport.prepare(
@@ -83,7 +94,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
             credential = credential,
             withImages = messages.any { it.images.isNotEmpty() || it.nativeToolMessage?.imageResults.orEmpty().isNotEmpty() },
             credentialHeader = OnlineAiCredentialHeader.ANTHROPIC_API_KEY,
-            fixedHeaders = mapOf("anthropic-version" to ANTHROPIC_VERSION),
+            fixedHeaders = headers,
         )
     }
 

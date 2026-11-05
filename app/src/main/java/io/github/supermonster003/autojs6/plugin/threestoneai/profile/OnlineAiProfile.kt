@@ -1,5 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.profile
 
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiEffortSupport
 import org.autojs.plugin.ai.common.api.AiCommonLimits
 import org.autojs.plugin.ai.common.api.AiValidation
 import java.net.URI
@@ -62,6 +64,10 @@ internal data class OnlineAiProfile(
     val modelIds: List<String> = listOf(modelId),
     /** Exact model IDs explicitly enabled by the user; never inferred from a protocol/name. */
     val visionModelIds: List<String> = emptyList(),
+    /** Effort each new chat conversation starts from (D72); chat may override it per conversation. */
+    val defaultEffort: GenerationEffort = GenerationEffort.DEFAULT,
+    /** Fast output mode each new chat conversation starts from; only Anthropic profiles keep it (D74). */
+    val fastMode: Boolean = false,
 ) {
     val declaredHttpsOrigin: String
         get() = OnlineAiProfileUrls.origin(baseUrl)
@@ -74,6 +80,8 @@ internal data class OnlineAiProfile(
             modelId: String,
             modelIds: List<String> = listOf(modelId),
             visionModelIds: List<String> = emptyList(),
+            defaultEffort: GenerationEffort = GenerationEffort.DEFAULT,
+            fastMode: Boolean = false,
         ): OnlineAiProfile = OnlineAiProfilePolicy.normalizeProfile(
             OnlineAiProfile(
                 profileId = UUID.randomUUID().toString(),
@@ -83,6 +91,8 @@ internal data class OnlineAiProfile(
                 modelId = modelId,
                 modelIds = modelIds,
                 visionModelIds = visionModelIds,
+                defaultEffort = defaultEffort,
+                fastMode = fastMode,
             ),
         )
     }
@@ -113,7 +123,9 @@ internal data class OnlineAiProfileDeletion(
 )
 
 internal object OnlineAiProfilePolicy {
-    const val SCHEMA = 4
+    /** Schema 5 adds defaultEffort and fastMode; older documents decode as DEFAULT / false. */
+    const val SCHEMA = 5
+    const val VISION_SCHEMA = 4
     const val MULTI_MODEL_SCHEMA = 3
     const val LEGACY_SCHEMA = 2
     const val MAXIMUM_PROFILES = 100
@@ -168,6 +180,7 @@ internal object OnlineAiProfilePolicy {
             modelId = modelId,
             modelIds = modelIds,
             visionModelIds = modelIds.filter { it in visionModelIds },
+            fastMode = profile.fastMode && OnlineAiEffortSupport.supportsFast(profile.provider.protocol),
         )
     }
 

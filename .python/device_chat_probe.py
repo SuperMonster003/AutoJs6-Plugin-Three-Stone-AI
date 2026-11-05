@@ -27,7 +27,10 @@ and restores it. Either one checks that the reply is still generating after each
 that the chat log (tag ThreeStoneAiChat) shows no cancel. --stop-after taps the chat's own Stop
 button that many seconds after Send and checks the log: "Generation cancel complete reason=stopped"
 within 1000 ms and httpCall=cancelled for an online target. Log checks print only the matched
-fields, never prompts, replies or credentials.
+fields, never prompts, replies or credentials. uiautomator cannot dump a chat that is streaming (no
+idle state, the dump fails after about 11 s), so "still generating" is read from the window's
+FLAG_KEEP_SCREEN_ON, Stop is tapped where Send was (the keyboard is closed first so the composer
+does not move), and every dump removes the previous file so a failed dump is never read as current.
 """
 
 import argparse
@@ -50,7 +53,6 @@ STRING_NAMES = (
     "chat_generation_failure_choose_target",
     "chat_generation_failure_detail",
     "chat_usage_format",
-    "chat_stop",
 )
 LOG_TAG = "ThreeStoneAiChat"
 SETTLE_SECONDS = 2.5
@@ -96,7 +98,10 @@ def adb(serial, *args, check=True):
 
 
 def dump(serial):
-    adb(serial, "shell", "uiautomator", "dump", "/sdcard/three_stone_probe.xml")
+    # Remove the previous dump first: a failed dump ("could not get idle state" while a reply
+    # streams) leaves the old file, which would be read back as the current screen.
+    adb(serial, "shell", "rm", "-f", "/sdcard/three_stone_probe.xml", check=False)
+    adb(serial, "shell", "uiautomator", "dump", "/sdcard/three_stone_probe.xml", check=False)
     xml = adb(serial, "exec-out", "cat", "/sdcard/three_stone_probe.xml")
     start = xml.find("<?xml")
     if start < 0:
@@ -169,6 +174,10 @@ def keep_screen_on(serial):
     return None
 
 
+def ime_shown(serial):
+    return "mInputShown=true" in adb(serial, "shell", "dumpsys", "input_method", check=False)
+
+
 def clear_field(serial, length):
     # Ctrl+A then Delete; fall back to one Delete per character when key combinations are unsupported.
     adb(serial, "shell", "input", "keycombination", "113", "29", check=False)
@@ -178,14 +187,17 @@ def clear_field(serial, length):
         adb(serial, "shell", "input", "keyevent", "67")
 
 
-def stop_button(serial, words):
-    """The composer's Stop button while a reply is generating, else None."""
-    return find(dump(serial), **{"content-desc": words["chat_stop"]})
+def generating(serial):
+    """Whether the chat is generating, read from FLAG_KEEP_SCREEN_ON (held exactly while a reply is
+    generating). uiautomator cannot dump a streaming chat (it never reaches an idle state), so the
+    Stop button itself is not looked up."""
+    return keep_screen_on(serial) is True
 
 
 def device_time(serial):
     """Device clock in the format `logcat -T` accepts, so later reads skip older lines."""
-    return adb(serial, "shell", "date", "+%m-%d %H:%M:%S.000").strip()
+    # One shell word: adb joins arguments with spaces, which would split the format.
+    return adb(serial, "shell", "date '+%m-%d %H:%M:%S.000'").strip()
 
 
 def chat_log(serial, since):
@@ -194,7 +206,7 @@ def chat_log(serial, since):
 
 
 def recreate_events(serial, words, args):
-    """Recreates the chat while it streams; returns (event, still generating) pairs."""
+    """Recreates the chat while it streams; returns (event, still generating, time checked) triples."""
     events = []
     if args.rotate_during:
         accelerometer = adb(serial, "shell", "settings", "get", "system", "accelerometer_rotation").strip()
@@ -205,10 +217,10 @@ def recreate_events(serial, words, args):
             adb(serial, "shell", "settings", "put", "system", "accelerometer_rotation", "0")
             adb(serial, "shell", "settings", "put", "system", "user_rotation", landscape)
             time.sleep(SETTLE_SECONDS)
-            events.append((f"rotate to {landscape}", stop_button(serial, words) is not None))
+            events.append((f"rotate to {landscape}", generating(serial), time.time()))
             adb(serial, "shell", "settings", "put", "system", "user_rotation", original)
             time.sleep(SETTLE_SECONDS)
-            events.append((f"rotate back to {original}", stop_button(serial, words) is not None))
+            events.append((f"rotate back to {original}", generating(serial), time.time()))
         finally:
             adb(serial, "shell", "settings", "put", "system", "user_rotation", original, check=False)
             if accelerometer.isdigit():
@@ -220,11 +232,11 @@ def recreate_events(serial, words, args):
         try:
             adb(serial, "shell", "cmd", "uimode", "night", flipped)
             time.sleep(SETTLE_SECONDS)
-            events.append((f"night mode {flipped}", stop_button(serial, words) is not None))
+            events.append((f"night mode {flipped}", generating(serial), time.time()))
         finally:
             adb(serial, "shell", "cmd", "uimode", "night", original, check=False)
         time.sleep(SETTLE_SECONDS)
-        events.append((f"night mode back to {original}", stop_button(serial, words) is not None))
+        events.append((f"night mode back to {original}", generating(serial), time.time()))
     return events
 
 
@@ -317,6 +329,12 @@ def main():
         print(f"FAIL: IME changed the prompt, nothing sent: {escaped(typed[:80])}")
         clear_field(serial, len(typed) + 8)
         return 3
+    if args.stop_after is not None and ime_shown(serial):
+        # The keyboard closes after Send and the composer moves down; close it first so the
+        # Send position, where Stop appears, stays valid. BACK only when the keyboard is shown.
+        adb(serial, "shell", "input", "keyevent", "4")
+        time.sleep(1.0)
+        root = dump(serial)
     send = find(root, **{"content-desc": words["chat_send"]})
     if send is None:
         print("FAIL: send button not found")
@@ -333,21 +351,21 @@ def main():
     stop_requested = False
     if args.stop_after is not None:
         time.sleep(max(0.0, args.stop_after - (time.time() - started)))
-        button = stop_button(serial, words)
-        if button is None:
-            print("FAIL: Stop is not shown, the reply ended before --stop-after")
+        if not generating(serial):
+            print("FAIL: not generating, the reply ended before --stop-after")
             return 1
-        tap(serial, button)
+        # Send turns into Stop in place while generating.
+        tap(serial, send)
         stop_requested = True
         print(f"stop: tapped {time.time() - started:.1f} s after Send")
     elif args.rotate_during or args.night_during:
         time.sleep(max(0.0, args.disturb_after - (time.time() - started)))
-        if stop_button(serial, words) is None:
+        if not generating(serial):
             print("FAIL: the reply ended before the screen was recreated, use a longer prompt")
             return 1
         events = recreate_events(serial, words, args)
-        for event, generating in events:
-            print(f"{event}: generating={generating}")
+        for event, active, checked in events:
+            print(f"{event}: generating={active} at {checked - started:.1f} s")
 
     outcome = None
     meta = ""
@@ -356,7 +374,10 @@ def main():
     detail = None
     while time.time() - started < args.timeout:
         time.sleep(3)
-        root = dump(serial)
+        try:
+            root = dump(serial)
+        except (RuntimeError, ET.ParseError):
+            continue  # still streaming
         visible = texts(root)
         for index, text in enumerate(visible):
             match = usage.search(text)
@@ -406,8 +427,10 @@ def main():
         completes = [line for line in log if "Context complete" in line]
         print(f"log: lines={len(log)} cancel requests={len(cancels)} context completions={len(completes)}")
         if events:
-            if not events[0][1]:
-                print("FAIL: the reply was not generating after the first recreation")
+            idle = [event for event, active, _ in events if not active]
+            if idle:
+                # A complete outcome with no cancel logged means the reply simply ended first.
+                print(f"FAIL: not generating after: {', '.join(idle)} (use a longer reply if no cancel was logged)")
                 failed = True
             if cancels:
                 print("FAIL: recreating the screen requested a cancel")

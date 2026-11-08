@@ -32,7 +32,7 @@
 | --- | --- |
 | OpenAI | 从[模型目录](https://developers.openai.com/api/docs/models/all.md)发现详情页, 验证实际 Model ID, 文本输出, Chat Completions 和 streaming, 结合[退役说明](https://developers.openai.com/api/docs/deprecations.md)排除明确停用项 |
 | Anthropic | 从[模型对照表](https://platform.claude.com/docs/en/models/overview.md)提取原生 ID/alias, 结合[生命周期表](https://platform.claude.com/docs/en/about-claude/model-deprecations.md)的 Active 项, 排除受限型号 |
-| Gemini | 从[官方模型表](https://ai.google.dev/gemini-api/docs/models.md.txt)的 Endpoint 列提取并验证文本输出, 排除旧用户限定和非聊天章节; 最早可能退役日不能当作实际停用日 |
+| Gemini | 从[官方模型表](https://aistudio.google.com/docs/models.md)的 Endpoint 列提取并验证文本输出, 兼容旧 Markdown 与 AI Studio Markdoc 表格, 排除旧用户限定和非聊天章节; 最早可能退役日不能当作实际停用日 |
 | DeepSeek | 解析[官方模型规格](https://api-docs.deepseek.com/quick_start/pricing/)的 MODEL 表格行, 不从脚注或历史示例猜 ID |
 | OpenRouter | 使用[公开 Models API](https://openrouter.ai/api/v1/models)的真实路由 ID 和模态信息, 排除媒体生成, batch 和已过期项 |
 

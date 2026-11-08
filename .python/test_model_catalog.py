@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.request import Request
 
 import update_model_catalog as catalog
 
@@ -137,9 +138,85 @@ class SourceParserTest(unittest.TestCase):
 
     def test_gemini_endpoint_column_and_restricted_sections_control_discovery(self):
         pages = {catalog.GEMINI_INDEX: fixture("gemini-index.md"),
-                 "https://ai.google.dev/gemini-api/docs/models/gemini-4-flash.md.txt": fixture("gemini-detail.md")}
+                 "https://aistudio.google.com/docs/models/gemini-4-flash.md": fixture("gemini-detail.md")}
         self.assertEqual(catalog.discover_gemini(pages.__getitem__), ["gemini-4-flash"])
         self.assertIsNone(catalog.parse_gemini_detail(fixture("gemini-detail.md").replace("**Output** Text", "**Output** Audio"), "gemini-4-flash"))
+
+    def test_gemini_markdoc_tables_relative_links_and_nested_cells(self):
+        pages = {catalog.GEMINI_INDEX: fixture("gemini-markdoc-index.md"),
+                 "https://aistudio.google.com/docs/models/gemini-4-flash.md": fixture("gemini-markdoc-detail.md")}
+        self.assertEqual(catalog.discover_gemini(pages.__getitem__), ["gemini-4-flash"])
+        index = pages[catalog.GEMINI_INDEX].replace(
+            "](/docs/models/", "](https://aistudio.google.com/docs/models/")
+        self.assertEqual(catalog.parse_gemini_index(index), catalog.parse_gemini_index(pages[catalog.GEMINI_INDEX]))
+        self.assertEqual(catalog.discover_gemini(lambda url: pages[url].replace("\n", "\r\n")), ["gemini-4-flash"])
+
+    def test_gemini_markdoc_requires_matching_model_and_text_only_output(self):
+        detail = fixture("gemini-markdoc-detail.md")
+        for output in ("Audio", "Text, Image"):
+            with self.subTest(output=output):
+                self.assertIsNone(catalog.parse_gemini_detail(detail.replace("**Output** Text", f"**Output** {output}"), "gemini-4-flash"))
+        for invalid in (detail.replace("Model code", "Example code"),
+                        detail.replace("**Output** Text", "Text"), detail.replace("gemini-4-flash", "gemini-5-flash")):
+            with self.subTest(detail=invalid), self.assertRaises(catalog.CatalogError):
+                catalog.parse_gemini_detail(invalid, "gemini-4-flash")
+        self.assertIsNone(catalog.parse_gemini_detail(
+            "API access is limited to existing\nusers.\n" + detail, "gemini-4-flash"))
+
+    def test_gemini_wrapped_access_notices_exclude_legacy_models(self):
+        for notice in ("We are limiting\naccess to these models.",
+                       "Models are for users who have\nactively used them.",
+                       "API access is limited to existing\nusers."):
+            index = fixture("gemini-index.md").replace(
+                "We are limiting access to users who have actively used these models.", notice)
+            with self.subTest(notice=notice):
+                self.assertEqual(list(catalog.parse_gemini_index(index)), ["gemini-4-flash"])
+
+    def test_gemini_rejects_untrusted_detail_links_and_duplicate_endpoints(self):
+        index = fixture("gemini-markdoc-index.md")
+        for link in ("https://evil.example/docs/models/gemini-4-flash",
+                     "https://aistudio.google.com.evil.example/docs/models/gemini-4-flash",
+                     "/docs/models/gemini-4-flash?token=anything", "/docs/other/gemini-4-flash"):
+            with self.subTest(link=link), self.assertRaises(catalog.CatalogError):
+                catalog.parse_gemini_index(index.replace("(/docs/models/gemini-4-flash)", f"({link})"))
+        with self.assertRaises(catalog.CatalogError):
+            catalog.parse_gemini_index(index + "\n" + index)
+
+    def test_gemini_malformed_markdoc_retains_previous_provider(self):
+        index = fixture("gemini-markdoc-index.md")
+        for invalid in (index.replace("{% /table %}", "", 1),
+                        index.replace("  * Endpoint\n", "", 1),
+                        index.replace("  * `gemini-4-flash`", "  * ", 1)):
+            with self.subTest(index=invalid):
+                with self.assertRaises(catalog.CatalogError):
+                    catalog.parse_gemini_index(invalid)
+                value = seed()
+                sources = unchanged_sources(value)
+                sources["gemini"] = lambda: list(catalog.parse_gemini_index(invalid))
+                output, report = catalog.refresh(encode(value), policy(), sources)
+                self.assertEqual(output, encode(value))
+                self.assertEqual(report["providers"]["gemini"]["status"], "retained")
+                self.assertEqual([error["provider"] for error in report["errors"]], ["gemini"])
+
+    def test_gemini_redirects_accept_only_official_model_document_paths(self):
+        redirects = catalog.TrustedRedirects()
+        for suffix in ("", "/gemini-4-flash"):
+            old = f"https://ai.google.dev/gemini-api/docs/models{suffix}.md.txt"
+            intermediate = f"https://aistudio.google.com/docs/models{suffix}.md.txt"
+            canonical = f"https://aistudio.google.com/docs/models{suffix}.md"
+            for source, target in ((old, intermediate), (intermediate, canonical)):
+                self.assertTrue(catalog.trusted_url(source))
+                redirected = redirects.redirect_request(Request(source), None, 301, "Moved", {}, target)
+                self.assertEqual(redirected.full_url, target)
+        for target in ("https://evil.example/docs/models.md", "https://aistudio.google.com/llms-full.txt",
+                       "https://aistudio.google.com/docs/models.md?key=anything",
+                       "https://aistudio.google.com/docs/models.md#fragment",
+                       "https://aistudio.google.com:443/docs/models.md",
+                       "https://user@aistudio.google.com/docs/models.md",
+                       "http://aistudio.google.com/docs/models.md",
+                       "https://aistudio.google.com/docs/models/../other.md"):
+            with self.subTest(target=target), self.assertRaises(catalog.CatalogError):
+                redirects.redirect_request(Request(catalog.GEMINI_INDEX), None, 302, "Moved", {}, target)
 
     def test_deepseek_ignores_superscript_versions_and_retired_alias_footnotes(self):
         self.assertEqual(catalog.discover_deepseek(lambda _: fixture("deepseek-pricing.html")),

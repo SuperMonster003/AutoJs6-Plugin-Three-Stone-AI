@@ -36,7 +36,7 @@ OPENAI_INDEX = "https://developers.openai.com/api/docs/models/all.md"
 OPENAI_DEPRECATIONS = "https://developers.openai.com/api/docs/deprecations.md"
 ANTHROPIC_INDEX = "https://platform.claude.com/docs/en/models/overview.md"
 ANTHROPIC_STATUS = "https://platform.claude.com/docs/en/about-claude/model-deprecations.md"
-GEMINI_INDEX = "https://ai.google.dev/gemini-api/docs/models.md.txt"
+GEMINI_INDEX = "https://aistudio.google.com/docs/models.md"
 DEEPSEEK_INDEX = "https://api-docs.deepseek.com/quick_start/pricing/"
 OPENROUTER_INDEX = "https://openrouter.ai/api/v1/models"
 DEFAULT_POLICY = Path(__file__).resolve().parents[1] / ".github/model-catalog-policy.json"
@@ -158,7 +158,10 @@ def trusted_url(url: str) -> bool:
     if parts.netloc == "developers.openai.com":
         return re.fullmatch(r"/api/docs/models/[a-z0-9.-]+\.md", parts.path) is not None
     if parts.netloc == "ai.google.dev":
-        return re.fullmatch(r"/gemini-api/docs/models/[a-z0-9.-]+\.md\.txt", parts.path) is not None
+        return re.fullmatch(r"/gemini-api/docs/models(?:/[a-z0-9.-]+)?\.md\.txt", parts.path) is not None
+    if parts.netloc == "aistudio.google.com":
+        # The old .md.txt URLs redirect through this suffix before reaching .md.
+        return re.fullmatch(r"/docs/models(?:/[a-z0-9.-]+)?\.md(?:\.txt)?", parts.path) is not None
     return False
 
 
@@ -350,6 +353,38 @@ def discover_anthropic(fetch: Fetch) -> list[str]:
 
 
 GEMINI_CHAT = re.compile(r"gemini-\d+(?:\.\d+)*-(?:pro|flash(?:-lite)?)(?:-(?:preview|exp)(?:-\d+(?:-\d+)*)?)?\Z")
+GEMINI_RESTRICTED = re.compile(r"limiting\s+access|restricted\s+access|only\s+available\s+to|"
+                               r"users\s+who\s+have\s+actively|limited\s+to\s+existing\s+users", re.I)
+
+
+def gemini_tables(text: str) -> list[tuple[list[str], list[list[str]]]]:
+    """Read legacy pipe tables and AI Studio's Markdoc table cells without rendering tags."""
+    text = text.replace("\r\n", "\n")
+    result = tables(text)
+    opening = r"^[ \t]*{%\s*table\b[^\n]*%}[ \t]*$"
+    closing = r"^[ \t]*{%\s*/table\s*%}[ \t]*$"
+    blocks = list(re.finditer(opening + r"\n(.*?)" + closing, text, re.M | re.S))
+    require(len(blocks) == len(re.findall(opening, text, re.M)) == len(re.findall(closing, text, re.M)),
+            "malformed Gemini Markdoc table boundaries")
+    for block in blocks:
+        body = block[1]
+        first_cell = re.search(r"(?m)^([ \t]*)\* +", body)
+        require(first_cell is not None, "Gemini Markdoc table cells missing")
+        indent = re.escape(first_cell[1])
+        rows = []
+        for row in re.split(r"(?m)^" + indent + r"---[ \t]*$", body):
+            parts = re.split(r"(?m)^" + indent + r"\* +", row)
+            require(not parts[0].strip() and len(parts) > 1, "malformed Gemini Markdoc table row")
+            # Only bullets at the table's indentation start cells. Nested lists
+            # and section/icon tags remain inside the current cell.
+            values = [" ".join(re.sub(r"{%.*?%}", "", part, flags=re.S).split()) for part in parts[1:]]
+            require(all(values), "empty Gemini Markdoc table cell")
+            rows.append(values)
+        header, values = rows[0], rows[1:]
+        require(values and all(len(row) == len(header) for row in values),
+                "malformed Gemini Markdoc table columns")
+        result.append((header, values))
+    return result
 
 
 def parse_gemini_index(text: str) -> dict[str, str]:
@@ -358,11 +393,11 @@ def parse_gemini_index(text: str) -> dict[str, str]:
     sections = re.split(r"(?m)^## ", text)
     for section in sections[1:]:
         heading = section.splitlines()[0]
-        if not re.match(r"Gemini \d", heading):
+        if not re.match(r"(?:All )?Gemini \d", heading):
             continue
-        if re.search(r"limiting access|restricted access|only available to|users who have actively", section, re.I):
+        if GEMINI_RESTRICTED.search(section):
             continue
-        for header, rows in tables(section):
+        for header, rows in gemini_tables(section):
             if "Endpoint" not in header or "Model" not in header:
                 continue
             for row in rows:
@@ -370,16 +405,18 @@ def parse_gemini_index(text: str) -> dict[str, str]:
                 label = row[header.index("Model")]
                 if not GEMINI_CHAT.fullmatch(endpoint) or re.search(r"shut down|deprecated|discontinued", label, re.I):
                     continue
-                link = re.search(r"\]\(https://ai\.google\.dev/gemini-api/docs/models/([a-z0-9.-]+)\)", label)
+                link = re.search(r"\]\((?:(?:https://aistudio\.google\.com)?/docs|"
+                                 r"https://ai\.google\.dev/gemini-api/docs)/models/([a-z0-9.-]+)\)", label)
                 require(link is not None, "Gemini endpoint missing detail link")
-                candidates[endpoint] = f"https://ai.google.dev/gemini-api/docs/models/{link[1]}.md.txt"
+                require(endpoint not in candidates, "duplicate Gemini endpoint")
+                candidates[endpoint] = f"https://aistudio.google.com/docs/models/{link[1]}.md"
     require(0 < len(candidates) <= MAX_DETAIL_PAGES, "Gemini general model tables missing or excessive")
     return candidates
 
 
 def parse_gemini_detail(text: str, expected: str) -> str | None:
     text = markdown(text)
-    rows = [row for _, values in tables(text) for row in values]
+    rows = [row for _, values in gemini_tables(text) for row in values]
     codes = [row for row in rows if row[0].strip("* ") == "Model code"]
     types = [row for row in rows if row[0].strip("* ") == "Supported data types"]
     require(len(codes) == len(types) == 1, f"Gemini {expected} missing model specification")
@@ -387,7 +424,7 @@ def parse_gemini_detail(text: str, expected: str) -> str | None:
     data_types = " ".join(types[0][1:])
     output = re.search(r"\*\*Output(?:s)?\*\*\s*:?\s*(.*)", data_types, re.I)
     require(output is not None, "Gemini output modality missing")
-    if re.search(r"limiting access|restricted access|only available to|users who have actively", text, re.I):
+    if GEMINI_RESTRICTED.search(text):
         return None
     return expected if output[1].strip().strip("* ").lower() == "text" else None
 

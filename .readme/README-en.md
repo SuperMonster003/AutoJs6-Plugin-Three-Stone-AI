@@ -213,6 +213,7 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Fix` Newer Claude models rejected requests from Anthropic profiles that set temperature, Top K or Top P; Anthropic profiles no longer send these three settings, and the settings page says so
 * `Fix` After the default model of a profile was changed, a new conversation that was already open but had no messages kept the old default model; it now switches to the new default model (unless you picked another model in that conversation)
 * `Fix` When adding or editing an online profile, swiping down on the form easily closed it and everything you had typed was lost; the form now closes only with the close button at the top right, "Cancel" or Back, asks first when there are unsaved changes, and keeps what you typed when the screen is rotated
+* `Fix` Online model catalog updates failed after the Gemini documentation moved and changed its table format
 
 # v1.5.0
 

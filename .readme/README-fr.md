@@ -213,6 +213,7 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Correctif` Les modèles Claude récents refusaient les requêtes des profils Anthropic qui définissaient la température, Top K ou Top P; les profils Anthropic n'envoient plus ces trois paramètres, et la page des paramètres l'indique
 * `Correctif` Après la modification du modèle par défaut d'un profil, une nouvelle conversation déjà ouverte et sans message gardait l'ancien modèle par défaut; elle passe désormais au nouveau modèle par défaut (sauf si vous avez choisi un autre modèle dans cette conversation)
 * `Correctif` Lors de l'ajout ou de la modification d'un profil en ligne, balayer vers le bas sur le formulaire le fermait facilement et tout ce que vous aviez saisi était perdu; le formulaire ne se ferme désormais qu'avec le bouton de fermeture en haut à droite, "Annuler" ou Retour, demande confirmation avant d'abandonner les modifications non enregistrées et conserve votre saisie quand l'écran pivote
+* `Correctif` Échec de la mise à jour automatique du catalogue de modèles en ligne après le déplacement de la documentation Gemini et le changement du format de ses tableaux
 
 # v1.5.0
 

@@ -26,8 +26,11 @@ import org.autojs.plugin.common.api.PluginInfo;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipFile;
@@ -35,6 +38,10 @@ import java.util.zip.ZipFile;
 /** No AndroidX runner, Kotlin runtime names, app implementation classes or debug resource IDs. */
 public class ReleaseAbiSmokeInstrumentation extends Instrumentation {
     private static final String PACKAGE = "io.github.supermonster003.autojs6.plugin.threestoneai";
+    private static final String PLUGIN_PERMISSION = "org.autojs.permission.PLUGIN";
+    private static final String INFO_SERVICE = PACKAGE + ".ThreeStoneAiPluginInfoService";
+    private static final String PROVIDER_SERVICE = PACKAGE + ".provider.ThreeStoneAiProviderService";
+    private static final String RUNTIME_SERVICE = PACKAGE + ".provider.ThreeStoneAiRuntimeService";
     private Bundle arguments;
 
     @Override
@@ -88,7 +95,10 @@ public class ReleaseAbiSmokeInstrumentation extends Instrumentation {
 
     @SuppressWarnings("deprecation")
     private void verifyInfo() throws Exception {
-        withBinder(new Intent("org.autojs.plugin.INFO").addCategory("three-stone-ai"), binder -> {
+        Intent infoIntent = new Intent("org.autojs.plugin.INFO").addCategory("three-stone-ai");
+        require(Collections.singletonMap(INFO_SERVICE, PLUGIN_PERMISSION).equals(declaredServices(infoIntent)),
+                "INFO service discovery differs");
+        withBinder(infoIntent, INFO_SERVICE, binder -> {
             require(IPluginInfoProvider.DESCRIPTOR.equals(binder.getInterfaceDescriptor()), "INFO descriptor differs");
             PluginInfo info = IPluginInfoProvider.Stub.asInterface(binder).getInfo();
             PackageInfo installed = getTargetContext().getPackageManager().getPackageInfo(PACKAGE, 0);
@@ -108,7 +118,14 @@ public class ReleaseAbiSmokeInstrumentation extends Instrumentation {
     }
 
     private void verifyProvider() throws Exception {
-        withBinder(new Intent("org.autojs.plugin.AI_PROVIDER"), binder -> {
+        // Since 1.5.0 the action has two services: the host-facing provider and the runtime service that
+        // independently signed apps reach with the AI_RUNTIME permission. Only the host-facing one is bound.
+        Intent provider = new Intent("org.autojs.plugin.AI_PROVIDER");
+        Map<String, String> services = new HashMap<>();
+        services.put(PROVIDER_SERVICE, PLUGIN_PERMISSION);
+        services.put(RUNTIME_SERVICE, "org.autojs.permission.AI_RUNTIME");
+        require(services.equals(declaredServices(provider)), "AI service discovery differs");
+        withBinder(provider, PROVIDER_SERVICE, binder -> {
             require("org.autojs.plugin.ai.provider.api.IAiProvider".equals(binder.getInterfaceDescriptor()), "AI descriptor differs");
             try {
                 IAiProvider.Stub.asInterface(binder).getCapabilities();
@@ -149,12 +166,22 @@ public class ReleaseAbiSmokeInstrumentation extends Instrumentation {
         }
     }
 
-    private void withBinder(Intent intent, BinderCheck check) throws Exception {
-        intent.setPackage(PACKAGE);
-        List<ResolveInfo> matches = getTargetContext().getPackageManager().queryIntentServices(intent, 0);
-        require(matches.size() == 1, "Service discovery differs");
-        require("org.autojs.permission.PLUGIN".equals(matches.get(0).serviceInfo.permission), "Service permission differs");
-        intent.setComponent(new ComponentName(PACKAGE, matches.get(0).serviceInfo.name));
+    /** Every service of this package that resolves the intent, by class name, with its required permission. */
+    private Map<String, String> declaredServices(Intent intent) {
+        Map<String, String> services = new HashMap<>();
+        for (ResolveInfo match : getTargetContext().getPackageManager()
+                .queryIntentServices(new Intent(intent).setPackage(PACKAGE), 0)) {
+            require(services.put(match.serviceInfo.name, String.valueOf(match.serviceInfo.permission)) == null,
+                    "Service declared twice");
+        }
+        return services;
+    }
+
+    private void withBinder(Intent intent, String service, BinderCheck check) throws Exception {
+        String permission = declaredServices(intent).get(service);
+        require(permission != null, "Service discovery differs");
+        require(PLUGIN_PERMISSION.equals(permission), "Service permission differs");
+        intent.setComponent(new ComponentName(PACKAGE, service));
         CountDownLatch ready = new CountDownLatch(1);
         IBinder[] remote = new IBinder[1];
         ServiceConnection connection = new ServiceConnection() {

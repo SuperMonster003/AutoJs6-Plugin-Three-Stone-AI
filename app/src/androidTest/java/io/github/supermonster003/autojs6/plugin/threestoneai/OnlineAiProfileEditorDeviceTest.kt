@@ -175,12 +175,12 @@ class OnlineAiProfileEditorDeviceTest {
 
     private val SheetHandle.behavior get() = dialog.behavior
 
-    private fun launchEditor(): ActivityScenario<OnlineAiSettingsActivity> = ActivityScenario.launch(
-        Intent(context, OnlineAiSettingsActivity::class.java)
-            .putExtra(OnlineAiSettingsActivity.EXTRA_ADD_PROFILE, true),
+    private fun launchEditor(): ActivityScenario<ModelManagerActivity> = ActivityScenario.launch(
+        Intent(context, ModelManagerActivity::class.java)
+            .putExtra(OnlineServicesActivity.EXTRA_ADD_PROFILE, true),
     )
 
-    private fun waitForSheet(scenario: ActivityScenario<OnlineAiSettingsActivity>): SheetHandle {
+    private fun waitForSheet(scenario: ActivityScenario<ModelManagerActivity>): SheetHandle {
         waitUntil("the profile editor opens") {
             onActivity(scenario) { it.profileEditorSheetForTest?.dialog?.isShowing == true }
         }
@@ -255,8 +255,8 @@ class OnlineAiProfileEditorDeviceTest {
             .profiles.map { it.profile.profileId }.sorted()
 
     private fun <T> onActivity(
-        scenario: ActivityScenario<OnlineAiSettingsActivity>,
-        block: (OnlineAiSettingsActivity) -> T,
+        scenario: ActivityScenario<ModelManagerActivity>,
+        block: (ModelManagerActivity) -> T,
     ): T {
         var result: Result<T>? = null
         scenario.onActivity { activity -> result = runCatching { block(activity) } }

@@ -8,4 +8,12 @@
         <item quantity="many">%1$d إصدارا متجاهلا</item>
         <item quantity="other">%1$d إصدار متجاهل</item>
     </plurals>
+    <plurals name="models_service_model_count">
+        <item quantity="zero">لا نماذج</item>
+        <item quantity="one">نموذج واحد</item>
+        <item quantity="two">نموذجان</item>
+        <item quantity="few">%1$d نماذج</item>
+        <item quantity="many">%1$d نموذجا</item>
+        <item quantity="other">%1$d نموذج</item>
+    </plurals>
 </resources>

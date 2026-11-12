@@ -2,12 +2,15 @@ package io.github.supermonster003.autojs6.plugin.threestoneai.backend
 
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
+import java.io.IOException
 import java.security.MessageDigest
 
 /** Deterministic union of independently implemented local and remote target catalogs. */
 internal class CompositeAiBackend(
     backends: List<AiBackend>,
     private val preferredDefaultBackendId: String? = null,
+    /** The user's one global default (roadmap 1.7.0 P5.3, D114); without it the merged default stands. */
+    private val defaultTargetStore: DefaultTargetStore? = null,
 ) : AiBackend {
     private val backends = backends.toList()
 
@@ -26,10 +29,19 @@ internal class CompositeAiBackend(
 
     override fun ownsTarget(targetId: String): Boolean = backends.any { it.ownsTarget(targetId) }
 
-    override fun catalog(): AiTargetCatalog = AiTargetCatalogs.merge(
-        catalogs = backends.map { backend -> backend.backendId to backend.catalog() },
-        preferredDefaultSourceId = preferredDefaultBackendId,
-    )
+    override fun catalog(): AiTargetCatalog {
+        val merged = AiTargetCatalogs.merge(
+            catalogs = backends.map { backend -> backend.backendId to backend.catalog() },
+            preferredDefaultSourceId = preferredDefaultBackendId,
+        )
+        val store = defaultTargetStore ?: return merged
+        val stored = try {
+            store.readOrMigrate { DefaultTargetPolicy.migrated(merged) }
+        } catch (_: IOException) {
+            null
+        }
+        return AiTargetCatalogs.withDefault(merged, DefaultTargetPolicy.effective(stored, merged))
+    }
 
     override fun createSession(request: AiBackendSessionRequest): AiBackendSession {
         val owners = backends.filter { backend -> backend.ownsTarget(request.targetId) }
@@ -66,18 +78,37 @@ internal object AiTargetCatalogs {
         )
     }
 
-    private fun generation(catalogs: List<Pair<String, AiTargetCatalog>>): String {
-        val input = ByteArrayOutputStream()
-        DataOutputStream(input).use { output ->
-            output.writeInt(catalogs.size)
-            catalogs.forEach { (sourceId, catalog) ->
-                output.writeLengthPrefixed(sourceId)
-                output.writeLengthPrefixed(catalog.generation)
-            }
+    /** The same catalog with another default; the generation changes with it so listings notice. */
+    fun withDefault(catalog: AiTargetCatalog, defaultTargetId: String?): AiTargetCatalog =
+        if (defaultTargetId == catalog.defaultTargetId) {
+            catalog
+        } else {
+            catalog.copy(
+                generation = digest { output ->
+                    output.writeLengthPrefixed(catalog.generation)
+                    output.writeLengthPrefixed(DEFAULT_MARKER)
+                    output.writeLengthPrefixed(defaultTargetId.orEmpty())
+                },
+                defaultTargetId = defaultTargetId,
+            )
         }
+
+    private fun generation(catalogs: List<Pair<String, AiTargetCatalog>>): String = digest { output ->
+        output.writeInt(catalogs.size)
+        catalogs.forEach { (sourceId, catalog) ->
+            output.writeLengthPrefixed(sourceId)
+            output.writeLengthPrefixed(catalog.generation)
+        }
+    }
+
+    private fun digest(write: (DataOutputStream) -> Unit): String {
+        val input = ByteArrayOutputStream()
+        DataOutputStream(input).use(write)
         val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
         return "catalog.${digest.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }}"
     }
+
+    private const val DEFAULT_MARKER = "default"
 
     private fun DataOutputStream.writeLengthPrefixed(value: String) {
         val bytes = value.toByteArray(Charsets.UTF_8)

@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="models_badge_default">默认</string>
+    <string name="models_badge_missing_key">缺 API Key</string>
+    <string name="models_badge_ready">已就绪</string>
+    <string name="models_badge_unavailable">不可用</string>
+    <string name="models_default_none_ready">还没有可用的模型. 请先添加服务或下载模型.</string>
+    <string name="models_default_picker_title">选择默认目标</string>
+    <string name="models_default_save_failed">无法更新默认目标</string>
+    <string name="models_default_saved">默认目标已更新</string>
+    <string name="models_default_target">默认目标</string>
+    <string name="models_default_target_format">%1$s | %2$s</string>
+    <string name="models_default_target_none">未设置</string>
+    <string name="models_detail_imported">导入时间: %1$s</string>
+    <string name="models_import_file_summary">选择设备上的 .litertlm 模型文件</string>
+    <string name="models_local_section">本地模型</string>
+    <string name="models_section_actions">更多操作</string>
+    <string name="online_ai_catalog_automatic_off">已关闭预置模型自动更新</string>
+    <string name="online_ai_rename_failed">无法重命名服务</string>
+    <string name="online_ai_rename_invalid">名称不能为空, 也不能与其他服务重名.</string>
+    <string name="online_ai_rename_title">重命名服务</string>
+    <string name="online_ai_renamed">服务已重命名</string>
     <string name="settings_conversation_display">显示</string>
     <string name="settings_conversation_input">输入</string>
     <string name="settings_conversation_limits">上下文与输出</string>

@@ -13,7 +13,7 @@
     <string name="model_picker_fast">この会話で高速モードを使う</string>
     <string name="model_picker_favorite">お気に入りに追加</string>
     <string name="model_picker_favorites">お気に入り</string>
-    <string name="model_picker_local">この端末</string>
+    <string name="model_picker_local">ローカルモデル</string>
     <string name="model_picker_manage">モデルとサービスを管理</string>
     <string name="model_picker_search">モデルを検索</string>
     <string name="model_picker_tag_fast">高速</string>

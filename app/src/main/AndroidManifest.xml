@@ -129,12 +129,6 @@
             android:parentActivityName=".AppSettingsActivity" />
 
         <activity
-            android:name=".OnlineAiSettingsActivity"
-            android:exported="false"
-            android:label="@string/online_ai_settings_title"
-            android:parentActivityName=".ModelManagerActivity" />
-
-        <activity
             android:name=".AboutActivity"
             android:exported="false"
             android:label="@string/about_app_and_developer"

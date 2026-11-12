@@ -13,7 +13,7 @@
     <string name="model_picker_fast">이 대화에서 빠른 모드 사용</string>
     <string name="model_picker_favorite">즐겨찾기에 추가</string>
     <string name="model_picker_favorites">즐겨찾기</string>
-    <string name="model_picker_local">이 기기</string>
+    <string name="model_picker_local">로컬 모델</string>
     <string name="model_picker_manage">모델 및 서비스 관리</string>
     <string name="model_picker_search">모델 검색</string>
     <string name="model_picker_tag_fast">빠름</string>

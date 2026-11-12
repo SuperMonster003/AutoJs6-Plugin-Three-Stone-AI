@@ -13,7 +13,7 @@
     <string name="model_picker_fast">الوضع السريع لهذه المحادثة</string>
     <string name="model_picker_favorite">إضافة إلى المفضلة</string>
     <string name="model_picker_favorites">المفضلة</string>
-    <string name="model_picker_local">على هذا الجهاز</string>
+    <string name="model_picker_local">النماذج المحلية</string>
     <string name="model_picker_manage">إدارة النماذج والخدمات</string>
     <string name="model_picker_search">البحث عن نموذج</string>
     <string name="model_picker_tag_fast">سريع</string>

@@ -2,7 +2,9 @@
 
 Collects, per settings page, the page title, the group headers and the static row titles, resolves
 them in every shipped locale and reports any text that is shown in more than one place. The only
-allowed repeat is one entry row whose title is the title of the page it opens.
+allowed repeat is one entry row whose title is the title of the page it opens. A class without a page
+title of its own that extends a page class (the local model section of "Models and services" extends
+the online services base) adds its titles to that page.
 
 Usage: python .python/check_settings_titles.py [--root DIR]
 """
@@ -24,6 +26,8 @@ LOCALES = {
     'zh-HK': ['values-zh-rHK', 'values-zh', 'values'], 'zh-TW': ['values-zh-rTW', 'values-zh', 'values'],
 }
 CLASS = re.compile(r'^(?:internal |abstract |open |private )*class (\w+)', re.M)
+# The superclass call in a class header, for example ": OnlineServicesActivity() {".
+BASE = re.compile(r':\s*(\w+)\(')
 PAGE = re.compile(r'(?:settingsPage|buildScaffold)\(\s*R\.string\.(\w+)')
 SECTION = re.compile(r'sectionHeader\(\s*R\.string\.(\w+)')
 ROW = re.compile(r'(?:settingRow|switchRow)\(\s*(?:title\s*=\s*)?getString\(\s*R\.string\.(\w+)\s*\)')
@@ -33,19 +37,27 @@ STRING = re.compile(r'<string name="([^"]+)"[^>]*>(.*?)</string>', re.S)
 
 def pages(root):
     """Yields (page name, page title resource, [(kind, resource)]) for each settings page class."""
+    classes = {}
     for file in sorted((root / SOURCE).rglob('*.kt')):
         text = file.read_text(encoding='utf-8')
         starts = [(match.start(), match.group(1)) for match in CLASS.finditer(text)]
         for index, (start, name) in enumerate(starts):
             end = starts[index + 1][0] if index + 1 < len(starts) else len(text)
             body = text[start:end]
+            bases = BASE.findall(body.split('{', 1)[0])
+            base = bases[-1] if bases else None
             title = PAGE.search(body)
-            if name in NOT_SETTINGS or title is None:
-                continue
             items = [('section', match.group(1)) for match in SECTION.finditer(body)]
             items += [('row', match.group(1)) for match in ROW.finditer(body)]
             items += [('row', match.group(1)) for match in ENTRY.finditer(body)]
-            yield name, title.group(1), items
+            classes[name] = (base, title.group(1) if title else None, items)
+    found = {name: (title, list(items)) for name, (base, title, items) in classes.items()
+             if title is not None and name not in NOT_SETTINGS}
+    for name, (base, title, items) in classes.items():
+        if title is None and base in found:
+            found[base][1].extend(items)
+    for name, (title, items) in found.items():
+        yield name, title, items
 
 
 def strings(root, directory):

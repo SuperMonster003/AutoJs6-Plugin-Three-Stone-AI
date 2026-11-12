@@ -13,7 +13,7 @@
     <string name="model_picker_fast">Быстрый режим в этом диалоге</string>
     <string name="model_picker_favorite">Добавить в избранное</string>
     <string name="model_picker_favorites">Избранное</string>
-    <string name="model_picker_local">На этом устройстве</string>
+    <string name="model_picker_local">Локальные модели</string>
     <string name="model_picker_manage">Управление моделями и сервисами</string>
     <string name="model_picker_search">Поиск моделей</string>
     <string name="model_picker_tag_fast">Быстро</string>

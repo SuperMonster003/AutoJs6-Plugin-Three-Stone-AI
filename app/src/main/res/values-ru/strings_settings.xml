@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="models_badge_default">По умолчанию</string>
+    <string name="models_badge_missing_key">Нет API key</string>
+    <string name="models_badge_ready">Готово</string>
+    <string name="models_badge_unavailable">Недоступно</string>
+    <string name="models_default_none_ready">Пока нет готовых моделей. Сначала добавьте сервис или скачайте модель.</string>
+    <string name="models_default_picker_title">Выбор цели по умолчанию</string>
+    <string name="models_default_save_failed">Не удалось обновить цель по умолчанию</string>
+    <string name="models_default_saved">Цель по умолчанию обновлена</string>
+    <string name="models_default_target">Цель по умолчанию</string>
+    <string name="models_default_target_format">%1$s | %2$s</string>
+    <string name="models_default_target_none">Не задано</string>
+    <string name="models_detail_imported">Импортировано: %1$s</string>
+    <string name="models_import_file_summary">Выберите файл модели .litertlm на устройстве</string>
+    <string name="models_local_section">Локальные модели</string>
+    <string name="models_section_actions">Другие действия</string>
+    <string name="online_ai_catalog_automatic_off">Автоматическое обновление списка моделей выключено</string>
+    <string name="online_ai_rename_failed">Не удалось переименовать сервис</string>
+    <string name="online_ai_rename_invalid">Имя не может быть пустым или совпадать с именем другого сервиса.</string>
+    <string name="online_ai_rename_title">Переименовать сервис</string>
+    <string name="online_ai_renamed">Сервис переименован</string>
     <string name="settings_conversation_display">Отображение</string>
     <string name="settings_conversation_input">Ввод</string>
     <string name="settings_conversation_limits">Контекст и ответ</string>

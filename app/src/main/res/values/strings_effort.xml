@@ -13,7 +13,7 @@
     <string name="model_picker_fast">Fast mode for this conversation</string>
     <string name="model_picker_favorite">Add to favorites</string>
     <string name="model_picker_favorites">Favorites</string>
-    <string name="model_picker_local">On this device</string>
+    <string name="model_picker_local">Local models</string>
     <string name="model_picker_manage">Manage models and services</string>
     <string name="model_picker_search">Search models</string>
     <string name="model_picker_tag_fast">Fast</string>

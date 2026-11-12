@@ -6,57 +6,35 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
-import android.text.InputFilter
 import android.text.InputType
 import android.text.method.PasswordTransformationMethod
 import android.view.View
-import android.view.Menu
-import android.view.MenuItem
 import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.VisibleForTesting
-import androidx.core.view.ViewCompat
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.ViewCompat
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputLayout
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiEffortSupport
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SheetCloseGuard
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SheetHandle
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardContainer
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardListParams
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.emptyStateView
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formBottomSheet
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formLabel
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formTextField
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.hairline
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.iconButton
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.singleChoiceDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.uiDpF
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetUnavailableException
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiConnectionTest
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiEffortSupport
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureReason
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.ConfiguredOnlineAiProfile
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiBaseUrlHistoryPolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiBaseUrlHistoryStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiCredentialUpdate
-import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogRepository
-import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogRefreshResult
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogGroups
-import io.github.supermonster003.autojs6.plugin.threestoneai.profile.createOnlineAiModelCatalogRepository
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogRefreshResult
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogRepository
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfile
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileCodec
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfilePolicy
@@ -66,16 +44,40 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiPro
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileUrls
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProviderCatalog
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.createOnlineAiModelCatalogRepository
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.BadgeTone
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.CardBadge
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SheetCloseGuard
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SheetHandle
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formBottomSheet
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formLabel
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formTextField
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.inputDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.insertRowHairlines
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.itemCard
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.singleChoiceDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.uiDpF
 import java.io.ByteArrayOutputStream
-import java.text.DateFormat
-import java.util.Date
 import java.util.Locale
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
-class OnlineAiSettingsActivity : ConfiguredActivity() {
+/**
+ * The models and services page (roadmap 1.7.0 P5.2, D95, D97, D115): the page frame, the default
+ * target row, the metered-network switch and the online services section. [ModelManagerActivity],
+ * the only concrete page, adds the local models section below.
+ */
+abstract class OnlineServicesActivity : ConfiguredActivity() {
     private lateinit var applicationState: ThreeStoneAiApplication
     private lateinit var registry: OnlineAiProfileRegistry
     private lateinit var baseUrlHistoryStore: OnlineAiBaseUrlHistoryStore
@@ -88,9 +90,13 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
     }
     private var catalogRefresh: Future<*>? = null
     private var catalogRefreshing = false
+    private lateinit var topContent: LinearLayout
     private lateinit var settingsContent: LinearLayout
-    private lateinit var screenRoot: View
+    protected lateinit var screenRoot: View
+        private set
     private var snapshot: OnlineAiProfileRegistrySnapshot? = null
+    private var targets: List<AiTarget> = emptyList()
+    private var defaultTargetId: String? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val testExecutor: ExecutorService = Executors.newSingleThreadExecutor { action ->
         Thread(action, "three-stone-ai-connection-test").apply { isDaemon = true }
@@ -113,7 +119,7 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         registry = applicationState.onlineProfileRegistry
         baseUrlHistoryStore = OnlineAiBaseUrlHistoryStore(applicationContext)
         modelCatalog = createOnlineAiModelCatalogRepository(applicationContext)
-        setContentView(createContentView())
+        setContentView(createContentView(savedInstanceState))
         reloadSnapshot()
         val restoredDraft = savedInstanceState?.getBundle(KEY_PROFILE_EDITOR)
             ?.let(OnlineAiProfileEditorDraft::fromBundle)
@@ -167,26 +173,6 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         showProfileEditor(existing, draft)
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, MENU_IMPORT, 0, R.string.online_ai_import_profiles)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-        menu.add(0, MENU_EXPORT, 1, R.string.online_ai_export_profiles)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-        MENU_IMPORT -> {
-            openProfileImportPicker()
-            true
-        }
-        MENU_EXPORT -> {
-            openProfileExportPicker()
-            true
-        }
-        else -> super.onOptionsItemSelected(item)
-    }
-
     override fun onResume() {
         super.onResume()
         if (::settingsContent.isInitialized) reloadSnapshot()
@@ -206,49 +192,94 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         super.onDestroy()
     }
 
-    private fun createContentView(): View {
-        val scaffold = buildScaffold(R.string.online_ai_settings_title)
-        settingsContent = scaffold.content
+    private fun createContentView(savedInstanceState: Bundle?): View {
+        val scaffold = buildScaffold(R.string.model_manager_title)
         screenRoot = scaffold.root
+        topContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        settingsContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        scaffold.content.addView(topContent)
+        scaffold.content.addView(settingsContent)
+        buildLocalSection(scaffold.content, savedInstanceState)
+        applyThemeToControls(scaffold.content)
         return scaffold.root
+    }
+
+    /** Adds the local models section below the online services; called once from onCreate. */
+    protected abstract fun buildLocalSection(content: LinearLayout, savedInstanceState: Bundle?)
+
+    /** Called after [refreshTargets] loaded the catalog, so the local cards can redraw their badges. */
+    protected open fun onTargetsChanged() = Unit
+
+    /**
+     * Reloads the merged target catalog and redraws everything that shows the default target. Runs on
+     * the main thread like the chat page's catalog refresh; the catalog reads only small private files.
+     */
+    protected fun refreshTargets() {
+        val catalog = runCatching { applicationState.aiBackend.catalog() }.getOrNull()
+        targets = catalog?.targets.orEmpty()
+        defaultTargetId = catalog?.defaultTargetId
+        renderTopRows()
+        renderSettings()
+        onTargetsChanged()
+    }
+
+    protected fun isDefaultTarget(targetId: String): Boolean = targetId == defaultTargetId
+
+    internal fun targetFor(targetId: String): AiTarget? = targets.firstOrNull { it.targetId == targetId }
+
+    /** Stores [targetId] as the one global default target (D97, D114). */
+    protected fun makeDefault(targetId: String) {
+        runCatching { applicationState.defaultTargetStore.write(targetId) }
+            .onSuccess { showSnackbar(screenRoot, getString(R.string.models_default_saved)) }
+            .onFailure {
+                showSnackbar(screenRoot, getString(R.string.models_default_save_failed), Snackbar.LENGTH_LONG)
+            }
+        refreshTargets()
     }
 
     private fun reloadSnapshot() {
         val result = runCatching(registry::snapshot)
         snapshot = result.getOrNull()
-        renderSettings()
+        refreshTargets()
+    }
+
+    private fun renderTopRows() {
+        topContent.removeAllViews()
+        val current = defaultTargetId?.let(::targetFor)
+        topContent.addView(
+            settingRow(
+                title = getString(R.string.models_default_target),
+                summary = current?.let(TargetPickerTexts(this)::summary)
+                    ?: getString(R.string.models_default_target_none),
+                iconResource = R.drawable.ic_tune_24,
+                onClick = ::showDefaultTargetPicker,
+            ).view,
+        )
+        snapshot?.let { settings ->
+            topContent.addView(
+                switchRow(
+                    title = getString(R.string.online_ai_allow_metered_network),
+                    summary = getString(R.string.online_ai_allow_metered_network_summary),
+                    iconResource = R.drawable.ic_cloud_24,
+                    checked = settings.allowMeteredNetwork,
+                ) { checked -> updateMeteredNetworkPolicy(checked) }.view,
+            )
+        }
+        insertRowHairlines(topContent)
+        applyThemeToControls(topContent)
     }
 
     private fun renderSettings() {
         settingsContent.removeAllViews()
+        settingsContent.addView(sectionHeader(R.string.online_ai_profiles_section, ::showOnlineSectionMenu))
         val current = snapshot
         if (current == null) {
             settingsContent.addView(messageBlock(R.string.online_ai_settings_unavailable))
             return
         }
-
-        settingsContent.addView(sectionHeader(R.string.online_ai_general_section))
-        settingsContent.addView(
-            settingRow(
-                title = getString(R.string.online_ai_default_target),
-                summary = defaultTargetSummary(current),
-                iconResource = R.drawable.ic_tune_24,
-                onClick = ::showDefaultTargetDialog,
-            ).view,
-        )
-        settingsContent.addView(
-            switchRow(
-                title = getString(R.string.online_ai_allow_metered_network),
-                summary = getString(R.string.online_ai_allow_metered_network_summary),
-                iconResource = R.drawable.ic_cloud_24,
-                checked = current.allowMeteredNetwork,
-            ) { checked -> updateMeteredNetworkPolicy(checked) }.view,
-        )
-        settingsContent.addView(hairline())
-
-        renderModelCatalogSettings()
-
-        settingsContent.addView(sectionHeader(R.string.online_ai_profiles_section))
+        current.profiles
+            .sortedBy { state -> state.profile.displayName.lowercase(Locale.ROOT) }
+            .forEach { state -> settingsContent.addView(profileCard(state)) }
         settingsContent.addView(
             settingRow(
                 title = getString(R.string.online_ai_add_profile),
@@ -257,75 +288,89 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
                 onClick = { showProfileEditor(null) },
             ).view,
         )
-
-        val profiles = current.profiles.sortedBy { state ->
-            state.profile.displayName.lowercase(Locale.ROOT)
-        }
-        if (profiles.isEmpty()) {
-            settingsContent.addView(
-                emptyStateView(
-                    title = getString(R.string.online_ai_empty_title),
-                    description = getString(R.string.online_ai_empty_description),
-                    iconResource = R.drawable.ic_cloud_24,
-                ),
-            )
-        } else {
-            profiles.forEach { state -> settingsContent.addView(profileCard(state, current)) }
-        }
         applyThemeToControls(settingsContent)
     }
 
-    private fun renderModelCatalogSettings() {
-        settingsContent.addView(sectionHeader(R.string.online_ai_catalog_section))
-        settingsContent.addView(
-            switchRow(
-                title = getString(R.string.online_ai_catalog_automatic),
-                summary = getString(R.string.online_ai_catalog_automatic_summary),
-                iconResource = R.drawable.ic_cloud_24,
-                checked = catalogSettings.getBoolean(KEY_AUTOMATIC_CATALOG, true),
-            ) { checked ->
-                catalogSettings.edit().putBoolean(KEY_AUTOMATIC_CATALOG, checked).apply()
-                if (checked) refreshModelCatalog(manual = false)
-            }.view,
-        )
-        val catalogSnapshot = modelCatalog.snapshot()
-        val summary = when {
-            catalogRefreshing -> getString(R.string.online_ai_catalog_checking)
-            catalogSnapshot.isCached -> getString(
-                R.string.online_ai_catalog_cached,
-                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
-                    .format(Date(catalogSnapshot.catalog.updatedAtEpochMillis)),
-            )
-            else -> getString(R.string.online_ai_catalog_builtin)
+    /** The default target picker lists only targets that can answer now; there is no "none" choice. */
+    private fun showDefaultTargetPicker() {
+        val usable = targets.filter(TargetPickerTexts::isUsable)
+        if (usable.isEmpty()) {
+            showSnackbar(screenRoot, getString(R.string.models_default_none_ready), Snackbar.LENGTH_LONG)
+            return
         }
-        settingsContent.addView(
-            settingRow(
-                title = getString(R.string.online_ai_catalog_refresh),
-                summary = summary,
-                iconResource = R.drawable.ic_cloud_24,
-                onClick = { refreshModelCatalog(manual = true) },
-            ).view.apply { isEnabled = !catalogRefreshing },
+        val texts = TargetPickerTexts(this)
+        val favorites = ModelPickerFavoritesStore(this)
+        showModelPickerSheet(
+            state = ModelPickerState(
+                targets = usable,
+                selectedTargetId = defaultTargetId,
+                favorites = favorites.load(),
+                currentTarget = null,
+                effort = null,
+                fast = null,
+            ),
+            actions = ModelPickerActions(
+                rowTitle = texts::rowTitle,
+                rowSubtitle = texts::rowSubtitle,
+                groupTitle = texts::groupTitle,
+                searchText = texts::searchText,
+                isReady = TargetPickerTexts::isUsable,
+                onSelect = { target -> makeDefault(target.targetId) },
+                onToggleFavorite = favorites::toggle,
+                onEffort = {},
+                onFast = {},
+                onManage = null,
+            ),
+            title = getString(R.string.models_default_picker_title),
         )
-        settingsContent.addView(
-            secondaryText(getString(R.string.online_ai_catalog_help), Ui.TEXT_SECONDARY).apply {
-                setPaddingRelative(uiDp(20), 0, uiDp(20), uiDp(16))
-            },
+    }
+
+    private fun showOnlineSectionMenu(anchor: View) {
+        PopupMenu(this, anchor).apply {
+            menu.add(0, MENU_IMPORT, 0, R.string.online_ai_import_profiles)
+            menu.add(0, MENU_EXPORT, 1, R.string.online_ai_export_profiles)
+            menu.add(0, MENU_AUTOMATIC_CATALOG, 2, R.string.online_ai_catalog_automatic).apply {
+                isCheckable = true
+                isChecked = catalogSettings.getBoolean(KEY_AUTOMATIC_CATALOG, true)
+            }
+            menu.add(0, MENU_REFRESH_CATALOG, 3, R.string.online_ai_catalog_refresh).isEnabled = !catalogRefreshing
+            setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    MENU_IMPORT -> openProfileImportPicker()
+                    MENU_EXPORT -> openProfileExportPicker()
+                    MENU_AUTOMATIC_CATALOG -> setAutomaticCatalog(!item.isChecked)
+                    MENU_REFRESH_CATALOG -> refreshModelCatalog(manual = true)
+                }
+                true
+            }
+            show()
+        }
+    }
+
+    private fun setAutomaticCatalog(enabled: Boolean) {
+        catalogSettings.edit().putBoolean(KEY_AUTOMATIC_CATALOG, enabled).apply()
+        showSnackbar(
+            screenRoot,
+            getString(
+                if (enabled) R.string.online_ai_catalog_automatic_summary
+                else R.string.online_ai_catalog_automatic_off,
+            ),
+            Snackbar.LENGTH_LONG,
         )
-        settingsContent.addView(hairline())
+        if (enabled) refreshModelCatalog(manual = false)
     }
 
     private fun refreshModelCatalog(manual: Boolean) {
         if (catalogRefreshing || isFinishing || isDestroyed) return
         catalogRefreshing = true
-        renderSettings()
+        if (manual) showSnackbar(screenRoot, getString(R.string.online_ai_catalog_checking))
         catalogRefresh = catalogExecutor.submit {
             val result = runCatching { modelCatalog.refresh(force = manual) }
             mainHandler.post {
                 if (isFinishing || isDestroyed) return@post
                 catalogRefreshing = false
                 catalogRefresh = null
-                // Only rebuild the settings page. An open editor keeps its unsaved selection.
-                renderSettings()
+                // The page shows no catalog state; an open editor keeps its unsaved selection.
                 if (manual) {
                     val failure = result.exceptionOrNull()
                     val message = when {
@@ -343,135 +388,40 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         }
     }
 
-    private fun profileCard(
-        state: ConfiguredOnlineAiProfile,
-        current: OnlineAiProfileRegistrySnapshot,
-    ): View {
-        val card = cardContainer(interactive = true)
-        val summary = getString(
-            R.string.online_ai_profile_summary,
-            providerLabel(state.profile.provider),
-            modelIdsSummary(state.profile),
-            state.profile.baseUrl,
-            getString(
-                if (state.configured) R.string.online_ai_configured
-                else R.string.online_ai_not_configured,
-            ),
-            getString(
-                if (current.defaultProfileId == state.profile.profileId) R.string.online_ai_yes
-                else R.string.online_ai_no,
-            ),
+    private fun profileCard(state: ConfiguredOnlineAiProfile): View {
+        val profile = state.profile
+        val models = resources.getQuantityString(
+            R.plurals.models_service_model_count,
+            profile.modelIds.size,
+            profile.modelIds.size,
         )
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
+        val badges = buildList {
+            if (defaultTargetId?.let(::targetFor)?.profileId == profile.profileId) {
+                add(CardBadge(getString(R.string.models_badge_default), BadgeTone.ACCENT))
+            }
+            add(
+                if (state.configured) CardBadge(getString(R.string.models_badge_ready), BadgeTone.NEUTRAL)
+                else CardBadge(getString(R.string.models_badge_missing_key), BadgeTone.WARNING),
+            )
         }
-        header.addView(
-            primaryText(state.profile.displayName, Ui.TEXT_ITEM).apply {
-                typeface = Ui.mediumTypeface
-                maxLines = 2
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            },
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+        return itemCard(
+            title = profile.displayName,
+            subtitle = "${providerLabel(profile.provider)} | $models",
+            badges = badges,
+            actionsDescription = R.string.online_ai_profile_action_hint,
+            onActions = { anchor -> showProfileActions(anchor, state) },
+            onClick = { showProfileEditor(state) },
         )
-        header.addView(
-            iconButton(R.drawable.ic_more_vert_24, R.string.online_ai_profile_action_hint) {
-                showProfileActions(state)
-            },
-        )
-        card.addView(header)
-        card.addView(
-            secondaryText(summary, Ui.TEXT_SECONDARY).apply {
-                setPaddingRelative(0, uiDp(2), 0, 0)
-                setLineSpacing(0f, 1.12f)
-            },
-        )
-        card.contentDescription = "${state.profile.displayName}, $summary"
-        card.setOnClickListener { showProfileEditor(state) }
-        card.layoutParams = cardListParams().apply {
-            marginStart = uiDp(Ui.SCREEN_MARGIN)
-            marginEnd = uiDp(Ui.SCREEN_MARGIN)
-        }
-        return card
     }
 
     private fun messageBlock(resource: Int) = secondaryText(getString(resource), 15f).apply {
         setPaddingRelative(uiDp(20), uiDp(24), uiDp(20), uiDp(24))
     }
 
-    private fun primaryText(value: CharSequence, size: Float) = TextView(this).apply {
-        text = value
-        textSize = size
-        setTextColor(appPalette.primaryText)
-    }
-
     private fun secondaryText(value: CharSequence, size: Float) = TextView(this).apply {
         text = value
         textSize = size
         setTextColor(appPalette.secondaryText)
-    }
-
-    private fun defaultTargetSummary(current: OnlineAiProfileRegistrySnapshot): String {
-        val selected = current.defaultProfileId?.let { profileId ->
-            current.profiles.singleOrNull { it.profile.profileId == profileId }
-        } ?: return getString(R.string.online_ai_no_default_target)
-        return getString(
-            R.string.online_ai_default_target_summary,
-            selected.profile.displayName,
-            selected.profile.modelId,
-        )
-    }
-
-    private fun modelIdsSummary(profile: OnlineAiProfile): String = when (profile.modelIds.size) {
-        1 -> profile.modelId
-        else -> getString(
-            R.string.online_ai_models_summary,
-            profile.modelId,
-            profile.modelIds.size,
-        )
-    }
-
-    private fun showDefaultTargetDialog() {
-        val current = snapshot ?: return
-        val configured = current.profiles
-            .filter(ConfiguredOnlineAiProfile::configured)
-            .sortedBy { it.profile.displayName.lowercase(Locale.ROOT) }
-        if (configured.isEmpty() && current.defaultProfileId == null) {
-            showSnackbar(
-                screenRoot,
-                getString(R.string.online_ai_no_configured_profiles),
-                Snackbar.LENGTH_LONG,
-            )
-            return
-        }
-        val labels = listOf(getString(R.string.online_ai_no_default_target)) + configured.map { state ->
-            getString(
-                R.string.online_ai_default_target_summary,
-                state.profile.displayName,
-                state.profile.modelId,
-            )
-        }
-        val selected = configured.indexOfFirst { it.profile.profileId == current.defaultProfileId }
-            .let { if (it < 0) 0 else it + 1 }
-        singleChoiceDialog(
-            title = getString(R.string.online_ai_default_target),
-            labels = labels,
-            checkedIndex = selected,
-        ) { index ->
-            updateDefaultProfile(configured.getOrNull(index - 1)?.profile?.profileId)
-        }
-    }
-
-    private fun updateDefaultProfile(profileId: String?) {
-        runCatching { registry.setDefaultProfile(profileId) }
-            .onSuccess {
-                showSnackbar(screenRoot, getString(R.string.online_ai_default_saved))
-                reloadSnapshot()
-            }
-            .onFailure {
-                showSnackbar(screenRoot, getString(R.string.online_ai_default_save_failed), Snackbar.LENGTH_LONG)
-                reloadSnapshot()
-            }
     }
 
     private fun updateMeteredNetworkPolicy(allowed: Boolean) {
@@ -488,33 +438,74 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
             }
     }
 
-    private fun showProfileActions(state: ConfiguredOnlineAiProfile) {
-        val isDefault = snapshot?.defaultProfileId == state.profile.profileId
-        val actions = buildList {
-            add(ProfileAction.EDIT)
-            add(ProfileAction.CLONE)
-            if (state.configured) add(ProfileAction.TEST)
-            if (isDefault) add(ProfileAction.CLEAR_DEFAULT)
-            else if (state.configured) add(ProfileAction.SET_DEFAULT)
-            if (state.configured) add(ProfileAction.CLEAR_KEY)
-            add(ProfileAction.DELETE)
-        }
-        materialDialog()
-            .setTitle(state.profile.displayName)
-            .setItems(actions.map { getString(it.labelResource) }.toTypedArray()) { _, index ->
-                when (actions[index]) {
-                    ProfileAction.EDIT -> showProfileEditor(state)
-                    ProfileAction.CLONE -> cloneProfile(state)
-                    ProfileAction.TEST -> confirmConnectionTest(state)
-                    ProfileAction.SET_DEFAULT -> updateDefaultProfile(state.profile.profileId)
-                    ProfileAction.CLEAR_DEFAULT -> updateDefaultProfile(null)
-                    ProfileAction.CLEAR_KEY -> confirmClearKey(state)
-                    ProfileAction.DELETE -> confirmDeleteProfile(state)
+    /** The service's preferred model as a target: what "Set as default" stores. */
+    private fun preferredTarget(profile: OnlineAiProfile): AiTarget? = targets.firstOrNull { target ->
+        target.profileId == profile.profileId && target.modelId == profile.modelId
+    }
+
+    /** One fixed order on every card (D100); actions that do not apply now stay visible but disabled. */
+    private fun showProfileActions(anchor: View, state: ConfiguredOnlineAiProfile) {
+        val preferred = preferredTarget(state.profile)
+        PopupMenu(this, anchor).apply {
+            menu.add(0, ACTION_SET_DEFAULT, 0, R.string.online_ai_action_set_default).isEnabled =
+                preferred != null && TargetPickerTexts.isUsable(preferred) && !isDefaultTarget(preferred.targetId)
+            menu.add(0, ACTION_TEST, 1, R.string.online_ai_action_test).isEnabled = state.configured
+            menu.add(0, ACTION_RENAME, 2, R.string.button_rename_model)
+            menu.add(0, ACTION_CLONE, 3, R.string.online_ai_action_clone)
+            menu.add(0, ACTION_CLEAR_KEY, 4, R.string.online_ai_action_clear_key).isEnabled = state.configured
+            menu.add(0, ACTION_DELETE, 5, R.string.online_ai_action_delete)
+            setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    ACTION_SET_DEFAULT -> preferred?.let { makeDefault(it.targetId) }
+                    ACTION_TEST -> confirmConnectionTest(state)
+                    ACTION_RENAME -> confirmProfileRename(state)
+                    ACTION_CLONE -> cloneProfile(state)
+                    ACTION_CLEAR_KEY -> confirmClearKey(state)
+                    ACTION_DELETE -> confirmDeleteProfile(state)
                 }
+                true
             }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-            .also(::tintDialogButtons)
+            show()
+        }
+    }
+
+    private fun confirmProfileRename(state: ConfiguredOnlineAiProfile) {
+        inputDialog(
+            title = getString(R.string.online_ai_rename_title),
+            initialValue = state.profile.displayName,
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES,
+            positiveResource = R.string.button_rename_model,
+            validate = { value ->
+                if (renamedProfile(state, value) == null) getString(R.string.online_ai_rename_invalid) else null
+            },
+        ) { value -> renameProfile(state, value) }
+    }
+
+    /** The renamed profile, or null when the name is empty, too long or used by another service. */
+    private fun renamedProfile(state: ConfiguredOnlineAiProfile, value: String): OnlineAiProfile? {
+        val renamed = runCatching {
+            OnlineAiProfilePolicy.normalizeProfile(state.profile.copy(displayName = value))
+        }.getOrNull() ?: return null
+        val taken = snapshot?.profiles.orEmpty().any { other ->
+            other.profile.profileId != state.profile.profileId &&
+                other.profile.displayName.lowercase(Locale.ROOT) == renamed.displayName.lowercase(Locale.ROOT)
+        }
+        return renamed.takeUnless { taken }
+    }
+
+    private fun renameProfile(state: ConfiguredOnlineAiProfile, value: String) {
+        val renamed = renamedProfile(state, value)
+        if (renamed == null) {
+            showSnackbar(screenRoot, getString(R.string.online_ai_rename_invalid), Snackbar.LENGTH_LONG)
+            return
+        }
+        if (renamed.displayName == state.profile.displayName) return
+        runCatching { registry.save(renamed, OnlineAiCredentialUpdate.Keep) }
+            .onSuccess { showSnackbar(screenRoot, getString(R.string.online_ai_renamed)) }
+            .onFailure {
+                showSnackbar(screenRoot, getString(R.string.online_ai_rename_failed), Snackbar.LENGTH_LONG)
+            }
+        reloadSnapshot()
     }
 
     /**
@@ -1438,16 +1429,6 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         else -> R.string.online_ai_test_failed
     }
 
-    private enum class ProfileAction(val labelResource: Int) {
-        EDIT(R.string.online_ai_action_edit),
-        CLONE(R.string.online_ai_action_clone),
-        TEST(R.string.online_ai_action_test),
-        SET_DEFAULT(R.string.online_ai_action_set_default),
-        CLEAR_DEFAULT(R.string.online_ai_action_clear_default),
-        CLEAR_KEY(R.string.online_ai_action_clear_key),
-        DELETE(R.string.online_ai_action_delete),
-    }
-
     private data class ActiveConnectionTest(
         val token: Long,
         val profileId: String,
@@ -1469,6 +1450,14 @@ class OnlineAiSettingsActivity : ConfiguredActivity() {
         private const val CONNECTION_TEST_TIMEOUT_MILLIS = 120_000L
         private const val MENU_IMPORT = 2201
         private const val MENU_EXPORT = 2202
+        private const val MENU_AUTOMATIC_CATALOG = 2203
+        private const val MENU_REFRESH_CATALOG = 2204
+        private const val ACTION_SET_DEFAULT = 2301
+        private const val ACTION_TEST = 2302
+        private const val ACTION_RENAME = 2303
+        private const val ACTION_CLONE = 2304
+        private const val ACTION_CLEAR_KEY = 2305
+        private const val ACTION_DELETE = 2306
         private const val MIME_JSON = "application/json"
         private const val PROFILE_EXPORT_FILE_NAME = "3-stone-ai-online-profiles.json"
         private const val KEY_AUTOMATIC_CATALOG = "automatic-checks"

@@ -117,6 +117,33 @@ class SettingsNavigationTest {
         }
     }
 
+    /** P5.2 (D95, D97): one page, the default target row on top, then online services and local models. */
+    @Test
+    fun modelsAndServicesShowsTheDefaultTargetAboveBothSections() {
+        ActivityScenario.launch<ModelManagerActivity>(Intent(context, ModelManagerActivity::class.java)).use { scenario ->
+            val expected = listOf(
+                R.string.model_manager_title,
+                R.string.models_default_target,
+                R.string.online_ai_allow_metered_network,
+                R.string.online_ai_profiles_section,
+                R.string.online_ai_add_profile,
+                R.string.models_local_section,
+                R.string.button_browse_litert_models,
+                R.string.button_import_model,
+            ).map(context::getString)
+            var shown = emptyList<String>()
+            val deadline = SystemClock.uptimeMillis() + TIMEOUT_MILLIS
+            while (SystemClock.uptimeMillis() < deadline) {
+                scenario.onActivity { activity -> shown = texts(activity.window.decorView) }
+                if (shown.containsAll(expected)) break
+                SystemClock.sleep(POLL_MILLIS)
+            }
+            expected.forEach { text -> assertEquals("\"$text\" shown once", 1, shown.count { it == text }) }
+            assertEquals("Rows in page order", expected, shown.filter { it in expected })
+            assertFalse(context.getString(R.string.online_ai_settings_unavailable) in shown)
+        }
+    }
+
     private fun awaitStage(activity: Activity, stage: Stage) {
         val deadline = SystemClock.uptimeMillis() + TIMEOUT_MILLIS
         while (SystemClock.uptimeMillis() < deadline) {

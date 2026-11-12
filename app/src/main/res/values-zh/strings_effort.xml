@@ -13,7 +13,7 @@
     <string name="model_picker_fast">本会话使用快速模式</string>
     <string name="model_picker_favorite">收藏</string>
     <string name="model_picker_favorites">收藏</string>
-    <string name="model_picker_local">本机</string>
+    <string name="model_picker_local">本地模型</string>
     <string name="model_picker_manage">管理模型与服务</string>
     <string name="model_picker_search">搜索模型</string>
     <string name="model_picker_tag_fast">快速</string>

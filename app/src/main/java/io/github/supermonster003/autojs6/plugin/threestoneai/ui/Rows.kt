@@ -26,6 +26,30 @@ internal fun ConfiguredActivity.sectionHeader(@StringRes titleResource: Int): Te
         )
     }
 
+/**
+ * Section header with a trailing "more" button that opens the section's own actions (roadmap 1.7.0
+ * P5.2, D98): the models and services page has no overflow menu.
+ */
+internal fun ConfiguredActivity.sectionHeader(
+    @StringRes titleResource: Int,
+    onMenu: (View) -> Unit,
+): LinearLayout = LinearLayout(this).apply {
+    orientation = LinearLayout.HORIZONTAL
+    gravity = Gravity.CENTER_VERTICAL
+    setPaddingRelative(0, uiDp(Ui.SECTION_GAP - Ui.SPACE_MD), uiDp(Ui.SPACE_SM), 0)
+    addView(
+        sectionHeader(titleResource).apply {
+            setPaddingRelative(uiDp(Ui.SPACE_XXL), 0, uiDp(Ui.SPACE_SM), 0)
+        },
+        LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+    )
+    addView(
+        iconButton(R.drawable.ic_more_vert_24, R.string.models_section_actions) { }.also { button ->
+            button.setOnClickListener { onMenu(button) }
+        },
+    )
+}
+
 /** Full-bleed hairline between groups; rows above/below carry their own margins. */
 internal fun ConfiguredActivity.hairline(insetStartDp: Int = Ui.SPACE_XXL): View =
     View(this).apply {
@@ -61,6 +85,14 @@ internal class SettingRow(
 )
 
 internal class SettingRowLayout(context: android.content.Context) : LinearLayout(context)
+
+/** Enables or disables the whole row, its texts included, so finders by text see the state too. */
+internal fun SettingRow.setRowEnabled(enabled: Boolean) {
+    view.isEnabled = enabled
+    titleView.isEnabled = enabled
+    summaryView.isEnabled = enabled
+    view.alpha = if (enabled) 1f else Ui.DISABLED_ALPHA
+}
 
 private fun ConfiguredActivity.rowShell(): LinearLayout = SettingRowLayout(this).apply {
     orientation = LinearLayout.HORIZONTAL

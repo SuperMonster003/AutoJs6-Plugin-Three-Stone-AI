@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="models_badge_default">Default</string>
+    <string name="models_badge_missing_key">API key missing</string>
+    <string name="models_badge_ready">Ready</string>
+    <string name="models_badge_unavailable">Unavailable</string>
+    <string name="models_default_none_ready">No model is ready yet. Add a service or download a model first.</string>
+    <string name="models_default_picker_title">Choose default target</string>
+    <string name="models_default_save_failed">Could not update the default target</string>
+    <string name="models_default_saved">Default target updated</string>
+    <string name="models_default_target">Default target</string>
+    <string name="models_default_target_format">%1$s | %2$s</string>
+    <string name="models_default_target_none">Not set</string>
+    <string name="models_detail_imported">Imported: %1$s</string>
+    <string name="models_import_file_summary">Choose a .litertlm model file on this device</string>
+    <string name="models_local_section">Local models</string>
+    <string name="models_section_actions">More actions</string>
+    <string name="online_ai_catalog_automatic_off">Automatic model preset updates are off</string>
+    <string name="online_ai_rename_failed">Could not rename the service</string>
+    <string name="online_ai_rename_invalid">The name must not be empty or match another service.</string>
+    <string name="online_ai_rename_title">Rename service</string>
+    <string name="online_ai_renamed">Service renamed</string>
     <string name="settings_conversation_display">Display</string>
     <string name="settings_conversation_input">Input</string>
     <string name="settings_conversation_limits">Context and output</string>

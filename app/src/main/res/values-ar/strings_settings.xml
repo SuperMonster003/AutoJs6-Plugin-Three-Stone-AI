@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="models_badge_default">افتراضي</string>
+    <string name="models_badge_missing_key">مفتاح API مفقود</string>
+    <string name="models_badge_ready">جاهز</string>
+    <string name="models_badge_unavailable">غير متاح</string>
+    <string name="models_default_none_ready">لا توجد نماذج جاهزة بعد. أضف خدمة أو قم بتنزيل نموذج أولا.</string>
+    <string name="models_default_picker_title">اختيار الهدف الافتراضي</string>
+    <string name="models_default_save_failed">تعذر تحديث الهدف الافتراضي</string>
+    <string name="models_default_saved">تم تحديث الهدف الافتراضي</string>
+    <string name="models_default_target">الهدف الافتراضي</string>
+    <string name="models_default_target_format">%1$s | %2$s</string>
+    <string name="models_default_target_none">غير محدد</string>
+    <string name="models_detail_imported">تاريخ الاستيراد: %1$s</string>
+    <string name="models_import_file_summary">اختر ملف نموذج .litertlm من الجهاز</string>
+    <string name="models_local_section">النماذج المحلية</string>
+    <string name="models_section_actions">مزيد من الإجراءات</string>
+    <string name="online_ai_catalog_automatic_off">تم إيقاف التحديث التلقائي للنماذج المعدة مسبقا</string>
+    <string name="online_ai_rename_failed">تعذرت إعادة تسمية الخدمة</string>
+    <string name="online_ai_rename_invalid">لا يمكن أن يكون الاسم فارغا أو مطابقا لاسم خدمة أخرى.</string>
+    <string name="online_ai_rename_title">إعادة تسمية الخدمة</string>
+    <string name="online_ai_renamed">تمت إعادة تسمية الخدمة</string>
     <string name="settings_conversation_display">العرض</string>
     <string name="settings_conversation_input">الإدخال</string>
     <string name="settings_conversation_limits">السياق والمخرجات</string>

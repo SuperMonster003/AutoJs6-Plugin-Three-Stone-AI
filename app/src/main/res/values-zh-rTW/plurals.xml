@@ -3,4 +3,7 @@
     <plurals name="app_update_ignored_count">
         <item quantity="other">已忽略 %1$d 個發行版</item>
     </plurals>
+    <plurals name="models_service_model_count">
+        <item quantity="other">%1$d 個模型</item>
+    </plurals>
 </resources>

@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="models_badge_default">Par défaut</string>
+    <string name="models_badge_missing_key">Clé API manquante</string>
+    <string name="models_badge_ready">Prêt</string>
+    <string name="models_badge_unavailable">Indisponible</string>
+    <string name="models_default_none_ready">Aucun modèle n\'est encore prêt. Ajoutez d\'abord un service ou téléchargez un modèle.</string>
+    <string name="models_default_picker_title">Choisir la cible par défaut</string>
+    <string name="models_default_save_failed">Impossible de mettre à jour la cible par défaut</string>
+    <string name="models_default_saved">Cible par défaut mise à jour</string>
+    <string name="models_default_target">Cible par défaut</string>
+    <string name="models_default_target_format">%1$s | %2$s</string>
+    <string name="models_default_target_none">Non défini</string>
+    <string name="models_detail_imported">Date d\'importation: %1$s</string>
+    <string name="models_import_file_summary">Choisir un fichier de modèle .litertlm sur l\'appareil</string>
+    <string name="models_local_section">Modèles locaux</string>
+    <string name="models_section_actions">Plus d\'actions</string>
+    <string name="online_ai_catalog_automatic_off">Mise à jour automatique des modèles prédéfinis désactivée</string>
+    <string name="online_ai_rename_failed">Impossible de renommer le service</string>
+    <string name="online_ai_rename_invalid">Le nom ne peut pas être vide ni identique à celui d\'un autre service.</string>
+    <string name="online_ai_rename_title">Renommer le service</string>
+    <string name="online_ai_renamed">Service renommé</string>
     <string name="settings_conversation_display">Affichage</string>
     <string name="settings_conversation_input">Saisie</string>
     <string name="settings_conversation_limits">Contexte et sortie</string>

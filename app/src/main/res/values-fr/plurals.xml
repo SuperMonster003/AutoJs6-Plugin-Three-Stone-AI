@@ -5,4 +5,9 @@
         <item quantity="many">%1$d versions ignorées</item>
         <item quantity="other">%1$d versions ignorées</item>
     </plurals>
+    <plurals name="models_service_model_count">
+        <item quantity="one">%1$d modèle</item>
+        <item quantity="many">%1$d modèles</item>
+        <item quantity="other">%1$d modèles</item>
+    </plurals>
 </resources>

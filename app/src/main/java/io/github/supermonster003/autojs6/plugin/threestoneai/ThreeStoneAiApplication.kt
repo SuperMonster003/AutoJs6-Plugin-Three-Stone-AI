@@ -5,7 +5,9 @@ import androidx.annotation.VisibleForTesting
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AndroidOnlineAiNetworkAccess
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.CompositeAiBackend
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.DefaultTargetStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.EngineMemoryPressurePolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.FileDefaultTargetStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLocalBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmEngineRuntime
@@ -83,6 +85,14 @@ class ThreeStoneAiApplication : Application() {
     internal val onlineBackend: AiBackend
         get() = onlineBackendDelegate.value
 
+    private val defaultTargetStoreDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        FileDefaultTargetStore(filesDir)
+    }
+
+    /** The one global default target shared by chat, scripts and the models and services page (D114). */
+    internal val defaultTargetStore: DefaultTargetStore
+        get() = defaultTargetStoreDelegate.value
+
     private val aiBackendDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         CompositeAiBackend(
             backends = listOf(
@@ -90,6 +100,7 @@ class ThreeStoneAiApplication : Application() {
                 onlineBackend,
             ),
             preferredDefaultBackendId = OnlineAiBackend.BACKEND_ID,
+            defaultTargetStore = defaultTargetStore,
         )
     }
 

@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="models_badge_default">Predeterminado</string>
+    <string name="models_badge_missing_key">Falta la API key</string>
+    <string name="models_badge_ready">Listo</string>
+    <string name="models_badge_unavailable">No disponible</string>
+    <string name="models_default_none_ready">Todavía no hay ningún modelo listo. Añade primero un servicio o descarga un modelo.</string>
+    <string name="models_default_picker_title">Elegir destino predeterminado</string>
+    <string name="models_default_save_failed">No se pudo actualizar el destino predeterminado</string>
+    <string name="models_default_saved">Destino predeterminado actualizado</string>
+    <string name="models_default_target">Destino predeterminado</string>
+    <string name="models_default_target_format">%1$s | %2$s</string>
+    <string name="models_default_target_none">Sin configurar</string>
+    <string name="models_detail_imported">Importado: %1$s</string>
+    <string name="models_import_file_summary">Elegir un archivo de modelo .litertlm del dispositivo</string>
+    <string name="models_local_section">Modelos locales</string>
+    <string name="models_section_actions">Más acciones</string>
+    <string name="online_ai_catalog_automatic_off">Actualización automática de modelos predefinidos desactivada</string>
+    <string name="online_ai_rename_failed">No se pudo renombrar el servicio</string>
+    <string name="online_ai_rename_invalid">El nombre no puede estar vacío ni coincidir con el de otro servicio.</string>
+    <string name="online_ai_rename_title">Renombrar servicio</string>
+    <string name="online_ai_renamed">Servicio renombrado</string>
     <string name="settings_conversation_display">Visualización</string>
     <string name="settings_conversation_input">Entrada</string>
     <string name="settings_conversation_limits">Contexto y salida</string>

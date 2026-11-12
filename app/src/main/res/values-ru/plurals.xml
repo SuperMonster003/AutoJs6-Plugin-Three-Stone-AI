@@ -6,4 +6,10 @@
         <item quantity="many">Игнорируется %1$d выпусков</item>
         <item quantity="other">Игнорируется %1$d выпуска</item>
     </plurals>
+    <plurals name="models_service_model_count">
+        <item quantity="one">%1$d модель</item>
+        <item quantity="few">%1$d модели</item>
+        <item quantity="many">%1$d моделей</item>
+        <item quantity="other">%1$d модели</item>
+    </plurals>
 </resources>

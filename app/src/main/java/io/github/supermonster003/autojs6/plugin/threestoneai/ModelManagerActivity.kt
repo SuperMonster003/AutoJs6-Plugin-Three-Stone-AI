@@ -7,33 +7,16 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
+import android.text.format.DateUtils
 import android.text.format.Formatter
-import android.view.Gravity
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.PopupMenu
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetIds
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.ProgressPanel
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardContainer
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.cardListParams
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.filledButton
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.hairline
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.iconButton
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.inputDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.textButton
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.tonalButton
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadCleanupResult
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadCoordinator
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadFailureReason
@@ -48,42 +31,56 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelHealthCh
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelHealthStatus
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportFailureReason
-import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportProgress
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportProgress
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportStage
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportState
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportStoragePreflight
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelManagerState
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelRenameState
-import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelSelectionState
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelStorageCleanupState
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.BadgeTone
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.CardBadge
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.ProgressPanel
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.filledButton
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.inputDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.insertRowHairlines
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.itemCard
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.setRowEnabled
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
 
-class ModelManagerActivity : ConfiguredActivity() {
+/**
+ * The models and services page (roadmap 1.7.0 P5.2, D95, D104, D115). [OnlineServicesActivity] draws
+ * the frame, the default target row and the online services; this class adds the local models. The
+ * class keeps its name because the host settings action and the chat page open it (D110, D112).
+ */
+class ModelManagerActivity : OnlineServicesActivity() {
     private val localRuntimeAvailable by lazy {
         LiteRtLmBackendCompatibilityDetector().isRuntimeAvailable
     }
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var downloadCoordinator: ModelDownloadCoordinator
-    private lateinit var screenRoot: View
     private lateinit var downloadStatus: TextView
-    private lateinit var downloadButton: MaterialButton
+    private lateinit var downloadRow: SettingRow
     private lateinit var importDownloadedButton: MaterialButton
     private lateinit var downloadPanel: ProgressPanel
     private lateinit var status: TextView
-    private lateinit var copyModelIdButton: MaterialButton
-    private lateinit var importButton: MaterialButton
+    private lateinit var importRow: SettingRow
     private lateinit var importPanel: ProgressPanel
     private lateinit var catalogSummary: TextView
-    private lateinit var onlineSummary: TextView
     private lateinit var catalogRows: LinearLayout
     private var cleanupEnabled = false
-    private var copyableModelId: String? = null
     private var cancellableOperationId: Long? = null
     private var cancellableDownloadOperationId: Long? = null
     private var downloadedDestination: ModelDownloadState.Succeeded<Uri>? = null
     private var lastNotifiedImportOperationId = 0L
     private var lastNotifiedDownloadOperationId = 0L
-    private var lastNotifiedSelectionOperationId = 0L
     private var lastNotifiedDeletionOperationId = 0L
     private var lastNotifiedRenameOperationId = 0L
     private var lastNotifiedStorageCleanupOperationId = 0L
@@ -91,23 +88,76 @@ class ModelManagerActivity : ConfiguredActivity() {
     private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
     private val downloadObserver = ModelDownloadCoordinator.Observer(::renderDownloadState)
     private var renderedManagerView: ModelManagerViewState? = null
+    /** The model rows the target catalog was last loaded for; a change reloads the catalog. */
+    private var catalogRowsForTargets: List<ModelManagerRow>? = null
     private var importStateAllowsPicker = false
     private var catalogMutationBlocksPicker = false
     private var storageAllowsPicker = false
     private var downloadStateAllowsStart = true
     private var downloadBlocksImport = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun buildLocalSection(content: LinearLayout, savedInstanceState: Bundle?) {
         importCoordinator = ModelImportCoordinator.get(applicationContext)
         downloadCoordinator = ModelDownloadCoordinator.get(applicationContext)
+        restoreNotifiedOperations(savedInstanceState)
+
+        content.addView(sectionHeader(R.string.models_local_section, ::showLocalSectionMenu))
+        if (!localRuntimeAvailable) {
+            content.addView(paragraph(getString(R.string.model_local_runtime_unavailable)))
+        }
+        catalogSummary = paragraph()
+        content.addView(catalogSummary)
+        catalogRows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        content.addView(catalogRows)
+
+        downloadPanel = ProgressPanel(this)
+            .withCancelAction(R.string.button_cancel_download) { cancelDownload() }
+        content.addView(downloadPanel.view, blockParams(topDp = Ui.SPACE_SM))
+        downloadStatus = paragraph().apply {
+            setTextIsSelectable(true)
+            visibility = View.GONE
+        }
+        content.addView(downloadStatus, blockParams(topDp = Ui.SPACE_SM, horizontalDp = 0))
+        importDownloadedButton = filledButton(R.string.button_import_downloaded_model) {
+            importDownloadedModel()
+        }.apply { visibility = View.GONE }
+        content.addView(importDownloadedButton, blockParams(bottomDp = Ui.SPACE_SM).apply {
+            width = LinearLayout.LayoutParams.WRAP_CONTENT
+        })
+        importPanel = ProgressPanel(this)
+            .withCancelAction(R.string.button_cancel_import) { cancelImport() }
+        content.addView(importPanel.view, blockParams(topDp = Ui.SPACE_SM))
+        status = paragraph().apply {
+            setTextIsSelectable(true)
+            visibility = View.GONE
+        }
+        content.addView(status, blockParams(topDp = Ui.SPACE_SM, horizontalDp = 0))
+
+        val rows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        downloadRow = settingRow(
+            title = getString(R.string.button_browse_litert_models),
+            summary = getString(R.string.download_description),
+            iconResource = R.drawable.ic_download_24,
+            onClick = ::chooseRecommendedModel,
+        )
+        importRow = settingRow(
+            title = getString(R.string.button_import_model),
+            summary = getString(R.string.models_import_file_summary),
+            iconResource = R.drawable.ic_upload_24,
+            onClick = ::openModelPicker,
+        )
+        rows.addView(downloadRow.view)
+        rows.addView(importRow.view)
+        insertRowHairlines(rows)
+        content.addView(rows)
+    }
+
+    private fun restoreNotifiedOperations(savedInstanceState: Bundle?) {
         val restoredManagerNotifications = savedInstanceState?.takeIf { restored ->
             restored.getString(STATE_PROCESS_SESSION_TOKEN) == importCoordinator.processSessionToken
         }
         restoredManagerNotifications?.let { restored ->
             lastNotifiedImportOperationId = restored.getLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID)
-            lastNotifiedSelectionOperationId =
-                restored.getLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID)
             lastNotifiedDeletionOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_DELETION_OPERATION_ID)
             lastNotifiedRenameOperationId =
@@ -139,36 +189,12 @@ class ModelManagerActivity : ConfiguredActivity() {
             lastNotifiedDownloadOperationId =
                 restored.getLong(STATE_LAST_NOTIFIED_DOWNLOAD_OPERATION_ID)
         }
-        setContentView(createContentView())
     }
 
     override fun onStart() {
         super.onStart()
         renderManagerState(importCoordinator.attachManager(managerObserver))
         renderDownloadState(downloadCoordinator.attach(downloadObserver))
-    }
-
-    override fun onResume() {
-        super.onResume()
-        refreshOnlineSummary()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, MENU_CLEANUP_STORAGE, 0, R.string.button_cleanup_storage)
-        return true
-    }
-
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        menu.findItem(MENU_CLEANUP_STORAGE)?.isEnabled = cleanupEnabled
-        return super.onPrepareOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-        MENU_CLEANUP_STORAGE -> {
-            cleanUnreferencedStorage()
-            true
-        }
-        else -> super.onOptionsItemSelected(item)
     }
 
     override fun onStop() {
@@ -180,7 +206,6 @@ class ModelManagerActivity : ConfiguredActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putLong(STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID, lastNotifiedImportOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_DOWNLOAD_OPERATION_ID, lastNotifiedDownloadOperationId)
-        outState.putLong(STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID, lastNotifiedSelectionOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_DELETION_OPERATION_ID, lastNotifiedDeletionOperationId)
         outState.putLong(STATE_LAST_NOTIFIED_RENAME_OPERATION_ID, lastNotifiedRenameOperationId)
         outState.putLong(
@@ -216,93 +241,23 @@ class ModelManagerActivity : ConfiguredActivity() {
         }
     }
 
-    private fun createContentView(): View {
-        val scaffold = buildScaffold(R.string.model_manager_title)
-        val content = scaffold.content
+    override fun onTargetsChanged() {
+        renderedManagerView?.let(::renderModelCards)
+    }
 
-        content.addView(sectionHeader(R.string.model_online_section_title))
-        onlineSummary = paragraph()
-        content.addView(onlineSummary)
-        content.addView(
-            settingRow(
-                title = getString(R.string.online_ai_settings_title),
-                summary = getString(R.string.model_online_manage_summary),
-                iconResource = R.drawable.ic_cloud_24,
-            ) {
-                startActivity(Intent(this, OnlineAiSettingsActivity::class.java))
-            }.view,
-        )
-        content.addView(
-            settingRow(
-                title = getString(R.string.online_ai_add_profile),
-                summary = getString(R.string.online_ai_add_profile_summary),
-                iconResource = R.drawable.ic_add_24,
-            ) {
-                startActivity(
-                    Intent(this, OnlineAiSettingsActivity::class.java)
-                        .putExtra(OnlineAiSettingsActivity.EXTRA_ADD_PROFILE, true),
-                )
-            }.view,
-        )
-        content.addView(hairline())
-
-        content.addView(sectionHeader(R.string.download_section_title))
-        if (!localRuntimeAvailable) {
-            content.addView(paragraph(getString(R.string.model_local_runtime_unavailable)))
+    private fun showLocalSectionMenu(anchor: View) {
+        PopupMenu(this, anchor).apply {
+            menu.add(0, MENU_IMPORT_FILE, 0, R.string.button_import_model).isEnabled = importRow.view.isEnabled
+            menu.add(0, MENU_CLEANUP_STORAGE, 1, R.string.button_cleanup_storage).isEnabled = cleanupEnabled
+            setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    MENU_IMPORT_FILE -> openModelPicker()
+                    MENU_CLEANUP_STORAGE -> cleanUnreferencedStorage()
+                }
+                true
+            }
+            show()
         }
-        content.addView(paragraph(getString(R.string.screen_description)))
-        downloadStatus = paragraph().apply {
-            text = getString(R.string.download_description)
-            setTextIsSelectable(true)
-        }
-        content.addView(downloadStatus)
-        downloadPanel = ProgressPanel(this)
-            .withCancelAction(R.string.button_cancel_download) { cancelDownload() }
-        content.addView(downloadPanel.view, blockParams(topDp = Ui.SPACE_SM))
-        downloadButton = tonalButton(R.string.button_browse_litert_models) { chooseRecommendedModel() }
-        importDownloadedButton = filledButton(R.string.button_import_downloaded_model) {
-            importDownloadedModel()
-        }.apply { visibility = View.GONE }
-        content.addView(
-            actionRow(downloadButton, importDownloadedButton),
-            blockParams(topDp = Ui.SPACE_MD),
-        )
-        content.addView(hairline())
-
-        content.addView(sectionHeader(R.string.import_section_title))
-        status = paragraph().apply { setTextIsSelectable(true) }
-        content.addView(status)
-        copyModelIdButton = textButton(R.string.button_copy_model_id) { copyModelId() }
-            .apply { visibility = View.GONE }
-        content.addView(
-            actionRow(copyModelIdButton),
-            blockParams(horizontalDp = Ui.SPACE_SM),
-        )
-        importPanel = ProgressPanel(this)
-            .withCancelAction(R.string.button_cancel_import) { cancelImport() }
-        content.addView(importPanel.view, blockParams(topDp = Ui.SPACE_SM))
-        importButton = tonalButton(R.string.button_import_model) { openModelPicker() }
-        content.addView(actionRow(importButton), blockParams(topDp = Ui.SPACE_MD))
-        content.addView(hairline())
-
-        catalogSummary = TextView(this).apply {
-            textSize = Ui.TEXT_SECTION
-            typeface = Ui.mediumTypeface
-            setTextColor(appPalette.accent)
-            setPaddingRelative(
-                uiDp(Ui.SCREEN_MARGIN),
-                uiDp(Ui.SECTION_GAP),
-                uiDp(Ui.SCREEN_MARGIN),
-                uiDp(Ui.SPACE_SM),
-            )
-        }
-        content.addView(catalogSummary)
-        catalogRows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        content.addView(catalogRows, blockParams())
-
-        applyThemeToControls(content)
-        screenRoot = scaffold.root
-        return scaffold.root
     }
 
     private fun paragraph(text: CharSequence? = null): TextView = TextView(this).apply {
@@ -325,44 +280,6 @@ class ModelManagerActivity : ConfiguredActivity() {
         marginEnd = uiDp(horizontalDp)
         topMargin = uiDp(topDp)
         bottomMargin = uiDp(bottomDp)
-    }
-
-    private fun actionRow(vararg buttons: View): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        buttons.forEachIndexed { index, button ->
-            addView(
-                button,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { if (index > 0) marginStart = uiDp(Ui.SPACE_MD) },
-            )
-        }
-    }
-
-    private fun refreshOnlineSummary() {
-        if (!::onlineSummary.isInitialized) return
-        val snapshot = runCatching {
-            (application as ThreeStoneAiApplication).onlineProfileRegistry.snapshot()
-        }.getOrNull()
-        if (snapshot == null) {
-            onlineSummary.text = getString(R.string.model_online_unavailable)
-            return
-        }
-        val profileCount = snapshot.profiles.size
-        val modelCount = snapshot.profiles.sumOf { configured -> configured.profile.modelIds.size }
-        val configuredCount = snapshot.profiles.count { configured -> configured.configured }
-        onlineSummary.text = if (profileCount == 0) {
-            getString(R.string.model_online_empty)
-        } else {
-            getString(
-                R.string.model_online_summary,
-                profileCount,
-                modelCount,
-                configuredCount,
-            )
-        }
     }
 
     private fun chooseRecommendedModel() {
@@ -416,7 +333,9 @@ class ModelManagerActivity : ConfiguredActivity() {
         when (state) {
             ModelDownloadState.Idle -> {
                 setDownloadUi(inProgress = false, startEnabled = true)
-                downloadStatus.text = getString(R.string.download_description)
+                // The download row already explains downloads; the status line only reports results.
+                downloadStatus.text = null
+                downloadStatus.visibility = View.GONE
             }
             is ModelDownloadState.Running -> {
                 setDownloadUi(
@@ -567,7 +486,6 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun renderImportState(state: ModelImportState<ImportedModel>) {
-        updateModelActions(ModelManagerPresentation.visibleModel(state))
         when (state) {
             ModelImportState.Preparing -> {
                 setImportUi(inProgress = true, importEnabled = false)
@@ -575,11 +493,11 @@ class ModelManagerActivity : ConfiguredActivity() {
             }
             ModelImportState.Unavailable -> {
                 setImportUi(inProgress = false, importEnabled = false)
-                status.text = getString(R.string.import_failed)
+                showImportMessage(getString(R.string.import_failed))
             }
             is ModelImportState.Ready -> {
                 setImportUi(inProgress = false, importEnabled = true)
-                showCurrent(state.current)
+                showImportMessage(null)
             }
             is ModelImportState.Running -> {
                 setImportUi(
@@ -598,41 +516,32 @@ class ModelManagerActivity : ConfiguredActivity() {
             }
             is ModelImportState.Succeeded -> {
                 setImportUi(inProgress = false, importEnabled = true)
-                showModel(state.model)
+                showImportMessage(null)
                 notifyImportOnce(state.operationId, R.string.import_succeeded, Snackbar.LENGTH_SHORT)
             }
             is ModelImportState.Cancelled -> {
                 setImportUi(inProgress = false, importEnabled = true)
-                state.current?.let(::showModel) ?: run { status.text = getString(R.string.model_none) }
+                showImportMessage(null)
                 notifyImportOnce(state.operationId, R.string.import_cancelled, Snackbar.LENGTH_SHORT)
             }
             is ModelImportState.Failed -> {
                 setImportUi(inProgress = false, importEnabled = state.retryAllowed)
                 val message = importFailureMessage(state.reason)
-                state.current?.let(::showModel) ?: run { status.text = getString(message) }
+                showImportMessage(getString(message))
                 notifyImportOnce(state.operationId, message, Snackbar.LENGTH_LONG)
             }
         }
     }
 
+    /** The import status line only reports failures; the new model shows up as a card. */
+    private fun showImportMessage(message: CharSequence?) {
+        status.text = message
+        status.visibility = if (message.isNullOrEmpty()) View.GONE else View.VISIBLE
+    }
+
     private fun renderManagerState(state: ModelManagerState) {
         renderImportState(state.importState)
         renderManagerCatalog(state)
-        when (val selection = state.selection) {
-            is ModelSelectionState.Succeeded -> notifySelectionOnce(
-                selection.operationId,
-                R.string.model_selection_succeeded,
-                Snackbar.LENGTH_SHORT,
-            )
-            is ModelSelectionState.Failed -> notifySelectionOnce(
-                selection.operationId,
-                R.string.model_selection_failed,
-                Snackbar.LENGTH_LONG,
-            )
-            ModelSelectionState.Idle,
-            is ModelSelectionState.Selecting,
-            -> Unit
-        }
         when (val deletion = state.deletion) {
             is ModelDeletionState.Succeeded -> notifyDeletionOnce(
                 deletion.operationId,
@@ -715,12 +624,9 @@ class ModelManagerActivity : ConfiguredActivity() {
         if (!::catalogRows.isInitialized) return
         val view = ModelManagerPresentation.managerView(state)
         catalogMutationBlocksPicker = view.catalogMutationBusy
+        cleanupEnabled = view.cleanupEnabled
         updateImportButtonEnabled()
         updateDownloadButtonEnabled()
-        if (cleanupEnabled != view.cleanupEnabled) {
-            cleanupEnabled = view.cleanupEnabled
-            invalidateOptionsMenu()
-        }
         val storage = refreshImportStoragePreflight()
         catalogSummary.text = when (view.availability) {
             ModelCatalogAvailability.LOADING -> getString(R.string.model_catalog_loading)
@@ -734,43 +640,23 @@ class ModelManagerActivity : ConfiguredActivity() {
         }
         if (view == renderedManagerView) return
         renderedManagerView = view
-        catalogRows.removeAllViews()
-        view.rows.forEach { row ->
-            catalogRows.addView(modelCard(row), cardListParams())
+        if (view.rows != catalogRowsForTargets) {
+            // Imports, deletions, renames and health checks change the local targets and can move the
+            // default target; refreshTargets redraws the cards through onTargetsChanged.
+            catalogRowsForTargets = view.rows
+            refreshTargets()
+        } else {
+            renderModelCards(view)
         }
     }
 
+    private fun renderModelCards(view: ModelManagerViewState) {
+        catalogRows.removeAllViews()
+        view.rows.forEach { row -> catalogRows.addView(modelCard(row)) }
+    }
+
     private fun modelCard(row: ModelManagerRow): View {
-        val card = cardContainer(interactive = row.selectionEnabled, selected = row.selected)
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        if (row.selected) {
-            header.addView(
-                ImageView(this).apply {
-                    setImageDrawable(tintedDrawable(R.drawable.ic_check_circle_24, appPalette.accent))
-                },
-                LinearLayout.LayoutParams(uiDp(20), uiDp(20)).apply { marginEnd = uiDp(Ui.SPACE_SM) },
-            )
-        }
-        header.addView(
-            TextView(this).apply {
-                text = row.displayName
-                textSize = Ui.TEXT_ITEM
-                typeface = Ui.mediumTypeface
-                setTextColor(appPalette.primaryText)
-                maxLines = 2
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            },
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
-        )
-        header.addView(
-            iconButton(R.drawable.ic_more_vert_24, R.string.model_item_actions) { }.also { button ->
-                button.setOnClickListener { showModelActionsMenu(button, row) }
-            },
-        )
-        card.addView(header)
+        val targetId = AiTargetIds.local(row.modelId)
         val healthText = getString(
             if (row.healthCheckInProgress) {
                 R.string.model_health_checking
@@ -778,46 +664,46 @@ class ModelManagerActivity : ConfiguredActivity() {
                 healthStatusText(row.healthStatus)
             },
         )
-        card.addView(
-            TextView(this).apply {
-                text = "${Formatter.formatFileSize(this@ModelManagerActivity, row.sizeBytes)} | $healthText"
-                textSize = Ui.TEXT_SECONDARY
-                setTextColor(appPalette.secondaryText)
-                setPaddingRelative(0, uiDp(Ui.SPACE_XS), 0, 0)
-            },
-        )
-        card.addView(
-            TextView(this).apply {
-                text = row.modelId
-                textSize = Ui.TEXT_CAPTION
-                setTextColor(appPalette.secondaryText)
-                alpha = 0.8f
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
-                setPaddingRelative(0, uiDp(2), 0, 0)
-            },
-        )
-        if (localRuntimeAvailable && row.selectionEnabled) {
-            card.setOnClickListener {
-                if (row.selected) return@setOnClickListener
-                renderedManagerView = null
-                importCoordinator.beginSelection(row.modelId)
-                renderManagerState(importCoordinator.managerState())
+        val badges = buildList {
+            if (isDefaultTarget(targetId)) {
+                add(CardBadge(getString(R.string.models_badge_default), BadgeTone.ACCENT))
             }
-        } else if (!row.selected) {
-            card.alpha = 0.72f
+            add(
+                if (isLocalModelUsable(row)) {
+                    CardBadge(getString(R.string.models_badge_ready), BadgeTone.NEUTRAL)
+                } else {
+                    CardBadge(getString(R.string.models_badge_unavailable), BadgeTone.WARNING)
+                },
+            )
         }
-        return card
+        return itemCard(
+            title = row.displayName,
+            subtitle = "${Formatter.formatFileSize(this, row.sizeBytes)} | $healthText",
+            badges = badges,
+            actionsDescription = R.string.model_item_actions,
+            onActions = { anchor -> showModelActionsMenu(anchor, row) },
+            onClick = { showModelDetails(row) },
+        )
     }
 
+    /** The catalog's verdict once it is loaded, otherwise the runtime and the last health check. */
+    private fun isLocalModelUsable(row: ModelManagerRow): Boolean =
+        targetFor(AiTargetIds.local(row.modelId))?.let { TargetPickerTexts.isUsable(it) }
+            ?: (localRuntimeAvailable && row.healthStatus != ModelHealthStatus.INCOMPATIBLE)
+
+    /** The same fixed order as the service cards (D98), without the online-only entries. */
     private fun showModelActionsMenu(anchor: View, row: ModelManagerRow) {
+        val targetId = AiTargetIds.local(row.modelId)
         PopupMenu(this, anchor).apply {
-            menu.add(0, ACTION_CHECK, 0, R.string.button_check_model).isEnabled =
+            menu.add(0, ACTION_SET_DEFAULT, 0, R.string.online_ai_action_set_default).isEnabled =
+                targetFor(targetId)?.let { TargetPickerTexts.isUsable(it) } == true && !isDefaultTarget(targetId)
+            menu.add(0, ACTION_CHECK, 1, R.string.button_check_model).isEnabled =
                 localRuntimeAvailable && row.healthCheckEnabled && !row.healthCheckInProgress
-            menu.add(0, ACTION_RENAME, 1, R.string.button_rename_model).isEnabled = row.renameEnabled
-            menu.add(0, ACTION_DELETE, 2, R.string.button_delete_model).isEnabled = row.deletionEnabled
+            menu.add(0, ACTION_RENAME, 2, R.string.button_rename_model).isEnabled = row.renameEnabled
+            menu.add(0, ACTION_DELETE, 3, R.string.button_delete_model).isEnabled = row.deletionEnabled
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
+                    ACTION_SET_DEFAULT -> makeDefault(targetId)
                     ACTION_CHECK -> checkModel(row.modelId)
                     ACTION_RENAME -> confirmModelRename(row)
                     ACTION_DELETE -> confirmModelDeletion(row)
@@ -889,19 +775,30 @@ class ModelManagerActivity : ConfiguredActivity() {
         renderManagerState(importCoordinator.managerState())
     }
 
-    private fun showCurrent(model: ImportedModel?) {
-        model?.let(::showModel) ?: run { status.text = getString(R.string.model_none) }
-    }
-
-    private fun showModel(model: ImportedModel) {
-        status.text = getString(
+    /** Local model details (D104): what the model store keeps, with the model ID ready to copy. */
+    private fun showModelDetails(row: ModelManagerRow) {
+        val model = importCoordinator.managerState().snapshot?.models
+            ?.firstOrNull { it.modelId == row.modelId } ?: return
+        val imported = DateUtils.formatDateTime(
+            this,
+            model.importedAtMillis,
+            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_YEAR or DateUtils.FORMAT_SHOW_TIME,
+        )
+        val details = getString(
             R.string.model_status_format,
             model.displayName,
             Formatter.formatFileSize(this, model.sizeBytes),
             model.sha256,
             model.modelId,
             getString(healthStatusText(model.healthStatus)),
-        )
+        ) + "\n" + getString(R.string.models_detail_imported, imported)
+        materialDialog()
+            .setTitle(model.displayName)
+            .setMessage(details)
+            .setNeutralButton(R.string.button_copy_model_id) { _, _ -> copyModelId(model.modelId) }
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+            .also(::tintDialogButtons)
     }
 
     private fun healthStatusText(status: ModelHealthStatus): Int = when (status) {
@@ -910,13 +807,7 @@ class ModelManagerActivity : ConfiguredActivity() {
         ModelHealthStatus.INCOMPATIBLE -> R.string.model_health_incompatible
     }
 
-    private fun updateModelActions(model: ImportedModel?) {
-        copyableModelId = model?.modelId
-        copyModelIdButton.visibility = if (model == null) View.GONE else View.VISIBLE
-    }
-
-    private fun copyModelId() {
-        val modelId = copyableModelId ?: return
+    private fun copyModelId(modelId: String) {
         getSystemService(ClipboardManager::class.java).setPrimaryClip(
             ClipData.newPlainText(getString(R.string.model_id_clipboard_label), modelId),
         )
@@ -976,7 +867,7 @@ class ModelManagerActivity : ConfiguredActivity() {
         cancellableOperationId = cancelOperationId
         if (!inProgress) importPanel.hide()
         importPanel.setCancelEnabled(cancelOperationId != null)
-        status.visibility = if (inProgress) View.GONE else View.VISIBLE
+        if (inProgress) status.visibility = View.GONE
         importStateAllowsPicker = importEnabled
         updateImportButtonEnabled()
         updateDownloadButtonEnabled()
@@ -992,18 +883,19 @@ class ModelManagerActivity : ConfiguredActivity() {
     }
 
     private fun updateImportButtonEnabled() {
+        if (!::importRow.isInitialized) return
         val enabled = localRuntimeAvailable && importStateAllowsPicker &&
             !catalogMutationBlocksPicker && storageAllowsPicker && !downloadBlocksImport
-        importButton.isEnabled = enabled
-        if (::importDownloadedButton.isInitialized) {
-            importDownloadedButton.isEnabled = enabled && downloadedDestination != null
-        }
+        importRow.setRowEnabled(enabled)
+        importDownloadedButton.isEnabled = enabled && downloadedDestination != null
     }
 
     private fun updateDownloadButtonEnabled() {
-        if (!::downloadButton.isInitialized) return
-        downloadButton.isEnabled = localRuntimeAvailable && downloadStateAllowsStart &&
-            importStateAllowsPicker && !catalogMutationBlocksPicker
+        if (!::downloadRow.isInitialized) return
+        downloadRow.setRowEnabled(
+            localRuntimeAvailable && downloadStateAllowsStart &&
+                importStateAllowsPicker && !catalogMutationBlocksPicker,
+        )
     }
 
     private fun importFailureMessage(reason: ModelImportFailureReason): Int = when (reason) {
@@ -1018,12 +910,6 @@ class ModelManagerActivity : ConfiguredActivity() {
     private fun notifyImportOnce(operationId: Long, message: Int, duration: Int) {
         if (operationId <= lastNotifiedImportOperationId) return
         lastNotifiedImportOperationId = operationId
-        showSnackbar(screenRoot, getString(message), duration)
-    }
-
-    private fun notifySelectionOnce(operationId: Long, message: Int, duration: Int) {
-        if (operationId <= lastNotifiedSelectionOperationId) return
-        lastNotifiedSelectionOperationId = operationId
         showSnackbar(screenRoot, getString(message), duration)
     }
 
@@ -1060,13 +946,14 @@ class ModelManagerActivity : ConfiguredActivity() {
     private companion object {
         const val REQUEST_OPEN_MODEL = 1001
         const val REQUEST_CHOOSE_LITERT_MODEL = 1003
-        const val MENU_CLEANUP_STORAGE = 2001
+        const val MENU_IMPORT_FILE = 2001
+        const val MENU_CLEANUP_STORAGE = 2002
+        const val ACTION_SET_DEFAULT = 3000
         const val ACTION_CHECK = 3001
         const val ACTION_RENAME = 3002
         const val ACTION_DELETE = 3003
         const val STATE_LAST_NOTIFIED_IMPORT_OPERATION_ID = "lastNotifiedImportOperationId"
         const val STATE_LAST_NOTIFIED_DOWNLOAD_OPERATION_ID = "lastNotifiedDownloadOperationId"
-        const val STATE_LAST_NOTIFIED_SELECTION_OPERATION_ID = "lastNotifiedSelectionOperationId"
         const val STATE_LAST_NOTIFIED_DELETION_OPERATION_ID = "lastNotifiedDeletionOperationId"
         const val STATE_LAST_NOTIFIED_RENAME_OPERATION_ID = "lastNotifiedRenameOperationId"
         const val STATE_LAST_NOTIFIED_STORAGE_CLEANUP_OPERATION_ID =

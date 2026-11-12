@@ -3264,9 +3264,6 @@ class ChatActivity : ConfiguredActivity() {
     private fun targetLocalityLabel(locality: AiTargetLocality): String =
         generationText.localityLabel(locality)
 
-    private fun targetProviderLabel(providerId: String, locality: AiTargetLocality): String =
-        generationText.providerLabel(providerId, locality)
-
     private fun showTargetSelector() {
         val catalog = targetCatalog
         if (
@@ -3277,6 +3274,7 @@ class ChatActivity : ConfiguredActivity() {
             return
         }
         val current = resolvedConversationTarget()?.takeIf(::isTargetReady)
+        val pickerTexts = TargetPickerTexts(this)
         showModelPickerSheet(
             ModelPickerState(
                 targets = catalog.targets,
@@ -3287,35 +3285,10 @@ class ChatActivity : ConfiguredActivity() {
                 fast = current?.let(::conversationFast),
             ),
             ModelPickerActions(
-                rowTitle = { target ->
-                    if (target.locality == AiTargetLocality.LOCAL) {
-                        targetDisplayName(ConversationTargetSnapshot.from(target))
-                    } else {
-                        target.modelId
-                    }
-                },
-                rowSubtitle = ::targetPickerSubtitle,
-                groupTitle = { section ->
-                    when (section.kind) {
-                        ModelPickerSectionKind.FAVORITES -> getString(R.string.model_picker_favorites)
-                        ModelPickerSectionKind.LOCAL -> getString(R.string.model_picker_local)
-                        ModelPickerSectionKind.PROFILE -> section.targets.first().let { target ->
-                            getString(
-                                R.string.chat_model_switch_summary,
-                                targetDisplayName(ConversationTargetSnapshot.from(target)),
-                                targetProviderLabel(target.providerId, target.locality),
-                            )
-                        }
-                    }
-                },
-                searchText = { target ->
-                    listOf(
-                        target.modelId,
-                        targetDisplayName(ConversationTargetSnapshot.from(target)),
-                        targetProviderLabel(target.providerId, target.locality),
-                        targetLocalityLabel(target.locality),
-                    ).joinToString(" ")
-                },
+                rowTitle = pickerTexts::rowTitle,
+                rowSubtitle = pickerTexts::rowSubtitle,
+                groupTitle = pickerTexts::groupTitle,
+                searchText = pickerTexts::searchText,
                 isReady = ::isTargetReady,
                 onSelect = { target ->
                     if (!target.configured || !target.available || !target.capabilities.streaming) {
@@ -3336,21 +3309,6 @@ class ChatActivity : ConfiguredActivity() {
                 onManage = ::openModelManager,
             ),
         )
-    }
-
-    /** Local models show their ID under the name; unavailable targets say so. */
-    private fun targetPickerSubtitle(target: AiTarget): String? {
-        val parts = buildList {
-            if (target.locality == AiTargetLocality.LOCAL &&
-                target.modelId != targetDisplayName(ConversationTargetSnapshot.from(target))
-            ) {
-                add(target.modelId)
-            }
-            if (!target.configured || !target.available || !target.capabilities.streaming) {
-                add(getString(R.string.chat_target_unavailable_suffix).trimStart(' ', '|'))
-            }
-        }
-        return parts.joinToString(" | ").ifEmpty { null }
     }
 
     /** Effort or fast changed for this conversation (D72): saved with the history, shown in the target bar. */

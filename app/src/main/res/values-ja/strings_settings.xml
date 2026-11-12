@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="models_badge_default">既定</string>
+    <string name="models_badge_missing_key">API key 未設定</string>
+    <string name="models_badge_ready">準備完了</string>
+    <string name="models_badge_unavailable">利用不可</string>
+    <string name="models_default_none_ready">使用できるモデルがまだありません. 先にサービスを追加するか, モデルをダウンロードしてください.</string>
+    <string name="models_default_picker_title">既定のターゲットを選択</string>
+    <string name="models_default_save_failed">既定のターゲットを更新できませんでした</string>
+    <string name="models_default_saved">既定のターゲットを更新しました</string>
+    <string name="models_default_target">既定のターゲット</string>
+    <string name="models_default_target_format">%1$s | %2$s</string>
+    <string name="models_default_target_none">未設定</string>
+    <string name="models_detail_imported">インポート日時: %1$s</string>
+    <string name="models_import_file_summary">端末上の .litertlm モデルファイルを選択</string>
+    <string name="models_local_section">ローカルモデル</string>
+    <string name="models_section_actions">その他の操作</string>
+    <string name="online_ai_catalog_automatic_off">プリセットモデルの自動更新をオフにしました</string>
+    <string name="online_ai_rename_failed">サービス名を変更できませんでした</string>
+    <string name="online_ai_rename_invalid">名前は空にできず, 他のサービスと同じ名前も使えません.</string>
+    <string name="online_ai_rename_title">サービス名を変更</string>
+    <string name="online_ai_renamed">サービス名を変更しました</string>
     <string name="settings_conversation_display">表示</string>
     <string name="settings_conversation_input">入力</string>
     <string name="settings_conversation_limits">コンテキストと出力</string>

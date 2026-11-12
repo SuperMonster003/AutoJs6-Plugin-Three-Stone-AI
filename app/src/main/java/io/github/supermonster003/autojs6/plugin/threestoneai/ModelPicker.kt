@@ -146,12 +146,72 @@ internal class ModelPickerActions(
     val onToggleFavorite: (String) -> Set<String>,
     val onEffort: (GenerationEffort) -> Unit,
     val onFast: (Boolean) -> Unit,
-    val onManage: () -> Unit,
+    /** Opens the models and services page; null hides the link (the page itself picks targets too). */
+    val onManage: (() -> Unit)?,
 )
+
+/**
+ * Row, group and search texts for targets, shared by the chat switcher and the default target picker
+ * on the models and services page (roadmap 1.7.0 P5.2), so both lists read the same.
+ */
+internal class TargetPickerTexts(private val context: Context) {
+    private val text = ChatGenerationText(context)
+
+    fun name(target: AiTarget): String = text.displayName(ConversationTargetSnapshot.from(target))
+
+    /** Local models by name, service models by model ID (their service is the group). */
+    fun rowTitle(target: AiTarget): String =
+        if (target.locality == AiTargetLocality.LOCAL) name(target) else target.modelId
+
+    /** Local models show their ID under the name; unavailable targets say so. */
+    fun rowSubtitle(target: AiTarget): String? {
+        val parts = buildList {
+            if (target.locality == AiTargetLocality.LOCAL && target.modelId != name(target)) add(target.modelId)
+            if (!isUsable(target)) add(context.getString(R.string.chat_target_unavailable_suffix).trimStart(' ', '|'))
+        }
+        return parts.joinToString(" | ").ifEmpty { null }
+    }
+
+    fun groupTitle(section: ModelPickerSection): String = when (section.kind) {
+        ModelPickerSectionKind.FAVORITES -> context.getString(R.string.model_picker_favorites)
+        ModelPickerSectionKind.LOCAL -> context.getString(R.string.model_picker_local)
+        ModelPickerSectionKind.PROFILE -> section.targets.first().let { target ->
+            context.getString(
+                R.string.chat_model_switch_summary,
+                name(target),
+                text.providerLabel(target.providerId, target.locality),
+            )
+        }
+    }
+
+    fun searchText(target: AiTarget): String = listOf(
+        target.modelId,
+        name(target),
+        text.providerLabel(target.providerId, target.locality),
+        text.localityLabel(target.locality),
+    ).joinToString(" ")
+
+    /** One line for the default target row: "model | service" or "name | Local models". */
+    fun summary(target: AiTarget): String = context.getString(
+        R.string.models_default_target_format,
+        rowTitle(target),
+        if (target.locality == AiTargetLocality.LOCAL) {
+            context.getString(R.string.model_picker_local)
+        } else {
+            name(target)
+        },
+    )
+
+    companion object {
+        fun isUsable(target: AiTarget): Boolean =
+            target.configured && target.available && target.capabilities.streaming
+    }
+}
 
 internal fun ConfiguredActivity.showModelPickerSheet(
     state: ModelPickerState,
     actions: ModelPickerActions,
+    title: String = getString(R.string.chat_model_switch_title),
 ): BottomSheetDialog {
     var favorites = state.favorites
     var query = ""
@@ -221,6 +281,16 @@ internal fun ConfiguredActivity.showModelPickerSheet(
         },
     )
     renderList()
+    val onManage = actions.onManage
+    if (onManage != null) addManageLink(content) {
+        dialog.dismiss()
+        onManage()
+    }
+    dialog = formBottomSheet(title, content).dialog
+    return dialog
+}
+
+private fun ConfiguredActivity.addManageLink(content: LinearLayout, onClick: () -> Unit) {
     content.addView(hairline(insetStartDp = 0))
     content.addView(
         TextView(this).apply {
@@ -234,15 +304,10 @@ internal fun ConfiguredActivity.showModelPickerSheet(
             isClickable = true
             isFocusable = true
             applyThemedSelectableBackground()
-            setOnClickListener {
-                dialog.dismiss()
-                actions.onManage()
-            }
+            setOnClickListener { onClick() }
         },
         LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT),
     )
-    dialog = formBottomSheet(getString(R.string.chat_model_switch_title), content).dialog
-    return dialog
 }
 
 /** Effort row and fast switch for the conversation on screen, shown only when the target supports them. */

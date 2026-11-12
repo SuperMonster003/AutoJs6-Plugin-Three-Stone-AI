@@ -3,4 +3,7 @@
     <plurals name="app_update_ignored_count">
         <item quantity="other">무시한 릴리스 %1$d개</item>
     </plurals>
+    <plurals name="models_service_model_count">
+        <item quantity="other">모델 %1$d개</item>
+    </plurals>
 </resources>

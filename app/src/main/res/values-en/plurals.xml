@@ -4,4 +4,8 @@
         <item quantity="one">%1$d ignored release</item>
         <item quantity="other">%1$d ignored releases</item>
     </plurals>
+    <plurals name="models_service_model_count">
+        <item quantity="one">%1$d model</item>
+        <item quantity="other">%1$d models</item>
+    </plurals>
 </resources>

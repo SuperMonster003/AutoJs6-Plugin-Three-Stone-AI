@@ -481,7 +481,6 @@ class ChatActivity : ConfiguredActivity() {
                 }
             })
         }
-        menu.add(0, MENU_MODEL_SETTINGS, 3, R.string.model_manager_title)
         menu.add(0, MENU_APP_SETTINGS, 4, R.string.app_settings_title)
         toolbar.post { tintToolbarIcons(toolbar) }
         return true
@@ -545,10 +544,6 @@ class ChatActivity : ConfiguredActivity() {
         }
         MENU_APP_SETTINGS -> {
             startActivity(Intent(this, AppSettingsActivity::class.java))
-            true
-        }
-        MENU_MODEL_SETTINGS -> {
-            openModelManager()
             true
         }
         else -> super.onOptionsItemSelected(item)
@@ -1153,12 +1148,6 @@ class ChatActivity : ConfiguredActivity() {
             addView(
                 drawerActionButton(R.drawable.ic_settings_24, R.string.app_settings_title) {
                     startActivity(Intent(this@ChatActivity, AppSettingsActivity::class.java))
-                },
-                LinearLayout.LayoutParams(0, dp(60), 1f),
-            )
-            addView(
-                drawerActionButton(R.drawable.ic_model_24, R.string.model_manager_title) {
-                    openModelManager()
                 },
                 LinearLayout.LayoutParams(0, dp(60), 1f),
             )
@@ -3439,10 +3428,6 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun showUnavailableTargetDialog(target: AiTarget) {
-        val settingsLabel = when (target.locality) {
-            AiTargetLocality.LOCAL -> R.string.model_manager_title
-            AiTargetLocality.REMOTE -> R.string.online_ai_settings_title
-        }
         materialDialog()
             .setTitle(R.string.chat_target_unavailable_title)
             .setMessage(
@@ -3452,7 +3437,7 @@ class ChatActivity : ConfiguredActivity() {
                 ),
             )
             .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(settingsLabel) { _, _ -> openTargetSettings(target.locality) }
+            .setPositiveButton(R.string.model_picker_manage) { _, _ -> openModelManager() }
             .show()
             .also(::tintDialogButtons)
     }
@@ -3460,10 +3445,6 @@ class ChatActivity : ConfiguredActivity() {
     private fun showUnavailableRegenerationTargetDialog(
         snapshot: ConversationTargetSnapshot,
     ) {
-        val settingsLabel = when (snapshot.locality) {
-            AiTargetLocality.LOCAL -> R.string.model_manager_title
-            AiTargetLocality.REMOTE -> R.string.online_ai_settings_title
-        }
         materialDialog()
             .setTitle(R.string.chat_regenerate_target_unavailable_title)
             .setMessage(
@@ -3473,7 +3454,7 @@ class ChatActivity : ConfiguredActivity() {
                 ),
             )
             .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(settingsLabel) { _, _ -> openTargetSettings(snapshot.locality) }
+            .setPositiveButton(R.string.model_picker_manage) { _, _ -> openModelManager() }
             .show()
             .also(::tintDialogButtons)
     }
@@ -3483,14 +3464,9 @@ class ChatActivity : ConfiguredActivity() {
             .setTitle(R.string.chat_target_selector_empty_title)
             .setMessage(R.string.chat_target_selector_empty_message)
             .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.model_manager_title) { _, _ -> openModelManager() }
+            .setPositiveButton(R.string.model_picker_manage) { _, _ -> openModelManager() }
             .show()
             .also(::tintDialogButtons)
-    }
-
-    private fun openTargetSettings(locality: AiTargetLocality) = when (locality) {
-        AiTargetLocality.LOCAL -> openModelManager()
-        AiTargetLocality.REMOTE -> openOnlineAiSettings()
     }
 
     private fun showKeyboard(target: View) {
@@ -3511,12 +3487,9 @@ class ChatActivity : ConfiguredActivity() {
         )
     }
 
+    /** "Models and services" (roadmap D95); every target dialog and the picker land there (D103). */
     private fun openModelManager() {
         startActivity(Intent(this, ModelManagerActivity::class.java))
-    }
-
-    private fun openOnlineAiSettings() {
-        startActivity(Intent(this, OnlineAiSettingsActivity::class.java))
     }
 
     private fun copyMessage(messageId: Long): Boolean {
@@ -3969,7 +3942,6 @@ class ChatActivity : ConfiguredActivity() {
     private companion object {
         const val TAG = "ThreeStoneAiChat"
         const val MENU_NEW_CONVERSATION = 1
-        const val MENU_MODEL_SETTINGS = 2
         const val MENU_CONVERSATION_HISTORY = 3
         const val MENU_SEARCH = 4
         const val MENU_APP_SETTINGS = 6

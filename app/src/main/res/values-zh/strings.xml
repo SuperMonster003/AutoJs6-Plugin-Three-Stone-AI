@@ -198,7 +198,7 @@
     <string name="chat_search_next">下一个</string>
     <string name="chat_search_previous">上一个</string>
     <string name="chat_send">发送</string>
-    <string name="chat_settings_generation_section">生成</string>
+    <string name="chat_settings_generation_section">输出长度与采样</string>
     <string name="chat_settings_save">保存</string>
     <string name="chat_show_generation_usage">显示令牌和耗时详情</string>
     <string name="chat_stop">停止</string>
@@ -337,7 +337,7 @@
     <string name="model_id_clipboard_label">AI 文本模型 ID</string>
     <string name="model_id_copied">模型 ID 已复制</string>
     <string name="model_local_runtime_unavailable">此设备或安装包不支持本地模型推理. 可以使用在线 AI.</string>
-    <string name="model_manager_title">模型</string>
+    <string name="model_manager_title">模型与服务</string>
     <string name="model_none">未配置模型</string>
     <string name="model_online_empty">尚无在线档案. 添加后即可在 Chat 中使用远程模型.</string>
     <string name="model_online_manage_summary">管理提供方, 档案, 模型 ID, 凭据和网络访问</string>

@@ -4,50 +4,34 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.Spanned
-import android.text.InputType
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.TypefaceSpan
-import android.view.Gravity
-import android.view.View
 import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
-import com.google.android.material.checkbox.MaterialCheckBox
-import com.google.android.material.textfield.TextInputLayout
-import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationProvider
-import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadAloudProvider
-import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechAvailability
-import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechAvailabilityPolicy
-import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceProbe
-import io.github.supermonster003.autojs6.plugin.threestoneai.speech.SpeechDeviceState
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.buildScaffold
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formBottomSheet
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.formTextField
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmedChoiceDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.hairline
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.inputDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.materialDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.singleChoiceDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmedChoiceDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingsPage
 import java.util.Locale
 import org.autojs.plugin.ai.provider.api.AiProviderSettingsContract
 
+/**
+ * Settings home (roadmap D80): the shared appearance group, then one entry per subpage. The host's
+ * "AI service settings" action still resolves here and continues to "Models and services" (D103,
+ * D110), so Back from that page returns to this home and then to the host.
+ */
 class AppSettingsActivity : ConfiguredActivity() {
     internal var appearanceDialog: androidx.appcompat.app.AlertDialog? = null; private set
     internal var launcherIconDialog: androidx.appcompat.app.AlertDialog? = null; private set
-    private var launcherIconRow: io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRow? = null
+    private var launcherIconRow: SettingRow? = null
     private lateinit var settingsStore: ApplicationSettingsStore
     private lateinit var settings: ApplicationSettings
     private lateinit var hostResult: AutoJs6HostSettingsResult
-    private lateinit var chatSettingsStore: ChatUiSettingsStore
-    private lateinit var chatSettings: ChatUiSettings
-    private lateinit var updateSettingsStore: AppUpdateSettingsStore
-    private lateinit var updateController: AppUpdateController
-    private var speechDeviceState: SpeechDeviceState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,11 +42,13 @@ class AppSettingsActivity : ConfiguredActivity() {
         settingsStore = ApplicationSettingsStore(applicationContext)
         hostResult = AutoJs6HostSettingsClient.query(this)
         settings = settingsStore.load()
-        chatSettingsStore = ChatUiSettingsStore(applicationContext)
-        chatSettings = chatSettingsStore.load()
-        updateSettingsStore = AppUpdateSettingsStore(applicationContext)
-        updateController = AppUpdateController(this, updateSettingsStore)
-        setContentView(createContentView())
+        setContentView(settingsPage(R.string.app_settings_title, ::buildSettingsContent))
+        if (savedInstanceState == null && intent.action == AiProviderSettingsContract.ACTION_OPEN_SETTINGS) {
+            // A real back stack (home below the target page) instead of a synthesized one (D110).
+            startActivity(Intent(this, ModelManagerActivity::class.java))
+            @Suppress("DEPRECATION")
+            overridePendingTransition(0, 0)
+        }
     }
 
     override fun hasUnconfirmedDialog() = appearanceDialog?.isShowing == true || launcherIconDialog?.isShowing == true
@@ -70,7 +56,6 @@ class AppSettingsActivity : ConfiguredActivity() {
     override fun onDestroy() {
         appearanceDialog?.dismiss()
         launcherIconDialog?.dismiss()
-        if (::updateController.isInitialized) updateController.cancel()
         super.onDestroy()
     }
 
@@ -80,19 +65,6 @@ class AppSettingsActivity : ConfiguredActivity() {
             intent.data == null &&
             intent.clipData == null &&
             intent.extras == null
-    }
-
-    private fun createContentView(): View {
-        val scaffold = buildScaffold(R.string.app_settings_title)
-        buildSettingsContent(scaffold.content)
-        for (index in scaffold.content.childCount - 1 downTo 1) {
-            if (scaffold.content.getChildAt(index) is io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRowLayout &&
-                scaffold.content.getChildAt(index - 1) is io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRowLayout) {
-                scaffold.content.addView(hairline(64), index)
-            }
-        }
-        applyThemeToControls(scaffold.content)
-        return scaffold.root
     }
 
     private fun buildSettingsContent(content: LinearLayout) {
@@ -115,185 +87,23 @@ class AppSettingsActivity : ConfiguredActivity() {
             iconResource = R.drawable.ic_settings_theme,
             onClick = ::showThemeColorDialog,
         ).view)
-        launcherIconRow = settingRow(getString(R.string.launcher_icon_title),
-            getString(launcherIconLabels[LauncherIcons.current(this).ordinal]), R.drawable.ic_settings_launcher,
-            onClick = ::showLauncherIconDialog).also { it.view.tag = "launcher-icon" }
+        launcherIconRow = settingRow(
+            title = getString(R.string.launcher_icon_title),
+            summary = getString(launcherIconLabels[LauncherIcons.current(this).ordinal]),
+            iconResource = R.drawable.ic_settings_launcher,
+            onClick = ::showLauncherIconDialog,
+        ).also { it.view.tag = "launcher-icon" }
         content.addView(launcherIconRow!!.view)
         content.addView(hairline())
 
-        content.addView(sectionHeader(R.string.ai_runtime_access_section))
-        content.addView(settingRow(
-            title = getString(R.string.ai_runtime_access_title),
-            summary = getString(R.string.ai_runtime_access_summary),
-            iconResource = R.drawable.ic_person_24,
-            onClick = { startActivity(Intent(this, io.github.supermonster003.autojs6.plugin.threestoneai.provider.RuntimeAccessManagementActivity::class.java)) },
-        ).view)
-
-        content.addView(sectionHeader(R.string.app_settings_conversation))
-        content.addView(settingRow(
-            title = getString(R.string.chat_font_size),
-            summary = getString(chatSettings.fontSize.labelResource()),
-            iconResource = R.drawable.ic_edit_24,
-            onClick = ::showFontSizeDialog,
-        ).view)
-        content.addView(settingRow(
-            title = getString(R.string.chat_user_bubble_style),
-            summary = getString(chatSettings.userBubbleStyle.labelResource()),
-            iconResource = R.drawable.ic_person_24,
-            onClick = { showBubbleStyleDialog(userMessage = true) },
-        ).view)
-        content.addView(settingRow(
-            title = getString(R.string.chat_assistant_bubble_style),
-            summary = getString(chatSettings.assistantBubbleStyle.labelResource()),
-            iconResource = R.drawable.ic_article_24,
-            onClick = { showBubbleStyleDialog(userMessage = false) },
-        ).view)
-        content.addView(switchRow(
-            title = getString(R.string.chat_follow_streaming_output),
-            summary = getString(R.string.app_settings_follow_streaming_summary),
-            iconResource = R.drawable.ic_arrow_down_24,
-            checked = chatSettings.followStreamingOutput,
-        ) { checked -> saveChatSettings(chatSettings.copy(followStreamingOutput = checked)) }.view)
-        content.addView(switchRow(
-            title = getString(R.string.app_settings_show_reasoning),
-            summary = getString(R.string.app_settings_show_reasoning_summary),
-            iconResource = R.drawable.ic_article_24,
-            checked = chatSettings.showReasoningWhileGenerating,
-        ) { checked -> saveChatSettings(chatSettings.copy(showReasoningWhileGenerating = checked)) }.view)
-        content.addView(switchRow(
-            title = getString(R.string.app_settings_collapse_reasoning),
-            summary = getString(R.string.app_settings_collapse_reasoning_summary),
-            iconResource = R.drawable.ic_chevron_right_24,
-            checked = chatSettings.collapseReasoningWhenDone,
-        ) { checked -> saveChatSettings(chatSettings.copy(collapseReasoningWhenDone = checked)) }.view)
-        content.addView(switchRow(
-            title = getString(R.string.chat_show_generation_usage),
-            summary = getString(R.string.app_settings_show_usage_summary),
-            iconResource = R.drawable.ic_check_circle_24,
-            checked = chatSettings.showGenerationUsage,
-        ) { checked -> saveChatSettings(chatSettings.copy(showGenerationUsage = checked)) }.view)
-        content.addView(settingRow(
-            title = getString(R.string.chat_enter_key_behavior),
-            summary = getString(chatSettings.enterKeyBehavior.labelResource()),
-            iconResource = R.drawable.ic_send_24,
-            onClick = ::showEnterKeyDialog,
-        ).view)
-        content.addView(settingRow(
-            title = getString(R.string.chat_context_token_budget),
-            summary = contextTokenBudgetLabel(chatSettings.contextTokenBudget),
-            iconResource = R.drawable.ic_history_24,
-            onClick = ::showContextTokenBudgetDialog,
-        ).view)
-        content.addView(settingRow(
-            title = getString(R.string.chat_settings_generation_section),
-            summary = generationSettingsSummary(),
-            iconResource = R.drawable.ic_tune_24,
-            onClick = ::showGenerationSettingsDialog,
-        ).view)
-        content.addView(hairline())
-
-        buildSpeechSettings(content)
-        content.addView(hairline())
-
-        content.addView(sectionHeader(R.string.app_settings_updates))
-        content.addView(settingRow(
-            title = getString(R.string.app_update_check),
-            summary = currentVersionSummary(),
-            iconResource = R.drawable.ic_restart_24,
-            onClick = updateController::checkManually,
-        ).view)
-        content.addView(switchRow(
-            title = getString(R.string.app_update_automatic),
-            summary = getString(R.string.app_update_automatic_summary),
-            iconResource = R.drawable.ic_download_24,
-            checked = updateSettingsStore.automaticChecksEnabled,
-        ) { checked -> updateSettingsStore.automaticChecksEnabled = checked }.view)
-        content.addView(settingRow(
-            title = getString(R.string.app_update_manage_ignored),
-            summary = resources.getQuantityString(
-                R.plurals.app_update_ignored_count,
-                updateSettingsStore.ignoredTags.size,
-                updateSettingsStore.ignoredTags.size,
-            ),
-            iconResource = R.drawable.ic_history_24,
-            onClick = ::showIgnoredUpdatesDialog,
-        ).view)
-        content.addView(settingRow(
-            title = getString(R.string.release_history_title),
-            summary = getString(R.string.app_update_release_history_summary),
-            iconResource = R.drawable.ic_article_24,
-            onClick = {
-                startActivity(Intent(this, ReleaseHistoryActivity::class.java))
-            },
-        ).view)
-        content.addView(hairline())
-
-        content.addView(sectionHeader(R.string.app_settings_information))
-        content.addView(settingRow(
-            title = getString(R.string.about_app_and_developer),
-            summary = getString(R.string.about_app_summary),
-            iconResource = R.drawable.ic_info_24,
-            onClick = { startActivity(Intent(this, AboutActivity::class.java)) },
-        ).view)
-    }
-
-    /** The "Voice" group after "Conversation" (roadmap D17); its rows follow what the device offers. */
-    private fun buildSpeechSettings(content: LinearLayout) {
-        val speech = SpeechDeviceProbe.probe(this).also { speechDeviceState = it }
-        val availability = SpeechAvailabilityPolicy.resolve(speech, chatSettings.preferMacawSpeech)
-        content.addView(sectionHeader(R.string.app_settings_speech))
-        content.addView(switchRow(
-            title = getString(R.string.speech_auto_read_replies),
-            summary = getString(
-                if (availability.readAloudAvailable) R.string.speech_auto_read_replies_summary
-                else R.string.speech_auto_read_unavailable,
-            ),
-            iconResource = R.drawable.ic_volume_up_24,
-            checked = chatSettings.autoReadReplies && availability.readAloudAvailable,
-        ) { checked -> saveChatSettings(chatSettings.copy(autoReadReplies = checked)) }.view.apply {
-            tag = TAG_SPEECH_AUTO_READ
-            if (!availability.readAloudAvailable) {
-                isEnabled = false
-                alpha = Ui.DISABLED_ALPHA
-            }
-        })
-        if (availability.showPreferMacawSetting) {
-            content.addView(switchRow(
-                title = getString(R.string.speech_prefer_macaw),
-                summary = getString(R.string.speech_prefer_macaw_summary),
-                iconResource = R.drawable.ic_mic_24,
-                checked = chatSettings.preferMacawSpeech,
-            ) { checked ->
-                saveChatSettings(chatSettings.copy(preferMacawSpeech = checked), recreate = true)
-            }.view.apply { tag = TAG_SPEECH_PREFER_MACAW })
+        SUBPAGES.forEach { page ->
+            content.addView(settingRow(
+                title = getString(page.titleResource),
+                summary = getString(page.summaryResource),
+                iconResource = page.iconResource,
+                onClick = { startActivity(Intent(this, page.activity)) },
+            ).view.apply { tag = page.tag })
         }
-        content.addView(settingRow(
-            title = getString(R.string.speech_status_title),
-            summary = speechStatusSummary(availability),
-            iconResource = R.drawable.ic_info_24,
-        ).view.apply { tag = TAG_SPEECH_STATUS })
-    }
-
-    private fun speechStatusSummary(availability: SpeechAvailability): String = buildList {
-        add(getString(when (availability.dictation) {
-            DictationProvider.MACAW -> R.string.speech_status_dictation_macaw
-            DictationProvider.SYSTEM -> R.string.speech_status_dictation_system
-            DictationProvider.NONE -> R.string.speech_status_dictation_none
-        }))
-        add(getString(when (availability.readAloud) {
-            ReadAloudProvider.MACAW -> R.string.speech_status_read_aloud_macaw
-            ReadAloudProvider.SYSTEM -> R.string.speech_status_read_aloud_system
-            ReadAloudProvider.NONE -> R.string.speech_status_read_aloud_none
-        }))
-        if (availability.showMacawInstallHint) add(getString(R.string.speech_status_install_macaw))
-        add(getString(R.string.speech_status_privacy))
-    }.joinToString("\n")
-
-    override fun onResume() {
-        super.onResume()
-        // Recognizers and engines may be installed, enabled or removed while settings are open (D17).
-        val built = speechDeviceState ?: return
-        if (SpeechDeviceProbe.probe(this) != built) recreate()
     }
 
     private fun showLauncherIconDialog() {
@@ -369,296 +179,11 @@ class AppSettingsActivity : ConfiguredActivity() {
         ) { index -> saveSettings(settings.copy(language = values[index])) }
     }
 
-    private fun showFontSizeDialog() {
-        val values = ChatFontSize.entries
-        singleChoiceDialog(
-            title = getString(R.string.chat_font_size),
-            labels = values.map { getString(it.labelResource()) },
-            checkedIndex = values.indexOf(chatSettings.fontSize),
-        ) { index -> saveChatSettings(chatSettings.copy(fontSize = values[index]), recreate = true) }
-    }
-
-    private fun showEnterKeyDialog() {
-        val values = EnterKeyBehavior.entries
-        singleChoiceDialog(
-            title = getString(R.string.chat_enter_key_behavior),
-            labels = values.map { getString(it.labelResource()) },
-            checkedIndex = values.indexOf(chatSettings.enterKeyBehavior),
-        ) { index ->
-            saveChatSettings(chatSettings.copy(enterKeyBehavior = values[index]), recreate = true)
-        }
-    }
-
-    private fun showBubbleStyleDialog(userMessage: Boolean) {
-        val values = ChatBubbleStyle.entries
-        val current = if (userMessage) {
-            chatSettings.userBubbleStyle
-        } else {
-            chatSettings.assistantBubbleStyle
-        }
-        singleChoiceDialog(
-            title = getString(
-                if (userMessage) R.string.chat_user_bubble_style
-                else R.string.chat_assistant_bubble_style,
-            ),
-            labels = values.map { value -> getString(value.labelResource()) },
-            checkedIndex = values.indexOf(current),
-        ) { index ->
-            val selected = values[index]
-            saveChatSettings(
-                if (userMessage) {
-                    chatSettings.copy(userBubbleStyle = selected)
-                } else {
-                    chatSettings.copy(assistantBubbleStyle = selected)
-                },
-                recreate = true,
-            )
-        }
-    }
-
-    private fun showContextTokenBudgetDialog() {
-        val presets = CONTEXT_TOKEN_BUDGET_PRESETS
-        val customIndex = presets.size
-        val selected = presets.indexOf(chatSettings.contextTokenBudget).takeIf { it >= 0 }
-            ?: customIndex
-        singleChoiceDialog(
-            title = getString(R.string.chat_context_token_budget),
-            labels = presets.map(::contextTokenBudgetLabel) +
-                getString(R.string.chat_context_token_budget_custom),
-            checkedIndex = selected,
-        ) { index ->
-            if (index == customIndex) {
-                showCustomContextTokenBudgetDialog()
-            } else {
-                saveChatSettings(
-                    chatSettings.copy(contextTokenBudget = presets[index]),
-                    recreate = true,
-                )
-            }
-        }
-    }
-
-    private fun showCustomContextTokenBudgetDialog() {
-        inputDialog(
-            title = getString(R.string.chat_context_token_budget_custom_title),
-            initialValue = chatSettings.contextTokenBudget.toString(),
-            hint = getString(R.string.chat_context_token_budget_custom_hint),
-            inputType = InputType.TYPE_CLASS_NUMBER,
-            maxLength = 10,
-            positiveResource = R.string.chat_settings_save,
-            validate = { value ->
-                if (value.toIntOrNull()?.takeIf { it > 0 } == null) {
-                    getString(R.string.chat_positive_integer_error)
-                } else {
-                    null
-                }
-            },
-        ) { value ->
-            val budget = value.toIntOrNull()?.takeIf { it > 0 } ?: return@inputDialog
-            saveChatSettings(
-                chatSettings.copy(contextTokenBudget = budget),
-                recreate = true,
-            )
-        }
-    }
-
-    private fun showGenerationSettingsDialog() {
-        val working = chatSettings
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPaddingRelative(uiDp(Ui.SPACE_XXL), 0, uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM))
-        }
-        val unlimitedTokens = sheetCheckBox(
-            R.string.chat_maximum_output_tokens_unlimited,
-            working.maximumOutputTokens == null,
-        )
-        container.addView(unlimitedTokens)
-        val (maximumTokensField, maximumTokensInput) = formTextField(
-            initialValue = working.maximumOutputTokensDraft.toString(),
-            hint = getString(R.string.chat_maximum_output_tokens),
-            inputType = InputType.TYPE_CLASS_NUMBER,
-        )
-        container.addView(sheetField(maximumTokensField))
-        fun updateMaximumTokensState(unlimited: Boolean) {
-            maximumTokensField.isEnabled = !unlimited
-            maximumTokensField.alpha = if (unlimited) Ui.DISABLED_ALPHA else 1f
-        }
-        updateMaximumTokensState(unlimitedTokens.isChecked)
-        unlimitedTokens.setOnCheckedChangeListener { _, checked ->
-            updateMaximumTokensState(checked)
-        }
-
-        val useModelDefaults = sheetCheckBox(
-            R.string.chat_use_model_sampling_defaults,
-            working.useModelSamplingDefaults,
-        ).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = uiDp(Ui.SPACE_MD) }
-        }
-        container.addView(useModelDefaults)
-        val (temperatureField, temperatureInput) = formTextField(
-            initialValue = working.temperature.toString(),
-            hint = getString(R.string.chat_temperature),
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
-        )
-        container.addView(sheetField(temperatureField))
-        val (topKField, topKInput) = formTextField(
-            initialValue = working.topK.toString(),
-            hint = getString(R.string.chat_top_k),
-            inputType = InputType.TYPE_CLASS_NUMBER,
-        )
-        container.addView(sheetField(topKField))
-        val (topPField, topPInput) = formTextField(
-            initialValue = working.topP.toString(),
-            hint = getString(R.string.chat_top_p),
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL,
-        )
-        container.addView(sheetField(topPField))
-        container.addView(TextView(this).apply {
-            text = getString(R.string.app_settings_generation_anthropic_ignored)
-            textSize = Ui.TEXT_CAPTION
-            setTextColor(appPalette.secondaryText)
-            setLineSpacing(0f, 1.15f)
-            setPaddingRelative(0, uiDp(Ui.SPACE_MD), 0, 0)
-        })
-        container.addView(TextView(this).apply {
-            text = getString(R.string.chat_generation_settings_help)
-            textSize = Ui.TEXT_CAPTION
-            setTextColor(appPalette.secondaryText)
-            setLineSpacing(0f, 1.15f)
-            setPaddingRelative(0, uiDp(Ui.SPACE_MD), 0, uiDp(Ui.SPACE_XS))
-        })
-        val samplingFields = listOf(temperatureField, topKField, topPField)
-        fun updateSamplingState(useDefaults: Boolean) {
-            samplingFields.forEach { field ->
-                field.isEnabled = !useDefaults
-                field.alpha = if (useDefaults) Ui.DISABLED_ALPHA else 1f
-            }
-        }
-        updateSamplingState(useModelDefaults.isChecked)
-        useModelDefaults.setOnCheckedChangeListener { _, checked -> updateSamplingState(checked) }
-
-        formBottomSheet(
-            title = getString(R.string.chat_settings_generation_section),
-            content = container,
-            positiveResource = R.string.chat_settings_save,
-            onPositive = onPositive@{
-                val maximumTokens = if (unlimitedTokens.isChecked) {
-                    null
-                } else {
-                    maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
-                        ?: run {
-                            maximumTokensField.error = getString(R.string.chat_positive_integer_error)
-                            return@onPositive false
-                        }
-                }
-                val maximumTokensDraft = maximumTokens
-                    ?: maximumTokensInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
-                    ?: working.maximumOutputTokensDraft
-                val useDefaults = useModelDefaults.isChecked
-                val temperature = if (useDefaults) {
-                    working.temperature
-                } else {
-                    temperatureInput.text.toString().toDoubleOrNull()
-                        ?.takeIf { it.isFinite() && it >= 0.0 }
-                        ?: run {
-                            temperatureField.error = getString(R.string.chat_nonnegative_number_error)
-                            return@onPositive false
-                        }
-                }
-                val topK = if (useDefaults) {
-                    working.topK
-                } else {
-                    topKInput.text.toString().toIntOrNull()?.takeIf { it > 0 }
-                        ?: run {
-                            topKField.error = getString(R.string.chat_positive_integer_error)
-                            return@onPositive false
-                        }
-                }
-                val topP = if (useDefaults) {
-                    working.topP
-                } else {
-                    topPInput.text.toString().toDoubleOrNull()
-                        ?.takeIf { it.isFinite() && it in 0.0..1.0 }
-                        ?: run {
-                            topPField.error = getString(R.string.chat_probability_error)
-                            return@onPositive false
-                        }
-                }
-                saveChatSettings(
-                    working.copy(
-                        maximumOutputTokens = maximumTokens,
-                        maximumOutputTokensDraft = maximumTokensDraft,
-                        useModelSamplingDefaults = useDefaults,
-                        temperature = temperature,
-                        topK = topK,
-                        topP = topP,
-                    ),
-                    recreate = true,
-                )
-                true
-            },
-        )
-    }
-
-    private fun showIgnoredUpdatesDialog() {
-        val ignored = updateSettingsStore.ignoredTags.sorted()
-        if (ignored.isEmpty()) {
-            materialDialog()
-                .setTitle(R.string.app_update_manage_ignored)
-                .setMessage(R.string.app_update_no_ignored)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-                .also(::tintDialogButtons)
-            return
-        }
-        val selected = BooleanArray(ignored.size)
-        materialDialog()
-            .setTitle(R.string.app_update_manage_ignored)
-            .setMultiChoiceItems(ignored.toTypedArray(), selected) { _, index, checked ->
-                selected[index] = checked
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.app_update_stop_ignoring) { _, _ ->
-                updateSettingsStore.stopIgnoring(
-                    ignored.filterIndexed { index, _ -> selected[index] },
-                )
-                recreate()
-            }
-            .show()
-            .also(::tintDialogButtons)
-    }
-
-    private fun sheetCheckBox(textResource: Int, checked: Boolean) = MaterialCheckBox(this).apply {
-        text = getString(textResource)
-        isChecked = checked
-        gravity = Gravity.CENTER_VERTICAL
-        setTextColor(appPalette.primaryText)
-        buttonTintList = controlTintList()
-            buttonIconTintList = android.content.res.ColorStateList.valueOf(appPalette.onAccent)
-        minimumHeight = uiDp(Ui.TOUCH_TARGET)
-    }
-
-    private fun sheetField(field: TextInputLayout): TextInputLayout = field.apply {
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = uiDp(Ui.SPACE_MD) }
-    }
-
     private fun saveSettings(updated: ApplicationSettings) {
         settingsStore.save(updated)
         settings = updated
         Toast.makeText(this, R.string.app_settings_saved, Toast.LENGTH_SHORT).show()
         recreate()
-    }
-
-    private fun saveChatSettings(updated: ChatUiSettings, recreate: Boolean = false) {
-        chatSettings = updated
-        chatSettingsStore.save(updated)
-        if (recreate) recreate()
     }
 
     private fun languageSummary(value: AppLanguage): String = when (value) {
@@ -727,34 +252,6 @@ class AppSettingsActivity : ConfiguredActivity() {
         }
     }
 
-    private fun currentVersionSummary(): String {
-        val packageInfo = packageManager.getPackageInfo(packageName, 0)
-        return getString(R.string.about_version_name, packageInfo.versionName.orEmpty())
-    }
-
-    private fun generationSettingsSummary(): String {
-        val output = chatSettings.maximumOutputTokens?.let { count ->
-            getString(R.string.app_settings_generation_limited, count)
-        } ?: getString(R.string.chat_maximum_output_tokens_unlimited)
-        val sampling = getString(
-            if (chatSettings.useModelSamplingDefaults) {
-                R.string.app_settings_generation_model_defaults
-            } else {
-                R.string.app_settings_generation_custom_sampling
-            },
-        )
-        return "$output | $sampling"
-    }
-
-    private fun contextTokenBudgetLabel(value: Int): String {
-        val display = if (value % TOKENS_PER_K == 0) {
-            "${value / TOKENS_PER_K}K"
-        } else {
-            value.toString()
-        }
-        return getString(R.string.chat_context_token_budget_value, display)
-    }
-
     private fun AppDarkMode.labelResource(): Int = when (this) {
         AppDarkMode.FOLLOW_AUTOJS6 -> R.string.app_settings_follow_autojs6
         AppDarkMode.FOLLOW_SYSTEM -> R.string.app_settings_follow_system
@@ -783,35 +280,52 @@ class AppSettingsActivity : ConfiguredActivity() {
         AppLanguage.ARABIC -> R.string.app_language_ar
     }
 
-    private fun ChatFontSize.labelResource(): Int = when (this) {
-        ChatFontSize.SMALL -> R.string.chat_font_size_small
-        ChatFontSize.DEFAULT -> R.string.chat_font_size_default
-        ChatFontSize.LARGE -> R.string.chat_font_size_large
-        ChatFontSize.EXTRA_LARGE -> R.string.chat_font_size_extra_large
-    }
-
-    private fun EnterKeyBehavior.labelResource(): Int = when (this) {
-        EnterKeyBehavior.SEND -> R.string.chat_enter_key_send
-        EnterKeyBehavior.NEW_LINE -> R.string.chat_enter_key_new_line
-    }
-
-    private fun ChatBubbleStyle.labelResource(): Int = when (this) {
-        ChatBubbleStyle.NONE -> R.string.chat_bubble_style_none
-        ChatBubbleStyle.BACKGROUND -> R.string.chat_bubble_style_background
-        ChatBubbleStyle.BORDER -> R.string.chat_bubble_style_border
-    }
-
-    private data class ThemeChoice(
-        val labelResource: Int,
-        val color: Int?,
-        val followAutoJs6: Boolean = false,
+    /** One settings subpage entry of the home (D80); [tag] lets tests find the row. */
+    internal class Subpage(
+        val tag: String,
+        @StringRes val titleResource: Int,
+        @StringRes val summaryResource: Int,
+        @DrawableRes val iconResource: Int,
+        val activity: Class<out android.app.Activity>,
     )
 
     internal companion object {
-        const val TAG_SPEECH_AUTO_READ = "speech-auto-read"
-        const val TAG_SPEECH_PREFER_MACAW = "speech-prefer-macaw"
-        const val TAG_SPEECH_STATUS = "speech-status"
-        private const val TOKENS_PER_K = 1_024
-        private val CONTEXT_TOKEN_BUDGET_PRESETS = listOf(8_192, 16_384, 32_768)
+        val SUBPAGES = listOf(
+            Subpage(
+                "settings-models-services",
+                R.string.model_manager_title,
+                R.string.settings_models_services_summary,
+                R.drawable.ic_model_24,
+                ModelManagerActivity::class.java,
+            ),
+            Subpage(
+                "settings-conversation",
+                R.string.app_settings_conversation,
+                R.string.settings_conversation_summary,
+                R.drawable.ic_article_24,
+                ConversationSettingsActivity::class.java,
+            ),
+            Subpage(
+                "settings-speech",
+                R.string.app_settings_speech,
+                R.string.settings_speech_summary,
+                R.drawable.ic_volume_up_24,
+                SpeechSettingsActivity::class.java,
+            ),
+            Subpage(
+                "settings-privacy",
+                R.string.settings_privacy_title,
+                R.string.settings_privacy_summary,
+                R.drawable.ic_key_24,
+                PrivacySettingsActivity::class.java,
+            ),
+            Subpage(
+                "settings-updates-about",
+                R.string.settings_updates_about_title,
+                R.string.settings_updates_about_summary,
+                R.drawable.ic_info_24,
+                UpdatesAboutActivity::class.java,
+            ),
+        )
     }
 }

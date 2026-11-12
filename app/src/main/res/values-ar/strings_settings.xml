@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_conversation_display">العرض</string>
+    <string name="settings_conversation_input">الإدخال</string>
+    <string name="settings_conversation_limits">السياق والمخرجات</string>
+    <string name="settings_conversation_reasoning">التفكير</string>
+    <string name="settings_conversation_summary">العرض والتفكير والإدخال وطول المخرجات</string>
+    <string name="settings_models_services_summary">الخدمات عبر الإنترنت والنماذج المحلية والهدف الافتراضي</string>
+    <string name="settings_privacy_summary">التطبيقات التي يمكنها استخدام الذكاء الاصطناعي في هذا التطبيق</string>
+    <string name="settings_privacy_title">الخصوصية والأذونات</string>
+    <string name="settings_speech_summary">قراءة الردود وحالة خدمات الصوت</string>
+    <string name="settings_updates_about_summary">التحقق من التحديثات وسجل الإصدارات ومعلومات المطور</string>
+    <string name="settings_updates_about_title">التحديثات وحول التطبيق</string>
+</resources>

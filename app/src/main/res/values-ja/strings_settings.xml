@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_conversation_display">表示</string>
+    <string name="settings_conversation_input">入力</string>
+    <string name="settings_conversation_limits">コンテキストと出力</string>
+    <string name="settings_conversation_reasoning">思考過程</string>
+    <string name="settings_conversation_summary">表示, 思考過程, 入力と出力の長さ</string>
+    <string name="settings_models_services_summary">オンラインサービス, ローカルモデルと既定のターゲット</string>
+    <string name="settings_privacy_summary">このアプリの AI を使用できるアプリ</string>
+    <string name="settings_privacy_title">プライバシーと権限</string>
+    <string name="settings_speech_summary">応答の読み上げと音声サービスの状態</string>
+    <string name="settings_updates_about_summary">更新の確認, バージョン履歴と開発者情報</string>
+    <string name="settings_updates_about_title">更新とアプリ情報</string>
+</resources>

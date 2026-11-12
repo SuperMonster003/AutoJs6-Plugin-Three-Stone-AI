@@ -198,7 +198,7 @@
     <string name="chat_search_next">Next</string>
     <string name="chat_search_previous">Previous</string>
     <string name="chat_send">Send</string>
-    <string name="chat_settings_generation_section">Generation</string>
+    <string name="chat_settings_generation_section">Output length and sampling</string>
     <string name="chat_settings_save">Save</string>
     <string name="chat_show_generation_usage">Show token and timing details</string>
     <string name="chat_stop">Stop</string>
@@ -337,7 +337,7 @@
     <string name="model_id_clipboard_label">local AI model ID</string>
     <string name="model_id_copied">Model ID copied</string>
     <string name="model_local_runtime_unavailable">Local model inference is unavailable on this device or in this APK. You can use Online AI.</string>
-    <string name="model_manager_title">Models</string>
+    <string name="model_manager_title">Models and services</string>
     <string name="model_none">No model is configured</string>
     <string name="model_online_empty">No online profiles yet. Add one to expose remote models in Chat.</string>
     <string name="model_online_manage_summary">Manage providers, profiles, model IDs, credentials, and network access</string>

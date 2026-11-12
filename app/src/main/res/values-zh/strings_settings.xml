@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_conversation_display">显示</string>
+    <string name="settings_conversation_input">输入</string>
+    <string name="settings_conversation_limits">上下文与输出</string>
+    <string name="settings_conversation_reasoning">思考过程</string>
+    <string name="settings_conversation_summary">显示, 思考过程, 输入与输出长度</string>
+    <string name="settings_models_services_summary">在线服务, 本地模型与默认目标</string>
+    <string name="settings_privacy_summary">可以使用本应用 AI 的应用</string>
+    <string name="settings_privacy_title">隐私与权限</string>
+    <string name="settings_speech_summary">自动朗读回复与语音服务状态</string>
+    <string name="settings_updates_about_summary">检查更新, 版本历史与开发者信息</string>
+    <string name="settings_updates_about_title">更新与关于</string>
+</resources>

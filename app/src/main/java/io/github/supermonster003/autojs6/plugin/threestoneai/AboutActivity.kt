@@ -56,13 +56,6 @@ class AboutActivity : ConfiguredActivity() {
         content.addView(hairline())
         content.addView(
             settingRow(
-                title = getString(R.string.release_history_title),
-                iconResource = R.drawable.ic_article_24,
-                onClick = { startActivity(Intent(this, ReleaseHistoryActivity::class.java)) },
-            ).view,
-        )
-        content.addView(
-            settingRow(
                 title = getString(R.string.about_project_source),
                 iconResource = R.drawable.ic_code_24,
                 onClick = { openUri(PROJECT_URI) },

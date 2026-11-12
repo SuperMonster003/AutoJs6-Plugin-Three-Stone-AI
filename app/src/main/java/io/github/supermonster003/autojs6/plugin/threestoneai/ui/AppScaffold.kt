@@ -90,3 +90,18 @@ internal class ContentPadding(
         val SCREEN = ContentPadding(Ui.SCREEN_MARGIN, Ui.SPACE_LG, Ui.SECTION_GAP)
     }
 }
+
+/**
+ * Settings page shell (roadmap D80): the scaffold, the flat groups [build] adds, and an inset
+ * hairline between adjacent rows (see [insertRowHairlines]).
+ */
+internal fun ConfiguredActivity.settingsPage(
+    @StringRes titleResource: Int,
+    build: (LinearLayout) -> Unit,
+): View {
+    val scaffold = buildScaffold(titleResource)
+    build(scaffold.content)
+    insertRowHairlines(scaffold.content)
+    applyThemeToControls(scaffold.content)
+    return scaffold.root
+}

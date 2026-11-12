@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_conversation_display">Отображение</string>
+    <string name="settings_conversation_input">Ввод</string>
+    <string name="settings_conversation_limits">Контекст и ответ</string>
+    <string name="settings_conversation_reasoning">Размышления</string>
+    <string name="settings_conversation_summary">Отображение, размышления, ввод и длина ответа</string>
+    <string name="settings_models_services_summary">Онлайн-сервисы, локальные модели и цель по умолчанию</string>
+    <string name="settings_privacy_summary">Приложения, которым доступен ИИ этого приложения</string>
+    <string name="settings_privacy_title">Конфиденциальность и разрешения</string>
+    <string name="settings_speech_summary">Озвучивание ответов и состояние голосовых служб</string>
+    <string name="settings_updates_about_summary">Обновления, история версий и сведения о разработчике</string>
+    <string name="settings_updates_about_title">Обновления и сведения</string>
+</resources>

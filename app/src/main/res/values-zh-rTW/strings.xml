@@ -147,7 +147,7 @@
     <string name="chat_search_next">下一個</string>
     <string name="chat_search_previous">上一個</string>
     <string name="chat_send">傳送</string>
-    <string name="chat_settings_generation_section">生成</string>
+    <string name="chat_settings_generation_section">輸出長度與取樣</string>
     <string name="chat_settings_save">儲存</string>
     <string name="chat_show_generation_usage">顯示權杖與耗時詳細資料</string>
     <string name="chat_stop">停止</string>
@@ -257,7 +257,7 @@
     <string name="model_id_clipboard_label">AI 文字模型 ID</string>
     <string name="model_id_copied">模型 ID 已複製</string>
     <string name="model_local_runtime_unavailable">此裝置或安裝套件不支援本機模型推論. 可以使用線上 AI.</string>
-    <string name="model_manager_title">模型</string>
+    <string name="model_manager_title">模型與服務</string>
     <string name="model_none">尚未設定模型</string>
     <string name="model_rename_failed">模型重新命名失敗</string>
     <string name="model_rename_invalid">請輸入非空白的單行名稱, 最多 256 個 UTF-8 位元組.</string>

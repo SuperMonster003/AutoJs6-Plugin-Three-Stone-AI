@@ -147,7 +147,7 @@
     <string name="chat_search_next">Siguiente</string>
     <string name="chat_search_previous">Anterior</string>
     <string name="chat_send">Enviar</string>
-    <string name="chat_settings_generation_section">Generación</string>
+    <string name="chat_settings_generation_section">Longitud de salida y muestreo</string>
     <string name="chat_settings_save">Guardar</string>
     <string name="chat_show_generation_usage">Mostrar tokens y tiempo empleado</string>
     <string name="chat_stop">Detener</string>
@@ -257,7 +257,7 @@
     <string name="model_id_clipboard_label">ID del modelo de texto con IA</string>
     <string name="model_id_copied">ID del modelo copiado</string>
     <string name="model_local_runtime_unavailable">La inferencia local no está disponible en este dispositivo o APK. Puedes usar IA en línea.</string>
-    <string name="model_manager_title">Modelos</string>
+    <string name="model_manager_title">Modelos y servicios</string>
     <string name="model_none">No hay ningún modelo configurado</string>
     <string name="model_rename_failed">Error al renombrar el modelo</string>
     <string name="model_rename_invalid">Introduce un nombre no vacío de una sola línea de hasta 256 bytes UTF-8.</string>

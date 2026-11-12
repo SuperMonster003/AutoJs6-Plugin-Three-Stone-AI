@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_conversation_display">표시</string>
+    <string name="settings_conversation_input">입력</string>
+    <string name="settings_conversation_limits">컨텍스트 및 출력</string>
+    <string name="settings_conversation_reasoning">생각 과정</string>
+    <string name="settings_conversation_summary">표시, 생각 과정, 입력 및 출력 길이</string>
+    <string name="settings_models_services_summary">온라인 서비스, 로컬 모델 및 기본 대상</string>
+    <string name="settings_privacy_summary">이 앱의 AI를 사용할 수 있는 앱</string>
+    <string name="settings_privacy_title">개인정보 및 권한</string>
+    <string name="settings_speech_summary">응답 읽기 및 음성 서비스 상태</string>
+    <string name="settings_updates_about_summary">업데이트 확인, 버전 기록 및 개발자 정보</string>
+    <string name="settings_updates_about_title">업데이트 및 정보</string>
+</resources>

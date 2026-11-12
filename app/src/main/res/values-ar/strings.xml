@@ -147,7 +147,7 @@
     <string name="chat_search_next">التالي</string>
     <string name="chat_search_previous">السابق</string>
     <string name="chat_send">إرسال</string>
-    <string name="chat_settings_generation_section">التوليد</string>
+    <string name="chat_settings_generation_section">طول المخرجات وإعدادات sampling</string>
     <string name="chat_settings_save">حفظ</string>
     <string name="chat_show_generation_usage">إظهار تفاصيل الرموز والوقت</string>
     <string name="chat_stop">إيقاف</string>
@@ -257,7 +257,7 @@
     <string name="model_id_clipboard_label">معرف نموذج النص بالذكاء الاصطناعي</string>
     <string name="model_id_copied">تم نسخ معرف النموذج</string>
     <string name="model_local_runtime_unavailable">الاستدلال المحلي غير متاح على هذا الجهاز أو في ملف APK هذا. يمكنك استخدام الذكاء الاصطناعي عبر الإنترنت.</string>
-    <string name="model_manager_title">النماذج</string>
+    <string name="model_manager_title">النماذج والخدمات</string>
     <string name="model_none">لا يوجد نموذج مهيأ</string>
     <string name="model_rename_failed">فشل تغيير اسم النموذج</string>
     <string name="model_rename_invalid">أدخل اسما غير فارغ من سطر واحد لا يتجاوز 256 بايت UTF-8.</string>

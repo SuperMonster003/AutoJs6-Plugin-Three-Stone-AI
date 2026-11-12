@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_conversation_display">Visualización</string>
+    <string name="settings_conversation_input">Entrada</string>
+    <string name="settings_conversation_limits">Contexto y salida</string>
+    <string name="settings_conversation_reasoning">Razonamiento</string>
+    <string name="settings_conversation_summary">Visualización, razonamiento, entrada y longitud de salida</string>
+    <string name="settings_models_services_summary">Servicios en línea, modelos locales y destino predeterminado</string>
+    <string name="settings_privacy_summary">Aplicaciones que pueden usar la IA de esta aplicación</string>
+    <string name="settings_privacy_title">Privacidad y permisos</string>
+    <string name="settings_speech_summary">Lectura de respuestas y estado de los servicios de voz</string>
+    <string name="settings_updates_about_summary">Actualizaciones, historial de versiones e información del desarrollador</string>
+    <string name="settings_updates_about_title">Actualizaciones y acerca de</string>
+</resources>

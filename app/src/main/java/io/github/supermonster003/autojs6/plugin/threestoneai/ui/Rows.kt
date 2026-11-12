@@ -36,6 +36,23 @@ internal fun ConfiguredActivity.hairline(insetStartDp: Int = Ui.SPACE_XXL): View
         ).apply { marginStart = uiDp(insetStartDp) }
     }
 
+/** Start inset of the hairline between two adjacent rows: past the leading icon column. */
+internal const val ROW_HAIRLINE_INSET_DP = 64
+
+/**
+ * Separates every pair of adjacent setting rows in [content] with an inset hairline. Settings
+ * pages build their rows first and call this once, so group dividers and headers stay untouched.
+ */
+internal fun ConfiguredActivity.insertRowHairlines(content: LinearLayout) {
+    for (index in content.childCount - 1 downTo 1) {
+        if (content.getChildAt(index) is SettingRowLayout &&
+            content.getChildAt(index - 1) is SettingRowLayout
+        ) {
+            content.addView(hairline(ROW_HAIRLINE_INSET_DP), index)
+        }
+    }
+}
+
 internal class SettingRow(
     val view: LinearLayout,
     val titleView: TextView,

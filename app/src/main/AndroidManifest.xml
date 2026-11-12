@@ -105,6 +105,30 @@
         </activity>
 
         <activity
+            android:name=".ConversationSettingsActivity"
+            android:exported="false"
+            android:label="@string/app_settings_conversation"
+            android:parentActivityName=".AppSettingsActivity" />
+
+        <activity
+            android:name=".SpeechSettingsActivity"
+            android:exported="false"
+            android:label="@string/app_settings_speech"
+            android:parentActivityName=".AppSettingsActivity" />
+
+        <activity
+            android:name=".PrivacySettingsActivity"
+            android:exported="false"
+            android:label="@string/settings_privacy_title"
+            android:parentActivityName=".AppSettingsActivity" />
+
+        <activity
+            android:name=".UpdatesAboutActivity"
+            android:exported="false"
+            android:label="@string/settings_updates_about_title"
+            android:parentActivityName=".AppSettingsActivity" />
+
+        <activity
             android:name=".OnlineAiSettingsActivity"
             android:exported="false"
             android:label="@string/online_ai_settings_title"
@@ -114,19 +138,19 @@
             android:name=".AboutActivity"
             android:exported="false"
             android:label="@string/about_app_and_developer"
-            android:parentActivityName=".AppSettingsActivity" />
+            android:parentActivityName=".UpdatesAboutActivity" />
 
         <activity
             android:name=".ReleaseHistoryActivity"
             android:exported="false"
             android:label="@string/release_history_title"
-            android:parentActivityName=".AppSettingsActivity" />
+            android:parentActivityName=".UpdatesAboutActivity" />
 
         <activity
             android:name=".ModelManagerActivity"
             android:exported="true"
             android:label="@string/model_manager_title"
-            android:parentActivityName=".ChatActivity" />
+            android:parentActivityName=".AppSettingsActivity" />
 
         <activity
             android:name=".LiteRtModelCatalogActivity"

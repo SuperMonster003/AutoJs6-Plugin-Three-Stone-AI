@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_conversation_display">Display</string>
+    <string name="settings_conversation_input">Input</string>
+    <string name="settings_conversation_limits">Context and output</string>
+    <string name="settings_conversation_reasoning">Reasoning</string>
+    <string name="settings_conversation_summary">Display, reasoning, input and output length</string>
+    <string name="settings_models_services_summary">Online services, local models and the default target</string>
+    <string name="settings_privacy_summary">Apps that may use AI from this app</string>
+    <string name="settings_privacy_title">Privacy and permissions</string>
+    <string name="settings_speech_summary">Read replies aloud and voice service status</string>
+    <string name="settings_updates_about_summary">Check for updates, version history and developer information</string>
+    <string name="settings_updates_about_title">Updates and about</string>
+</resources>

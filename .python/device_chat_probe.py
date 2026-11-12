@@ -42,6 +42,10 @@ Roadmap P3.3 (2026-11-05, 1.6.0): --expect-reasoning shown / absent looks for th
 card header ("Thought for N s", D94) of the finished reply and prints only whether it is shown and
 the seconds; the thinking text itself is never printed. Use a prompt with a short answer so the card
 stays on screen.
+
+Roadmap P8 (2026-11-12, 1.6.0): --fast on / off sets the switcher's fast switch for the conversation
+(the row is shown only when the target supports fast output), reads its checked state back, and
+after the reply compares "fast=<bool>" in the logged generation start.
 """
 
 import argparse
@@ -65,6 +69,7 @@ STRING_NAMES = (
     "chat_generation_failure_detail",
     "chat_usage_format",
     "chat_reasoning_duration",
+    "model_picker_fast",
 )
 EFFORT_IDS = ("default", "low", "medium", "high", "xhigh", "max")
 EFFORT_NAMES = tuple("effort_" + effort for effort in EFFORT_IDS)
@@ -304,6 +309,11 @@ def main():
         help="pick this effort for the conversation in the switcher (a level the model supports) and check the logged request",
     )
     parser.add_argument(
+        "--fast",
+        choices=["on", "off"],
+        help="set the switcher's fast switch for the conversation and check the logged request",
+    )
+    parser.add_argument(
         "--expect-reasoning",
         choices=["shown", "absent"],
         help="fail unless the finished reply shows (or does not show) the folded thinking card",
@@ -386,6 +396,30 @@ def main():
         print(f"effort: chose {args.effort}, target bar badge shown={badge is not None}")
         if (badge is not None) != (args.effort != "default"):
             print("FAIL: the target bar badge does not match the chosen effort")
+            return 2
+    if args.fast:
+        switcher = find(root, **{"content-desc": words["chat_open_model_switcher"]})
+        if switcher is None:
+            print("FAIL: model switcher not found")
+            return 2
+        tap(serial, switcher)
+        time.sleep(1.5)
+        row = find_clickable_containing(dump(serial), words["model_picker_fast"])
+        if row is None:
+            close_sheet(serial)
+            print("FAIL: no fast switch for this target")
+            return 2
+        wanted = args.fast == "on"
+        if (row.get("checked") == "true") != wanted:
+            tap(serial, row)
+            time.sleep(1.0)
+            row = find_clickable_containing(dump(serial), words["model_picker_fast"])
+        checked = row is not None and row.get("checked") == "true"
+        close_sheet(serial)
+        root = dump(serial)
+        print(f"fast: chose {args.fast}, switch checked={checked}")
+        if checked != wanted:
+            print("FAIL: the fast switch did not take the chosen state")
             return 2
 
     field = find(root, **{"class": "android.widget.EditText"})
@@ -549,7 +583,7 @@ def main():
                 if http not in ("httpCall=cancelled", "httpCall=unreported"):
                     print("FAIL: the HTTP call was not cancelled")
                     failed = True
-    if args.effort:
+    if args.effort or args.fast:
         time.sleep(1.0)
         log = chat_log(serial, since)
         starts = [line for line in log if "Generation start " in line]
@@ -560,8 +594,14 @@ def main():
             failed = True
         else:
             print(f"request: effort={fields.group(1)} fast={fields.group(2)} starts={len(starts)}")
-            if len(starts) != 1 or fields.group(1) != args.effort:
-                print(f"FAIL: expected exactly one turn sent with effort={args.effort}")
+            if len(starts) != 1:
+                print("FAIL: expected exactly one turn sent")
+                failed = True
+            if args.effort and fields.group(1) != args.effort:
+                print(f"FAIL: expected the turn sent with effort={args.effort}")
+                failed = True
+            if args.fast and fields.group(2) != ("true" if args.fast == "on" else "false"):
+                print(f"FAIL: expected the turn sent with fast={args.fast}")
                 failed = True
         if outcome == "complete" and counts:
             logged = re.search(r"actualOutputTokens=(\d+)", completes[-1]) if completes else None

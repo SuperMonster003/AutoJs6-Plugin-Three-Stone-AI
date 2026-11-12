@@ -6,7 +6,7 @@
   "changelog_label_dependency": "Dépendance",
   "$data": {
     "v1.6.0": {
-      "released_date": "2026/11/05",
+      "released_date": "2026/11/12",
       "feature": [
         "Les profils en ligne peuvent définir un effort par défaut (Faible, Moyen, Élevé, Très élevé ou Maximal; avec \"Par défaut\", le modèle décide), et les profils Anthropic peuvent utiliser le mode rapide par défaut (réponses plus rapides, mais plus chères); les deux peuvent aussi être modifiés pour la conversation en cours seulement, la modification est enregistrée avec la conversation, et les nouvelles conversations partent des valeurs du profil. Si un modèle ne prend pas en charge le niveau choisi, le niveau inférieur le plus proche est utilisé",
         "Changer de modèle ouvre désormais un panneau depuis le bas: recherche, modèles groupés par profil, favoris épinglés en haut et étiquettes indiquant quels modèles prennent en charge l'entrée d'images, le raisonnement et le mode rapide; le panneau modifie aussi l'effort et le mode rapide de la conversation en cours, et \"Gérer les modèles et services\" en bas ouvre les paramètres des modèles. La barre en haut de la discussion affiche l'effort et le mode rapide de la conversation en cours",

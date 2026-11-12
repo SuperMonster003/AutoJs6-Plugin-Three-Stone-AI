@@ -6,7 +6,7 @@
   "changelog_label_dependency": "Dependencia",
   "$data": {
     "v1.6.0": {
-      "released_date": "2026/11/05",
+      "released_date": "2026/11/12",
       "feature": [
         "Los perfiles en línea pueden fijar un esfuerzo predeterminado (Bajo, Medio, Alto, Muy alto o Máximo; con \"Predeterminado\" decide el modelo), y los perfiles de Anthropic pueden usar el modo rápido de forma predeterminada (respuestas más rápidas a un precio mayor); ambos también se pueden cambiar solo para la conversación actual, el cambio se guarda con la conversación y las conversaciones nuevas empiezan con los valores del perfil. Si un modelo no admite el nivel elegido, se usa el nivel inferior más cercano",
         "Cambiar de modelo ahora abre un panel desde abajo: búsqueda, modelos agrupados por perfil, favoritos fijados arriba y etiquetas que indican qué modelos admiten entrada de imágenes, razonamiento y modo rápido; el panel también cambia el esfuerzo y el modo rápido de la conversación actual, y \"Administrar modelos y servicios\" abajo abre los ajustes de modelos. La barra superior del chat muestra el esfuerzo y el modo rápido de la conversación actual",

@@ -175,13 +175,36 @@ internal data class SummaryCheckpointDraft(
     val workingMemory: List<MemoryItem>,
 )
 
-/** Strict JSON only: markdown fences, unknown properties and non-integral IDs are rejected. */
+/**
+ * Unknown properties, missing properties and non-integral IDs are rejected. A reply that is not a
+ * bare JSON object (a Markdown fence, or prose before or after the object, as some providers and
+ * local models write it) is retried once with the object [StructuredJsonText] finds in it, under the
+ * same rules (roadmap D109); the original error is kept when there is none.
+ */
 internal object SummaryCheckpointJsonCodec {
     private val TOP_LEVEL_KEYS = setOf("summary", "workingMemory")
     private val MEMORY_KEYS = setOf("key", "kind", "text", "sourceMessageIds", "status")
+    private val OBJECT_SHAPE = setOf(StructuredJsonShape.OBJECT)
 
     fun decode(value: String): SummaryCheckpointDraft {
         val trimmed = value.trim()
+        val directError = try {
+            return decodeObject(trimmed)
+        } catch (error: RuntimeException) {
+            error
+        }
+        val extracted = StructuredJsonText.extract(trimmed, OBJECT_SHAPE)
+            ?.takeIf { candidate -> candidate != trimmed }
+            ?: throw directError
+        return try {
+            decodeObject(extracted)
+        } catch (error: RuntimeException) {
+            error.addSuppressed(directError)
+            throw error
+        }
+    }
+
+    private fun decodeObject(trimmed: String): SummaryCheckpointDraft {
         require(trimmed.startsWith('{') && trimmed.endsWith('}')) {
             "Summary response must be a JSON object"
         }

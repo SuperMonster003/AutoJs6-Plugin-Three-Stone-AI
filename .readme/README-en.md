@@ -201,6 +201,12 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.7.0
+
+###### 2026/11/12
+
+* `Fix` In long conversations, earlier messages are automatically condensed into a summary to save context, but some online services and local models wrapped the summary in Markdown code block markers or added explanatory text, so condensing failed and the model was more likely to forget earlier parts of the conversation; these markers and text are now removed before the summary is read
+
 # v1.6.0
 
 ###### 2026/11/12
@@ -226,12 +232,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Fix` Anthropic profiles always sent max_tokens=1024 while the maximum output tokens setting was unlimited, so replies were cut off around 1024 tokens without any notice (Claude models that think by default count their thinking against it); the default is now 16384 tokens, and a reply stopped at the output limit is marked "Output limit reached" under the message, for OpenAI-compatible and Gemini profiles as well
 * `Fix` The connection test allowed the model only 8 output tokens; Claude models that think by default spent them all on thinking and returned no text, so a correctly configured Anthropic profile was reported as an invalid response. The test now allows 1024 tokens
 * `Fix` When cloud generation or the connection test failed, only a fixed failure category was shown and the actual cause (for example an exhausted account balance) stayed invisible; the HTTP status and the provider's own explanation (at most 300 characters, with keys masked) now appear under the failure message
-
-# v1.4.1
-
-###### 2026/10/20
-
-* `Fix` The 1.4.0 APKs declared only the 64-bit processor architectures (arm64-v8a, x86_64), so on 32-bit phones (armeabi-v7a, x86) the AutoJs6 Plugin Center could treat the plugin as incompatible; all four architectures are now declared correctly
 
 ##### For more releases
 

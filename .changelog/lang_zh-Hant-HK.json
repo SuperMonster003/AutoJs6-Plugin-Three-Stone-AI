@@ -5,6 +5,12 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "依賴",
   "$data": {
+    "v1.7.0": {
+      "released_date": "2026/11/12",
+      "fix": [
+        "長對話中較早的內容會被自動整理成摘要以節省上下文, 但部分線上服務及本機模型傳回的摘要外面包着 Markdown 程式碼區塊標記或附帶說明文字, 整理因而失敗, 模型較容易忘記較早的對話內容; 現在會先移除這些標記及說明再讀取摘要"
+      ]
+    },
     "v1.6.0": {
       "released_date": "2026/11/12",
       "feature": [

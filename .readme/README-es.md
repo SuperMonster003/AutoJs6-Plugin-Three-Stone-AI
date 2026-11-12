@@ -201,6 +201,12 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ******
 
+# v1.7.0
+
+###### 2026/11/12
+
+* `Corrección` En conversaciones largas, los mensajes más antiguos se resumen automáticamente para ahorrar contexto, pero algunos servicios en línea y modelos locales envolvían el resumen en marcas de bloque de código Markdown o le añadían texto explicativo, por lo que el resumen fallaba y el modelo olvidaba con más facilidad las partes anteriores de la conversación; ahora se quitan esas marcas y ese texto antes de leer el resumen
+
 # v1.6.0
 
 ###### 2026/11/12
@@ -226,12 +232,6 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Corrección` Los perfiles de Anthropic enviaban siempre max_tokens=1024 aunque el máximo de tokens de salida estuviera sin límite, por lo que las respuestas se cortaban hacia los 1024 tokens sin ningún aviso (los modelos Claude que razonan por defecto descuentan también su razonamiento); ahora el valor por defecto es 16384 tokens y una respuesta detenida en el límite de salida se marca bajo el mensaje como "Límite de salida alcanzado" (también en perfiles compatibles con OpenAI y Gemini)
 * `Corrección` La prueba de conexión solo permitía al modelo 8 tokens de salida; los modelos Claude que razonan por defecto los gastaban en razonar sin devolver texto, así que un perfil de Anthropic bien configurado se daba por respuesta no válida. Ahora se permiten 1024 tokens
 * `Corrección` Cuando fallaba la generación en la nube o la prueba de conexión solo se mostraba una categoría fija de fallo y la causa real (por ejemplo, un saldo de cuenta agotado) quedaba oculta; ahora bajo el mensaje de fallo aparecen el estado HTTP y la explicación del propio proveedor (máximo 300 caracteres, con las claves enmascaradas)
-
-# v1.4.1
-
-###### 2026/10/20
-
-* `Corrección` Los APK de 1.4.0 solo declaraban las arquitecturas de procesador de 64 bits (arm64-v8a, x86_64), por lo que en teléfonos de 32 bits (armeabi-v7a, x86) el centro de plugins de AutoJs6 podía considerar el plugin incompatible; ahora se declaran correctamente las cuatro arquitecturas
 
 ##### Más versiones
 

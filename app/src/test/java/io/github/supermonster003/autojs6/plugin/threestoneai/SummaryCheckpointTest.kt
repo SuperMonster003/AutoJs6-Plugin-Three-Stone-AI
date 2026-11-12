@@ -129,27 +129,13 @@ class SummaryCheckpointTest {
     }
 
     @Test
-    fun `strict JSON codec accepts the schema and rejects wrappers unknown keys and decimal IDs`() {
-        val valid = """
-            {
-              "summary":"A compact checkpoint.",
-              "workingMemory":[{
-                "key":"preference.concise",
-                "kind":"PREFERENCE",
-                "text":"Keep answers concise.",
-                "sourceMessageIds":[1],
-                "status":"CONFIRMED"
-              }]
-            }
-        """.trimIndent()
+    fun `strict JSON codec accepts the schema and rejects unknown keys and decimal IDs`() {
+        val valid = validCheckpointJson()
 
         val decoded = SummaryCheckpointJsonCodec.decode(valid)
 
         assertEquals("A compact checkpoint.", decoded.summary)
         assertEquals("preference.concise", decoded.workingMemory.single().key)
-        assertThrows(IllegalArgumentException::class.java) {
-            SummaryCheckpointJsonCodec.decode("```json\n$valid\n```")
-        }
         assertThrows(IllegalArgumentException::class.java) {
             SummaryCheckpointJsonCodec.decode(valid.replace("\"summary\":", "\"extra\":1,\"summary\":"))
         }
@@ -157,6 +143,63 @@ class SummaryCheckpointTest {
             SummaryCheckpointJsonCodec.decode(valid.replace("[1]", "[1.0]"))
         }
     }
+
+    @Test
+    fun `codec reads the checkpoint inside a Markdown fence or surrounding prose`() {
+        val valid = validCheckpointJson()
+        val wrapped = listOf(
+            "```json\n$valid\n```",
+            "```\n$valid\n```",
+            "Here is the checkpoint:\n\n```json\n$valid\n```\n\nLet me know if anything is missing.",
+            "Here is the checkpoint:\n$valid\nDone.",
+            "```json\r\n${valid.replace("\n", "\r\n")}\r\n```",
+            "```json\n$valid",
+        )
+
+        wrapped.forEach { reply ->
+            val decoded = SummaryCheckpointJsonCodec.decode(reply)
+            assertEquals(reply, "A compact checkpoint.", decoded.summary)
+            assertEquals(reply, "preference.concise", decoded.workingMemory.single().key)
+        }
+    }
+
+    @Test
+    fun `fenced checkpoints keep the strict rules and replies without JSON keep the original error`() {
+        val valid = validCheckpointJson()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            SummaryCheckpointJsonCodec.decode(
+                "```json\n${valid.replace("\"summary\":", "\"extra\":1,\"summary\":")}\n```",
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            SummaryCheckpointJsonCodec.decode("```json\n${valid.replace("[1]", "[1.0]")}\n```")
+        }
+        val prose = assertThrows(IllegalArgumentException::class.java) {
+            SummaryCheckpointJsonCodec.decode("I could not summarize this conversation.")
+        }
+        assertEquals("Summary response must be a JSON object", prose.message)
+        // A truncated reply never decodes: at most a complete nested item is found, which fails the schema.
+        assertThrows(IllegalArgumentException::class.java) {
+            SummaryCheckpointJsonCodec.decode("```json\n${valid.dropLast(3)}")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            SummaryCheckpointJsonCodec.decode("```json\n${valid.substringBefore("\"workingMemory\"")}")
+        }
+    }
+
+    private fun validCheckpointJson(): String = """
+        {
+          "summary":"A compact checkpoint.",
+          "workingMemory":[{
+            "key":"preference.concise",
+            "kind":"PREFERENCE",
+            "text":"Keep answers concise.",
+            "sourceMessageIds":[1],
+            "status":"CONFIRMED"
+          }]
+        }
+    """.trimIndent()
 
     @Test
     fun `prompt only JSON mode still carries the complete response contract`() {

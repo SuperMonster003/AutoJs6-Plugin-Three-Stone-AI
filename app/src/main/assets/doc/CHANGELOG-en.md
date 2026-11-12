@@ -4,6 +4,12 @@
 
 ******
 
+# v1.7.0
+
+###### 2026/11/12
+
+* `Fix` In long conversations, earlier messages are automatically condensed into a summary to save context, but some online services and local models wrapped the summary in Markdown code block markers or added explanatory text, so condensing failed and the model was more likely to forget earlier parts of the conversation; these markers and text are now removed before the summary is read
+
 # v1.6.0
 
 ###### 2026/11/12

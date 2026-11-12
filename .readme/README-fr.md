@@ -201,6 +201,12 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 
 ******
 
+# v1.7.0
+
+###### 2026/11/12
+
+* `Correctif` Dans les longues conversations, les messages plus anciens sont résumés automatiquement pour économiser le contexte, mais certains services en ligne et modèles locaux entouraient le résumé de marqueurs de bloc de code Markdown ou y ajoutaient du texte explicatif, si bien que le résumé échouait et que le modèle oubliait plus facilement le début de la conversation; ces marqueurs et ce texte sont désormais retirés avant la lecture du résumé
+
 # v1.6.0
 
 ###### 2026/11/12
@@ -226,12 +232,6 @@ La feuille de route est organisée en fonctionnalités livrables, chacune vérif
 * `Correctif` Les profils Anthropic envoyaient toujours max_tokens=1024 même lorsque le maximum de jetons de sortie était illimité, si bien que les réponses étaient coupées vers 1024 jetons sans aucun avertissement (les modèles Claude qui réfléchissent par défaut y comptent aussi leur réflexion); la valeur par défaut passe à 16384 jetons et une réponse arrêtée à la limite de sortie est signalée sous le message par "Limite de sortie atteinte" (également pour les profils compatibles OpenAI et Gemini)
 * `Correctif` Le test de connexion n'accordait au modèle que 8 jetons de sortie; les modèles Claude qui réfléchissent par défaut les épuisaient en réflexion sans renvoyer de texte, si bien qu'un profil Anthropic correctement configuré était signalé comme réponse invalide. Le test accorde désormais 1024 jetons
 * `Correctif` Lorsque la génération dans le cloud ou le test de connexion échouait, seule une catégorie d'échec fixe était affichée et la cause réelle (par exemple un solde de compte épuisé) restait invisible; le statut HTTP et l'explication du fournisseur lui-même (300 caractères au plus, clés masquées) apparaissent désormais sous le message d'échec
-
-# v1.4.1
-
-###### 2026/10/20
-
-* `Correctif` Les APK de la version 1.4.0 ne déclaraient que les architectures de processeur 64 bits (arm64-v8a, x86_64), si bien que sur les téléphones 32 bits (armeabi-v7a, x86) le Centre de plugins d'AutoJs6 pouvait considérer le plugin comme incompatible; les quatre architectures sont désormais déclarées correctement
 
 ##### Autres versions
 

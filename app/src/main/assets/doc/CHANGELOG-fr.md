@@ -4,6 +4,12 @@
 
 ******
 
+# v1.7.0
+
+###### 2026/11/12
+
+* `Correctif` Dans les longues conversations, les messages plus anciens sont résumés automatiquement pour économiser le contexte, mais certains services en ligne et modèles locaux entouraient le résumé de marqueurs de bloc de code Markdown ou y ajoutaient du texte explicatif, si bien que le résumé échouait et que le modèle oubliait plus facilement le début de la conversation; ces marqueurs et ce texte sont désormais retirés avant la lecture du résumé
+
 # v1.6.0
 
 ###### 2026/11/12

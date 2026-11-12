@@ -54,6 +54,21 @@ class SummaryCheckpointerTest {
     }
 
     @Test
+    fun `a fenced reply with surrounding prose succeeds without a retry`() {
+        val backend = FakeBackend(success("Checkpoint:\n```json\n${validResponse()}\n```\nDone."))
+        var outcome: SummaryCheckpointOutcome? = null
+
+        SummaryCheckpointer(backend, directExecutor).generate(request()) { result ->
+            outcome = result
+        }
+
+        val success = outcome as SummaryCheckpointOutcome.Success
+        assertEquals(1, success.attempts)
+        assertEquals(2L, success.validatedState.coveredThroughMessageId)
+        assertEquals(1, backend.createdSessions)
+    }
+
+    @Test
     fun `malformed JSON and network failures receive exactly one retry`() {
         val malformedBackend = FakeBackend(success("{}"), success(validResponse()))
         var malformedOutcome: SummaryCheckpointOutcome? = null

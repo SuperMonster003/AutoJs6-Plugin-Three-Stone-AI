@@ -4,6 +4,12 @@
 
 ******
 
+# v1.7.0
+
+###### 2026/11/12
+
+* `Corrección` En conversaciones largas, los mensajes más antiguos se resumen automáticamente para ahorrar contexto, pero algunos servicios en línea y modelos locales envolvían el resumen en marcas de bloque de código Markdown o le añadían texto explicativo, por lo que el resumen fallaba y el modelo olvidaba con más facilidad las partes anteriores de la conversación; ahora se quitan esas marcas y ese texto antes de leer el resumen
+
 # v1.6.0
 
 ###### 2026/11/12

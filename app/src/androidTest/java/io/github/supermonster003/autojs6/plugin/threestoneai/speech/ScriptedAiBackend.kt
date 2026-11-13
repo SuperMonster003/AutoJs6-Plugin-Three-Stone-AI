@@ -43,6 +43,8 @@ internal class ScriptedAiBackend : AiBackend {
     @Volatile var pauseBeforeReply: Boolean = false
     @Volatile var failNext: Boolean = false
     val prompts: MutableList<String> = Collections.synchronizedList(ArrayList())
+    /** Text of the history each turn replays, one entry per message (P6.3). */
+    val histories: MutableList<List<String>> = Collections.synchronizedList(ArrayList())
     /**
      * Chat attachments the target accepts (P4.4); null takes none, as local models. Set it before
      * the chat opens: the catalog generation follows it, so an open screen picks up a change too.
@@ -112,6 +114,7 @@ internal class ScriptedAiBackend : AiBackend {
         /** Returns at once like the real backends; the reply streams on its own thread. */
         override fun stream(request: GenerationRequest, listener: GenerationListener) {
             prompts += request.prompt.textParts.joinToString("")
+            histories += request.history.map { message -> message.textParts.joinToString("") }
             attachmentTurns += AttachmentTurn(
                 prompt = request.prompt.attachments.map(::received),
                 history = request.history.flatMap { message -> message.attachments }.map(::received),

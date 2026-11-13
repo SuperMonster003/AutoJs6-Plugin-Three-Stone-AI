@@ -127,8 +127,11 @@ internal object ChatAttachmentLimits {
         }
     }
 
+    /** Bytes of the files a conversation keeps, each counted once however many versions share it (D148). */
     fun conversationBytes(messages: List<ChatMessage>): Long =
-        messages.sumOf { message -> message.attachments.sumOf(ChatAttachment::sizeBytes) }
+        ChatBranchPolicy.allMessages(messages).flatMap(ChatMessage::attachments)
+            .distinctBy(ChatAttachment::id)
+            .sumOf(ChatAttachment::sizeBytes)
 
     /** Attachments of one outgoing message that [input] cannot take, in their original order. */
     fun unsupported(attachments: List<ChatAttachment>, input: AiAttachmentInput?): List<ChatAttachment> {

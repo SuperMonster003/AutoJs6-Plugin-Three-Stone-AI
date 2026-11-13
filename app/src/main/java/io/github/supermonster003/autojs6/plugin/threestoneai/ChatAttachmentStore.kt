@@ -175,12 +175,13 @@ internal class ChatAttachmentStore(context: Context) {
         return SweepResult(files, bytes)
     }
 
-    /** Map of directory name to file names for [sweep]. */
+    /**
+     * Map of directory name to file names for [sweep]; a file that only a version not shown refers to
+     * is still referenced (roadmap D148).
+     */
     fun references(conversations: List<StoredConversation>): Map<String, Set<String>> =
         conversations.associate { conversation ->
-            directoryName(conversation.id) to conversation.messages
-                .flatMap(ChatMessage::attachments)
-                .mapTo(HashSet(), ChatAttachment::fileName)
+            directoryName(conversation.id) to ChatBranchPolicy.attachmentFileNames(conversation.messages)
         }
 
     /** A request attachment backed by the stored file; null when the file is gone or changed. */

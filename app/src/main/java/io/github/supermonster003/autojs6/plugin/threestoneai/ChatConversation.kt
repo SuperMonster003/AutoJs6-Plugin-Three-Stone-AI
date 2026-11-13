@@ -84,6 +84,8 @@ internal data class ChatMessage(
     val reasoning: ChatMessageReasoning? = null,
     /** Files attached to a user message (P4, D71), in the order the user added them. */
     val attachments: List<ChatAttachment> = emptyList(),
+    /** The other versions of the turn this user message starts (P6, D82, D148); null with one version. */
+    val branches: ChatMessageBranches? = null,
 ) {
     init {
         require(id > 0L)
@@ -106,6 +108,9 @@ internal data class ChatMessage(
             "Only user messages may carry attachments"
         }
         require(attachments.size <= ChatAttachmentLimits.MAXIMUM_PER_MESSAGE)
+        require(branches == null || role == ChatMessageRole.USER) {
+            "Only user messages may carry the versions of their turn"
+        }
     }
 }
 

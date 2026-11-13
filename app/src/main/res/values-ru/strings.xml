@@ -54,6 +54,10 @@
     <string name="button_resume_download">Продолжить</string>
     <string name="button_retry_download">Повторить</string>
     <string name="button_view_model_source">Источник модели</string>
+    <string name="chat_branch_limit">У этого сообщения уже %1$d версий, это максимум. Сначала удалите версию, которая больше не нужна.</string>
+    <string name="chat_branch_next">Следующая версия</string>
+    <string name="chat_branch_position">Версия %1$d из %2$d</string>
+    <string name="chat_branch_previous">Предыдущая версия</string>
     <string name="chat_cancel_editing">Отмена</string>
     <string name="chat_choose_target">Выбрать цель</string>
     <string name="chat_clipboard_label">сообщение ИИ</string>
@@ -76,11 +80,10 @@
     <string name="chat_context_usage_source_exact">Точный счётчик Backend</string>
     <string name="chat_context_usage_title">Использование контекста</string>
     <string name="chat_context_usage_unavailable">Данные контекста недоступны</string>
+    <string name="chat_delete_version_message">Версия %1$d из %2$d этого сообщения будет удалена навсегда вместе с последующими сообщениями этой версии. Остальные версии сохранятся.</string>
+    <string name="chat_delete_version_title">Удалить эту версию?</string>
     <string name="chat_duration_milliseconds">%1$d мс</string>
     <string name="chat_duration_seconds">%1$s с</string>
-    <string name="chat_edit_continue">Продолжить изменение</string>
-    <string name="chat_edit_warning_message">После отправки изменённой версии следующие сообщения (%1$d) будут навсегда удалены, а эта ветвь разговора будет заменена.</string>
-    <string name="chat_edit_warning_title">Изменить это сообщение?</string>
     <string name="chat_editing_message">Изменение предыдущего сообщения</string>
     <string name="chat_empty_response">Цель завершила генерацию, не вернув текст.</string>
     <string name="chat_enter_key_behavior">Клавиша Enter</string>
@@ -139,7 +142,6 @@
     <string name="chat_regenerate_original_target_message">Этот ответ был создан целью %1$s. При повторной генерации будет использована эта сохранённая цель, а не текущая цель разговора по умолчанию. %2$s</string>
     <string name="chat_regenerate_target_unavailable_message">%1$s больше не соответствует доступной цели с сохранёнными поставщиком и моделью. Повторная генерация не запущена; текущая цель разговора не использована как резервная.</string>
     <string name="chat_regenerate_target_unavailable_title">Исходная цель недоступна</string>
-    <string name="chat_regenerate_warning_message">Повторная генерация отсюда безвозвратно удалит все последующие сообщения (всего %1$d) и заменит эту ветвь разговора.</string>
     <string name="chat_regenerate_warning_title">Повторить генерацию ответа?</string>
     <string name="chat_save_and_send">Сохранить и отправить</string>
     <string name="chat_screen_title">Чат</string>

@@ -54,6 +54,10 @@
     <string name="button_resume_download">Reprendre</string>
     <string name="button_retry_download">Réessayer</string>
     <string name="button_view_model_source">Source du modèle</string>
+    <string name="chat_branch_limit">Ce message a déjà %1$d versions, soit le maximum. Supprimez d\'abord une version dont vous n\'avez plus besoin.</string>
+    <string name="chat_branch_next">Version suivante</string>
+    <string name="chat_branch_position">Version %1$d sur %2$d</string>
+    <string name="chat_branch_previous">Version précédente</string>
     <string name="chat_cancel_editing">Annuler</string>
     <string name="chat_choose_target">Choisir une cible</string>
     <string name="chat_clipboard_label">message d\'IA</string>
@@ -76,11 +80,10 @@
     <string name="chat_context_usage_source_exact">Valeur exacte du Backend</string>
     <string name="chat_context_usage_title">Utilisation du contexte</string>
     <string name="chat_context_usage_unavailable">Utilisation du contexte indisponible</string>
+    <string name="chat_delete_version_message">La version %1$d sur %2$d de ce message sera définitivement supprimée, ainsi que les messages suivants de cette version. Les autres versions sont conservées.</string>
+    <string name="chat_delete_version_title">Supprimer cette version?</string>
     <string name="chat_duration_milliseconds">%1$d ms</string>
     <string name="chat_duration_seconds">%1$s s</string>
-    <string name="chat_edit_continue">Continuer la modification</string>
-    <string name="chat_edit_warning_message">L\'envoi de la version modifiée supprimera définitivement les %1$d messages suivants et remplacera cette branche de la conversation.</string>
-    <string name="chat_edit_warning_title">Modifier ce message ?</string>
     <string name="chat_editing_message">Modification d\'un ancien message</string>
     <string name="chat_empty_response">La cible a terminé sans renvoyer de texte.</string>
     <string name="chat_enter_key_behavior">Touche Entrée</string>
@@ -139,7 +142,6 @@
     <string name="chat_regenerate_original_target_message">Cette réponse a été générée par %1$s. La régénération utilisera cette cible enregistrée au lieu de la cible par défaut actuelle de la conversation. %2$s</string>
     <string name="chat_regenerate_target_unavailable_message">%1$s ne correspond plus à une cible disponible ayant le fournisseur et le modèle enregistrés. La régénération n\'a pas démarré et la cible actuelle de la conversation n\'a pas été utilisée comme solution de repli.</string>
     <string name="chat_regenerate_target_unavailable_title">Cible d\'origine indisponible</string>
-    <string name="chat_regenerate_warning_message">Régénérer ici supprimera définitivement tous les messages suivants (%1$d au total) et remplacera cette branche de la conversation.</string>
     <string name="chat_regenerate_warning_title">Régénérer cette réponse?</string>
     <string name="chat_save_and_send">Enregistrer et envoyer</string>
     <string name="chat_screen_title">Conversation</string>

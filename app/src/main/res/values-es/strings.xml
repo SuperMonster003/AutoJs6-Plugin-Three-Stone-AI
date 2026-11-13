@@ -54,6 +54,10 @@
     <string name="button_resume_download">Reanudar</string>
     <string name="button_retry_download">Reintentar</string>
     <string name="button_view_model_source">Fuente del modelo</string>
+    <string name="chat_branch_limit">Este mensaje ya tiene %1$d versiones, el máximo. Elimina primero una versión que ya no necesites.</string>
+    <string name="chat_branch_next">Versión siguiente</string>
+    <string name="chat_branch_position">Versión %1$d de %2$d</string>
+    <string name="chat_branch_previous">Versión anterior</string>
     <string name="chat_cancel_editing">Cancelar</string>
     <string name="chat_choose_target">Elegir destino</string>
     <string name="chat_clipboard_label">mensaje de IA</string>
@@ -76,11 +80,10 @@
     <string name="chat_context_usage_source_exact">Recuento exacto del Backend</string>
     <string name="chat_context_usage_title">Uso de contexto</string>
     <string name="chat_context_usage_unavailable">Uso de contexto no disponible</string>
+    <string name="chat_delete_version_message">Se eliminará permanentemente la versión %1$d de %2$d de este mensaje, junto con los mensajes posteriores de esa versión. Las demás versiones se conservan.</string>
+    <string name="chat_delete_version_title">Eliminar esta versión?</string>
     <string name="chat_duration_milliseconds">%1$d ms</string>
     <string name="chat_duration_seconds">%1$s s</string>
-    <string name="chat_edit_continue">Continuar editando</string>
-    <string name="chat_edit_warning_message">Al enviar la versión editada se eliminarán permanentemente los %1$d mensajes posteriores y se reemplazará esa rama de la conversación.</string>
-    <string name="chat_edit_warning_title">Editar este mensaje?</string>
     <string name="chat_editing_message">Editando un mensaje anterior</string>
     <string name="chat_empty_response">El destino terminó sin devolver texto.</string>
     <string name="chat_enter_key_behavior">Tecla Intro</string>
@@ -139,7 +142,6 @@
     <string name="chat_regenerate_original_target_message">Esta respuesta fue generada por %1$s. La regeneración usará ese destino registrado en lugar del destino predeterminado actual de la conversación. %2$s</string>
     <string name="chat_regenerate_target_unavailable_message">%1$s ya no coincide con un destino disponible con el proveedor y modelo registrados. No se inició la regeneración ni se usó el destino actual de la conversación como alternativa.</string>
     <string name="chat_regenerate_target_unavailable_title">Destino original no disponible</string>
-    <string name="chat_regenerate_warning_message">Regenerar aquí eliminará permanentemente todos los mensajes posteriores (%1$d en total) y reemplazará esa rama de la conversación.</string>
     <string name="chat_regenerate_warning_title">Regenerar esta respuesta?</string>
     <string name="chat_save_and_send">Guardar y enviar</string>
     <string name="chat_screen_title">Chat</string>

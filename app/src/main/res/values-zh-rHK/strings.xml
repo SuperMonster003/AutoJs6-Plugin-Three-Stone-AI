@@ -54,6 +54,10 @@
     <string name="button_resume_download">繼續</string>
     <string name="button_retry_download">重試</string>
     <string name="button_view_model_source">模型來源</string>
+    <string name="chat_branch_limit">這則訊息已有 %1$d 個版本, 已達上限. 請先刪除不再需要的版本.</string>
+    <string name="chat_branch_next">下一個版本</string>
+    <string name="chat_branch_position">第 %1$d 個版本, 共 %2$d 個</string>
+    <string name="chat_branch_previous">上一個版本</string>
     <string name="chat_cancel_editing">取消</string>
     <string name="chat_choose_target">選擇目標</string>
     <string name="chat_clipboard_label">AI 訊息</string>
@@ -76,11 +80,10 @@
     <string name="chat_context_usage_source_exact">Backend 精確計數</string>
     <string name="chat_context_usage_title">上下文用量</string>
     <string name="chat_context_usage_unavailable">上下文用量暫不可用</string>
+    <string name="chat_delete_version_message">將永久刪除這則訊息的第 %1$d 個版本 (共 %2$d 個) 及該版本中其後的訊息, 其他版本會保留.</string>
+    <string name="chat_delete_version_title">刪除這個版本?</string>
     <string name="chat_duration_milliseconds">%1$d 毫秒</string>
     <string name="chat_duration_seconds">%1$s 秒</string>
-    <string name="chat_edit_continue">繼續編輯</string>
-    <string name="chat_edit_warning_message">傳送編輯後的內容將永久刪除此節點之後的 %1$d 則訊息, 並取代該對話分支.</string>
-    <string name="chat_edit_warning_title">編輯這則訊息?</string>
     <string name="chat_editing_message">正在編輯較早的訊息</string>
     <string name="chat_empty_response">目標已結束生成, 但沒有回傳文字.</string>
     <string name="chat_enter_key_behavior">Enter 鍵</string>
@@ -139,7 +142,6 @@
     <string name="chat_regenerate_original_target_message">此回覆由 %1$s 產生. 重新產生會沿用呢個已記錄目標, 而唔係目前對話預設目標. %2$s</string>
     <string name="chat_regenerate_target_unavailable_message">%1$s 已無法配對具有已記錄提供方同模型嘅可用目標. 未有開始重新產生, 亦無回退到目前對話目標.</string>
     <string name="chat_regenerate_target_unavailable_title">原回覆目標不可用</string>
-    <string name="chat_regenerate_warning_message">從此處重新產生將永久刪除其後所有訊息 (共 %1$d 則), 並取代該對話分支.</string>
     <string name="chat_regenerate_warning_title">重新產生此回覆?</string>
     <string name="chat_save_and_send">儲存並傳送</string>
     <string name="chat_screen_title">對話</string>

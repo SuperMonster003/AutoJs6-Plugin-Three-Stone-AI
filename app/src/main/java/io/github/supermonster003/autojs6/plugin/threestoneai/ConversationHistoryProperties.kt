@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
+import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.nio.ByteBuffer
@@ -38,6 +39,19 @@ import java.nio.ByteBuffer
  * - [MESSAGE_ATTACHMENTS] "attachments": the attachment metadata in [ChatAttachmentCodec] format
  *   (version byte 1). The files stay in `filesDir/attachments/<conversation id>/`. Builds before
  *   1.7.0 skip the key, so the message shows without its attachments there.
+ *
+ * Message keys of a user message that starts a branched turn (roadmap P6, D148; absent with one version):
+ * - [MESSAGE_BRANCH] "branch": three bytes: format 1, the 0-based index of the shown version among
+ *   all versions (0 - 7), and the number of chunks (1 - [MAXIMUM_BRANCH_CHUNKS]).
+ * - "branch.00", "branch.01", ...: the chunks, at most [MAXIMUM_VALUE_BYTES] each, of the payload
+ *   [ConversationHistoryCodec.encodeBranchVersions] writes: the other versions, each one the messages
+ *   from its user message to the end of that branch in this message format, property tables (and so
+ *   nested branches) included. The message itself starts the shown version.
+ *
+ * A turn whose versions do not fit the chunks loses its oldest other versions when it is written; a
+ * header, chunk or payload that cannot be read leaves the turn with its shown version only. Builds
+ * before 1.7.0 skip the keys: they show the selected versions, and the other versions are lost when
+ * such a build writes the history again.
  */
 internal object ConversationHistoryProperties {
     const val CONVERSATION_EFFORT = "effort"
@@ -46,6 +60,11 @@ internal object ConversationHistoryProperties {
     const val MESSAGE_REASONING_MILLIS = "reasoning.ms"
     const val MESSAGE_REASONING_TRUNCATED = "reasoning.cut"
     const val MESSAGE_ATTACHMENTS = "attachments"
+    const val MESSAGE_BRANCH = "branch"
+
+    /** Up to 3 MiB of other versions per turn, within the [MAXIMUM_ENTRIES] of one table. */
+    const val MAXIMUM_BRANCH_CHUNKS = 48
+    private const val BRANCH_FORMAT: Byte = 1
 
     const val MAXIMUM_ENTRIES = 64
     const val MAXIMUM_KEY_BYTES = 32
@@ -61,6 +80,7 @@ internal object ConversationHistoryProperties {
 
     fun messageTable(message: ChatMessage): Map<String, ByteArray> = buildMap {
         if (message.attachments.isNotEmpty()) put(MESSAGE_ATTACHMENTS, ChatAttachmentCodec.encode(message.attachments))
+        message.branches?.let { branches -> putBranches(branches) }
         val stored = message.reasoning
             ?.let { value -> ChatMessageReasoning.bounded(value.text, value.durationMillis, value.truncated) }
             ?.takeIf { value -> value.text.isNotEmpty() }
@@ -70,6 +90,43 @@ internal object ConversationHistoryProperties {
             put(MESSAGE_REASONING_MILLIS, ByteBuffer.allocate(Long.SIZE_BYTES).putLong(millis).array())
         }
         if (stored.truncated) put(MESSAGE_REASONING_TRUNCATED, byteArrayOf(1))
+    }
+
+    /** The other versions of the turn, or null without them or when they cannot be read (D148). */
+    fun branches(table: Map<String, ByteArray>, branchDepth: Int): ChatMessageBranches? {
+        val header = table[MESSAGE_BRANCH]?.takeIf { bytes -> bytes.size == 3 && bytes[0] == BRANCH_FORMAT } ?: return null
+        val selected = header[1].toInt()
+        val chunks = header[2].toInt()
+        if (chunks !in 1..MAXIMUM_BRANCH_CHUNKS) return null
+        val payload = ByteArrayOutputStream()
+        repeat(chunks) { index -> payload.write(table[branchChunkKey(index)] ?: return null) }
+        val others = ConversationHistoryCodec.decodeBranchVersions(payload.toByteArray(), branchDepth) ?: return null
+        if (selected !in 0..others.size) return null
+        return try {
+            ChatMessageBranches(selected, others)
+        } catch (error: IllegalArgumentException) {
+            null
+        }
+    }
+
+    fun branchChunkKey(index: Int): String = MESSAGE_BRANCH + "." + index.toString().padStart(2, '0')
+
+    /** Writes the other versions, leaving out the oldest ones while they do not fit the chunks. */
+    private fun MutableMap<String, ByteArray>.putBranches(branches: ChatMessageBranches) {
+        var fitting: ChatMessageBranches? = branches
+        while (fitting != null) {
+            val payload = ConversationHistoryCodec.encodeBranchVersions(fitting.others)
+            val chunks = (payload.size + MAXIMUM_VALUE_BYTES - 1) / MAXIMUM_VALUE_BYTES
+            if (chunks <= MAXIMUM_BRANCH_CHUNKS) {
+                put(MESSAGE_BRANCH, byteArrayOf(BRANCH_FORMAT, fitting.selected.toByte(), chunks.toByte()))
+                repeat(chunks) { index ->
+                    val start = index * MAXIMUM_VALUE_BYTES
+                    put(branchChunkKey(index), payload.copyOfRange(start, minOf(payload.size, start + MAXIMUM_VALUE_BYTES)))
+                }
+                return
+            }
+            fitting = ChatBranchPolicy.withoutOldestOther(fitting)
+        }
     }
 
     fun attachments(table: Map<String, ByteArray>): List<ChatAttachment> =

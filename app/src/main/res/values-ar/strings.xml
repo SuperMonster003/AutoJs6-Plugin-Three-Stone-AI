@@ -54,6 +54,10 @@
     <string name="button_resume_download">استئناف</string>
     <string name="button_retry_download">إعادة المحاولة</string>
     <string name="button_view_model_source">مصدر النموذج</string>
+    <string name="chat_branch_limit">لهذه الرسالة %1$d نسخ بالفعل, وهو الحد الأقصى. احذف أولا نسخة لم تعد بحاجة إليها.</string>
+    <string name="chat_branch_next">النسخة التالية</string>
+    <string name="chat_branch_position">النسخة %1$d من %2$d</string>
+    <string name="chat_branch_previous">النسخة السابقة</string>
     <string name="chat_cancel_editing">إلغاء</string>
     <string name="chat_choose_target">اختيار الهدف</string>
     <string name="chat_clipboard_label">رسالة ذكاء اصطناعي</string>
@@ -76,11 +80,10 @@
     <string name="chat_context_usage_source_exact">عدّ Backend الدقيق</string>
     <string name="chat_context_usage_title">استخدام السياق</string>
     <string name="chat_context_usage_unavailable">استخدام السياق غير متاح</string>
+    <string name="chat_delete_version_message">سيتم حذف النسخة %1$d من %2$d لهذه الرسالة نهائيا مع الرسائل التالية في تلك النسخة. تبقى النسخ الأخرى.</string>
+    <string name="chat_delete_version_title">هل تريد حذف هذه النسخة?</string>
     <string name="chat_duration_milliseconds">%1$d مللي ثانية</string>
     <string name="chat_duration_seconds">%1$s ث</string>
-    <string name="chat_edit_continue">متابعة التعديل</string>
-    <string name="chat_edit_warning_message">سيؤدي إرسال النسخة المعدلة إلى حذف %1$d من الرسائل التالية نهائيًا واستبدال هذا الفرع من المحادثة.</string>
-    <string name="chat_edit_warning_title">هل تريد تعديل هذه الرسالة?</string>
     <string name="chat_editing_message">جارٍ تعديل رسالة سابقة</string>
     <string name="chat_empty_response">اكتمل الهدف من دون إرجاع نص.</string>
     <string name="chat_enter_key_behavior">مفتاح Enter</string>
@@ -139,7 +142,6 @@
     <string name="chat_regenerate_original_target_message">تم إنشاء هذا الرد بواسطة %1$s. ستستخدم إعادة التوليد ذلك الهدف المسجل بدلا من الهدف الافتراضي الحالي للمحادثة. %2$s</string>
     <string name="chat_regenerate_target_unavailable_message">لم يعد %1$s يطابق هدفا متاحا بنفس المزود والنموذج المسجلين. لم تبدأ إعادة التوليد, ولم يستخدم هدف المحادثة الحالي كخيار احتياطي.</string>
     <string name="chat_regenerate_target_unavailable_title">الهدف الأصلي غير متاح</string>
-    <string name="chat_regenerate_warning_message">ستؤدي إعادة التوليد من هنا إلى حذف كل الرسائل اللاحقة نهائيا (عددها %1$d) واستبدال هذا الفرع من المحادثة.</string>
     <string name="chat_regenerate_warning_title">هل تريد إعادة توليد هذا الرد?</string>
     <string name="chat_save_and_send">حفظ وإرسال</string>
     <string name="chat_screen_title">محادثة</string>

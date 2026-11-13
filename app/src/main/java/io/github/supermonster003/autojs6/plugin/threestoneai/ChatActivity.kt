@@ -154,6 +154,8 @@ class ChatActivity : ConfiguredActivity() {
 
     private val messages = ArrayList<ChatMessage>()
     private val messageViews = HashMap<Long, MessageViewHolder>()
+    /** Version switches of the shown path, by the message they sit under (P6.2). */
+    private var branchPositions: Map<Long, ChatBranchPosition> = emptyMap()
     private val markdownCache = HashMap<Long, CachedMarkdown>()
     /** Thinking cards the user opened or closed during the current reply (D79). */
     private val reasoningExpanded = HashMap<Long, Boolean>()
@@ -2452,20 +2454,22 @@ class ChatActivity : ConfiguredActivity() {
         if (status.tapInterrupts) dispatchVoice(VoiceEvent.Interrupt)
     }
 
-    private fun renderTranscript() {
+    private fun renderTranscript(scrollToEnd: Boolean = true) {
         messagesColumn.removeAllViews()
         messageViews.clear()
         markdownCache.keys.retainAll(messages.map(ChatMessage::id).toSet())
         reasoningExpanded.keys.retainAll(messages.map(ChatMessage::id).toSet())
+        branchPositions = ChatBranchPolicy.positions(messages)
         messages.forEach(::addMessageView)
         refreshOptionsMenuState()
         renderEmptyState()
-        if (messages.isNotEmpty()) scrollToBottom()
+        if (scrollToEnd && messages.isNotEmpty()) scrollToBottom()
     }
 
     private fun appendMessage(message: ChatMessage) {
         messages += message
         addMessageView(message)
+        refreshBranchSwitches()
         markConversationChanged()
         renderEmptyState()
         refreshActiveSearchResults()
@@ -2573,9 +2577,52 @@ class ChatActivity : ConfiguredActivity() {
                 bottomMargin = if (userMessage) dp(4) else dp(14)
             },
         )
-        messageViews[message.id] = MessageViewHolder(body, meta, reasoningCard)
+        val holder = MessageViewHolder(body, meta, reasoningCard)
+        messageViews[message.id] = holder
         updateMessageView(message)
+        updateBranchSwitch(message.id, holder)
     }
+
+    /** Recomputes where the version switches go and whether they can be used now (P6.2). */
+    private fun refreshBranchSwitches() {
+        if (!::messagesColumn.isInitialized) return
+        branchPositions = ChatBranchPolicy.positions(messages)
+        messageViews.forEach { (messageId, holder) -> updateBranchSwitch(messageId, holder) }
+    }
+
+    private fun updateBranchSwitch(messageId: Long, holder: MessageViewHolder) {
+        val position = branchPositions[messageId]
+        if (position == null) {
+            holder.branch?.visibility = View.GONE
+            return
+        }
+        val switchView = holder.branch ?: createBranchSwitch(holder)?.also { created -> holder.branch = created } ?: return
+        switchView.visibility = View.VISIBLE
+        // Another version cannot be shown while a reply streams or a message is being edited.
+        switchView.show(position, enabled = !isGenerating && editingMessageId == null)
+    }
+
+    private fun createBranchSwitch(holder: MessageViewHolder): ChatBranchSwitchView? {
+        val row = holder.body.parent as? LinearLayout ?: return null
+        return ChatBranchSwitchView(this, appPalette).apply {
+            onSelect = { position, versionIndex -> selectBranchVersion(position.turnMessageId, versionIndex) }
+        }.also { switchView ->
+            row.addView(
+                switchView,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
+    }
+
+    /** Instrumentation only: the visible version switches, by the message they sit under. */
+    @VisibleForTesting
+    internal fun branchSwitchesForTest(): Map<Long, ChatBranchSwitchView> =
+        messageViews.mapNotNull { (messageId, holder) ->
+            holder.branch?.takeIf { switchView -> switchView.visibility == View.VISIBLE }?.let { messageId to it }
+        }.toMap()
 
     private fun toggleReasoning(messageId: Long) {
         val message = messages.singleOrNull { candidate -> candidate.id == messageId } ?: return
@@ -2749,6 +2796,7 @@ class ChatActivity : ConfiguredActivity() {
             .forEach { message ->
                 messageViews[message.id]?.meta?.let { meta -> updateMessageMeta(message, meta) }
             }
+        refreshBranchSwitches()
     }
 
     private fun updateMessageMeta(message: ChatMessage, meta: TextView) {
@@ -2866,10 +2914,11 @@ class ChatActivity : ConfiguredActivity() {
         }
         if (promptText.isEmpty() && promptAttachments.isEmpty()) return null
         if (newAttachments && !attachmentsSendable(target, promptAttachments)) return null
-        val retainedPrefix = messageBeingEdited?.let { messageId ->
-            ConversationEditPolicy.prefixBefore(messages, messageId)
+        // Sending an edited or regenerated message adds a version of its turn (P6.1, D82, D148).
+        val editedTurn = messageBeingEdited?.let { messageId ->
+            messages.singleOrNull { message -> message.id == messageId && message.role == ChatMessageRole.USER }
         }
-        if (messageBeingEdited != null && retainedPrefix == null) {
+        if (messageBeingEdited != null && (editedTurn == null || !branchVersionAvailable(messageBeingEdited))) {
             cancelEditing()
             return null
         }
@@ -2896,7 +2945,7 @@ class ChatActivity : ConfiguredActivity() {
         stopReading()
 
         val userMessage = ChatMessage(
-            id = messageBeingEdited ?: allocateMessageId(),
+            id = allocateMessageId(),
             role = ChatMessageRole.USER,
             text = promptText,
             attachments = promptAttachments,
@@ -2910,14 +2959,14 @@ class ChatActivity : ConfiguredActivity() {
         )
         activeAssistantMessageId = assistantMessage.id
         isGenerating = true
-        if (retainedPrefix != null) {
-            invalidateConversationContextFrom(checkNotNull(messageBeingEdited))
+        if (editedTurn != null) {
+            // The version shown so far stays, with its files; summaries and the backend session of
+            // the turn belong to it (D148).
+            val path = checkNotNull(ChatBranchPolicy.withNewVersion(messages, editedTurn.id, userMessage))
+            invalidateConversationContextFrom(ChatBranchPolicy.firstIdOfTurn(editedTurn))
             closeCurrentBackend(reason = "edit")
-            val keptAttachmentIds = promptAttachments.mapTo(HashSet(), ChatAttachment::id)
-            deleteAttachmentsOfDroppedMessages(retainedPrefix) { attachment -> attachment.id !in keptAttachmentIds }
             messages.clear()
-            messages.addAll(retainedPrefix)
-            messages += userMessage
+            messages.addAll(path)
             messages += assistantMessage
             markdownCache.clear()
             editingMessageId = null
@@ -3102,16 +3151,88 @@ class ChatActivity : ConfiguredActivity() {
         return hadBackend
     }
 
+    /** Editing keeps the later messages as the version shown so far, so it needs no warning (P6.1). */
     private fun requestEditMessage(messageId: Long) {
         if (isGenerating || editingMessageId != null) return
-        val impact = ConversationEditPolicy.impact(messages, messageId) ?: return
-        materialDialog()
-            .setTitle(R.string.chat_edit_warning_title)
-            .setMessage(getString(R.string.chat_edit_warning_message, impact.laterMessageCount))
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.chat_edit_continue) { _, _ -> enterEditing(messageId) }
-            .show()
-            .also(::tintDialogButtons)
+        if (!branchVersionAvailable(messageId)) return
+        enterEditing(messageId)
+    }
+
+    /** Whether the turn at [userMessageId] can take another version; tells the user when not (P6.2). */
+    private fun branchVersionAvailable(userMessageId: Long): Boolean {
+        if (ChatBranchPolicy.versionCount(messages, userMessageId) < ChatBranchPolicy.MAXIMUM_VERSIONS) return true
+        showSnackbar(drawerLayout, getString(R.string.chat_branch_limit, ChatBranchPolicy.MAXIMUM_VERSIONS))
+        return false
+    }
+
+    private fun selectBranchVersion(turnMessageId: Long, versionIndex: Int) {
+        if (isGenerating || editingMessageId != null) return
+        val turn = messages.singleOrNull { message -> message.id == turnMessageId } ?: return
+        val path = ChatBranchPolicy.withSelectedVersion(messages, turnMessageId, versionIndex) ?: return
+        showPath(path, turn, reason = "branch-switch")
+    }
+
+    /**
+     * Shows [path] after the versions of [turn] changed (P6, D148). Summaries and the backend session
+     * from the turn on belong to the version shown before; files no version refers to any more go;
+     * the turn keeps its place on the screen.
+     */
+    private fun showPath(path: List<ChatMessage>, turn: ChatMessage, reason: String) {
+        val turnIndex = messages.indexOfFirst { message -> message.id == turn.id }
+        val anchorOffset = turnAnchorView(turnIndex)?.let(::offsetInScroll)?.minus(messagesScroll.scrollY)
+        dispatchVoice(VoiceEvent.ConversationChanged)
+        val reading = readingMessageId
+        if (reading != null && path.none { message -> message.id == reading }) stopReading()
+        invalidateConversationContextFrom(ChatBranchPolicy.firstIdOfTurn(turn))
+        closeCurrentBackend(reason = reason)
+        val before = messages.toList()
+        messages.clear()
+        messages.addAll(path)
+        deleteUnreferencedAttachments(before)
+        markConversationChanged(schedulePersistence = false)
+        allowDeletedConversationRevival = true
+        persistConversationNow()
+        renderTranscript(scrollToEnd = false)
+        refreshActiveSearchResults()
+        renderTargetUi()
+        if (anchorOffset != null) keepTurnAnchor(turnIndex, anchorOffset)
+    }
+
+    /** The view that marks the turn at [turnIndex] on screen: its version switch, else its first message. */
+    private fun turnAnchorView(turnIndex: Int): View? {
+        val turn = messages.getOrNull(turnIndex) ?: return null
+        val switchView = branchPositions.entries
+            .firstOrNull { (_, position) -> position.turnMessageId == turn.id }
+            ?.let { (messageId, _) -> messageViews[messageId]?.branch }
+            ?.takeIf { view -> view.visibility == View.VISIBLE }
+        return switchView ?: messageViews[turn.id]?.body?.parent as? View
+    }
+
+    private fun offsetInScroll(view: View): Int? {
+        var top = 0
+        var current = view
+        while (current !== messagesScroll) {
+            top += current.top
+            current = current.parent as? View ?: return null
+        }
+        return top
+    }
+
+    /** After the next layout, scrolls so that the turn at [turnIndex] is [offset] pixels below the top again. */
+    private fun keepTurnAnchor(turnIndex: Int, offset: Int) {
+        val observer = messagesScroll.viewTreeObserver
+        observer.addOnPreDrawListener(
+            object : android.view.ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    messagesScroll.viewTreeObserver.removeOnPreDrawListener(this)
+                    val top = turnAnchorView(turnIndex)?.let(::offsetInScroll) ?: return true
+                    val content = messagesScroll.getChildAt(0) ?: return true
+                    val maximum = (content.height - messagesScroll.height).coerceAtLeast(0)
+                    messagesScroll.scrollTo(0, (top - offset).coerceIn(0, maximum))
+                    return true
+                }
+            },
+        )
     }
 
     private fun enterEditing(messageId: Long) {
@@ -3423,15 +3544,16 @@ class ChatActivity : ConfiguredActivity() {
         draftStore.saveAttachments(emptyList())
     }
 
-    /** Files of messages that leave the transcript (edit, regenerate, delete from here) go at once. */
-    private fun deleteAttachmentsOfDroppedMessages(
-        retained: List<ChatMessage>,
-        filter: (ChatAttachment) -> Boolean,
-    ) {
-        val retainedIds = retained.mapTo(HashSet(), ChatMessage::id)
-        val dropped = messages.filterNot { message -> message.id in retainedIds }
+    /**
+     * Files that [before] referred to and no version of the conversation refers to any more (delete
+     * from here, delete a version) go at once; a file a version that is not shown still uses stays (D148).
+     */
+    private fun deleteUnreferencedAttachments(before: List<ChatMessage>) {
+        val kept = ChatBranchPolicy.attachmentFileNames(messages)
+        val dropped = ChatBranchPolicy.allMessages(before)
             .flatMap(ChatMessage::attachments)
-            .filter(filter)
+            .filter { attachment -> attachment.fileName !in kept }
+            .distinctBy(ChatAttachment::fileName)
         if (dropped.isNotEmpty()) attachmentStore.deleteFiles(currentConversationId, dropped)
     }
 
@@ -3553,7 +3675,7 @@ class ChatActivity : ConfiguredActivity() {
         conversationEffortOverride = conversation.effortOverride
         conversationFastOverride = conversation.fastOverride
         generationCoordinator.resetSummaryFailure()
-        nextMessageId = (messages.maxOfOrNull(ChatMessage::id) ?: 0L) + 1L
+        nextMessageId = ChatBranchPolicy.maximumId(messages) + 1L
         markdownCache.clear()
         allowDeletedConversationRevival = false
         historyStore.rememberLastConversation(currentConversationId)
@@ -3846,6 +3968,15 @@ class ChatActivity : ConfiguredActivity() {
     internal var messageActionsDialog: AlertDialog? = null
         private set
 
+    /** Instrumentation only: opens the menu of [messageId] as a long press would (P6.3). */
+    @VisibleForTesting
+    internal fun showMessageActionsForTest(messageId: Long) = showMessageActions(messageId)
+
+    /** Instrumentation only: the last confirmation for deleting a version (P6.3). */
+    @VisibleForTesting
+    internal var deleteVersionDialog: AlertDialog? = null
+        private set
+
     private fun readAloudAction(message: ChatMessage): MessageAction? = when (
         ReadAloudPolicy.menuItem(
             reply = ReadableReply(
@@ -3864,6 +3995,11 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun requestDeleteMessage(messageId: Long) {
+        val branches = messages.singleOrNull { message -> message.id == messageId }?.branches
+        if (branches != null) {
+            requestDeleteVersion(messageId, branches)
+            return
+        }
         val impact = ConversationDeletionPolicy.impact(messages, messageId) ?: return
         materialDialog()
             .setTitle(R.string.chat_delete_warning_title)
@@ -3880,6 +4016,29 @@ class ChatActivity : ConfiguredActivity() {
             }
     }
 
+    /** A turn with several versions loses only the version shown; the others stay (P6.1, D82). */
+    private fun requestDeleteVersion(messageId: Long, branches: ChatMessageBranches) {
+        deleteVersionDialog = materialDialog()
+            .setTitle(R.string.chat_delete_version_title)
+            .setMessage(getString(R.string.chat_delete_version_message, branches.selected + 1, branches.count))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.chat_message_delete) { _, _ -> deleteShownVersion(messageId) }
+            .show()
+            .also { dialog ->
+                tintDialogButtons(dialog)
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    ?.setTextColor(getColor(R.color.validation_error))
+            }
+    }
+
+    private fun deleteShownVersion(messageId: Long) {
+        if (isGenerating) stopGeneration(showToast = false)
+        val turn = messages.singleOrNull { message -> message.id == messageId } ?: return
+        val path = ChatBranchPolicy.withoutShownVersion(messages, messageId) ?: return
+        cancelEditing(restoreDraft = true)
+        showPath(path, turn, reason = "delete-version")
+    }
+
     private fun deleteMessageAndFollowing(messageId: Long) {
         val retained = ConversationDeletionPolicy.prefixBefore(messages, messageId) ?: return
         dispatchVoice(VoiceEvent.ConversationChanged)
@@ -3890,9 +4049,10 @@ class ChatActivity : ConfiguredActivity() {
         closeCurrentBackend(reason = "delete-messages")
         closeSearch()
         cancelEditing(restoreDraft = true)
-        deleteAttachmentsOfDroppedMessages(retained) { true }
+        val before = messages.toList()
         messages.clear()
         messages.addAll(retained)
+        deleteUnreferencedAttachments(before)
         markdownCache.clear()
         markConversationChanged(schedulePersistence = false)
         if (messages.isEmpty()) {
@@ -3909,6 +4069,9 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun requestRegenerateMessage(messageId: Long) {
         val impact = ConversationRegenerationPolicy.impact(messages, messageId) ?: return
+        // The reply regenerated stays as a version of its turn, so only the limit and a changed
+        // destination need the user (P6.1).
+        if (!branchVersionAvailable(impact.userMessageId)) return
         val originalTarget = ConversationTargetPolicy.resolveExact(
             impact.responseTarget,
             targetCatalog,
@@ -3918,32 +4081,24 @@ class ChatActivity : ConfiguredActivity() {
             return
         }
         checkNotNull(originalTarget)
-        val warnings = buildList {
-            if (impact.laterMessageCount > 0) {
-                add(getString(R.string.chat_regenerate_warning_message, impact.laterMessageCount))
-            }
-            if (conversationTarget?.matchesExecutionIdentity(originalTarget) != true) {
-                val destinationWarning = if (impact.responseTarget.locality == AiTargetLocality.REMOTE) {
-                    getString(R.string.chat_target_change_cloud_warning)
-                } else {
-                    getString(R.string.chat_target_change_local_warning)
-                }
-                add(
-                    getString(
-                        R.string.chat_regenerate_original_target_message,
-                        targetSummary(impact.responseTarget),
-                        destinationWarning,
-                    ),
-                )
-            }
-        }
-        if (warnings.isEmpty()) {
+        if (conversationTarget?.matchesExecutionIdentity(originalTarget) == true) {
             regenerateMessage(impact.userMessageId, impact.responseTarget)
             return
         }
+        val destinationWarning = if (impact.responseTarget.locality == AiTargetLocality.REMOTE) {
+            getString(R.string.chat_target_change_cloud_warning)
+        } else {
+            getString(R.string.chat_target_change_local_warning)
+        }
         materialDialog()
             .setTitle(R.string.chat_regenerate_warning_title)
-            .setMessage(warnings.joinToString("\n\n"))
+            .setMessage(
+                getString(
+                    R.string.chat_regenerate_original_target_message,
+                    targetSummary(impact.responseTarget),
+                    destinationWarning,
+                ),
+            )
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.chat_message_regenerate) { _, _ ->
                 regenerateMessage(impact.userMessageId, impact.responseTarget)
@@ -4109,7 +4264,7 @@ class ChatActivity : ConfiguredActivity() {
             restored,
             generatingMessageId = generationCoordinator.activeFor(restoredConversationId)?.assistantMessageId,
         )
-        val minimumNextId = (messages.maxOfOrNull(ChatMessage::id) ?: 0L) + 1L
+        val minimumNextId = ChatBranchPolicy.maximumId(messages) + 1L
         nextMessageId = state.getLong(STATE_NEXT_MESSAGE_ID, minimumNextId).coerceAtLeast(minimumNextId)
         currentConversationId = storedId?.takeIf(String::isNotBlank) ?: currentConversationId
         conversationCreatedAtMillis = state.getLong(
@@ -4204,7 +4359,10 @@ class ChatActivity : ConfiguredActivity() {
         val body: MarkdownMessageView,
         val meta: TextView?,
         val reasoning: ReasoningCardView? = null,
-    )
+    ) {
+        /** The version switch under this message (P6.2), added when the message first needs one. */
+        var branch: ChatBranchSwitchView? = null
+    }
 
     private data class CachedMarkdown(
         val source: String,

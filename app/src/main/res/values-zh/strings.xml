@@ -82,6 +82,10 @@
     <string name="button_retry_download">重试</string>
     <string name="button_view_model_source">模型来源</string>
     <string name="chat_assistant_bubble_style">回复消息气泡</string>
+    <string name="chat_branch_limit">这条消息已有 %1$d 个版本, 达到上限. 请先删除不需要的版本.</string>
+    <string name="chat_branch_next">下一个版本</string>
+    <string name="chat_branch_position">第 %1$d 个版本, 共 %2$d 个</string>
+    <string name="chat_branch_previous">上一个版本</string>
     <string name="chat_bubble_style_background">背景着色</string>
     <string name="chat_bubble_style_border">边框着色</string>
     <string name="chat_bubble_style_none">无着色</string>
@@ -107,13 +111,12 @@
     <string name="chat_context_usage_source_exact">Backend 精确计数</string>
     <string name="chat_context_usage_title">上下文用量</string>
     <string name="chat_context_usage_unavailable">上下文用量暂不可用</string>
+    <string name="chat_delete_version_message">将永久删除这条消息的第 %1$d 个版本 (共 %2$d 个) 及该版本中其后的消息, 其他版本保留.</string>
+    <string name="chat_delete_version_title">删除这个版本?</string>
     <string name="chat_delete_warning_message">删除这条消息将永久删除它及其后的所有消息 (后续共 %1$d 条).</string>
     <string name="chat_delete_warning_title">删除这条消息?</string>
     <string name="chat_duration_milliseconds">%1$d 毫秒</string>
     <string name="chat_duration_seconds">%1$s 秒</string>
-    <string name="chat_edit_continue">继续编辑</string>
-    <string name="chat_edit_warning_message">发送编辑后的内容将永久删除此节点之后的 %1$d 条消息, 并替换该会话分支.</string>
-    <string name="chat_edit_warning_title">编辑这条消息?</string>
     <string name="chat_editing_message">正在编辑历史消息</string>
     <string name="chat_empty_response">目标已结束生成, 但没有返回文本.</string>
     <string name="chat_enter_key_behavior">回车键</string>
@@ -190,7 +193,6 @@
     <string name="chat_regenerate_original_target_message">此回复由 %1$s 生成. 重新生成将沿用这个已记录目标, 而不是当前会话默认目标. %2$s</string>
     <string name="chat_regenerate_target_unavailable_message">%1$s 已无法匹配具有已记录提供方和模型的可用目标. 未开始重新生成, 也没有回退到当前会话目标.</string>
     <string name="chat_regenerate_target_unavailable_title">原回复目标不可用</string>
-    <string name="chat_regenerate_warning_message">从此处重新生成将永久删除后续所有消息 (共 %1$d 条), 并替换该会话分支.</string>
     <string name="chat_regenerate_warning_title">重新生成此回复?</string>
     <string name="chat_save_and_send">保存并发送</string>
     <string name="chat_screen_title">会话</string>

@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.io.IOException
 import java.io.InputStream
 
 internal data class StoredConversation(
@@ -60,7 +61,7 @@ internal object ConversationHistoryPolicy {
     fun normalized(conversations: List<StoredConversation>): List<StoredConversation> {
         val newestById = LinkedHashMap<String, StoredConversation>()
         conversations.sortedByDescending(StoredConversation::updatedAtMillis).forEach { conversation ->
-            newestById.putIfAbsent(conversation.id, conversation.withBoundedMessages())
+            newestById.putIfAbsent(conversation.id, conversation.withBoundedMessages().withBoundedBranches())
         }
         val retained = ArrayList<StoredConversation>()
         var retainedBytes = 0
@@ -104,6 +105,14 @@ internal object ConversationHistoryPolicy {
         return if (safeStart <= 0) this else copy(messages = messages.drop(safeStart))
     }
 
+    /** Other versions beyond [ChatBranchPolicy.MAXIMUM_CONVERSATION_BRANCH_BYTES] go, oldest first (D148). */
+    private fun StoredConversation.withBoundedBranches(): StoredConversation {
+        val fitted = ChatBranchPolicy.fitted(messages, ChatBranchPolicy.MAXIMUM_CONVERSATION_BRANCH_BYTES) { message ->
+            message.estimatedBytes()
+        }
+        return if (fitted === messages) this else copy(messages = fitted)
+    }
+
     private fun StoredConversation.estimatedMessageBytes(): Int = messages.sumOf { message -> message.estimatedBytes() }
 
     private fun ChatMessage.estimatedBytes(): Int = text.toByteArray(Charsets.UTF_8).size + target.estimatedBytes() +
@@ -112,6 +121,8 @@ internal object ConversationHistoryPolicy {
         MESSAGE_OVERHEAD_BYTES
 
     private fun StoredConversation.estimatedBytes(): Int = estimatedMessageBytes() +
+        ChatBranchPolicy.branchBytes(messages) { message -> message.estimatedBytes() }
+            .coerceAtMost(Int.MAX_VALUE.toLong()).toInt() +
         id.toByteArray(Charsets.UTF_8).size + title.toByteArray(Charsets.UTF_8).size +
         target.estimatedBytes() + contextState.estimatedBytes() + CONVERSATION_OVERHEAD_BYTES
 
@@ -208,24 +219,6 @@ internal object ConversationTranscriptFormatter {
     }
 }
 
-internal data class MessageEditImpact(
-    val messageIndex: Int,
-    val laterMessageCount: Int,
-)
-
-internal object ConversationEditPolicy {
-    fun impact(messages: List<ChatMessage>, userMessageId: Long): MessageEditImpact? {
-        val index = messages.indexOfFirst { message -> message.id == userMessageId }
-        if (index < 0 || messages[index].role != ChatMessageRole.USER) return null
-        return MessageEditImpact(index, messages.lastIndex - index)
-    }
-
-    fun prefixBefore(messages: List<ChatMessage>, userMessageId: Long): List<ChatMessage>? {
-        val impact = impact(messages, userMessageId) ?: return null
-        return messages.take(impact.messageIndex)
-    }
-}
-
 internal data class MessageDeletionImpact(
     val messageIndex: Int,
     val laterMessageCount: Int,
@@ -246,7 +239,6 @@ internal object ConversationDeletionPolicy {
 
 internal data class MessageRegenerationImpact(
     val userMessageId: Long,
-    val laterMessageCount: Int,
     val responseTarget: ConversationTargetSnapshot,
 )
 
@@ -262,7 +254,6 @@ internal object ConversationRegenerationPolicy {
         } ?: return null
         return MessageRegenerationImpact(
             userMessageId = user.id,
-            laterMessageCount = messages.lastIndex - assistantIndex,
             responseTarget = responseTarget,
         )
     }
@@ -325,21 +316,7 @@ internal object ConversationHistoryCodec {
         output.writeNullableTarget(conversation.target)
         require(conversation.messages.size <= MAXIMUM_SERIALIZED_MESSAGES_PER_CONVERSATION)
         output.writeInt(conversation.messages.size)
-        conversation.messages.forEach { message ->
-            output.writeLong(message.id)
-            output.writeText(message.role.name, MAXIMUM_ENUM_BYTES)
-            output.writeText(message.status.name, MAXIMUM_ENUM_BYTES)
-            output.writeText(message.text, MAXIMUM_MESSAGE_BYTES)
-            output.writeBoolean(message.usage != null)
-            message.usage?.let { usage ->
-                output.writeLong(usage.inputTokens)
-                output.writeLong(usage.outputTokens)
-                output.writeLong(usage.durationMillis)
-            }
-            output.writeBoolean(message.truncated)
-            output.writeNullableTarget(message.target)
-            ConversationHistoryProperties.write(output, ConversationHistoryProperties.messageTable(message))
-        }
+        conversation.messages.forEach { message -> writeMessage(output, message) }
         output.writeContextState(conversation.contextState)
         ConversationHistoryProperties.write(output, ConversationHistoryProperties.conversationTable(conversation))
     }
@@ -352,39 +329,8 @@ internal object ConversationHistoryCodec {
         val target = input.readNullableTarget()
         val messageCount = input.readBoundedCount(MAXIMUM_SERIALIZED_MESSAGES_PER_CONVERSATION)
         val messages = buildList(messageCount) {
-            repeat(messageCount) {
-                val messageId = input.readLong()
-                val role = ChatMessageRole.valueOf(input.readText(MAXIMUM_ENUM_BYTES))
-                val status = ChatMessageStatus.valueOf(input.readText(MAXIMUM_ENUM_BYTES))
-                val text = input.readText(MAXIMUM_MESSAGE_BYTES)
-                val usage = if (input.readBoolean()) {
-                    ChatMessageUsage(input.readLong(), input.readLong(), input.readLong())
-                } else {
-                    null
-                }
-                val truncated = version >= PUBLISHED_VERSION_WITH_TRUNCATION && input.readBoolean()
-                val messageTarget = input.readNullableTarget()
-                val messageProperties = if (version >= VERSION) ConversationHistoryProperties.read(input) else emptyMap()
-                val reasoning = ConversationHistoryProperties.reasoning(messageProperties)
-                    ?.takeIf { role == ChatMessageRole.ASSISTANT }
-                val attachments = ConversationHistoryProperties.attachments(messageProperties)
-                    .takeIf { role == ChatMessageRole.USER }
-                    .orEmpty()
-                add(
-                    ChatMessage(
-                        id = messageId,
-                        role = role,
-                        text = text,
-                        status = status,
-                        usage = usage,
-                        target = messageTarget,
-                        truncated = truncated,
-                        reasoning = reasoning,
-                        attachments = attachments,
-                    ),
-                )
-            }
-        }
+            repeat(messageCount) { add(readMessage(input, version, branchDepth = 0)) }
+        }.let(ChatBranchPolicy::sanitized)
         val contextState = input.readContextState()
         val properties = if (version >= VERSION) ConversationHistoryProperties.read(input) else emptyMap()
         return StoredConversation(
@@ -397,6 +343,99 @@ internal object ConversationHistoryCodec {
             contextState = contextState,
             effortOverride = ConversationHistoryProperties.effortOverride(properties),
             fastOverride = ConversationHistoryProperties.fastOverride(properties),
+        )
+    }
+
+    /**
+     * Payload of the "branch.NN" message properties (roadmap D148): the other versions of a turn,
+     * each as a big-endian `Int` message count and the messages in the message format of version 6
+     * (property tables included, so a version keeps its own nested branches).
+     */
+    fun encodeBranchVersions(others: List<List<ChatMessage>>): ByteArray =
+        ByteArrayOutputStream().use { bytes ->
+            DataOutputStream(bytes).use { output ->
+                output.writeInt(others.size)
+                others.forEach { version ->
+                    output.writeInt(version.size)
+                    version.forEach { message -> writeMessage(output, message) }
+                }
+            }
+            bytes.toByteArray()
+        }
+
+    /**
+     * The versions [encodeBranchVersions] wrote, or null when the payload cannot be read: the turn
+     * then shows only its selected version, like any known key whose value cannot be parsed (D91).
+     */
+    fun decodeBranchVersions(bytes: ByteArray, branchDepth: Int): List<List<ChatMessage>>? {
+        if (branchDepth > MAXIMUM_BRANCH_DEPTH) return null
+        return try {
+            DataInputStream(ByteArrayInputStream(bytes)).use { input ->
+                val count = input.readInt()
+                require(count in 1 until ChatBranchPolicy.MAXIMUM_VERSIONS) { "Invalid version count" }
+                List(count) {
+                    val size = input.readBoundedCount(MAXIMUM_SERIALIZED_MESSAGES_PER_CONVERSATION)
+                    require(size > 0) { "Empty version" }
+                    List(size) { readMessage(input, VERSION, branchDepth) }
+                }.also { require(input.available() == 0) { "Unexpected trailing branch data" } }
+            }
+        } catch (error: IOException) {
+            null
+        } catch (error: IllegalArgumentException) {
+            null
+        }
+    }
+
+    private fun writeMessage(output: DataOutputStream, message: ChatMessage) {
+        output.writeLong(message.id)
+        output.writeText(message.role.name, MAXIMUM_ENUM_BYTES)
+        output.writeText(message.status.name, MAXIMUM_ENUM_BYTES)
+        output.writeText(message.text, MAXIMUM_MESSAGE_BYTES)
+        output.writeBoolean(message.usage != null)
+        message.usage?.let { usage ->
+            output.writeLong(usage.inputTokens)
+            output.writeLong(usage.outputTokens)
+            output.writeLong(usage.durationMillis)
+        }
+        output.writeBoolean(message.truncated)
+        output.writeNullableTarget(message.target)
+        ConversationHistoryProperties.write(output, ConversationHistoryProperties.messageTable(message))
+    }
+
+    private fun readMessage(input: DataInputStream, version: Int, branchDepth: Int): ChatMessage {
+        val messageId = input.readLong()
+        val role = ChatMessageRole.valueOf(input.readText(MAXIMUM_ENUM_BYTES))
+        val status = ChatMessageStatus.valueOf(input.readText(MAXIMUM_ENUM_BYTES))
+        val text = input.readText(MAXIMUM_MESSAGE_BYTES)
+        val usage = if (input.readBoolean()) {
+            ChatMessageUsage(input.readLong(), input.readLong(), input.readLong())
+        } else {
+            null
+        }
+        val truncated = version >= PUBLISHED_VERSION_WITH_TRUNCATION && input.readBoolean()
+        val messageTarget = input.readNullableTarget()
+        val messageProperties = if (version >= VERSION) ConversationHistoryProperties.read(input) else emptyMap()
+        val reasoning = ConversationHistoryProperties.reasoning(messageProperties)
+            ?.takeIf { role == ChatMessageRole.ASSISTANT }
+        val attachments = ConversationHistoryProperties.attachments(messageProperties)
+            .takeIf { role == ChatMessageRole.USER }
+            .orEmpty()
+        val branches = if (role == ChatMessageRole.USER) {
+            ConversationHistoryProperties.branches(messageProperties, branchDepth + 1)
+        } else {
+            null
+        }
+        return ChatMessage(
+            id = messageId,
+            role = role,
+            text = text,
+            status = status,
+            usage = usage,
+            target = messageTarget,
+            truncated = truncated,
+            reasoning = reasoning,
+            attachments = attachments,
+            branches = branches,
         )
     }
 
@@ -528,6 +567,8 @@ internal object ConversationHistoryCodec {
     /** Shipped in 1.4.x: the layout of version 5 without the per-message truncation flag. */
     private const val PUBLISHED_VERSION_WITHOUT_TRUNCATION = 4
     private const val MAXIMUM_SERIALIZED_MESSAGES_PER_CONVERSATION = 100_000
+    /** Versions nested in versions; deeper payloads are read as "no other versions" (D148). */
+    private const val MAXIMUM_BRANCH_DEPTH = 32
     private const val MAXIMUM_ID_BYTES = 128
     private const val MAXIMUM_TITLE_BYTES = 512
     private const val MAXIMUM_TARGET_ID_BYTES = 512

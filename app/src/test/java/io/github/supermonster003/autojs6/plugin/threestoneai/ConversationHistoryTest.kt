@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.nio.ByteBuffer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -216,6 +217,106 @@ class ConversationHistoryTest {
         }
     }
 
+    @Test
+    fun `codec round trips nested message versions and the selected one (P6)`() {
+        val original = listOf(question(1, "Q"), assistant(2, "A"), question(3, "Q2"), assistant(4, "A2"))
+        val inner = checkNotNull(ChatBranchPolicy.withNewVersion(original, 3L, question(5, "Q2 again"))) + assistant(6, "B2")
+        val outer = checkNotNull(ChatBranchPolicy.withNewVersion(inner, 1L, question(7, "Q again"))) + assistant(8, "B")
+        val firstShown = checkNotNull(ChatBranchPolicy.withSelectedVersion(outer, 7L, 0))
+
+        assertEquals(setOf("branch", "branch.00"), ConversationHistoryProperties.messageTable(outer.first()).keys)
+        listOf(outer, firstShown).forEach { messages ->
+            val conversation = conversation("branched", updatedAt = 300).copy(messages = messages)
+
+            val restored = ConversationHistoryCodec.decode(ConversationHistoryCodec.encode(listOf(conversation))).single()
+
+            assertEquals(conversation, restored)
+        }
+    }
+
+    @Test
+    fun `codec splits versions into 64 KiB chunks and keeps the newest that fit (P6)`() {
+        val long = "x".repeat(100 * 1_024)
+        val chunked = checkNotNull(
+            ChatBranchPolicy.withNewVersion(listOf(question(1, long), assistant(2, long)), 1L, question(3, "Q")),
+        ) + assistant(4, "A")
+        val conversation = conversation("chunked", updatedAt = 300).copy(messages = chunked)
+
+        assertEquals(
+            setOf("branch", "branch.00", "branch.01", "branch.02", "branch.03"),
+            ConversationHistoryProperties.messageTable(chunked.first()).keys,
+        )
+        assertEquals(conversation, ConversationHistoryCodec.decode(ConversationHistoryCodec.encode(listOf(conversation))).single())
+
+        val big = "y".repeat(900 * 1_024)
+        val others = List(4) { index -> listOf(question(10L + index, big + index)) }
+        val table = ConversationHistoryProperties.messageTable(question(20, "Q").copy(branches = ChatMessageBranches(4, others)))
+        val header = checkNotNull(table["branch"])
+
+        assertEquals(3, header[1].toInt())
+        assertEquals(setOf("branch") + List(header[2].toInt(), ConversationHistoryProperties::branchChunkKey), table.keys)
+        assertTrue(table.values.all { value -> value.size <= ConversationHistoryProperties.MAXIMUM_VALUE_BYTES })
+        assertEquals(ChatMessageBranches(3, others.drop(1)), ConversationHistoryProperties.branches(table, branchDepth = 1))
+    }
+
+    @Test
+    fun `codec shows only the selected version when branch keys cannot be read (P6)`() {
+        val other = listOf(question(3, "Other question"), assistant(4, "Other answer"))
+        val payload = ConversationHistoryCodec.encodeBranchVersions(listOf(other))
+
+        val valid = ConversationHistoryCodec.decode(
+            publishedLayout(version = 6, messageProperties = listOf("branch" to byteArrayOf(1, 1, 1), "branch.00" to payload)),
+        ).single()
+
+        assertEquals(ChatMessageBranches(1, listOf(other)), valid.messages.first().branches)
+        assertNull(valid.messages.last().branches)
+        listOf(
+            listOf("branch" to byteArrayOf(2, 1, 1), "branch.00" to payload),
+            listOf("branch" to byteArrayOf(1, 1), "branch.00" to payload),
+            listOf("branch" to byteArrayOf(1, 1, 0)),
+            listOf("branch" to byteArrayOf(1, 1, 2), "branch.00" to payload),
+            listOf("branch" to byteArrayOf(1, 2, 1), "branch.00" to payload),
+            listOf("branch" to byteArrayOf(1, 1, 1), "branch.00" to byteArrayOf(0, 0, 0, 1)),
+            listOf("branch" to byteArrayOf(1, 1, 1), "branch.00" to payload + 0.toByte()),
+            listOf("branch.00" to payload),
+        ).forEach { properties ->
+            val restored = ConversationHistoryCodec.decode(publishedLayout(version = 6, messageProperties = properties)).single()
+
+            assertEquals(listOf("First question", "**Answer**"), restored.messages.map { message -> message.text })
+            assertNull(restored.messages.first().branches)
+        }
+        val repeatedIds = ConversationHistoryCodec.encodeBranchVersions(listOf(listOf(question(2, "Q"), assistant(5, "A"))))
+        val sanitized = ConversationHistoryCodec.decode(
+            publishedLayout(version = 6, messageProperties = listOf("branch" to byteArrayOf(1, 0, 1), "branch.00" to repeatedIds)),
+        ).single()
+
+        assertNull(sanitized.messages.first().branches)
+        assertNotNull(ConversationHistoryCodec.decodeBranchVersions(payload, branchDepth = 32))
+        assertNull(ConversationHistoryCodec.decodeBranchVersions(payload, branchDepth = 33))
+    }
+
+    @Test
+    fun `history keeps at most 2 MiB of other versions per conversation (P6)`() {
+        val big = "z".repeat(900 * 1_024)
+        var messages = listOf(question(1, "Q"), assistant(2, big))
+        var next = 3L
+        repeat(3) {
+            messages = checkNotNull(ChatBranchPolicy.withNewVersion(messages, messages.first().id, question(next++, "Q"))) +
+                assistant(next++, big)
+        }
+
+        val normalized = ConversationHistoryPolicy.normalized(
+            listOf(conversation("versions", updatedAt = 300).copy(messages = messages)),
+        ).single()
+
+        assertEquals(messages.map(ChatMessage::id), normalized.messages.map(ChatMessage::id))
+        val branches = checkNotNull(normalized.messages.first().branches)
+        assertEquals(listOf(listOf(3L, 4L), listOf(5L, 6L)), branches.others.map { version -> version.map(ChatMessage::id) })
+        assertEquals(2, branches.selected)
+    }
+
+    private fun question(id: Long, text: String) = ChatMessage(id, ChatMessageRole.USER, text)
+
     /**
      * Byte for byte what each published format writes: a conversation without a target snapshot, one
      * user and one truncated assistant message with usage and target, and an empty context state.
@@ -385,23 +486,6 @@ class ConversationHistoryTest {
     }
 
     @Test
-    fun `edit impact removes the selected user node and every later message`() {
-        val messages = listOf(
-            ChatMessage(1, ChatMessageRole.USER, "keep"),
-            assistant(2, "keep answer"),
-            ChatMessage(3, ChatMessageRole.USER, "edit"),
-            assistant(4, "old branch"),
-            ChatMessage(5, ChatMessageRole.USER, "later"),
-        )
-
-        val impact = ConversationEditPolicy.impact(messages, 3)
-
-        assertEquals(MessageEditImpact(messageIndex = 2, laterMessageCount = 2), impact)
-        assertEquals(messages.take(2), ConversationEditPolicy.prefixBefore(messages, 3))
-        assertNull(ConversationEditPolicy.impact(messages, 2))
-    }
-
-    @Test
     fun `delete impact removes the selected sent message and every later message`() {
         val messages = listOf(
             ChatMessage(1, ChatMessageRole.USER, "keep"),
@@ -444,7 +528,7 @@ class ConversationHistoryTest {
     }
 
     @Test
-    fun `regeneration locates the paired user and reports later branch size`() {
+    fun `regeneration locates the paired user and the recorded target`() {
         val messages = listOf(
             ChatMessage(1, ChatMessageRole.USER, "first"),
             assistant(2, "answer"),
@@ -458,7 +542,6 @@ class ConversationHistoryTest {
         assertEquals(
             MessageRegenerationImpact(
                 userMessageId = 4,
-                laterMessageCount = 1,
                 responseTarget = assistantTarget,
             ),
             ConversationRegenerationPolicy.impact(messages, 6),

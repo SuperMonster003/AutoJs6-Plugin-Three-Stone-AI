@@ -81,28 +81,6 @@ def main():
     def run_as(*command):
         return shell("run-as", PACKAGE, *command, check=False)
 
-    def digest(path):
-        words = run_as("sha256sum", path).split()
-        return words[0] if words and SHA256.fullmatch(words[0]) else None
-
-    def read_state():
-        state = {key: digest(path) for key, path in DOCUMENTS.items()}
-        for name in sorted(run_as("ls", "shared_prefs").split()):
-            if name.endswith(".xml"):
-                # Entries, not bytes: a rewrite with the same values may store them in another order.
-                values = preference_values(run_as("cat", f"shared_prefs/{name}"))
-                canonical = "unparsable" if values is None else json.dumps(sorted(values.items()))
-                state[f"prefs {name[:-4]}"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-        models = []
-        for line in run_as("ls", "-ln", "files/models").splitlines():
-            words = line.split()
-            if len(words) >= 8 and words[0].startswith(("-", "d")):
-                models.append([words[-1], words[4]])
-        state["files/models (names and sizes)"] = sorted(models)
-        attachments = run_as("find", "files/attachments", "-type", "f")
-        state["stored attachment files"] = len([line for line in attachments.splitlines() if line.startswith("files/")])
-        return state
-
     sdk = shell("getprop", "ro.build.version.sdk").strip()
     model = shell("getprop", "ro.product.model").strip()
     abi = shell("getprop", "ro.product.cpu.abi").strip()
@@ -110,7 +88,7 @@ def main():
     print(f"device {args.serial} model={model} api={sdk} abi={abi} versionCode={version.group(1) if version else 'none'}")
 
     if args.snapshot:
-        state = read_state()
+        state = read_state(run_as)
         (output / f"state-{args.snapshot}.json").write_text(json.dumps(state, indent=1), encoding="utf-8")
         present = sum(1 for key, value in state.items() if key in DOCUMENTS and value)
         prefs = sum(1 for key in state if key.startswith("prefs "))
@@ -152,21 +130,52 @@ def main():
 
     if args.compare:
         saved = json.loads((output / f"state-{args.compare}.json").read_text(encoding="utf-8"))
-        current = read_state()
-        for key in sorted(set(saved) | set(current)):
-            before, after = saved.get(key), current.get(key)
-            if before == after:
-                verdict = "same" if before not in (None, [], 0) else "same (absent)"
-            elif key not in saved:
-                verdict = "NEW"
-            elif key not in current:
-                verdict = "GONE"
-            else:
-                verdict = "CHANGED"
-            passed &= verdict.startswith("same") or (key.startswith("prefs ") and verdict == "NEW")
-            print(f"  {key}: {verdict} compared with {args.compare}")
+        passed &= compare_states(saved, read_state(run_as), args.compare)
     print(f"{'PASS' if passed else 'FAIL'} attachment flow")
     return 0 if passed else 1
+
+
+def read_state(run_as):
+    """The state a flow must leave alone, read through run-as on the debug build."""
+
+    def digest(path):
+        words = run_as("sha256sum", path).split()
+        return words[0] if words and SHA256.fullmatch(words[0]) else None
+
+    state = {key: digest(path) for key, path in DOCUMENTS.items()}
+    for name in sorted(run_as("ls", "shared_prefs").split()):
+        if name.endswith(".xml"):
+            # Entries, not bytes: a rewrite with the same values may store them in another order.
+            values = preference_values(run_as("cat", f"shared_prefs/{name}"))
+            canonical = "unparsable" if values is None else json.dumps(sorted(values.items()))
+            state[f"prefs {name[:-4]}"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    models = []
+    for line in run_as("ls", "-ln", "files/models").splitlines():
+        words = line.split()
+        if len(words) >= 8 and words[0].startswith(("-", "d")):
+            models.append([words[-1], words[4]])
+    state["files/models (names and sizes)"] = sorted(models)
+    attachments = run_as("find", "files/attachments", "-type", "f")
+    state["stored attachment files"] = len([line for line in attachments.splitlines() if line.startswith("files/")])
+    return state
+
+
+def compare_states(saved, current, name):
+    """Prints per item only whether it is the same as in the state recorded as NAME; True when all are."""
+    passed = True
+    for key in sorted(set(saved) | set(current)):
+        before, after = saved.get(key), current.get(key)
+        if before == after:
+            verdict = "same" if before not in (None, [], 0) else "same (absent)"
+        elif key not in saved:
+            verdict = "NEW"
+        elif key not in current:
+            verdict = "GONE"
+        else:
+            verdict = "CHANGED"
+        passed &= verdict.startswith("same") or (key.startswith("prefs ") and verdict == "NEW")
+        print(f"  {key}: {verdict} compared with {name}")
+    return passed
 
 
 def report(label, result):

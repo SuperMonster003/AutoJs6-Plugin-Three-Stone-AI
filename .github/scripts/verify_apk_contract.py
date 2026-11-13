@@ -74,10 +74,20 @@ if args.pagesize is not None:
         adb('logcat', '-c')
     except subprocess.CalledProcessError:
         pass  # Evidence then also includes boot and installation lines.
-    output = adb('shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
-                 metadata['applicationId'] + '.PluginDiscoveryAndroidTest,' +
-                 metadata['applicationId'] + '.AbiCompatibilityAndroidTest',
-                 test['applicationId'] + '/androidx.test.runner.AndroidJUnitRunner')
+    try:
+        output = adb('shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
+                     metadata['applicationId'] + '.PluginDiscoveryAndroidTest,' +
+                     metadata['applicationId'] + '.AbiCompatibilityAndroidTest',
+                     test['applicationId'] + '/androidx.test.runner.AndroidJUnitRunner')
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        # A dying shell or runner makes adb fail; keep what the instrumentation printed before that.
+        output = error.output or ''
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', errors='replace')
+        output = output.strip()
+        reason = (f'timed out after {error.timeout} s' if isinstance(error, subprocess.TimeoutExpired)
+                  else f'exited with {error.returncode}')
+        print(f'am instrument {reason}; its output follows', flush=True)
     print(output, flush=True)
     passed = 'OK (7 tests)' in output and 'FAILURES!!!' not in output
     if not passed:

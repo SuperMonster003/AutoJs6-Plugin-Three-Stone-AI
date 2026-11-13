@@ -26,4 +26,30 @@ AVD_API_33 (x86_64, Android 13), started read-only as emulator-5970, with the sc
 
 ## XQ-DQ72
 
-Pending. The real requests of D131 (one picture to AIGoCode (Codex) / gpt-6.1-sol, one small PDF to the existing Anthropic service, one PDF to the Gemini service) need the maintainer's consent to install this debug build over build 336 first; they will be recorded here.
+XQ-DQ72 (QV770340J7, Android 13, arm64-v8a) through the remote adb server, with the maintainer's own data: three online services, two entries in `files/models`, the default target on the Anthropic service.
+
+### Consent and upgrade from 336 to 339 (2026-11-14 00:0x)
+
+- The maintainer agreed in this session ("同意", 2026-11-13 23:5x) to install debug build 339 (sources of 5b99a44) over debug build 336 with data kept. Nothing was uninstalled. At 21:4x the remote adb server listed no device, so nothing was done until the consent and the device were both there (23:55).
+- `.python/device_attachments_flow.py --snapshot pre339 --install --list --compare before336`: the state recorded through run-as before this card (default target, services document, local model catalog, conversation history, the entries of the nine preference files, names and sizes in `files/models`, number of attachment files) was the same after the install and the first launch. The script prints only same / changed per item, never content, keys, IDs or digests. The 32 MB APK took about 10 minutes over the remote link.
+- Online targets listed by the debug build (no request sent): AIGoCode (Codex) gpt-6.1-sol (OpenAI compatible, picture input on, no PDF), Gemini gemini-3.8-flash (picture input off, PDF), Anthropic claude-opus-5-5 / claude-fable-5-1 / claude-fable-5-2 (picture input off, PDF); all ready.
+
+### Requests (00:0x - 00:1x), one each, `--snapshot ready339 --request ... --compare ready339`
+
+ChatAttachmentRealDeviceFlowTest `oneRequestToARealService`, one instrumentation run per request. Each run picks the chosen target in a new conversation, injects the files the test generated itself (no file from the phone's storage, no system picker on the phone), sends one message, checks the stored message and its attachment files, logs only the status, the reply length and which expected words it contains, then deletes the conversation with its files and restores the default target and the preferences it touched. No API key was read or printed.
+
+| Case | Target | Files | Result |
+|---|---|---|---|
+| Picture (OpenAI compatible `image_url`) | AIGoCode (Codex) / gpt-6.1-sol | a 2-color PNG | PASS, complete after 22 s, 23 characters, names both colors (red, blue) |
+| PDF + text file (Anthropic `document` block + text envelope) | Anthropic / claude-opus-5-5 | a one-page PDF with a code word, a UTF-8 text file with a fruit | PASS, complete after 36 s, 40 characters, names both |
+| PDF + text file (Gemini `inline_data` + text envelope) | Gemini / gemini-3.8-flash | the same two files | PASS, complete after 117 s, 40 characters, names both |
+
+- Text-file injection was covered by the two PDF requests (D131).
+- No Gemini picture was sent: picture input is off for gemini-3.8-flash in the maintainer's service, and this card does not change the maintainer's settings. The Gemini service has no 2.5 model, so the Q15 round (a non-default effort on Gemini 2.5) was not run.
+- No request was repeated; there were no failures.
+
+### State left on the device
+
+- `--compare ready339` after the three requests: default target, services, local model catalog, conversation history, the nine preference files and `files/models` are the same as before the requests; no attachment file is stored (`files/attachments` holds only the empty `.pending` directory).
+- Debug build 339 stays installed with the maintainer's data; the androidTest APK is uninstalled; nothing was pushed to `/data/local/tmp`.
+- Not caused by this card: `cache/litertlm` still holds the XNNPACK cache (1.55 GB) of the model that the P5b flow downloaded and deleted on 2026-11-13 (same size and time as that model), so deleting that model left its cache behind. Left for a later card.

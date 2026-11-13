@@ -32,30 +32,90 @@ internal object ModelDownloadTransfer {
         model: RecommendedModel,
         ensureActive: () -> Unit = ::ensureThreadActive,
         progressListener: (ModelDownloadProgress) -> Unit = {},
+    ): ModelDownloadTransferResult = resumeAndVerify(
+        input = input,
+        output = output,
+        model = model,
+        alreadyCopied = 0L,
+        digest = MessageDigest.getInstance("SHA-256"),
+        ensureActive = ensureActive,
+        progressListener = progressListener,
+    )
+
+    /**
+     * Hashes the [length]-byte prefix already in a partial file so a resumed transfer can extend
+     * the same digest. The prefix must start with the LiteRT-LM header; anything else is discarded.
+     */
+    fun seedPartial(
+        input: InputStream,
+        length: Long,
+        ensureActive: () -> Unit = ::ensureThreadActive,
+        progressListener: (Long) -> Unit = {},
+    ): MessageDigest {
+        require(length >= ModelImportPolicy.LITERTLM_MAGIC_BYTES) { "Partial download is too short" }
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(COPY_BUFFER_BYTES)
+        val header = ByteArray(ModelImportPolicy.LITERTLM_MAGIC_BYTES)
+        var hashed = 0L
+        while (hashed < length) {
+            ensureActive()
+            val count = try {
+                input.read(buffer, 0, minOf(buffer.size.toLong(), length - hashed).toInt())
+            } catch (error: IOException) {
+                throw ModelDownloadFailureException(
+                    ModelDownloadFailureReason.DESTINATION_UNAVAILABLE,
+                    "Partial model download could not be read",
+                    error,
+                )
+            }
+            if (count < 0) {
+                throw ModelDownloadFailureException(
+                    ModelDownloadFailureReason.DESTINATION_UNAVAILABLE,
+                    "Partial model download ended early",
+                )
+            }
+            if (hashed < header.size) {
+                val headerBytes = minOf(count.toLong(), header.size - hashed).toInt()
+                buffer.copyInto(header, hashed.toInt(), 0, headerBytes)
+                if (hashed + count >= header.size) requireHeader(header)
+            }
+            digest.update(buffer, 0, count)
+            hashed += count
+            progressListener(hashed)
+        }
+        return digest
+    }
+
+    /**
+     * Appends the rest of a pinned model to [output], which already holds [alreadyCopied] bytes
+     * whose hash is in [digest], then verifies the exact size and SHA-256.
+     */
+    fun resumeAndVerify(
+        input: InputStream,
+        output: OutputStream,
+        model: RecommendedModel,
+        alreadyCopied: Long,
+        digest: MessageDigest,
+        ensureActive: () -> Unit = ::ensureThreadActive,
+        progressListener: (ModelDownloadProgress) -> Unit = {},
     ): ModelDownloadTransferResult {
         ModelDownloadPolicy.requireValidCatalogEntry(model)
-        val header = ByteArray(ModelImportPolicy.LITERTLM_MAGIC_BYTES)
-        var headerCount = 0
-        while (headerCount < header.size) {
-            ensureActive()
-            val count = read(input, header, headerCount, header.size - headerCount)
-            if (count < 0) break
-            headerCount += count
+        require(alreadyCopied in 0L..model.expectedSizeBytes) { "Resumed length is invalid" }
+        var copied = alreadyCopied
+        if (copied == 0L) {
+            val header = ByteArray(ModelImportPolicy.LITERTLM_MAGIC_BYTES)
+            var headerCount = 0
+            while (headerCount < header.size) {
+                ensureActive()
+                val count = read(input, header, headerCount, header.size - headerCount)
+                if (count < 0) break
+                headerCount += count
+            }
+            requireHeader(header.copyOf(headerCount))
+            write(output, header, 0, header.size)
+            digest.update(header)
+            copied = header.size.toLong()
         }
-        try {
-            ModelImportPolicy.requireLiteRtLmHeader(header.copyOf(headerCount))
-        } catch (error: ModelImportFailureException) {
-            throw ModelDownloadFailureException(
-                ModelDownloadFailureReason.INVALID_CONTENT,
-                "Downloaded content is not a LiteRT-LM model",
-                error,
-            )
-        }
-
-        val digest = MessageDigest.getInstance("SHA-256")
-        write(output, header, 0, header.size)
-        digest.update(header)
-        var copied = header.size.toLong()
         progressListener(ModelDownloadProgress(copied, model.expectedSizeBytes))
 
         val buffer = ByteArray(COPY_BUFFER_BYTES)
@@ -65,7 +125,7 @@ internal object ModelDownloadTransfer {
             val count = read(input, buffer, 0, minOf(buffer.size.toLong(), remaining).toInt())
             if (count < 0) {
                 throw ModelDownloadFailureException(
-                    ModelDownloadFailureReason.INTEGRITY_MISMATCH,
+                    ModelDownloadFailureReason.NETWORK_UNAVAILABLE,
                     "Downloaded model ended before its pinned size",
                 )
             }
@@ -82,17 +142,37 @@ internal object ModelDownloadTransfer {
                 "Downloaded model exceeds its pinned size",
             )
         }
+        return verifyDigest(digest, copied, model)
+    }
 
+    /** Final check for a partial file that already holds every pinned byte. */
+    fun verifyDigest(
+        digest: MessageDigest,
+        byteCount: Long,
+        model: RecommendedModel,
+    ): ModelDownloadTransferResult {
         val sha256 = digest.digest().joinToString(separator = "") { byte ->
             "%02x".format(byte.toInt() and 0xFF)
         }
-        if (sha256 != model.expectedSha256) {
+        if (byteCount != model.expectedSizeBytes || sha256 != model.expectedSha256) {
             throw ModelDownloadFailureException(
                 ModelDownloadFailureReason.INTEGRITY_MISMATCH,
                 "Downloaded model SHA-256 does not match its pinned digest",
             )
         }
-        return ModelDownloadTransferResult(copied, sha256)
+        return ModelDownloadTransferResult(byteCount, sha256)
+    }
+
+    private fun requireHeader(header: ByteArray) {
+        try {
+            ModelImportPolicy.requireLiteRtLmHeader(header)
+        } catch (error: ModelImportFailureException) {
+            throw ModelDownloadFailureException(
+                ModelDownloadFailureReason.INVALID_CONTENT,
+                "Downloaded content is not a LiteRT-LM model",
+                error,
+            )
+        }
     }
 
     private fun read(input: InputStream, buffer: ByteArray, offset: Int, length: Int): Int = try {

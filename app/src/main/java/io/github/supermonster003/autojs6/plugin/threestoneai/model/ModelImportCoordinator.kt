@@ -10,6 +10,7 @@ import android.util.Log
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmModelHealthChecker
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.ModelHealthChecker
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectory
+import java.io.File
 import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CopyOnWriteArraySet
@@ -78,6 +79,26 @@ internal sealed interface ModelHealthCheckState {
         }
     }
     data class Failed(val operationId: Long, val modelId: String) : ModelHealthCheckState
+}
+
+/**
+ * A model the download coordinator fetched into private storage and verified (D99). The import
+ * coordinator publishes it like an import and reports back through [onFinished] exactly once.
+ */
+internal class VerifiedDownloadImport(
+    val partFile: File,
+    val sha256: String,
+    val byteCount: Long,
+    val displayName: String,
+    val onFinished: (VerifiedDownloadImportOutcome) -> Unit,
+)
+
+internal enum class VerifiedDownloadImportStart { STARTED, BUSY, UNAVAILABLE }
+
+internal sealed interface VerifiedDownloadImportOutcome {
+    data class Imported(val modelId: String) : VerifiedDownloadImportOutcome
+    data object Cancelled : VerifiedDownloadImportOutcome
+    data object Failed : VerifiedDownloadImportOutcome
 }
 
 internal data class ModelManagerState(
@@ -397,12 +418,38 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         return true
     }
 
-    fun beginImport(uri: Uri, grantedFlags: Int): Boolean {
+    fun beginImport(uri: Uri, grantedFlags: Int): Boolean =
+        beginImportOperation(uri = uri, grantedFlags = grantedFlags, download = null)
+
+    /**
+     * [VerifiedDownloadImportStart.BUSY] means another model operation or the cold-start
+     * preparation still runs and the caller retries later; UNAVAILABLE means the catalog cannot be
+     * changed until the manager recovers, so waiting would not help.
+     */
+    fun beginVerifiedDownloadImport(download: VerifiedDownloadImport): VerifiedDownloadImportStart {
+        if (beginImportOperation(uri = null, grantedFlags = 0, download = download)) {
+            return VerifiedDownloadImportStart.STARTED
+        }
+        return synchronized(lifecycleLock) {
+            val state = stateMachine.snapshot()
+            val transient = state === ModelImportState.Preparing ||
+                state is ModelImportState.Running<*> ||
+                state is ModelImportState.Cancelling<*> ||
+                hasActiveManagerOperationLocked()
+            if (transient) VerifiedDownloadImportStart.BUSY else VerifiedDownloadImportStart.UNAVAILABLE
+        }
+    }
+
+    private fun beginImportOperation(
+        uri: Uri?,
+        grantedFlags: Int,
+        download: VerifiedDownloadImport?,
+    ): Boolean {
         val active = synchronized(lifecycleLock) {
             if (!catalogMutationAvailable || hasActiveManagerOperationLocked()) return false
             val operationId = stateMachine.begin() ?: return false
             val running = stateMachine.snapshot() as ModelImportState.Running<ImportedModel>
-            val persistedReadPermission = persistReadPermission(uri, grantedFlags)
+            val persistedReadPermission = uri != null && persistReadPermission(uri, grantedFlags)
             val control = ModelImportOperationControl { progress ->
                 val changed = synchronized(lifecycleLock) {
                     stateMachine.updateProgress(operationId, progress)
@@ -412,6 +459,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             val operation = ActiveImport(
                 operationId = operationId,
                 uri = uri,
+                download = download,
                 previous = running.previous,
                 persistedReadPermission = persistedReadPermission,
                 control = control,
@@ -432,8 +480,9 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         } catch (error: RejectedExecutionException) {
             val reason = ModelImportFailureReason.UNKNOWN
             logFailure(active.operationId, reason, error)
+            val cancelled = active.control.isCancellationRequested()
             val stateChanged = synchronized(lifecycleLock) {
-                if (active.control.isCancellationRequested()) {
+                if (cancelled) {
                     stateMachine.finishCancellation(active.operationId, active.previous)
                 } else {
                     stateMachine.fail(active.operationId, active.previous, reason)
@@ -441,6 +490,9 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             }
             active.finish()
             if (stateChanged) publishState()
+            active.download?.notifyFinished(
+                if (cancelled) VerifiedDownloadImportOutcome.Cancelled else VerifiedDownloadImportOutcome.Failed,
+            )
             return true
         }
         return true
@@ -476,7 +528,15 @@ internal class ModelImportCoordinator private constructor(context: Context) {
         var importFailure: Throwable? = null
         try {
             active.control.ensureActive()
-            imported = repository.importFrom(active.uri, active.control)
+            imported = active.download?.let { download ->
+                repository.importVerifiedDownload(
+                    partFile = download.partFile,
+                    sha256 = download.sha256,
+                    byteCount = download.byteCount,
+                    displayName = download.displayName,
+                    operation = active.control,
+                )
+            } ?: repository.importFrom(checkNotNull(active.uri), active.control)
             val publishedModel = checkNotNull(imported)
             active.control.reportProgress(
                 ModelImportProgress(
@@ -524,6 +584,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             snapshotFailure?.let { error ->
                 logFailure(active.operationId, ModelImportFailureReason.UNKNOWN, error)
             }
+            var outcome: VerifiedDownloadImportOutcome = VerifiedDownloadImportOutcome.Failed
             val stateChanged = synchronized(lifecycleLock) {
                 when {
                     recoveryFailure != null || snapshotFailure != null -> {
@@ -540,6 +601,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                         val snapshot = checkNotNull(refreshedSnapshot)
                         visibleManagerSnapshot = snapshot
                         catalogMutationAvailable = true
+                        outcome = VerifiedDownloadImportOutcome.Cancelled
                         stateMachine.finishCancellation(active.operationId, snapshot.selectedModel)
                     }
                     imported != null -> {
@@ -547,6 +609,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                         val selected = checkNotNull(snapshot.selectedModel)
                         visibleManagerSnapshot = snapshot
                         catalogMutationAvailable = true
+                        outcome = VerifiedDownloadImportOutcome.Imported(selected.modelId)
                         stateMachine.succeed(active.operationId, selected)
                     }
                     else -> {
@@ -562,6 +625,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             }
             active.finish()
             if (stateChanged) publishState()
+            active.download?.notifyFinished(outcome)
         }
     }
 
@@ -982,7 +1046,8 @@ internal class ModelImportCoordinator private constructor(context: Context) {
 
     private inner class ActiveImport(
         val operationId: Long,
-        val uri: Uri,
+        val uri: Uri?,
+        val download: VerifiedDownloadImport?,
         val previous: ImportedModel?,
         private val persistedReadPermission: Boolean,
         val control: ModelImportOperationControl,
@@ -1022,7 +1087,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
 
         private fun releaseReadPermissionOnce() {
             if (!persistedReadPermission || !permissionReleased.compareAndSet(false, true)) return
-            releaseReadPermission(uri)
+            uri?.let(::releaseReadPermission)
         }
     }
 
@@ -1036,4 +1101,8 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             instance ?: ModelImportCoordinator(context.applicationContext).also { instance = it }
         }
     }
+}
+
+private fun VerifiedDownloadImport.notifyFinished(outcome: VerifiedDownloadImportOutcome) {
+    runCatching { onFinished(outcome) }
 }

@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.text.format.DateUtils
 import android.text.format.Formatter
+import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -17,13 +18,14 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetIds
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
-import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadCleanupResult
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadCoordinator
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadFailureReason
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadProgress
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadStage
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadState
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.RecommendedModel
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.RecommendedModelCatalog
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.cardModel
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelDeletionState
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelDisplayNamePolicy
@@ -45,7 +47,6 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ui.ProgressPanel
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.SettingRow
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.confirmDialog
-import io.github.supermonster003.autojs6.plugin.threestoneai.ui.filledButton
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.inputDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.insertRowHairlines
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.itemCard
@@ -54,6 +55,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ui.sectionHeader
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.setRowEnabled
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.settingRow
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.textButton
 
 /**
  * The models and services page (roadmap 1.7.0 P5.2, D95, D104, D115). [OnlineServicesActivity] draws
@@ -66,10 +68,10 @@ class ModelManagerActivity : OnlineServicesActivity() {
     }
     private lateinit var importCoordinator: ModelImportCoordinator
     private lateinit var downloadCoordinator: ModelDownloadCoordinator
-    private lateinit var downloadStatus: TextView
     private lateinit var downloadRow: SettingRow
-    private lateinit var importDownloadedButton: MaterialButton
     private lateinit var downloadPanel: ProgressPanel
+    private lateinit var downloadPrimaryButton: MaterialButton
+    private lateinit var downloadCancelButton: MaterialButton
     private lateinit var status: TextView
     private lateinit var importRow: SettingRow
     private lateinit var importPanel: ProgressPanel
@@ -77,8 +79,8 @@ class ModelManagerActivity : OnlineServicesActivity() {
     private lateinit var catalogRows: LinearLayout
     private var cleanupEnabled = false
     private var cancellableOperationId: Long? = null
-    private var cancellableDownloadOperationId: Long? = null
-    private var downloadedDestination: ModelDownloadState.Succeeded<Uri>? = null
+    /** The download the card's buttons act on; the buttons only ever act on what is shown. */
+    private var renderedDownload: ModelDownloadState = ModelDownloadState.Idle
     private var lastNotifiedImportOperationId = 0L
     private var lastNotifiedDownloadOperationId = 0L
     private var lastNotifiedDeletionOperationId = 0L
@@ -110,20 +112,30 @@ class ModelManagerActivity : OnlineServicesActivity() {
         catalogRows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         content.addView(catalogRows)
 
+        // The download card (D99): progress of the one download in private storage, with pause /
+        // continue / retry and cancel. A finished download is handed to the import panel below.
         downloadPanel = ProgressPanel(this)
-            .withCancelAction(R.string.button_cancel_download) { cancelDownload() }
+        downloadPrimaryButton = textButton(R.string.button_pause_download, ::onDownloadPrimaryAction)
+        downloadCancelButton = textButton(R.string.button_cancel_download, ::cancelDownload)
+        downloadPanel.view.addView(
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                addView(downloadPrimaryButton)
+                addView(
+                    downloadCancelButton,
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ).apply { marginStart = uiDp(Ui.SPACE_SM) },
+                )
+            },
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = uiDp(Ui.SPACE_XS) },
+        )
         content.addView(downloadPanel.view, blockParams(topDp = Ui.SPACE_SM))
-        downloadStatus = paragraph().apply {
-            setTextIsSelectable(true)
-            visibility = View.GONE
-        }
-        content.addView(downloadStatus, blockParams(topDp = Ui.SPACE_SM, horizontalDp = 0))
-        importDownloadedButton = filledButton(R.string.button_import_downloaded_model) {
-            importDownloadedModel()
-        }.apply { visibility = View.GONE }
-        content.addView(importDownloadedButton, blockParams(bottomDp = Ui.SPACE_SM).apply {
-            width = LinearLayout.LayoutParams.WRAP_CONTENT
-        })
         importPanel = ProgressPanel(this)
             .withCancelAction(R.string.button_cancel_import) { cancelImport() }
         content.addView(importPanel.view, blockParams(topDp = Ui.SPACE_SM))
@@ -232,11 +244,9 @@ class ModelManagerActivity : OnlineServicesActivity() {
                 data?.data?.let { uri -> importModel(uri, data.flags) }
             }
             REQUEST_CHOOSE_LITERT_MODEL -> if (resultCode == RESULT_OK) {
-                val model = data?.getStringExtra(LiteRtModelCatalogActivity.EXTRA_MODEL_ID)
+                data?.getStringExtra(LiteRtModelCatalogActivity.EXTRA_MODEL_ID)
                     ?.let(RecommendedModelCatalog::find)
-                if (model != null) {
-                    data?.data?.let { uri -> downloadModel(model, uri, data.flags) }
-                }
+                    ?.let(::downloadModel)
             }
         }
     }
@@ -291,159 +301,141 @@ class ModelManagerActivity : OnlineServicesActivity() {
         )
     }
 
-    private fun downloadModel(model: RecommendedModel, destination: Uri, grantedFlags: Int) {
+    private fun downloadModel(model: RecommendedModel) {
         if (!localRuntimeAvailable) return
-        val accepted = downloadCoordinator.beginDownload(model, destination, grantedFlags)
+        val accepted = downloadCoordinator.beginDownload(model)
         renderDownloadState(downloadCoordinator.state())
         if (!accepted) {
             showSnackbar(screenRoot, getString(R.string.download_already_running), Snackbar.LENGTH_LONG)
         }
     }
 
+    private fun onDownloadPrimaryAction() {
+        val accepted = when (val state = renderedDownload) {
+            is ModelDownloadState.Running -> downloadCoordinator.pauseDownload(state.operationId)
+            is ModelDownloadState.Paused -> downloadCoordinator.beginDownload(state.model)
+            is ModelDownloadState.Failed -> downloadCoordinator.beginDownload(state.model)
+            else -> false
+        }
+        if (!accepted) renderDownloadState(downloadCoordinator.state())
+    }
+
     private fun cancelDownload() {
-        val operationId = cancellableDownloadOperationId ?: return
-        downloadPanel.setCancelEnabled(false)
+        val operationId = when (val state = renderedDownload) {
+            is ModelDownloadState.Running -> state.operationId
+            is ModelDownloadState.Pausing -> state.operationId
+            is ModelDownloadState.Paused -> state.operationId
+            is ModelDownloadState.Failed -> state.operationId
+            else -> return
+        }
+        downloadCancelButton.isEnabled = false
         if (downloadCoordinator.cancelDownload(operationId)) return
         renderDownloadState(downloadCoordinator.state())
     }
 
-    private fun importDownloadedModel() {
-        val completed = downloadedDestination ?: return
-        val preflight = refreshImportStoragePreflight()
-        if (completed.model.expectedSizeBytes > preflight.maximumAdditionalModelBytes) {
-            showSnackbar(
-                screenRoot,
-                getString(
-                    R.string.download_import_insufficient_storage,
-                    Formatter.formatFileSize(this, completed.model.expectedSizeBytes),
-                    Formatter.formatFileSize(this, preflight.maximumAdditionalModelBytes),
-                ),
-                Snackbar.LENGTH_LONG,
-            )
-            return
-        }
-        val accepted = importCoordinator.beginImport(completed.destination, completed.grantedFlags)
-        renderManagerState(importCoordinator.managerState())
-        if (!accepted) {
-            showSnackbar(screenRoot, getString(R.string.download_import_unavailable), Snackbar.LENGTH_LONG)
-        }
-    }
-
-    private fun renderDownloadState(state: ModelDownloadState<Uri>) {
+    private fun renderDownloadState(state: ModelDownloadState) {
+        renderedDownload = state
         when (state) {
-            ModelDownloadState.Idle -> {
-                setDownloadUi(inProgress = false, startEnabled = true)
-                // The download row already explains downloads; the status line only reports results.
-                downloadStatus.text = null
-                downloadStatus.visibility = View.GONE
+            is ModelDownloadState.Cancelled ->
+                notifyDownloadOnce(state.operationId, getString(R.string.download_cancelled), Snackbar.LENGTH_LONG)
+            is ModelDownloadState.Failed ->
+                notifyDownloadOnce(state.operationId, getString(downloadFailureMessage(state.reason)), Snackbar.LENGTH_LONG)
+            // A verified download continues in the import panel, which reports the result.
+            else -> Unit
+        }
+        val model = state.cardModel
+        if (model == null) {
+            downloadPanel.hide()
+        } else {
+            showDownloadCard(model, state)
+        }
+        val active = state is ModelDownloadState.Running ||
+            state is ModelDownloadState.Pausing ||
+            state is ModelDownloadState.Cancelling
+        downloadStateAllowsStart = !active
+        downloadBlocksImport = active
+        updateDownloadButtonEnabled()
+        updateImportButtonEnabled()
+    }
+
+    private fun showDownloadCard(model: RecommendedModel, state: ModelDownloadState) {
+        val name = model.displayName
+        when (state) {
+            is ModelDownloadState.Running -> when (state.stage) {
+                ModelDownloadStage.CHECKING_PARTIAL ->
+                    showDownloadProgress(name, state.progress, getString(R.string.download_checking_partial))
+                ModelDownloadStage.CONNECTING -> if (state.progress.processedBytes == 0L) {
+                    downloadPanel.showIndeterminate(getString(R.string.download_connecting, name))
+                } else {
+                    showDownloadProgress(name, state.progress, getString(R.string.download_connecting, name))
+                }
+                ModelDownloadStage.DOWNLOADING -> showDownloadProgress(name, state.progress)
+                ModelDownloadStage.WAITING_FOR_IMPORT,
+                ModelDownloadStage.IMPORTING,
+                -> showDownloadProgress(name, state.progress, getString(R.string.download_waiting_import))
             }
-            is ModelDownloadState.Running -> {
-                setDownloadUi(
-                    inProgress = true,
-                    startEnabled = false,
-                    cancelOperationId = state.operationId,
-                )
-                showDownloadProgress(state.model, state.progress)
-            }
-            is ModelDownloadState.Cancelling -> {
-                setDownloadUi(inProgress = true, startEnabled = false)
-                showDownloadProgress(
-                    state.model,
-                    state.progress,
-                    labelOverride = getString(R.string.download_cancelling, state.model.displayName),
-                )
-            }
-            is ModelDownloadState.Succeeded -> {
-                setDownloadUi(inProgress = false, startEnabled = true, completed = state)
-                downloadStatus.text = getString(
-                    R.string.download_succeeded,
-                    state.model.displayName,
-                    Formatter.formatFileSize(this, state.model.expectedSizeBytes),
-                )
-                notifyDownloadOnce(
-                    state.operationId,
-                    getString(R.string.download_succeeded_toast),
-                    Snackbar.LENGTH_SHORT,
-                )
-            }
-            is ModelDownloadState.Cancelled -> {
-                setDownloadUi(inProgress = false, startEnabled = true)
-                val message = terminalDownloadMessage(
-                    getString(R.string.download_cancelled),
-                    state.cleanup,
-                )
-                downloadStatus.text = message
-                notifyDownloadOnce(state.operationId, message, Snackbar.LENGTH_LONG)
-            }
+            is ModelDownloadState.Pausing ->
+                showDownloadProgress(name, state.progress, getString(R.string.download_pausing))
+            is ModelDownloadState.Cancelling ->
+                showDownloadProgress(name, state.progress, getString(R.string.download_cancelling, name))
+            is ModelDownloadState.Paused -> showDownloadProgress(
+                name,
+                state.progress,
+                getString(
+                    R.string.download_paused,
+                    Formatter.formatFileSize(this, state.progress.processedBytes),
+                    Formatter.formatFileSize(this, state.progress.totalBytes),
+                ),
+            )
             is ModelDownloadState.Failed -> {
-                setDownloadUi(inProgress = false, startEnabled = true)
-                val message = terminalDownloadMessage(
-                    getString(downloadFailureMessage(state.reason)),
-                    state.cleanup,
+                val reason = getString(downloadFailureMessage(state.reason))
+                val meta = if (state.downloadedBytes > 0L) {
+                    reason + "\n" + getString(
+                        R.string.download_resumable,
+                        Formatter.formatFileSize(this, state.downloadedBytes),
+                    )
+                } else {
+                    reason
+                }
+                showDownloadProgress(
+                    name,
+                    ModelDownloadProgress(state.downloadedBytes, model.expectedSizeBytes),
+                    meta,
                 )
-                downloadStatus.text = message
-                notifyDownloadOnce(state.operationId, message, Snackbar.LENGTH_LONG)
             }
+            else -> downloadPanel.hide()
+        }
+        val primary = when (state) {
+            is ModelDownloadState.Running -> R.string.button_pause_download.takeIf { state.stage.pausable }
+            is ModelDownloadState.Paused -> R.string.button_resume_download
+            is ModelDownloadState.Failed -> R.string.button_retry_download
+            else -> null
+        }
+        downloadPrimaryButton.visibility = if (primary == null) View.GONE else View.VISIBLE
+        primary?.let { downloadPrimaryButton.setText(it) }
+        downloadCancelButton.isEnabled = when (state) {
+            is ModelDownloadState.Running -> state.stage.cancellable
+            is ModelDownloadState.Pausing,
+            is ModelDownloadState.Paused,
+            is ModelDownloadState.Failed,
+            -> true
+            else -> false
         }
     }
 
-    private fun showDownloadProgress(
-        model: RecommendedModel,
-        value: ModelDownloadProgress,
-        labelOverride: CharSequence? = null,
-    ) {
-        if (value.processedBytes == 0L) {
-            downloadPanel.showIndeterminate(
-                labelOverride ?: getString(R.string.download_connecting, model.displayName),
-            )
-            return
-        }
-        val progress = if (value.processedBytes >= value.totalBytes) {
+    private fun showDownloadProgress(label: CharSequence, value: ModelDownloadProgress, status: CharSequence? = null) {
+        val progress = if (value.totalBytes <= 0L || value.processedBytes >= value.totalBytes) {
             PROGRESS_MAX
         } else {
             (value.processedBytes * PROGRESS_MAX / value.totalBytes).toInt()
         }
-        downloadPanel.showProgress(
-            labelOverride ?: model.displayName,
-            progress,
-            transferMeta(value.processedBytes, value.totalBytes, progress / (PROGRESS_MAX / 100)),
-        )
+        val transfer = transferMeta(value.processedBytes, value.totalBytes, progress / (PROGRESS_MAX / 100))
+        downloadPanel.showProgress(label, progress, status ?: transfer)
     }
 
     private fun transferMeta(processedBytes: Long, totalBytes: Long, percent: Int): String =
         "${Formatter.formatFileSize(this, processedBytes)} / " +
             "${Formatter.formatFileSize(this, totalBytes)} ($percent%)"
-
-    private fun setDownloadUi(
-        inProgress: Boolean,
-        startEnabled: Boolean,
-        cancelOperationId: Long? = null,
-        completed: ModelDownloadState.Succeeded<Uri>? = null,
-    ) {
-        cancellableDownloadOperationId = cancelOperationId
-        downloadedDestination = completed
-        if (!inProgress) downloadPanel.hide()
-        downloadPanel.setCancelEnabled(cancelOperationId != null)
-        downloadStatus.visibility = if (inProgress) View.GONE else View.VISIBLE
-        importDownloadedButton.visibility = if (completed == null) View.GONE else View.VISIBLE
-        downloadStateAllowsStart = startEnabled
-        downloadBlocksImport = inProgress
-        updateDownloadButtonEnabled()
-        updateImportButtonEnabled()
-    }
-
-    private fun terminalDownloadMessage(
-        message: String,
-        cleanup: ModelDownloadCleanupResult,
-    ): String = when (cleanup) {
-        ModelDownloadCleanupResult.NOT_NEEDED,
-        ModelDownloadCleanupResult.DELETED,
-        -> message
-        ModelDownloadCleanupResult.TRUNCATED ->
-            "$message\n${getString(R.string.download_cleanup_truncated)}"
-        ModelDownloadCleanupResult.FAILED ->
-            "$message\n${getString(R.string.download_cleanup_failed)}"
-    }
 
     private fun downloadFailureMessage(reason: ModelDownloadFailureReason): Int = when (reason) {
         ModelDownloadFailureReason.NETWORK_UNAVAILABLE -> R.string.download_failed_network
@@ -452,7 +444,9 @@ class ModelManagerActivity : OnlineServicesActivity() {
         ModelDownloadFailureReason.INTEGRITY_MISMATCH -> R.string.download_failed_integrity
         ModelDownloadFailureReason.DESTINATION_UNAVAILABLE ->
             R.string.download_failed_destination
+        ModelDownloadFailureReason.INSUFFICIENT_STORAGE -> R.string.download_failed_storage
         ModelDownloadFailureReason.INTERRUPTED -> R.string.download_failed_interrupted
+        ModelDownloadFailureReason.IMPORT_FAILED -> R.string.download_failed_import
         ModelDownloadFailureReason.UNKNOWN -> R.string.download_failed
     }
 
@@ -887,7 +881,6 @@ class ModelManagerActivity : OnlineServicesActivity() {
         val enabled = localRuntimeAvailable && importStateAllowsPicker &&
             !catalogMutationBlocksPicker && storageAllowsPicker && !downloadBlocksImport
         importRow.setRowEnabled(enabled)
-        importDownloadedButton.isEnabled = enabled && downloadedDestination != null
     }
 
     private fun updateDownloadButtonEnabled() {

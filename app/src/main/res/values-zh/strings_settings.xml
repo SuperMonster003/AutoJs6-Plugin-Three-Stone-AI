@@ -12,7 +12,7 @@
     <string name="models_default_target_format">%1$s | %2$s</string>
     <string name="models_default_target_none">未设置</string>
     <string name="models_detail_imported">导入时间: %1$s</string>
-    <string name="models_import_file_summary">选择设备上的 .litertlm 模型文件</string>
+    <string name="models_import_file_summary">选择设备上的 .litertlm 模型文件, 例如以前下载到其他位置的模型</string>
     <string name="models_local_section">本地模型</string>
     <string name="models_section_actions">更多操作</string>
     <string name="online_ai_catalog_automatic_off">已关闭预置模型自动更新</string>

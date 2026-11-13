@@ -72,13 +72,14 @@
     <string name="button_cancel_download">取消下载</string>
     <string name="button_cancel_import">取消导入</string>
     <string name="button_check_model">检查模型</string>
-    <string name="button_choose_download_location">选择保存位置</string>
     <string name="button_cleanup_storage">清理未引用文件</string>
     <string name="button_copy_model_id">复制模型 ID</string>
     <string name="button_delete_model">删除模型</string>
-    <string name="button_import_downloaded_model">导入已下载模型</string>
     <string name="button_import_model">导入模型文件</string>
+    <string name="button_pause_download">暂停</string>
     <string name="button_rename_model">重命名</string>
+    <string name="button_resume_download">继续</string>
+    <string name="button_retry_download">重试</string>
     <string name="button_view_model_source">模型来源</string>
     <string name="chat_assistant_bubble_style">回复消息气泡</string>
     <string name="chat_bubble_style_background">背景着色</string>
@@ -241,24 +242,26 @@
     <string name="download_already_running">已有模型下载任务正在运行</string>
     <string name="download_cancelled">模型下载已取消.</string>
     <string name="download_cancelling" tools:ignore="TypographyEllipsis">正在取消 %1$s 下载...</string>
-    <string name="download_cleanup_failed">无法清除未完整的目标文件, 请手动删除.</string>
-    <string name="download_cleanup_truncated">未完整内容已清空, 但可能仍保留一个空文件.</string>
-    <string name="download_confirm_message">下载大小: %1$s\n固定 SHA-256: %2$s\n许可证: %3$s\n\n请在系统文件选择器中选择任意可写位置. 除非有意使用移动数据, 否则建议使用 Wi-Fi. 模型通过校验后才可导入.</string>
+    <string name="download_checking_partial" tools:ignore="TypographyEllipsis">正在校验已下载的部分...</string>
+    <string name="download_confirm_discards_paused">开始后会放弃未完成的 %1$s 下载.</string>
+    <string name="download_confirm_memory_warning">本机内存约 %1$s, 低于该模型的最低要求 %2$d GB. 仍可下载, 但模型可能无法加载或运行很慢.</string>
+    <string name="download_confirm_message">下载大小: %1$s\n固定 SHA-256: %2$s\n许可证: %3$s\n最低内存: %4$d GB\n\n模型会下载到应用的私有存储, 校验通过后自动导入. 除非有意使用移动数据, 否则建议使用 Wi-Fi.</string>
     <string name="download_connecting" tools:ignore="TypographyEllipsis">正在连接以下载 %1$s...</string>
-    <string name="download_description">只有在选择模型和保存位置后才会开始下载. 推理始终离线; 每个下载均固定版本并完整校验.</string>
-    <string name="download_destination_unavailable">系统无法打开保存位置选择器</string>
+    <string name="download_description">下载到应用的私有存储, 校验通过后自动导入. 推理始终离线; 每个下载均固定版本并完整校验.</string>
     <string name="download_failed">模型下载失败</string>
-    <string name="download_failed_destination">模型下载失败: 无法写入所选位置</string>
+    <string name="download_failed_destination">模型下载失败: 无法写入应用存储</string>
     <string name="download_failed_http">模型下载失败: 服务器拒绝请求或发生意外重定向</string>
+    <string name="download_failed_import">模型已下载, 但导入失败, 可以重试</string>
     <string name="download_failed_integrity">模型下载失败: 文件大小或 SHA-256 与固定值不符</string>
     <string name="download_failed_interrupted">模型下载已中断</string>
     <string name="download_failed_invalid_content">模型下载失败: 响应内容不是 LiteRT-LM 模型</string>
     <string name="download_failed_network">模型下载失败: 请检查网络连接后重试</string>
-    <string name="download_import_insufficient_storage">导入约需 %1$s 私有存储, 当前导入预算为 %2$s.</string>
-    <string name="download_import_unavailable">其他模型操作进行期间无法导入已下载模型</string>
+    <string name="download_failed_storage">模型下载失败: 存储空间不足, 释放空间后重试</string>
+    <string name="download_paused">已暂停, 已下载 %1$s / %2$s</string>
+    <string name="download_pausing" tools:ignore="TypographyEllipsis">正在暂停...</string>
+    <string name="download_resumable">已下载 %1$s, 重试会从这里继续.</string>
     <string name="download_source_unavailable">没有应用可以打开模型来源页面</string>
-    <string name="download_succeeded">已下载并校验: %1$s (%2$s). 现在可以导入, 也可以保留外部文件以后再用.</string>
-    <string name="download_succeeded_toast">模型已下载并通过校验</string>
+    <string name="download_waiting_import" tools:ignore="TypographyEllipsis">下载完成, 正在等待导入...</string>
     <string name="form_discard_changes_confirm">放弃</string>
     <string name="form_discard_changes_message">尚未保存的更改将会丢失.</string>
     <string name="form_discard_changes_title">放弃更改?</string>

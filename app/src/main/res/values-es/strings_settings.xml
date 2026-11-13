@@ -12,7 +12,7 @@
     <string name="models_default_target_format">%1$s | %2$s</string>
     <string name="models_default_target_none">Sin configurar</string>
     <string name="models_detail_imported">Importado: %1$s</string>
-    <string name="models_import_file_summary">Elegir un archivo de modelo .litertlm del dispositivo</string>
+    <string name="models_import_file_summary">Elegir un archivo de modelo .litertlm del dispositivo, como uno descargado antes en otra ubicación</string>
     <string name="models_local_section">Modelos locales</string>
     <string name="models_section_actions">Más acciones</string>
     <string name="online_ai_catalog_automatic_off">Actualización automática de modelos predefinidos desactivada</string>

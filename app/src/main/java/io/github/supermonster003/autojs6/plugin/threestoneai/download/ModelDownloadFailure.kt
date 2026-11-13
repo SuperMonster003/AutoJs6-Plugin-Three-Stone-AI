@@ -6,7 +6,9 @@ internal enum class ModelDownloadFailureReason {
     INVALID_CONTENT,
     INTEGRITY_MISMATCH,
     DESTINATION_UNAVAILABLE,
+    INSUFFICIENT_STORAGE,
     INTERRUPTED,
+    IMPORT_FAILED,
     UNKNOWN,
 }
 
@@ -15,10 +17,3 @@ internal class ModelDownloadFailureException(
     message: String,
     cause: Throwable? = null,
 ) : Exception(message, cause)
-
-internal enum class ModelDownloadCleanupResult {
-    NOT_NEEDED,
-    DELETED,
-    TRUNCATED,
-    FAILED,
-}

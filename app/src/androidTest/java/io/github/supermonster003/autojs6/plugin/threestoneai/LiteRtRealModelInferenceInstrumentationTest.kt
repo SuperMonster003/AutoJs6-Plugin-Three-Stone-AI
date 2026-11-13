@@ -191,7 +191,7 @@ class LiteRtRealModelInferenceInstrumentationTest {
         val control = ModelDownloadOperationControl()
         val startedNanos = System.nanoTime()
         try {
-            val download = HttpsModelDownloadClient.open(model, control)
+            val download = HttpsModelDownloadClient.open(model, control, offset = 0L)
             download.input.use { input ->
                 partial.outputStream().use { output ->
                     ModelDownloadTransfer.copyAndVerify(input, output, model, control::ensureActive)

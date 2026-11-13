@@ -12,7 +12,7 @@
     <string name="models_default_target_format">%1$s | %2$s</string>
     <string name="models_default_target_none">설정 안 됨</string>
     <string name="models_detail_imported">가져온 시간: %1$s</string>
-    <string name="models_import_file_summary">기기의 .litertlm 모델 파일 선택</string>
+    <string name="models_import_file_summary">기기의 .litertlm 모델 파일 선택 (예: 이전에 다른 위치에 다운로드한 모델)</string>
     <string name="models_local_section">로컬 모델</string>
     <string name="models_section_actions">추가 작업</string>
     <string name="online_ai_catalog_automatic_off">사전 설정 모델 자동 업데이트를 껐습니다</string>

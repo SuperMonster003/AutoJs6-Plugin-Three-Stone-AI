@@ -12,7 +12,7 @@
     <string name="models_default_target_format">%1$s | %2$s</string>
     <string name="models_default_target_none">未設定</string>
     <string name="models_detail_imported">インポート日時: %1$s</string>
-    <string name="models_import_file_summary">端末上の .litertlm モデルファイルを選択</string>
+    <string name="models_import_file_summary">端末上の .litertlm モデルファイル (以前ほかの場所にダウンロードしたものなど) を選択</string>
     <string name="models_local_section">ローカルモデル</string>
     <string name="models_section_actions">その他の操作</string>
     <string name="online_ai_catalog_automatic_off">プリセットモデルの自動更新をオフにしました</string>

@@ -45,13 +45,14 @@
     <string name="button_cancel_download">Annuler le téléchargement</string>
     <string name="button_cancel_import">Annuler l\'import</string>
     <string name="button_check_model">Vérifier le modèle</string>
-    <string name="button_choose_download_location">Choisir l\'emplacement</string>
     <string name="button_cleanup_storage">Nettoyer les fichiers non référencés</string>
     <string name="button_copy_model_id">Copier l\'ID du modèle</string>
     <string name="button_delete_model">Supprimer le modèle</string>
-    <string name="button_import_downloaded_model">Importer le modèle téléchargé</string>
     <string name="button_import_model">Importer un fichier de modèle</string>
+    <string name="button_pause_download">Suspendre</string>
     <string name="button_rename_model">Renommer</string>
+    <string name="button_resume_download">Reprendre</string>
+    <string name="button_retry_download">Réessayer</string>
     <string name="button_view_model_source">Source du modèle</string>
     <string name="chat_cancel_editing">Annuler</string>
     <string name="chat_choose_target">Choisir une cible</string>
@@ -189,24 +190,26 @@
     <string name="download_already_running">Un téléchargement de modèle est déjà en cours</string>
     <string name="download_cancelled">Téléchargement annulé.</string>
     <string name="download_cancelling" tools:ignore="TypographyEllipsis">Annulation du téléchargement de %1$s...</string>
-    <string name="download_cleanup_failed">Impossible d\'effacer la destination incomplète. Supprimez-la manuellement.</string>
-    <string name="download_cleanup_truncated">Le contenu incomplet a été effacé, mais un document vide peut subsister.</string>
-    <string name="download_confirm_message">Taille: %1$s\nSHA-256 épinglé: %2$s\nLicence: %3$s\n\nChoisissez un emplacement accessible en écriture dans le sélecteur système. Utilisez le Wi-Fi sauf si vous souhaitez utiliser les données mobiles. Le modèle est vérifié avant de pouvoir être importé.</string>
+    <string name="download_checking_partial" tools:ignore="TypographyEllipsis">Vérification de la partie téléchargée...</string>
+    <string name="download_confirm_discards_paused">Commencer abandonne le téléchargement inachevé de %1$s.</string>
+    <string name="download_confirm_memory_warning">Cet appareil dispose d\'environ %1$s de mémoire, moins que les %2$d Go requis par ce modèle. Vous pouvez quand même le télécharger, mais il risque de ne pas se charger ou d\'être très lent.</string>
+    <string name="download_confirm_message">Taille: %1$s\nSHA-256 épinglé: %2$s\nLicence: %3$s\nMémoire minimale: %4$d Go\n\nLe modèle est téléchargé dans le stockage privé de l\'application et importé automatiquement une fois vérifié. Utilisez le Wi-Fi sauf si vous souhaitez utiliser les données mobiles.</string>
     <string name="download_connecting" tools:ignore="TypographyEllipsis">Connexion pour télécharger %1$s...</string>
-    <string name="download_description">Le téléchargement ne commence qu\'après le choix du modèle et de l\'emplacement. L\'inférence reste hors ligne; chaque téléchargement est épinglé et vérifié.</string>
-    <string name="download_destination_unavailable">Impossible d\'ouvrir le sélecteur d\'emplacement système</string>
+    <string name="download_description">Téléchargé dans le stockage privé de l\'application, puis importé automatiquement une fois vérifié. L\'inférence reste hors ligne; chaque téléchargement est épinglé et vérifié.</string>
     <string name="download_failed">Échec du téléchargement du modèle</string>
-    <string name="download_failed_destination">Échec du téléchargement: impossible d\'écrire dans la destination choisie</string>
+    <string name="download_failed_destination">Échec du téléchargement: impossible d\'écrire dans le stockage de l\'application</string>
     <string name="download_failed_http">Échec du téléchargement: requête refusée ou redirection inattendue</string>
+    <string name="download_failed_import">Le modèle a été téléchargé, mais son importation a échoué; vous pouvez réessayer</string>
     <string name="download_failed_integrity">Échec du téléchargement: la taille ou le SHA-256 épinglé ne correspond pas</string>
     <string name="download_failed_interrupted">Le téléchargement du modèle a été interrompu</string>
     <string name="download_failed_invalid_content">Échec du téléchargement: la réponse n\'est pas un modèle LiteRT-LM</string>
     <string name="download_failed_network">Échec du téléchargement: vérifiez la connexion réseau et réessayez</string>
-    <string name="download_import_insufficient_storage">L\'import nécessite environ %1$s de stockage privé, mais le budget actuel est de %2$s.</string>
-    <string name="download_import_unavailable">Le modèle téléchargé ne peut pas être importé pendant une autre opération</string>
+    <string name="download_failed_storage">Échec du téléchargement: espace de stockage insuffisant, libérez de l\'espace et réessayez</string>
+    <string name="download_paused">Suspendu, %1$s sur %2$s téléchargés</string>
+    <string name="download_pausing" tools:ignore="TypographyEllipsis">Suspension...</string>
+    <string name="download_resumable">%1$s déjà téléchargés; une nouvelle tentative reprend à partir de là.</string>
     <string name="download_source_unavailable">Aucune application ne peut ouvrir la page source du modèle</string>
-    <string name="download_succeeded">Téléchargé et vérifié: %1$s (%2$s). Vous pouvez l\'importer maintenant ou conserver le fichier externe.</string>
-    <string name="download_succeeded_toast">Modèle téléchargé et vérifié</string>
+    <string name="download_waiting_import" tools:ignore="TypographyEllipsis">Téléchargement terminé, en attente de l\'importation...</string>
     <string name="form_discard_changes_confirm">Abandonner</string>
     <string name="form_discard_changes_message">Les modifications non enregistrées seront perdues.</string>
     <string name="form_discard_changes_title">Abandonner les modifications?</string>

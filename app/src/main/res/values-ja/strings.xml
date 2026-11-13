@@ -45,13 +45,14 @@
     <string name="button_cancel_download">ダウンロードをキャンセル</string>
     <string name="button_cancel_import">インポートをキャンセル</string>
     <string name="button_check_model">モデルをチェック</string>
-    <string name="button_choose_download_location">保存先を選択</string>
     <string name="button_cleanup_storage">未参照ファイルをクリーンアップ</string>
     <string name="button_copy_model_id">モデル ID をコピー</string>
     <string name="button_delete_model">モデルを削除</string>
-    <string name="button_import_downloaded_model">ダウンロード済みモデルをインポート</string>
     <string name="button_import_model">モデルファイルをインポート</string>
+    <string name="button_pause_download">一時停止</string>
     <string name="button_rename_model">名前を変更</string>
+    <string name="button_resume_download">再開</string>
+    <string name="button_retry_download">再試行</string>
     <string name="button_view_model_source">モデルの配布元</string>
     <string name="chat_cancel_editing">キャンセル</string>
     <string name="chat_choose_target">ターゲットを選択</string>
@@ -189,24 +190,26 @@
     <string name="download_already_running">モデルのダウンロードがすでに実行中です</string>
     <string name="download_cancelled">モデルのダウンロードをキャンセルしました.</string>
     <string name="download_cancelling" tools:ignore="TypographyEllipsis">%1$s のダウンロードをキャンセルしています...</string>
-    <string name="download_cleanup_failed">不完全な保存先を消去できませんでした. 手動で削除してください.</string>
-    <string name="download_cleanup_truncated">不完全な内容は消去されましたが, 空のドキュメントが残っている場合があります.</string>
-    <string name="download_confirm_message">ダウンロードサイズ: %1$s\n固定 SHA-256: %2$s\nライセンス: %3$s\n\nシステムのファイル選択画面で書き込み可能な保存先を選んでください. モバイルデータを使う意図がなければ Wi-Fi を使用してください. モデルは検証後にのみインポートできます.</string>
+    <string name="download_checking_partial" tools:ignore="TypographyEllipsis">ダウンロード済みの部分を検証しています...</string>
+    <string name="download_confirm_discards_paused">開始すると, 未完了の %1$s のダウンロードは破棄されます.</string>
+    <string name="download_confirm_memory_warning">この端末のメモリは約 %1$s で, このモデルに必要な %2$d GB を下回っています. ダウンロードはできますが, 読み込めないか動作が非常に遅くなる可能性があります.</string>
+    <string name="download_confirm_message">ダウンロードサイズ: %1$s\n固定 SHA-256: %2$s\nライセンス: %3$s\n最小メモリ: %4$d GB\n\nモデルはアプリの非公開ストレージにダウンロードされ, 検証後に自動でインポートされます. モバイルデータを使う意図がなければ Wi-Fi を使用してください.</string>
     <string name="download_connecting" tools:ignore="TypographyEllipsis">%1$s のダウンロードに接続しています...</string>
-    <string name="download_description">モデルと保存先を選んだ後にのみダウンロードを開始します. 推論は常にオフラインで, 各ダウンロードは固定され検証されます.</string>
-    <string name="download_destination_unavailable">システムの保存先選択画面を開けませんでした</string>
+    <string name="download_description">アプリの非公開ストレージにダウンロードし, 検証後に自動でインポートします. 推論は常にオフラインで, 各ダウンロードは固定され検証されます.</string>
     <string name="download_failed">モデルのダウンロードに失敗しました</string>
-    <string name="download_failed_destination">ダウンロード失敗: 選択した保存先に書き込めませんでした</string>
+    <string name="download_failed_destination">ダウンロード失敗: アプリのストレージに書き込めませんでした</string>
     <string name="download_failed_http">ダウンロード失敗: サーバーが要求を拒否したか, 予期しないリダイレクトが発生しました</string>
+    <string name="download_failed_import">モデルはダウンロードされましたが, インポートに失敗しました. 再試行できます</string>
     <string name="download_failed_integrity">ダウンロード失敗: サイズまたは SHA-256 が固定値と一致しません</string>
     <string name="download_failed_interrupted">モデルのダウンロードが中断されました</string>
     <string name="download_failed_invalid_content">ダウンロード失敗: 応答は LiteRT-LM モデルではありません</string>
     <string name="download_failed_network">ダウンロード失敗: ネットワーク接続を確認して再試行してください</string>
-    <string name="download_import_insufficient_storage">インポートには約 %1$s の非公開ストレージが必要ですが, 現在の上限は %2$s です.</string>
-    <string name="download_import_unavailable">別のモデル操作中はダウンロード済みモデルをインポートできません</string>
+    <string name="download_failed_storage">ダウンロード失敗: ストレージの空き容量が不足しています. 空き容量を増やしてから再試行してください</string>
+    <string name="download_paused">一時停止中, %1$s / %2$s をダウンロード済み</string>
+    <string name="download_pausing" tools:ignore="TypographyEllipsis">一時停止しています...</string>
+    <string name="download_resumable">%1$s はダウンロード済みです. 再試行するとここから続行します.</string>
     <string name="download_source_unavailable">モデル配布元ページを開けるアプリがありません</string>
-    <string name="download_succeeded">ダウンロードと検証が完了しました: %1$s (%2$s). 今すぐインポートするか, 外部ファイルを後で使用できます.</string>
-    <string name="download_succeeded_toast">モデルのダウンロードと検証が完了しました</string>
+    <string name="download_waiting_import" tools:ignore="TypographyEllipsis">ダウンロード完了, インポートを待っています...</string>
     <string name="form_discard_changes_confirm">破棄</string>
     <string name="form_discard_changes_message">保存していない変更は失われます.</string>
     <string name="form_discard_changes_title">変更を破棄しますか?</string>

@@ -63,7 +63,11 @@ class ModelDownloadTransferTest {
                 modelFor(content),
             )
         }
-        assertEquals(ModelDownloadFailureReason.INTEGRITY_MISMATCH, short.reason)
+        assertEquals(
+            "A truncated stream is a network failure the next attempt resumes",
+            ModelDownloadFailureReason.NETWORK_UNAVAILABLE,
+            short.reason,
+        )
 
         val oversizedOutput = ByteArrayOutputStream()
         val oversized = assertThrows(ModelDownloadFailureException::class.java) {
@@ -129,6 +133,71 @@ class ModelDownloadTransferTest {
             modelFor(content),
         )
         assertArrayEquals(content, zeroOutput.toByteArray())
+    }
+
+    @Test
+    fun resumedTransferExtendsTheSeededDigest() {
+        val content = validContent(5000)
+        val split = 1234
+        val seeded = mutableListOf<Long>()
+        val digest = ModelDownloadTransfer.seedPartial(
+            input = ChunkedInputStream(content.copyOf(split), 3),
+            length = split.toLong(),
+            progressListener = seeded::add,
+        )
+        assertEquals(split.toLong(), seeded.last())
+
+        val output = ByteArrayOutputStream()
+        val progress = mutableListOf<ModelDownloadProgress>()
+        val result = ModelDownloadTransfer.resumeAndVerify(
+            input = ByteArrayInputStream(content.copyOfRange(split, content.size)),
+            output = output,
+            model = modelFor(content),
+            alreadyCopied = split.toLong(),
+            digest = digest,
+            progressListener = progress::add,
+        )
+
+        assertEquals(sha256(content), result.sha256)
+        assertArrayEquals(content.copyOfRange(split, content.size), output.toByteArray())
+        assertEquals(split.toLong(), progress.first().processedBytes)
+        assertEquals(content.size.toLong(), progress.last().processedBytes)
+    }
+
+    @Test
+    fun completePartialFileOnlyNeedsTheFinalDigestCheck() {
+        val content = validContent(64)
+        val digest = ModelDownloadTransfer.seedPartial(ByteArrayInputStream(content), content.size.toLong())
+        val result = ModelDownloadTransfer.verifyDigest(digest, content.size.toLong(), modelFor(content))
+        assertEquals(sha256(content), result.sha256)
+
+        val corrupted = content.copyOf().also { it[40] = (it[40] + 1).toByte() }
+        val corruptedDigest = ModelDownloadTransfer.seedPartial(
+            ByteArrayInputStream(corrupted),
+            corrupted.size.toLong(),
+        )
+        val failure = assertThrows(ModelDownloadFailureException::class.java) {
+            ModelDownloadTransfer.verifyDigest(corruptedDigest, corrupted.size.toLong(), modelFor(content))
+        }
+        assertEquals(ModelDownloadFailureReason.INTEGRITY_MISMATCH, failure.reason)
+    }
+
+    @Test
+    fun seedingRejectsForeignOrShortPartialFiles() {
+        val foreign = assertThrows(ModelDownloadFailureException::class.java) {
+            ModelDownloadTransfer.seedPartial(ByteArrayInputStream("NOTMODELpayload".toByteArray()), 15L)
+        }
+        assertEquals(ModelDownloadFailureReason.INVALID_CONTENT, foreign.reason)
+
+        val content = validContent(32)
+        val endedEarly = assertThrows(ModelDownloadFailureException::class.java) {
+            ModelDownloadTransfer.seedPartial(ByteArrayInputStream(content), 40L)
+        }
+        assertEquals(ModelDownloadFailureReason.DESTINATION_UNAVAILABLE, endedEarly.reason)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelDownloadTransfer.seedPartial(ByteArrayInputStream(content), 7L)
+        }
     }
 
     private fun validContent(size: Int): ByteArray {

@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import android.app.ActivityManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -16,7 +17,11 @@ import com.google.android.material.snackbar.Snackbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.AvailableLiteRtModel
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.AvailableLiteRtModelCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.LiteRtModelCapability
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadCoordinator
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadState
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.RecommendedModel
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.cardModel
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ImportedModel
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelImportCoordinator
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelManagerState
@@ -38,13 +43,11 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
     private lateinit var screenRoot: View
     private var importedModels: List<ImportedModel> = emptyList()
     private var currentQuery = ""
-    private var pendingDownloadModelId: String? = null
     private val managerObserver = ModelImportCoordinator.ManagerObserver(::renderManagerState)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         importCoordinator = ModelImportCoordinator.get(applicationContext)
-        pendingDownloadModelId = savedInstanceState?.getString(STATE_PENDING_DOWNLOAD_MODEL_ID)
         setContentView(createContentView())
         renderModels(currentQuery)
     }
@@ -57,38 +60,6 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
     override fun onStop() {
         importCoordinator.detachManager(managerObserver)
         super.onStop()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putString(STATE_PENDING_DOWNLOAD_MODEL_ID, pendingDownloadModelId)
-        super.onSaveInstanceState(outState)
-    }
-
-    @Deprecated("Deprecated in Android SDK")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQUEST_CREATE_MODEL_DOWNLOAD) return
-        val modelId = pendingDownloadModelId
-        pendingDownloadModelId = null
-        if (resultCode != RESULT_OK || modelId == null) return
-        val destination = data?.data
-        if (destination == null) {
-            showSnackbar(
-                screenRoot,
-                getString(R.string.download_destination_unavailable),
-                Snackbar.LENGTH_LONG,
-            )
-            return
-        }
-        val grantedFlags = (data?.flags ?: 0) and DOWNLOAD_GRANT_FLAGS
-        setResult(
-            RESULT_OK,
-            Intent()
-                .setData(destination)
-                .putExtra(EXTRA_MODEL_ID, modelId)
-                .addFlags(grantedFlags),
-        )
-        finish()
     }
 
     private fun createContentView(): View {
@@ -259,7 +230,9 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
             addView(textButton(R.string.button_view_model_source) { openSource(model) })
             model.verifiedDownload?.let { download ->
                 addView(
-                    textButton(R.string.litert_catalog_download) { confirmDownload(download) },
+                    textButton(R.string.litert_catalog_download) {
+                        confirmDownload(download, model.minimumMemoryGb)
+                    },
                     LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -309,45 +282,57 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
         renderModels(currentQuery)
     }
 
-    private fun confirmDownload(model: RecommendedModel) {
-        materialDialog()
-            .setTitle(model.displayName)
-            .setMessage(
+    /**
+     * Confirms a download into private storage (D99). The memory line warns when the device has
+     * less memory than the model needs but still allows the download (D107).
+     */
+    private fun confirmDownload(model: RecommendedModel, minimumMemoryGb: Int) {
+        val message = StringBuilder(
+            getString(
+                R.string.download_confirm_message,
+                Formatter.formatFileSize(this, model.expectedSizeBytes),
+                model.expectedSha256,
+                model.license,
+                minimumMemoryGb,
+            ),
+        )
+        val totalMemory = deviceTotalMemoryBytes()
+        if (ModelDownloadPolicy.isBelowMemoryRequirement(totalMemory, minimumMemoryGb)) {
+            message.append("\n\n").append(
                 getString(
-                    R.string.download_confirm_message,
-                    Formatter.formatFileSize(this, model.expectedSizeBytes),
-                    model.expectedSha256,
-                    model.license,
+                    R.string.download_confirm_memory_warning,
+                    Formatter.formatFileSize(this, totalMemory),
+                    minimumMemoryGb,
                 ),
             )
+        }
+        val unfinished = ModelDownloadCoordinator.get(applicationContext).state()
+        val unfinishedModel = unfinished.cardModel
+        if (
+            unfinishedModel != null && unfinishedModel != model &&
+            (unfinished is ModelDownloadState.Paused || unfinished is ModelDownloadState.Failed)
+        ) {
+            message.append("\n\n").append(
+                getString(R.string.download_confirm_discards_paused, unfinishedModel.displayName),
+            )
+        }
+        materialDialog()
+            .setTitle(model.displayName)
+            .setMessage(message)
             .setNegativeButton(android.R.string.cancel, null)
             .setNeutralButton(R.string.button_view_model_source) { _, _ -> openSource(model.sourceUrl) }
-            .setPositiveButton(R.string.button_choose_download_location) { _, _ ->
-                openDownloadDestinationPicker(model)
+            .setPositiveButton(R.string.litert_catalog_download) { _, _ ->
+                setResult(RESULT_OK, Intent().putExtra(EXTRA_MODEL_ID, model.id))
+                finish()
             }
             .show()
             .also(::tintDialogButtons)
     }
 
-    @Suppress("DEPRECATION")
-    private fun openDownloadDestinationPicker(model: RecommendedModel) {
-        pendingDownloadModelId = model.id
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/octet-stream"
-            putExtra(Intent.EXTRA_TITLE, model.fileName)
-            addFlags(DOWNLOAD_GRANT_FLAGS)
-        }
-        runCatching { startActivityForResult(intent, REQUEST_CREATE_MODEL_DOWNLOAD) }
-            .onFailure {
-                pendingDownloadModelId = null
-                showSnackbar(
-                    screenRoot,
-                    getString(R.string.download_destination_unavailable),
-                    Snackbar.LENGTH_LONG,
-                )
-            }
-    }
+    private fun deviceTotalMemoryBytes(): Long = runCatching {
+        val manager = getSystemService(ActivityManager::class.java)
+        ActivityManager.MemoryInfo().also(manager::getMemoryInfo).totalMem
+    }.getOrDefault(0L)
 
     private fun openSource(model: AvailableLiteRtModel) {
         openSource(model.sourceUrl)
@@ -395,9 +380,5 @@ class LiteRtModelCatalogActivity : ConfiguredActivity() {
 
     companion object {
         const val EXTRA_MODEL_ID = "liteRtCatalogModelId"
-        private const val REQUEST_CREATE_MODEL_DOWNLOAD = 1001
-        private const val STATE_PENDING_DOWNLOAD_MODEL_ID = "pendingDownloadModelId"
-        private const val DOWNLOAD_GRANT_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-            Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
     }
 }

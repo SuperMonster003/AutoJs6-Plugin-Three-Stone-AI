@@ -72,13 +72,14 @@
     <string name="button_cancel_download">Cancel download</string>
     <string name="button_cancel_import">Cancel import</string>
     <string name="button_check_model">Check model</string>
-    <string name="button_choose_download_location">Choose save location</string>
     <string name="button_cleanup_storage">Clean unreferenced files</string>
     <string name="button_copy_model_id">Copy model ID</string>
     <string name="button_delete_model">Delete model</string>
-    <string name="button_import_downloaded_model">Import downloaded model</string>
     <string name="button_import_model">Import model file</string>
+    <string name="button_pause_download">Pause</string>
     <string name="button_rename_model">Rename</string>
+    <string name="button_resume_download">Resume</string>
+    <string name="button_retry_download">Retry</string>
     <string name="button_view_model_source">Model source</string>
     <string name="chat_assistant_bubble_style">Reply message bubbles</string>
     <string name="chat_bubble_style_background">Background tint</string>
@@ -241,24 +242,26 @@
     <string name="download_already_running">A model download is already running</string>
     <string name="download_cancelled">Model download cancelled.</string>
     <string name="download_cancelling" tools:ignore="TypographyEllipsis">Cancelling %1$s download...</string>
-    <string name="download_cleanup_failed">The incomplete destination could not be cleared. Delete it manually.</string>
-    <string name="download_cleanup_truncated">The incomplete content was cleared, but an empty document may remain.</string>
-    <string name="download_confirm_message">Download size: %1$s\nPinned SHA-256: %2$s\nLicense: %3$s\n\nChoose any writable location in the system file picker. Use Wi-Fi unless you intend to use mobile data. The model is verified before it is offered for import.</string>
+    <string name="download_checking_partial" tools:ignore="TypographyEllipsis">Verifying the downloaded part...</string>
+    <string name="download_confirm_discards_paused">Starting this discards the unfinished %1$s download.</string>
+    <string name="download_confirm_memory_warning">This device has about %1$s of memory, below the %2$d GB this model needs. You can still download it, but it may fail to load or run very slowly.</string>
+    <string name="download_confirm_message">Download size: %1$s\nPinned SHA-256: %2$s\nLicense: %3$s\nMinimum memory: %4$d GB\n\nThe model is downloaded to the app\'s private storage and imported automatically once it is verified. Use Wi-Fi unless you intend to use mobile data.</string>
     <string name="download_connecting" tools:ignore="TypographyEllipsis">Connecting to download %1$s...</string>
-    <string name="download_description">Downloads start only after you choose a model and save location. Inference stays offline; every download is pinned and verified.</string>
-    <string name="download_destination_unavailable">The system could not open a save-location picker</string>
+    <string name="download_description">Downloads go to the app\'s private storage and are imported automatically once verified. Inference stays offline; every download is pinned and verified.</string>
     <string name="download_failed">Model download failed</string>
-    <string name="download_failed_destination">Model download failed: the chosen destination could not be written</string>
+    <string name="download_failed_destination">Model download failed: the app\'s storage could not be written</string>
     <string name="download_failed_http">Model download failed: the server rejected the request or redirected unexpectedly</string>
+    <string name="download_failed_import">The model was downloaded but could not be imported; you can retry</string>
     <string name="download_failed_integrity">Model download failed: the pinned size or SHA-256 did not match</string>
     <string name="download_failed_interrupted">Model download was interrupted</string>
     <string name="download_failed_invalid_content">Model download failed: the response is not a LiteRT-LM model</string>
     <string name="download_failed_network">Model download failed: check the network connection and try again</string>
-    <string name="download_import_insufficient_storage">Import needs approximately %1$s of private storage, but the current import budget is %2$s.</string>
-    <string name="download_import_unavailable">The downloaded model cannot be imported while another model operation is active</string>
+    <string name="download_failed_storage">Model download failed: not enough storage, free up space and try again</string>
+    <string name="download_paused">Paused, %1$s of %2$s downloaded</string>
+    <string name="download_pausing" tools:ignore="TypographyEllipsis">Pausing...</string>
+    <string name="download_resumable">%1$s already downloaded; retrying continues from there.</string>
     <string name="download_source_unavailable">No app could open the model source page</string>
-    <string name="download_succeeded">Downloaded and verified: %1$s (%2$s). You can import it now or keep the external file for later.</string>
-    <string name="download_succeeded_toast">Model downloaded and verified</string>
+    <string name="download_waiting_import" tools:ignore="TypographyEllipsis">Download complete, waiting to import...</string>
     <string name="form_discard_changes_confirm">Discard</string>
     <string name="form_discard_changes_message">Changes you have not saved will be lost.</string>
     <string name="form_discard_changes_title">Discard changes?</string>

@@ -45,13 +45,14 @@
     <string name="button_cancel_download">إلغاء التنزيل</string>
     <string name="button_cancel_import">إلغاء الاستيراد</string>
     <string name="button_check_model">فحص النموذج</string>
-    <string name="button_choose_download_location">اختيار موقع الحفظ</string>
     <string name="button_cleanup_storage">تنظيف الملفات غير المرجعية</string>
     <string name="button_copy_model_id">نسخ معرف النموذج</string>
     <string name="button_delete_model">حذف النموذج</string>
-    <string name="button_import_downloaded_model">استيراد النموذج المنزل</string>
     <string name="button_import_model">استيراد ملف نموذج</string>
+    <string name="button_pause_download">إيقاف مؤقت</string>
     <string name="button_rename_model">إعادة التسمية</string>
+    <string name="button_resume_download">استئناف</string>
+    <string name="button_retry_download">إعادة المحاولة</string>
     <string name="button_view_model_source">مصدر النموذج</string>
     <string name="chat_cancel_editing">إلغاء</string>
     <string name="chat_choose_target">اختيار الهدف</string>
@@ -189,24 +190,26 @@
     <string name="download_already_running">يوجد تنزيل نموذج قيد التشغيل بالفعل</string>
     <string name="download_cancelled">ألغي تنزيل النموذج.</string>
     <string name="download_cancelling" tools:ignore="TypographyEllipsis">جار إلغاء تنزيل %1$s...</string>
-    <string name="download_cleanup_failed">تعذر مسح الوجهة غير المكتملة. احذفها يدويا.</string>
-    <string name="download_cleanup_truncated">مسح المحتوى غير المكتمل, لكن قد يبقى مستند فارغ.</string>
-    <string name="download_confirm_message">حجم التنزيل: %1$s\nSHA-256 المثبت: %2$s\nالترخيص: %3$s\n\nاختر أي موقع قابل للكتابة في منتقي ملفات النظام. استخدم Wi-Fi ما لم تكن تنوي استخدام بيانات الهاتف. لا يتاح الاستيراد إلا بعد التحقق من النموذج.</string>
+    <string name="download_checking_partial" tools:ignore="TypographyEllipsis">جار التحقق من الجزء الذي تم تنزيله...</string>
+    <string name="download_confirm_discards_paused">سيؤدي البدء إلى تجاهل تنزيل %1$s غير المكتمل.</string>
+    <string name="download_confirm_memory_warning">ذاكرة هذا الجهاز نحو %1$s, وهي أقل من %2$d GB التي يتطلبها هذا النموذج. لا يزال بإمكانك تنزيله, لكنه قد يتعذر تحميله أو يعمل ببطء شديد.</string>
+    <string name="download_confirm_message">حجم التنزيل: %1$s\nSHA-256 المثبت: %2$s\nالترخيص: %3$s\nالحد الأدنى للذاكرة: %4$d GB\n\nيتم تنزيل النموذج إلى مساحة التطبيق الخاصة ويستورد تلقائيا بعد التحقق منه. استخدم Wi-Fi ما لم تكن تنوي استخدام بيانات الهاتف.</string>
     <string name="download_connecting" tools:ignore="TypographyEllipsis">جار الاتصال لتنزيل %1$s...</string>
-    <string name="download_description">لا يبدأ التنزيل إلا بعد اختيار النموذج وموقع الحفظ. يبقى الاستدلال دون اتصال; وكل تنزيل مثبت الإصدار ويخضع للتحقق.</string>
-    <string name="download_destination_unavailable">تعذر على النظام فتح منتقي موقع الحفظ</string>
+    <string name="download_description">يتم التنزيل إلى مساحة التطبيق الخاصة ويستورد النموذج تلقائيا بعد التحقق. يبقى الاستدلال دون اتصال; وكل تنزيل مثبت الإصدار ويخضع للتحقق.</string>
     <string name="download_failed">فشل تنزيل النموذج</string>
-    <string name="download_failed_destination">فشل التنزيل: تعذرت الكتابة إلى الوجهة المختارة</string>
+    <string name="download_failed_destination">فشل التنزيل: تعذرت الكتابة إلى مساحة تخزين التطبيق</string>
     <string name="download_failed_http">فشل التنزيل: رفض الخادم الطلب أو أعاد توجيهه بشكل غير متوقع</string>
+    <string name="download_failed_import">تم تنزيل النموذج لكن تعذر استيراده, يمكنك إعادة المحاولة</string>
     <string name="download_failed_integrity">فشل التنزيل: لم يطابق الحجم أو SHA-256 القيمة المثبتة</string>
     <string name="download_failed_interrupted">تمت مقاطعة تنزيل النموذج</string>
     <string name="download_failed_invalid_content">فشل التنزيل: الاستجابة ليست نموذج LiteRT-LM</string>
     <string name="download_failed_network">فشل التنزيل: تحقق من اتصال الشبكة ثم حاول مجددا</string>
-    <string name="download_import_insufficient_storage">يتطلب الاستيراد نحو %1$s من مساحة التطبيق الخاصة, لكن الميزانية الحالية %2$s.</string>
-    <string name="download_import_unavailable">لا يمكن استيراد النموذج المنزل أثناء عملية نموذج أخرى</string>
+    <string name="download_failed_storage">فشل التنزيل: مساحة التخزين غير كافية, حرر مساحة ثم حاول مجددا</string>
+    <string name="download_paused">متوقف مؤقتا, تم تنزيل %1$s من %2$s</string>
+    <string name="download_pausing" tools:ignore="TypographyEllipsis">جار الإيقاف المؤقت...</string>
+    <string name="download_resumable">تم تنزيل %1$s بالفعل, وستتابع إعادة المحاولة من هنا.</string>
     <string name="download_source_unavailable">لا يوجد تطبيق يمكنه فتح صفحة مصدر النموذج</string>
-    <string name="download_succeeded">اكتمل التنزيل والتحقق: %1$s (%2$s). يمكنك استيراده الآن أو الاحتفاظ بالملف الخارجي لاحقا.</string>
-    <string name="download_succeeded_toast">اكتمل تنزيل النموذج والتحقق منه</string>
+    <string name="download_waiting_import" tools:ignore="TypographyEllipsis">اكتمل التنزيل, في انتظار الاستيراد...</string>
     <string name="form_discard_changes_confirm">تجاهل</string>
     <string name="form_discard_changes_message">ستفقد التغييرات غير المحفوظة.</string>
     <string name="form_discard_changes_title">تجاهل التغييرات?</string>

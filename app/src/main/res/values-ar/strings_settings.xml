@@ -12,7 +12,7 @@
     <string name="models_default_target_format">%1$s | %2$s</string>
     <string name="models_default_target_none">غير محدد</string>
     <string name="models_detail_imported">تاريخ الاستيراد: %1$s</string>
-    <string name="models_import_file_summary">اختر ملف نموذج .litertlm من الجهاز</string>
+    <string name="models_import_file_summary">اختر ملف نموذج .litertlm من الجهاز, مثل نموذج نزلته سابقا في موقع آخر</string>
     <string name="models_local_section">النماذج المحلية</string>
     <string name="models_section_actions">مزيد من الإجراءات</string>
     <string name="online_ai_catalog_automatic_off">تم إيقاف التحديث التلقائي للنماذج المعدة مسبقا</string>

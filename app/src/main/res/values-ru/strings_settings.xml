@@ -12,7 +12,7 @@
     <string name="models_default_target_format">%1$s | %2$s</string>
     <string name="models_default_target_none">Не задано</string>
     <string name="models_detail_imported">Импортировано: %1$s</string>
-    <string name="models_import_file_summary">Выберите файл модели .litertlm на устройстве</string>
+    <string name="models_import_file_summary">Выберите файл модели .litertlm на устройстве, например загруженный ранее в другое место</string>
     <string name="models_local_section">Локальные модели</string>
     <string name="models_section_actions">Другие действия</string>
     <string name="online_ai_catalog_automatic_off">Автоматическое обновление списка моделей выключено</string>

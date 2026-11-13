@@ -295,8 +295,6 @@ internal class ModelRepository(context: Context) {
 
         val transactionId = UUID.randomUUID().toString()
         val temporary = File(directory, ".incoming-$transactionId.tmp")
-        val pendingTemporary = File(directory, ".pending-$transactionId.tmp")
-        var pendingTransaction: PendingModelTransaction? = null
         try {
             val limitFailureReason = if (maximumBytes < ModelImportPolicy.MAXIMUM_MODEL_BYTES) {
                 ModelImportFailureReason.INSUFFICIENT_STORAGE
@@ -334,19 +332,84 @@ internal class ModelRepository(context: Context) {
             } finally {
                 operation.unregisterCancellationResource(input)
             }
-            val sha256 = copied.sha256
+            return publishVerifiedFile(
+                source = temporary,
+                sha256 = copied.sha256,
+                byteCount = copied.byteCount,
+                displayName = document.displayName,
+                transactionId = transactionId,
+                operation = operation,
+            )
+        } finally {
+            if (temporary.exists()) temporary.delete()
+        }
+    }
+
+    /**
+     * Publishes a model that the download coordinator already fetched into private storage and
+     * verified against its pinned size and SHA-256 (D99). Nothing is copied: the partial file is
+     * renamed into place under the same pending-marker protocol as an import. On failure or
+     * cancellation before the rename, [partFile] stays where it is so the download can resume.
+     */
+    @Synchronized
+    fun importVerifiedDownload(
+        partFile: File,
+        sha256: String,
+        byteCount: Long,
+        displayName: String,
+        operation: ModelImportOperationControl = ModelImportOperationControl(),
+    ): ImportedModel {
+        operation.reportProgress(ModelImportProgress.initial())
+        ensureDirectory()
+        readAuthoritativeManagerCatalog()
+        requireSafeDirectChild(partFile)
+        requireSafeRegularFile(partFile)
+        require(partFile.length() == byteCount) { "Verified download length changed" }
+        ModelImportPolicy.requireImportableName(displayName)
+        operation.reportProgress(
+            ModelImportProgress(
+                stage = ModelImportStage.VALIDATING,
+                processedBytes = byteCount,
+                totalBytes = byteCount,
+            ),
+        )
+        return publishVerifiedFile(
+            source = partFile,
+            sha256 = sha256,
+            byteCount = byteCount,
+            displayName = displayName,
+            transactionId = UUID.randomUUID().toString(),
+            operation = operation,
+        )
+    }
+
+    /**
+     * Shared tail of an import and a verified download: moves [source] to its hash-named file (or
+     * verifies an identical existing generation), then commits and selects the catalog entry.
+     */
+    private fun publishVerifiedFile(
+        source: File,
+        sha256: String,
+        byteCount: Long,
+        displayName: String,
+        transactionId: String,
+        operation: ModelImportOperationControl,
+    ): ImportedModel {
+        val pendingTemporary = File(directory, ".pending-$transactionId.tmp")
+        var pendingTransaction: PendingModelTransaction? = null
+        try {
             val destination = File(directory, "model-$sha256.litertlm")
             val destinationExistedBeforeImport = destination.exists()
             if (!PendingModelTransactionPolicy.shouldCreateMarker(destinationExistedBeforeImport)) {
                 require(
                     destination.isFile &&
-                        destination.length() == copied.byteCount &&
+                        destination.length() == byteCount &&
                         digestExistingFile(destination, operation) == sha256
                 ) {
                     "A conflicting private model file already exists"
                 }
                 operation.whileActive {
-                    require(temporary.delete() || !temporary.exists()) {
+                    require(source.delete() || !source.exists()) {
                         "Duplicate model transaction file cannot be removed"
                     }
                 }
@@ -356,24 +419,24 @@ internal class ModelRepository(context: Context) {
                     publishPendingMarker(pendingTransaction, pendingTemporary)
                 }
                 operation.whileActive {
-                    Os.rename(temporary.absolutePath, destination.absolutePath)
+                    Os.rename(source.absolutePath, destination.absolutePath)
                     syncDirectory()
                 }
             }
 
             val candidate = ModelCatalogEntry(
                 modelId = ModelImportPolicy.stableModelId(sha256),
-                displayName = ModelImportPolicy.safeDisplayName(document.displayName),
+                displayName = ModelImportPolicy.safeDisplayName(displayName),
                 fileName = destination.name,
-                sizeBytes = copied.byteCount,
+                sizeBytes = byteCount,
                 sha256 = sha256,
                 importedAtMillis = System.currentTimeMillis(),
             )
             operation.reportProgress(
                 ModelImportProgress(
                     stage = ModelImportStage.PUBLISHING,
-                    processedBytes = copied.byteCount,
-                    totalBytes = copied.byteCount,
+                    processedBytes = byteCount,
+                    totalBytes = byteCount,
                 ),
             )
             operation.beginCommit()
@@ -391,7 +454,6 @@ internal class ModelRepository(context: Context) {
             pendingTransaction?.let { marker -> runCatching { rollbackOwnedPendingTransaction(marker) } }
             throw error
         } finally {
-            if (temporary.exists()) temporary.delete()
             if (pendingTemporary.exists()) pendingTemporary.delete()
         }
     }
@@ -638,7 +700,7 @@ internal class ModelRepository(context: Context) {
 
     private data class DocumentInfo(val displayName: String, val declaredSize: Long?)
     private companion object {
-        const val DIRECTORY_NAME = "models"
+        const val DIRECTORY_NAME = PRIVATE_MODEL_DIRECTORY_NAME
         const val CATALOG_FILE_NAME = "catalog.json"
         const val LEGACY_METADATA_FILE_NAME = "current.json"
         const val PENDING_MARKER_FILE_NAME = ".pending-model.json"
@@ -648,3 +710,6 @@ internal class ModelRepository(context: Context) {
         val RECOVERABLE_TEMP_FILE = Regex("^\\.(?:incoming|current|catalog|pending)-$TRANSACTION_ID_PATTERN\\.tmp$")
     }
 }
+
+/** Directory under filesDir that holds imported models, the catalog and partial downloads. */
+internal const val PRIVATE_MODEL_DIRECTORY_NAME = "models"

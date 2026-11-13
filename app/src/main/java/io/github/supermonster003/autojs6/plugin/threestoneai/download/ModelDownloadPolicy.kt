@@ -65,5 +65,57 @@ internal object ModelDownloadPolicy {
         require(uri.port == -1 || uri.port == 443) { "Model download URL port is invalid" }
     }
 
+    /** Name of the partial download kept in private model storage until it is verified (D99). */
+    fun partFileName(sha256: String): String {
+        require(SHA_256.matches(sha256)) { "Model download digest is invalid" }
+        return ".download-$sha256.part"
+    }
+
+    /** Returns the pinned digest named by a partial download file, or null for any other name. */
+    fun partFileSha256(fileName: String): String? = PART_FILE.matchEntire(fileName)?.groupValues?.get(1)
+
+    /**
+     * Length of an existing partial file that a resumed transfer can build on. Anything longer than
+     * the pinned size, or too short to hold the LiteRT-LM header, restarts from the first byte.
+     */
+    fun resumableLength(partLength: Long, expectedSizeBytes: Long): Long = when {
+        partLength > expectedSizeBytes -> 0L
+        partLength < ModelImportPolicy.LITERTLM_MAGIC_BYTES -> 0L
+        else -> partLength
+    }
+
+    /** Free space needed before the remaining bytes are fetched, keeping the import reserve free. */
+    fun hasStorageFor(usableBytes: Long, remainingBytes: Long): Boolean =
+        usableBytes.coerceAtLeast(0L) - ModelImportPolicy.RESERVED_FREE_BYTES >= remainingBytes
+
+    /** Failures that leave a partial file worth resuming; content and digest failures start over. */
+    fun keepsPartialFile(reason: ModelDownloadFailureReason): Boolean = when (reason) {
+        ModelDownloadFailureReason.INVALID_CONTENT,
+        ModelDownloadFailureReason.INTEGRITY_MISMATCH,
+        -> false
+        ModelDownloadFailureReason.NETWORK_UNAVAILABLE,
+        ModelDownloadFailureReason.HTTP_ERROR,
+        ModelDownloadFailureReason.DESTINATION_UNAVAILABLE,
+        ModelDownloadFailureReason.INSUFFICIENT_STORAGE,
+        ModelDownloadFailureReason.INTERRUPTED,
+        ModelDownloadFailureReason.IMPORT_FAILED,
+        ModelDownloadFailureReason.UNKNOWN,
+        -> true
+    }
+
+    /**
+     * D107: warns before a download when the device memory is below the model's stated minimum.
+     * The kernel reserves part of the installed memory, so a phone sold with N GB reports roughly
+     * 90 percent of it; the 85 percent tolerance keeps such a phone from being flagged.
+     */
+    fun isBelowMemoryRequirement(deviceTotalBytes: Long, minimumMemoryGb: Int): Boolean {
+        if (deviceTotalBytes <= 0L || minimumMemoryGb <= 0) return false
+        val required = minimumMemoryGb.toLong() * BYTES_PER_GIB / 100L * MEMORY_TOLERANCE_PERCENT
+        return deviceTotalBytes < required
+    }
+
     private const val PRIMARY_HOST = "huggingface.co"
+    private const val BYTES_PER_GIB = 1024L * 1024L * 1024L
+    private const val MEMORY_TOLERANCE_PERCENT = 85L
+    private val PART_FILE = Regex("^\\.download-([0-9a-f]{64})\\.part$")
 }

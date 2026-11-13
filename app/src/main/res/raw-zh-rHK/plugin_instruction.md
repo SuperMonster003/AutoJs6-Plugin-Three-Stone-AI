@@ -8,7 +8,7 @@
 
 ## 取得模型
 
-打開插件模型頁並點擊 **瀏覽 LiteRT-LM 模型**, 即可查看可用模型目錄同實用嘅運行資料. 標記為 **已驗證下載** 嘅項目可儲存到任何可寫入 SAF 位置. 插件會顯示進度, 並喺開放 **匯入已下載模型** 前驗證 LiteRT-LM 檔案頭, 精確字節數同 SHA-256. 本機推理從來唔使用網絡. 下載嘅外部檔案同匯入後嘅應用程式私人副本會分別佔用空間; 如果 Android 喺下載途中終止進程, 請手動刪除可能殘留嘅外部殘缺檔案.
+喺插件嘅 **設定 > 模型與服務** 撳 "本機模型" 段嘅 **下載模型**, 即可查看內置嘅建議模型目錄同實用嘅運行資料; 喺項目上撳 **下載** 就一步完成: 模型直接寫入應用程式私有儲存空間, 插件會顯示進度, 可以暫停, 取消或者喺失敗後重試, 並喺驗證 LiteRT-LM 檔案頭, 精確字節數同 SHA-256 後自動匯入. 中斷咗嘅下載會由已下載嘅部分繼續. 本機推理從來唔使用網絡. 每個模型只會喺應用程式私有儲存空間保存一份, 解除安裝插件或清除佢嘅應用程式數據會一併刪除; 其他位置嘅 `.litertlm` 檔案可以用 **匯入模型檔案** 匯入.
 
 ## 快速開始 (推薦)
 
@@ -99,7 +99,7 @@ ai.catalog({ plugin: true }).then((catalog) => {
 
 以下完整 Rhino 腳本以 **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** 模型為例. 此固定版本的 SHA-256 為 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此匯入後的模型 ID 為 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下載檔案可能名為 `gemma-4-E2B-it.litertlm`, 檔案名稱不影響模型 ID. 匯入後, 可使用插件說明頁右上角的複製操作複製整個腳本. 請將其作為一般 AutoJs6 Rhino 腳本執行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可嘗試其他請求.
 
-使用其他模型時, 請從模型管理頁複製該模型的 Model ID, 並替換腳本中的 `MODEL_ID`. 請勿沿用範例值.
+使用其他模型時, 請喺 **設定 > 模型與服務** 嘅 "本機模型" 段撳該模型嘅卡片, 喺詳情中撳 **複製模型 ID**, 並替換腳本中的 `MODEL_ID`. 請勿沿用範例值.
 
 ```javascript
 var PLUGIN_PACKAGE =
@@ -486,6 +486,6 @@ try {
 - 宣告 streaming, usage, persistent session, structured JSON, `text/plain` 同 `application/json`. 唔支援 reasoning 同 tools.
 - 響應 schema 必須係 JSON 對象且唔超過 64 KiB; 可用關鍵字以目前內置 LiteRT-LM/LLGuidance 運行時為準. 插件會嚴格解析同驗證完整結構化輸出, 因此應為整個 JSON 值預留足夠嘅 `maxTokens`.
 - Usage token 數來自 LiteRT-LM Conversation 嘅 KV cache 同 decode 計數, 唔會用字符數估算. `durationMillis` 只量度插件生成調用, 唔包括宿主發現, 綁定, 模型枚舉同分發時間.
-- 插件為用戶主動發起嘅建議模型下載, 用戶設定嘅網上目標請求, 同網上 AI 設定中從 GitHub 更新公開預設模型目錄使用 `INTERNET` 權限. 目錄更新唔需要 API Key, 唔會呼叫推理服務, 插件啟用同本機生成唔會觸發目錄連網. 本機推理唔使用網絡. 插件唔要求廣泛儲存權限; SAF 只授予對用戶所選來源或目標嘅存取.
+- 插件為用戶主動發起嘅建議模型下載, 用戶設定嘅網上目標請求, 同喺 "模型與服務" 頁從 GitHub 更新公開預設模型目錄使用 `INTERNET` 權限. 目錄更新唔需要 API Key, 唔會呼叫推理服務, 插件啟用同本機生成唔會觸發目錄連網. 本機推理唔使用網絡. 插件唔要求廣泛儲存權限; SAF 只授予對用戶所選來源或目標嘅存取.
 - 僅允許同簽名 AutoJs6 主程式綁定 provider 服務.
 - 為保證跨進程安全, 會保留先前以 SHA-256 hash 命名的模型代次, 它們會繼續佔用應用程式私人儲存空間.

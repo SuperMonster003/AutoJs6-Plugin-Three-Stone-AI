@@ -1,6 +1,6 @@
 # Online Provider Backend
 
-本文记录插件内部统一在线执行层, 在线服务设置页, 启动器聊天目标选择器及 AI Provider V2 统一目标目录的实际契约. 用户可在插件设置中管理在线 target, 并在插件启动器聊天中明确选择本地或在线 target; Binder 目录以相同 `local:*` / `profile:*` 身份向宿主公开非敏感目标元数据.
+本文记录插件内部统一在线执行层, "模型与服务" 设置页的在线服务部分, 启动器聊天目标选择器及 AI Provider V2 统一目标目录的实际契约. 用户可在插件设置中管理在线 target, 并在插件启动器聊天中明确选择本地或在线 target; Binder 目录以相同 `local:*` / `profile:*` 身份向宿主公开非敏感目标元数据.
 
 ## 提供方目录
 
@@ -21,24 +21,25 @@
 
 ## 设置页与配置状态
 
-应用设置中的 "在线服务" 页面提供以下显式操作:
+1.7.0 起在线服务与本地模型合并在设置的 "模型与服务" 页 (`ModelManagerActivity`, 在线部分由基类 `OnlineServicesActivity` 实现, D115): 顶部是 "默认目标" 与 "允许移动网络和按流量计费网络" 两行, 下面是 "在线服务" 段 (服务卡片 + "添加服务") 与 "本地模型" 段. 用户界面把在线档案统一称为 "服务", 代码与存储仍叫 profile.
 
-- 添加与编辑档案: 内置模板只预填 provider 与 baseUrl, 模型 ID 仍由用户输入. 自定义 OpenAI-compatible 档案必须输入 HTTPS baseUrl.
-- API Key 输入框从不回显既有值, 禁止 Autofill 与 Activity 状态保存, 编辑弹窗期间启用 `FLAG_SECURE`, 弹窗关闭时立即清空输入缓冲. 更换 provider 或 HTTPS origin 时, 已配置档案必须重新输入 Key.
-- 清除 Key 与删除档案均要求二次确认. 清除默认档案的 Key 时同时清除默认选择; 删除会先清除 Keystore 密文, 再原子发布不含该档案的元数据, 并在同一文档事务中清除默认值.
-- 默认在线目标只能从已配置档案中选择. 统一目录保留本地 target 排序, 但显式选择的在线默认值优先于本地 backend 默认值; 目标不可用时明确失败, 不自动回退本地.
+- 添加与编辑服务在全屏的 "服务详情" 页 (`ServiceDetailActivity`, D96, D125) 进行: 上方是连接信息 (提供方模板, 名称, HTTPS Base URL 与历史, API Key, 默认推理强度, 快速模式 (仅 Anthropic), "测试连接"), 下方是 "模型列表". 内置模板只预填 provider 与 baseUrl, 模型 ID 仍由用户输入; 自定义 OpenAI-compatible 服务必须输入 HTTPS baseUrl. 所有改动进入同一份草稿, 点工具栏的对勾才写入; 新服务在保存前不落盘, 有未保存改动时返回会先询问.
+- 模型列表的顺序就是 `modelIds` 的顺序 (拖动把手或长按排序, 行菜单也可上移 / 下移), 每个服务最多 32 个模型, 至少 1 个. 首个模型的目标 ID 是不带模型段的 `profile:<id>`, 其余为 `profile:<id>` 加模型段 (`AiTargetIds.profileModel`); 保存时首个模型变了, 默认目标与切换器收藏里指向本服务的 ID 按 "同一模型" 改写 (D122).
+- "首选模型" 就是 profile 的 `modelId` (1.6.x 界面称 "默认模型"), 可以是列表中任一模型, 在行菜单里 "设为首选"; 移除首选模型时首个模型成为首选. 服务卡片菜单的 "设为默认" 把该服务的首选模型设为默认目标, 旧的 `defaultProfileId` 也按首选模型解析. 图片输入在行菜单里按精确模型 ID 显式开启, 存于 `visionModelIds` (按列表顺序), 默认全部关闭; 主动开启之前不声明视觉能力, 不根据协议或模型名称猜测.
+- API Key 输入框从不回显既有值, 禁止 Autofill, 不参与 View 状态保存 (`isSaveEnabled=false`), 详情页整页启用 `FLAG_SECURE`. 已输入但未保存的 Key 只存在于内存与 Activity 的 saved-instance-state Bundle 里 (供旋转与进程回收后恢复草稿, 与 1.6.x 的底部表单相同, D105), 页面销毁时清空输入缓冲. 更换 provider 或 HTTPS origin 时, 已配置服务必须重新输入 Key.
+- 清除 Key 确认后立即生效, 不进草稿 (D123); 删除服务要求二次确认, 先清除 Keystore 密文, 再原子发布不含该服务的元数据.
+- 默认目标只有一个 (D97, D114), 可以是任一已就绪的在线模型或本地模型, 存于 `filesDir/ai-default-target/default-target` (首行 `v1`, 次行目标 ID; 跨进程文件锁, 写临时文件后原子改名), 由 `CompositeAiBackend.catalog()` 读取. 文件不存在时迁移一次: 写入原有的默认 (在线默认服务的首选模型, 否则 `local:<selectedModelId>`, 都没有则写入 "空"). 迁移不改 `defaultProfileId` 与本地的 `selectedModelId`, 新界面也不再写这两个字段, 降级到 1.6.x 仍按原行为. 存储值所指目标不在目录中或暂不可用时回退到自动默认, 存储值保留, 恢复后回到原默认. 这只决定新会话与未指定目标的调用用哪个目标; 已选定目标的会话与请求失败时仍不跨本地 / 在线边界回退.
 - "允许移动网络和按流量计费网络" 默认关闭. 设置只影响在线请求, 不影响本地推理或模型下载.
-- "支持图片输入的模型" 按当前档案中的精确模型 ID 显式启用, 默认全部关闭. 主动选择之前不会声明视觉能力; 配置界面说明图片会发往该在线服务, 不根据协议或模型名称猜测支持情况.
 
-非敏感 profile 文档当前采用 schema 4, 在 schema 3 的多模型列表上增加 `visionModelIds`. schema 2/3 仍可读取, 旧档案的图片输入默认关闭; 不支持 schema 1. `defaultProfileId`, `allowMeteredNetwork` 和档案列表保留在同一个跨进程锁, fsync 与原子 rename 事务内. 不支持的文档会 fail closed. 凭据仍完全独立保存在 Android Keystore 保护的密文仓库中.
+非敏感 profile 文档当前采用 schema 5 (`OnlineAiProfilePolicy.SCHEMA`), 在 schema 4 (`visionModelIds`) 上增加 `defaultEffort` (`default` / `low` / `medium` / `high` / `xhigh` / `max`) 与 `fastMode` (1.6.0, D72 / D74). schema 2/3/4 仍可读取: 缺少的字段按图片输入全部关闭, `DEFAULT` 与 `false` 读入; schema 5 的两个字段必须同时存在且取值已知, 非 Anthropic 服务的 `fastMode` 归一化为 `false`; 不支持 schema 1. 1.7.0 的首选模型, 模型顺序与默认目标没有改变 profile 文档格式 (首选模型仍是 `modelId`, 默认目标在上述独立文件中), 因此 schema 仍为 5. `defaultProfileId`, `allowMeteredNetwork` 和档案列表保留在同一个跨进程锁, fsync 与原子 rename 事务内. 不支持的文档会 fail closed. 凭据仍完全独立保存在 Android Keystore 保护的密文仓库中.
 
-"测试连接" 是一次用户确认后才会执行的真实生成: 固定发送 `Reply with OK.`, 最多请求 8 个输出 token, 不保存或显示响应文本, 可随时取消, UI 在 120 秒后主动取消活动 Call. 测试调用统一 `OnlineAiBackend` 和协议适配器, 因而同时验证 profile, Key, 网络策略, 请求认证, 协议解析及正常终态. 120 秒上限覆盖了 G8441 上维护者早期观测到约 64 秒才完成的宿主在线调用, 同时保持测试有界; 同一设备随后在插件端配置 PoloAPI OpenAI-compatible profile 后, 连接测试实测成功且耗时不足 10 秒.
+"测试连接" 是一次用户确认后才会执行的真实生成 (服务详情页只测已保存的设置, 有未保存改动或没有 API Key 时禁用, D125; 服务卡片菜单可直接测试): 固定发送 `Reply with OK.`, 最多请求 8 个输出 token, 不保存或显示响应文本, 可随时取消, UI 在 120 秒后主动取消活动 Call. 测试调用统一 `OnlineAiBackend` 和协议适配器, 因而同时验证 profile, Key, 网络策略, 请求认证, 协议解析及正常终态. 120 秒上限覆盖了 G8441 上维护者早期观测到约 64 秒才完成的宿主在线调用, 同时保持测试有界; 同一设备随后在插件端配置 PoloAPI OpenAI-compatible profile 后, 连接测试实测成功且耗时不足 10 秒.
 
 ## 启动器聊天目标绑定
 
 启动器聊天直接读取 Application 级 `AiTargetCatalog`, 不再从所选本地模型推导 `local:*` 目标. 选择在线 profile 时, `AiBackendSessionRequest` 使用原始 `profile:*` targetId 且不传本地 execution profile; 选择本地模型时优先使用可用 CPU profile, 否则使用目录声明的首个可用本地 profile. 两种路径共用相同的流式, 取消, Markdown 与会话复用管线, 任何失败都不会跨本地与在线边界回退.
 
-- 新的空会话只在首次解析统一目录时捕获一次默认 target. 后续本地模型选择或默认在线档案变化不会静默改写当前会话.
+- 新的空会话只在首次解析统一目录时捕获一次默认 target. 后续默认目标变化不会静默改写当前会话.
 - `ConversationTargetSnapshot` 保存 targetId, providerId, modelId, displayName 与 locality. 会话级目标与每条 assistant 消息的实际执行目标共用该不可变快照. 会话历史二进制格式直接升级为 version 3; 项目尚未发布, 因此不保留 version 1/2 的读取或迁移分支.
 - 顶部目标栏始终显示 Local/Cloud, provider, 显示名与 modelId, 点击后列出统一目录中的全部 target. 未配置或不可用 target 不能被选中, 只提供相应的模型管理入口.
 - 空会话可直接更换 target. 已有消息的会话默认主操作是使用所选 target 新建会话; "继续当前会话" 是次要操作, 对话框会明确说明保留消息将作为上下文交给新 target, Cloud 情况额外说明数据会发送到所选在线服务.
@@ -160,4 +161,4 @@ Provider 实现与确定性回归已完成, 真实在线视觉验收尚未通过
 .\gradlew.bat --offline :app:testDebugUnitTest
 ```
 
-测试使用无网络的 fake `Call.Factory`, 覆盖六种 profile 模板, schema 4 与 schema 2/3 迁移, 设置状态与默认档案删除, 统一目录默认值优先级, 每轮凭据读取前的网络门禁, 有界连接测试, 三个协议的 request mapping, one-shot body 清零, SSE/JSON response parser, partial/cumulative usage, persistent history, callback 重入, cancellation, redirect refusal, HTTP/provider/network error redaction 及全部 byte limit. 真机 endpoint 验证单独保留在 Roadmap. 普通自动化测试不使用个人或生产凭据; P9.2 的真实模型探针要求显式指定目标, 默认跳过.
+测试使用无网络的 fake `Call.Factory`, 覆盖六种 profile 模板, schema 5 与 schema 2/3/4 迁移, 设置状态与默认档案删除, 默认目标的存储, 迁移与回退, 模型列表的排序 / 首选 / 目标 ID 改写, 统一目录默认值优先级, 每轮凭据读取前的网络门禁, 有界连接测试, 三个协议的 request mapping, one-shot body 清零, SSE/JSON response parser, partial/cumulative usage, persistent history, callback 重入, cancellation, redirect refusal, HTTP/provider/network error redaction 及全部 byte limit. 真机 endpoint 验证单独保留在 Roadmap. 普通自动化测试不使用个人或生产凭据; P9.2 的真实模型探针要求显式指定目标, 默认跳过.

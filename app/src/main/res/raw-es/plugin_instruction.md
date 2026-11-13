@@ -8,7 +8,7 @@ Se requiere la build 5276 o posterior del host y Android 7.0 o posterior. Las co
 
 ## Obtener un modelo
 
-En la página de modelos, pulse **Explorar modelos LiteRT-LM** para consultar el catálogo disponible y datos útiles de ejecución. Las entradas marcadas como **Descarga verificada** se pueden guardar en cualquier ubicación SAF escribible. Se muestra el progreso y se verifican la cabecera LiteRT-LM, el número exacto de bytes y SHA-256 antes de habilitar **Importar modelo descargado**. La inferencia local nunca usa la red. El archivo externo y su copia privada importada ocupan espacio por separado; si Android termina el proceso durante la descarga, elimine manualmente cualquier documento externo parcial.
+En **Ajustes > Modelos y servicios** del plugin, pulse **Descargar modelo** en la sección "Modelos locales" para consultar el catálogo integrado de modelos recomendados y datos útiles de ejecución, y pulse **Descargar** en una entrada para terminar en un solo paso: el modelo se escribe directamente en el almacenamiento privado de la aplicación, se muestra el progreso con pausa, cancelación y reintento en caso de error, y se importa automáticamente tras verificar la cabecera LiteRT-LM, el número exacto de bytes y SHA-256. Una descarga interrumpida continúa desde la parte ya recibida. La inferencia local nunca usa la red. Cada modelo se guarda una sola vez, en el almacenamiento privado de la aplicación, por lo que desinstalar el plugin o borrar sus datos lo elimina; un archivo `.litertlm` de otra ubicación se puede añadir con **Importar archivo de modelo**.
 
 ## Inicio rápido (recomendado)
 
@@ -99,7 +99,7 @@ Las secciones siguientes muestran la ruta de protocolo de bajo nivel sin el mód
 
 El script Rhino completo siguiente usa como ejemplo el modelo **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)**. Esta descarga fijada tiene el SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, por lo que su ID tras importarlo es `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. El archivo descargado puede llamarse `gemma-4-E2B-it.litertlm`; el nombre no afecta al ID del modelo. Después de importarlo, use la acción de copiar de la esquina superior derecha de las instrucciones del plugin para copiar el script completo. Ejecútelo como un script Rhino normal de AutoJs6, no en modo Node.js. Cambie únicamente `PROMPT` para probar otra solicitud.
 
-Para usar otro modelo, copie su Model ID desde la pantalla de gestión de modelos y sustituya `MODEL_ID` en el script. No reutilice el valor del ejemplo.
+Para usar otro modelo, pulse la tarjeta del modelo en la sección "Modelos locales" de **Ajustes > Modelos y servicios**, copie su Model ID con **Copiar ID del modelo** en los detalles y sustituya `MODEL_ID` en el script. No reutilice el valor del ejemplo.
 
 ```javascript
 var PLUGIN_PACKAGE =
@@ -486,6 +486,6 @@ Seguridad y límites operativos:
 - Se declaran streaming, usage, sesiones persistentes, structured JSON, `text/plain` y `application/json`. No se admiten reasoning ni tools.
 - El schema de respuesta debe ser un objeto JSON de no más de 64 KiB; las palabras clave admitidas son las implementadas por el runtime LiteRT-LM/LLGuidance incluido. La salida estructurada completa se analiza y valida estrictamente, por lo que debe reservarse suficiente `maxTokens` para todo el valor JSON.
 - Los tokens de usage proceden de los contadores de caché KV y decode de Conversation en LiteRT-LM, sin estimaciones por caracteres. `durationMillis` mide la generación del proveedor y excluye descubrimiento, enlace, listado de modelos y despacho del host.
-- El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario, solicitudes a un destino en línea configurado por el usuario y actualizaciones del catálogo público de modelos predefinidos desde GitHub en los ajustes de IA en línea. Estas actualizaciones no requieren una clave API ni realizan inferencia, y no se inician al activar el plugin ni durante la generación local. La inferencia local nunca usa la red. No se solicita ningún permiso general de almacenamiento; SAF limita el acceso al origen o destino elegido.
+- El plugin solicita `INTERNET` para descargas de modelos recomendados iniciadas por el usuario, solicitudes a un destino en línea configurado por el usuario y actualizaciones del catálogo público de modelos predefinidos desde GitHub en la página "Modelos y servicios". Estas actualizaciones no requieren una clave API ni realizan inferencia, y no se inician al activar el plugin ni durante la generación local. La inferencia local nunca usa la red. No se solicita ningún permiso general de almacenamiento; SAF limita el acceso al origen o destino elegido.
 - Solo el host AutoJs6 con la misma firma puede enlazar el servicio provider.
 - Las generaciones anteriores con nombre de hash SHA-256 se conservan por seguridad entre procesos y siguen ocupando almacenamiento privado.

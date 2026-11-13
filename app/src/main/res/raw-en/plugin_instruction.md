@@ -8,7 +8,7 @@ Host build 5276 or later and Android 7.0 or later are required. Build outputs in
 
 ## Get a model
 
-Open the plugin model manager and tap **Browse LiteRT-LM models** to inspect the available catalog and useful runtime details. Entries marked **Verified download** can be saved to any writable SAF location. The plugin shows progress and verifies the LiteRT-LM header, exact byte count, and SHA-256 before enabling **Import downloaded model**. Local inference never uses the network. The downloaded external file and its imported app-private copy occupy space separately; if Android terminates the process mid-download, delete any partial external document manually.
+In the plugin's **Settings > Models and services**, tap **Download model** in the "Local models" section to see the built-in catalog of recommended models with useful runtime details, then tap **Download** on an entry to finish in one step: the model is written straight to app-private storage, the plugin shows progress with pause, cancel and retry on failure, and imports it automatically once the LiteRT-LM header, exact byte count, and SHA-256 are verified. An interrupted download continues from the part already received. Local inference never uses the network. Each model is stored once, in app-private storage, so uninstalling the plugin or clearing its app data deletes it; a `.litertlm` file from elsewhere can be added with **Import model file**.
 
 ## Quick start (recommended)
 
@@ -99,7 +99,7 @@ The remaining sections show the low-level protocol path without the `ai` module.
 
 The complete Rhino script below uses the **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** model as its example. This pinned download has SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, so its imported model ID is `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. The downloaded file may be named `gemma-4-E2B-it.litertlm`; its file name does not affect the model ID. After importing it, use the copy action in the upper-right corner of the plugin instructions to copy the entire script. Run it as a regular AutoJs6 Rhino script, not in Node.js mode. Change only `PROMPT` to try another request.
 
-When using another model, copy that model's Model ID from the model management screen and replace `MODEL_ID` in the script. Do not reuse the example value.
+When using another model, tap the model's card in the "Local models" section of **Settings > Models and services**, tap **Copy model ID** in its details, and replace `MODEL_ID` in the script. Do not reuse the example value.
 
 ```javascript
 var PLUGIN_PACKAGE =
@@ -486,6 +486,6 @@ Safety and operational limits:
 - Streaming, usage, persistent sessions, structured JSON, `text/plain`, and `application/json` are declared. Reasoning and tools are unsupported.
 - A response schema must be a JSON object no larger than 64 KiB; supported keywords follow the bundled LiteRT-LM/LLGuidance runtime. Completed structured output is parsed and validated strictly, so provide enough `maxTokens` for the entire JSON value.
 - Usage token counts come from LiteRT-LM Conversation KV-cache and decode counters without character-based estimation. `durationMillis` measures the provider generation call and excludes host discovery, binding, target catalog discovery, and dispatch time.
-- The plugin requests `INTERNET` for user-triggered recommended-model downloads, requests to a user-configured online target, and public model-preset catalog updates from GitHub in Online AI settings. Catalog updates need no API key, make no inference calls, and never start during plugin activation or local generation. Local inference never uses the network. No broad storage permission is requested; SAF grants access only to the user-selected source or destination.
+- The plugin requests `INTERNET` for user-triggered recommended-model downloads, requests to a user-configured online target, and public model-preset catalog updates from GitHub on the "Models and services" page. Catalog updates need no API key, make no inference calls, and never start during plugin activation or local generation. Local inference never uses the network. No broad storage permission is requested; SAF grants access only to the user-selected source or destination.
 - Only the same-signature AutoJs6 host may bind the provider service.
 - Previous model generations named by SHA-256 hash are retained for cross-process safety and continue to occupy app-private storage.

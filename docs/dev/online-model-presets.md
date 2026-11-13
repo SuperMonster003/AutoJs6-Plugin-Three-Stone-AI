@@ -7,7 +7,7 @@
 1. 默认分支保存采集器, 筛选策略和 app/src/main/assets/online-models.json 内置快照.
 2. Online model catalog GitHub Actions 每天 UTC 03:17 检查公开来源, 支持手动运行. 相关采集器, 策略或快照推送到默认分支后也会触发.
 3. 模型内容有变化时, CI 将 online-models.json 发布到独立的 model-catalog 数据分支. 首次发布创建不继承代码历史的分支, 后续只做快进推送.
-4. App 打开在线 AI 设置时先读取有效缓存, 没有缓存则使用 APK 内置快照. 自动更新默认开启, 最近成功检查超过 24 小时才后台联网; 可以关闭自动更新或手动刷新.
+4. App 打开 "模型与服务" 页时先读取有效缓存, 没有缓存则使用 APK 内置快照. 自动更新默认开启, 最近成功检查超过 24 小时才后台联网; 可以关闭自动更新或手动刷新.
 5. 下载结果完整校验后才原子替换本地缓存. 无网络, 禁止计费网络, 请求失败或损坏内容均保留现有列表. 网络失败后自动检查退避 1 小时, 手动刷新可绕过节流.
 
 [公开目录地址](https://raw.githubusercontent.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/model-catalog/online-models.json).
@@ -46,7 +46,7 @@ OpenRouter 扩充 OpenAI, Anthropic, Google, DeepSeek, xAI, Meta, Mistral, Aliba
 
 ## App 缓存与编辑行为
 
-- 仅在线 AI 设置页面触发检查; Application 初始化, Wake 激活, Provider 查询和本地生成不触发目录请求.
+- 仅 "模型与服务" 页触发检查 ("服务详情" 页只读取已有快照, 不联网); Application 初始化, Wake 激活, Provider 查询和本地生成不触发目录请求.
 - 独立无凭据 HTTPS 客户端, 固定项目地址, 禁止重定向, 限制超时和响应体, 遵守计费网络设置.
 - ETag 与已校验 JSON 一起保存; 304 仅在对应缓存有效时接受. 损坏缓存或过旧缓存不会发送遗留 ETag.
 - 缓存与用户配置文件分开, 使用私有目录和原子写入. 网络期间不持文件锁; 发布前重新核对版本, 晚到旧响应不能覆盖新版本.

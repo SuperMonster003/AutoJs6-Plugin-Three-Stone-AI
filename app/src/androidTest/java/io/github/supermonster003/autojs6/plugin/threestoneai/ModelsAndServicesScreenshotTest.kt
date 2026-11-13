@@ -80,20 +80,23 @@ class ModelsAndServicesScreenshotTest {
         }
     }
 
-    /** Waits until both sections are built, then lets the catalog and health checks settle. */
+    /**
+     * Waits until both sections are built, then lets the catalog and health checks settle. The labels come
+     * from the Activity, whose language may follow AutoJs6 rather than the system language.
+     */
     private fun awaitRows(scenario: ActivityScenario<ModelManagerActivity>) {
-        val expected = listOf(R.string.models_default_target, R.string.online_ai_add_profile, R.string.models_local_section)
-            .map(context::getString)
+        val labels = listOf(R.string.models_default_target, R.string.online_ai_add_profile, R.string.models_local_section)
         val deadline = SystemClock.uptimeMillis() + TIMEOUT_MILLIS
-        var shown = emptyList<String>()
+        var missing = labels.map(context::getString)
         while (SystemClock.uptimeMillis() < deadline) {
             scenario.onActivity { activity ->
-                shown = views(activity.window.decorView).filterIsInstance<TextView>().map { it.text.toString() }
+                val shown = views(activity.window.decorView).filterIsInstance<TextView>().map { it.text.toString() }
+                missing = labels.map(activity::getString).filterNot(shown::contains)
             }
-            if (shown.containsAll(expected)) break
+            if (missing.isEmpty()) break
             SystemClock.sleep(POLL_MILLIS)
         }
-        assertTrue("Both sections are shown", shown.containsAll(expected))
+        assertTrue("Both sections are shown, missing $missing", missing.isEmpty())
         SystemClock.sleep(SETTLE_MILLIS)
     }
 

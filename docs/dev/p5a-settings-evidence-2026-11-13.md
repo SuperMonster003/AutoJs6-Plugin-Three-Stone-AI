@@ -18,7 +18,13 @@
 ![Models and services, light, AVD_API_33](p5a-settings-evidence/avd-api33-models-and-services-light.png)
 ![Models and services, dark, AVD_API_33](p5a-settings-evidence/avd-api33-models-and-services-dark.png)
 
+## XQ-DQ72 (QV770340J7, 2026-11-13 08:2x)
+
+- The maintainer agreed at 08:1x (through the dispatch session) to install the migrating debug build over the release build 320. Debug build 328 (same sources as c325e6c) was installed with data kept; nothing was uninstalled.
+- Migration, `device_settings_screenshots.py --migration-check`: PASS. Before the first launch the default target file did not exist; afterwards it holds `v1` and the previous default service (the first model of the service named by `defaultProfileId`). `ai-profiles/profiles.json` and `models/catalog.json` were not written after the install (modification time older than the install, same digest before and after the run). The check prints only these verdicts, no content, ID or digest.
+- Screenshots: the first run failed at "Both sections are shown". The expected labels came from the test process, which uses the system language (en-US), while the plugin follows the AutoJs6 language; the test now reads the labels from the Activity and lists the missing ones. The device then dropped off the remote adb server and did not return within 15 minutes, so the light and dark screenshots are still missing.
+
 ## Not yet covered
 
-- XQ-DQ72 (QV770340J7) light and dark screenshots with the maintainer's real services and models, and the migration check on that device (the default target row and `run-as` reading of the stored target after the first install). The remote adb server was unreachable during this run, and the first install of the migrating debug build waits for the maintainer's consent.
-- Host side: AutoJs6 `AiProviderTargetListingAndroidConformanceTest` still expects the radio button selection on the local model list that P5.3 removed; it belongs to the host repository and is left for the host.
+- XQ-DQ72 light and dark screenshots with the maintainer's real services and models (including the default target row after the migration). Debug build 328 and the new androidTest APK are on the device; `py .python/device_settings_screenshots.py --serial QV770340J7 --no-install` takes them and removes the androidTest APK at the end.
+- Host side: AutoJs6 `AiProviderTargetListingAndroidConformanceTest` still expects the radio button selection on the local model list that P5.3 removed; the dispatch session scheduled it as a separate host card (Q23 = A, D121, P9.0).

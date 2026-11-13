@@ -241,7 +241,7 @@
     <string name="litert_catalog_imported">تم الاستيراد</string>
     <string name="model_catalog_loading">جارٍ تحميل كتالوج النماذج</string>
     <string name="model_catalog_unavailable">كتالوج النماذج غير متاح</string>
-    <string name="model_cleanup_empty">لم يتم العثور على ملفات نماذج أو مرفقات دردشة غير مرجعية</string>
+    <string name="model_cleanup_empty">لم يتم العثور على ملفات نماذج أو ذاكرات تخزين مؤقت للمحرك أو مرفقات دردشة غير مرجعية</string>
     <string name="model_cleanup_failed">فشل تنظيف مساحة التخزين</string>
     <string name="model_cleanup_succeeded">اكتمل التنظيف: تم حذف %1$d من الملفات وتحرير %2$s</string>
     <string name="model_delete_confirm_message">هل تريد حذف النموذج "%1$s"? لا يمكن التراجع عن هذا الإجراء.</string>

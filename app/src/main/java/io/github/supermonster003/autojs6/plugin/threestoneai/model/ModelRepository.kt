@@ -169,6 +169,25 @@ internal class ModelRepository(context: Context) {
         )
     }
 
+    /**
+     * Model file names whose LiteRT-LM engine caches must be kept: every catalog entry plus every
+     * entry still present in private model storage, so an unreferenced file keeps its caches until
+     * the storage cleanup removes the file itself. Fails closed when the catalog cannot be read.
+     */
+    @Synchronized
+    fun retainedModelFileNames(): Set<String> {
+        val catalog = readAuthoritativeManagerCatalog()
+        val directoryNames = directory.list()
+            ?: throw IllegalStateException("Private model storage cannot be listed")
+        require(directoryNames.size <= MAXIMUM_MODEL_DIRECTORY_ENTRIES) {
+            "Private model storage contains too many entries for bounded cleanup"
+        }
+        return buildSet {
+            catalog.entries.mapTo(this, ModelCatalogEntry::fileName)
+            addAll(directoryNames)
+        }
+    }
+
     /** Deletes only hash-named model files that the authoritative catalog does not reference. */
     @Synchronized
     fun cleanUnreferencedModelFiles(): ModelStorageCleanupResult {

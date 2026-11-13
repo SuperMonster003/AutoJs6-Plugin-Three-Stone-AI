@@ -241,7 +241,7 @@
     <string name="litert_catalog_imported">インポート済み</string>
     <string name="model_catalog_loading">モデルカタログを読み込んでいます</string>
     <string name="model_catalog_unavailable">モデルカタログを利用できません</string>
-    <string name="model_cleanup_empty">未参照のモデルファイルやチャットの添付ファイルはありません</string>
+    <string name="model_cleanup_empty">未参照のモデルファイル, エンジンキャッシュ, チャットの添付ファイルはありません</string>
     <string name="model_cleanup_failed">ストレージのクリーンアップに失敗しました</string>
     <string name="model_cleanup_succeeded">クリーンアップ完了: %1$d 個のファイルを削除し, %2$s を解放しました</string>
     <string name="model_delete_confirm_message">モデル\"%1$s\"を削除しますか? この操作は元に戻せません.</string>

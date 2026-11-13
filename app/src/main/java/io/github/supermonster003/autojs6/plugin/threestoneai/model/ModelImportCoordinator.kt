@@ -11,9 +11,12 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ChatAttachment
 import io.github.supermonster003.autojs6.plugin.threestoneai.ChatAttachmentStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.ChatComposerDraftStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.ConversationHistoryStore
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmEngineCacheCleanup
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmEngineCacheStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmModelHealthChecker
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.ModelHealthChecker
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectory
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectoryPath
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
@@ -133,6 +136,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     private val healthChecker: ModelHealthChecker = LiteRtLmModelHealthChecker(
         cacheDirectory = liteRtLmCacheDirectory(applicationContext.cacheDir),
     )
+    private val engineCacheStore = LiteRtLmEngineCacheStore(liteRtLmCacheDirectoryPath(applicationContext.cacheDir))
     private val stateMachine = ModelImportStateMachine<ImportedModel>()
     private val observers = CopyOnWriteArraySet<Observer>()
     private val managerObservers = CopyOnWriteArraySet<ManagerObserver>()
@@ -179,7 +183,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 runCatching {
                     releaseStaleImportPermissions()
                     repository.recoverInterruptedImportFromManagerColdStart()
-                    repository.managerSnapshot()
+                    repository.managerSnapshot().also { deleteOrphanEngineCaches() }
                 }.fold(
                     onSuccess = { snapshot ->
                         synchronized(lifecycleLock) {
@@ -682,6 +686,7 @@ internal class ModelImportCoordinator private constructor(context: Context) {
                 check(deletion.snapshot.models.none { it.modelId == active.modelId }) {
                     "Deleted model is still present in the manager snapshot"
                 }
+                deleteEngineCachesOf(deletion.deletedModel.file.name)
             }.snapshot
         }
         result.exceptionOrNull()?.let { error -> logDeletionFailure(active, error) }
@@ -775,9 +780,10 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     private fun executeStorageCleanup(active: ActiveStorageCleanup) {
         val result = runCatching { repository.cleanUnreferencedModelFiles() }.map { cleanup ->
             val attachments = sweepAttachments()
+            val engineCaches = deleteOrphanEngineCaches()
             cleanup.copy(
-                removedFileCount = cleanup.removedFileCount + attachments.files,
-                releasedBytes = cleanup.releasedBytes + attachments.bytes,
+                removedFileCount = cleanup.removedFileCount + attachments.files + engineCaches.removedFileCount,
+                releasedBytes = cleanup.releasedBytes + attachments.bytes + engineCaches.releasedBytes,
             )
         }
         result.exceptionOrNull()?.let { error -> logStorageCleanupFailure(active, error) }
@@ -1000,6 +1006,25 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     }.onFailure { error ->
         Log.w(TAG, "Unable to clean chat attachments", error)
     }.getOrDefault(ChatAttachmentStore.SweepResult(0, 0L))
+
+    /**
+     * Runs on the manager worker after the model file is gone. A failure never turns a completed
+     * deletion into a failed one; whatever is left becomes an orphan for the next sweep.
+     */
+    private fun deleteEngineCachesOf(modelFileName: String) {
+        runCatching {
+            engineCacheStore.deleteCachesOf(modelFileName, repository.retainedModelFileNames())
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to delete engine caches of a deleted model: type=${error.javaClass.name}")
+        }
+    }
+
+    /** Orphans are caches whose model file is neither in the catalog nor in private model storage. */
+    private fun deleteOrphanEngineCaches(): LiteRtLmEngineCacheCleanup = runCatching {
+        engineCacheStore.deleteOrphans(repository.retainedModelFileNames())
+    }.onFailure { error ->
+        Log.w(TAG, "Unable to delete orphan engine caches: type=${error.javaClass.name}")
+    }.getOrDefault(LiteRtLmEngineCacheCleanup.NONE)
 
     private fun logStorageCleanupFailure(active: ActiveStorageCleanup, error: Throwable) {
         val message =

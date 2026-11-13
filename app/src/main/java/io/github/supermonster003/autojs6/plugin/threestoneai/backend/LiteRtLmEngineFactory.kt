@@ -75,6 +75,9 @@ internal inline fun <T : AutoCloseable> initializeAndClose(
 }
 
 internal fun liteRtLmCacheDirectory(cacheRoot: File): File =
-    File(cacheRoot, "litertlm").apply {
+    liteRtLmCacheDirectoryPath(cacheRoot).apply {
         check(isDirectory || mkdirs()) { "LiteRT-LM cache directory is unavailable" }
     }
+
+/** The engine cache directory without creating it, for cleanup that must not leave empty directories. */
+internal fun liteRtLmCacheDirectoryPath(cacheRoot: File): File = File(cacheRoot, "litertlm")

@@ -167,8 +167,8 @@ class ServiceDetailActivity : ConfiguredActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         saveItem = menu.add(0, MENU_SAVE, 0, R.string.chat_settings_save).apply {
+            // An icon-only action item already reads its title as the content description.
             setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            contentDescription = getString(R.string.chat_settings_save)
         }
         updateSaveItem()
         return true

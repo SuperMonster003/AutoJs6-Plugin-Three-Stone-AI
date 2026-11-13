@@ -61,12 +61,16 @@ class SpeechReadingDeviceTest {
         autoRead(true)
         environment.backend.reply = listOf("Hello there. ", "How are ", "you? ", "Fine.")
         environment.backend.chunkDelayMillis = 250L
+        // The first sentence keeps being read until the checks below have seen it: otherwise reading
+        // lasts only as long as the stream, shorter than one poll on a slow emulator (P6.4).
+        FakeSpeechEngine.hold = true
         environment.launchChat().use { scenario ->
             send(scenario, "question")
             waitUntil("reading starts") { reading(scenario) != null }
             waitUntil("the first sentence is read") { FakeSpeechEngine.spokenTexts().isNotEmpty() }
             assertTrue("Status bar shows reading", statusShows(scenario, R.string.speech_reading_status))
             SpeechDeviceReport.screenshot("chat-reading-status")
+            FakeSpeechEngine.release()
             waitUntil("the reply is read to the end") {
                 environment.backend.completions == 1 && reading(scenario) == null
             }

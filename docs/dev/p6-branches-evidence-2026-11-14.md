@@ -30,6 +30,22 @@ Emulator check (AVD_API_33 read-only instance emulator-5972, x86_64): `.python/r
 - `EngineCacheCleanupDeviceTest` on emulator-5972, 1 / 1 PASS, through the real coordinator with two staged fake models: "Clean unreferenced files" removes the cache of a model that is gone and counts it; deleting a model removes its CPU and GPU caches but leaves a cache written a second ago; caches of the remaining model and an unrelated file stay.
 - Real cache on emulator-5972: after the inference above, the catalog entry and the model file were removed the way 1.6.0 deleted a model (cache left behind) and the cache was dated one hour back; `.python/device_engine_caches.py` then reported "orphans: 1 files, 1.55 GB". Launching the plugin (cold start of the main process) removed it within 5 s: "0 entries in cache/litertlm, orphans: 0 files".
 
+## P6.4 Two instrumentation tests that timed out on the emulator (D144, D147)
+
+`ChatReasoningCardDeviceTest.theCardStreamsCollapsesExpandsAndSurvivesReopening` ("the card streams the reasoning") and `SpeechReadingDeviceTest.repliesAreReadWhileTheyStream` ("reading starts") timed out on the AVD_API_33 read-only instance, also on the baseline before P4 (703ba9e).
+
+### Cause: the waits, on a slow emulator
+
+- Both waits look for a short-lived state. With the scripted backend (three reasoning chunks of 400 ms) the card says "Thinking..." for about 1.2 s; reading lasts only as long as the scripted reply streams (four chunks of 250 ms), about 0.3 - 1.4 s.
+- `waitUntil` polls with `waitForIdleSync` followed by `onActivity`. While a reply is generating, the meta line under it pulses (`ChatActivity.setMetaPulsing`, a 750 ms ValueAnimator with infinite repeats), and the emulator renders in software, so the main thread rarely goes idle: a probe test (not committed) measured 0.4 - 1.3 s per `waitForIdleSync` during generation, 0 - 60 ms with animations off. One or two polls are enough to miss the whole window. The probe saw "Thinking..." at 973 ms and "Thought for 1 s" at 1,896 ms; reading started at 883 ms and was over at 1,453 ms, with the three sentences queued at 339, 869 and 1,201 ms.
+- With `animator_duration_scale 0` the unchanged tests pass, and the timeline the probe recorded is what the app should do, so the app's timing is correct. The chat also saves the history on the main thread every 750 ms while a reply streams (`persistConversationRunnable`); that existed before and is not changed here.
+
+### Fix (tests only)
+
+- `ScriptedAiBackend.pauseBeforeReply` keeps a turn after its reasoning chunks until the test calls `continueReply()` (or `release()`); `ChatReasoningCardDeviceTest` sets it and continues once it has seen the streaming card. The check that the thinking time is between 1 and 10 s is unchanged (it now includes the wait for the check, typically 1 - 2 s).
+- `SpeechReadingDeviceTest.repliesAreReadWhileTheyStream` sets `FakeSpeechEngine.hold`, so the first sentence keeps being read until the test has checked the reading state and taken its screenshot, then releases it.
+- No assertion removed and no wait limit raised. With animations on, both classes (8 tests) passed in 5 of 5 runs on emulator-5972.
+
 ### XQ-DQ72
 
 The two files the P4 card left in `cache/litertlm` (2.21 GB from 2026-10-17, 1.55 GB from 2026-11-13 14:28) are checked with `.python/device_engine_caches.py` before and after the install of the P6 build (see the XQ-DQ72 section below).

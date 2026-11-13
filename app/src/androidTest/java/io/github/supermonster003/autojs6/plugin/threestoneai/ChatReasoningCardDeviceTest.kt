@@ -39,6 +39,9 @@ class ChatReasoningCardDeviceTest {
         backend.reasoning = listOf("Weigh ", "the ", "options.")
         backend.reply = listOf("Answer ", "text")
         backend.chunkDelayMillis = 400L
+        // The "thinking" state would last only the three reasoning chunks; on a slow emulator one
+        // poll can take longer than that (P6.4), so the reply waits until the card has been seen.
+        backend.pauseBeforeReply = true
         backend.hold = true
         var conversationId = ""
         var reasoning: ChatMessageReasoning? = null
@@ -51,6 +54,7 @@ class ChatReasoningCardDeviceTest {
                 card != null && card.expanded && card.body.startsWith("Weigh") &&
                     card.header == string(scenario, R.string.chat_reasoning_thinking)
             }
+            backend.continueReply()
             waitUntil("the reply text follows the reasoning") { lastReply(scenario)?.text == "Answer text" }
             assertTrue(checkNotNull(card(scenario)).expanded)
 

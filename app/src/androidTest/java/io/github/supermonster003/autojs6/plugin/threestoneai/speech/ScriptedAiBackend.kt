@@ -22,7 +22,8 @@ import java.util.Collections
 /**
  * A ready local-looking target whose replies are scripted, so chat UI tests need no model,
  * network or credentials. Replies stream as the given chunks; [hold] keeps a turn open until
- * [release] or cancellation, [failNext] fails the next turn after its chunks.
+ * [release] or cancellation, [pauseBeforeReply] stops it between the reasoning and the reply until
+ * [continueReply], [failNext] fails the next turn after its chunks.
  */
 internal class ScriptedAiBackend : AiBackend {
     override val backendId: String = "speech-test"
@@ -35,6 +36,11 @@ internal class ScriptedAiBackend : AiBackend {
     val reasoningRequested: MutableList<Boolean> = Collections.synchronizedList(ArrayList())
     @Volatile var chunkDelayMillis: Long = 20L
     @Volatile var hold: Boolean = false
+    /**
+     * Keeps each turn after its [reasoning] chunks, before the [reply], until [continueReply] or
+     * [release]: a test can then check the "thinking" state without racing a short timed window.
+     */
+    @Volatile var pauseBeforeReply: Boolean = false
     @Volatile var failNext: Boolean = false
     val prompts: MutableList<String> = Collections.synchronizedList(ArrayList())
     /**
@@ -48,9 +54,17 @@ internal class ScriptedAiBackend : AiBackend {
     @Volatile var completedAt = 0L
 
     @Volatile private var released = false
+    @Volatile private var replyContinued = false
 
+    /** Lets a held turn run to its end, past [pauseBeforeReply] too. */
     fun release() {
+        replyContinued = true
         released = true
+    }
+
+    /** Lets a turn stopped by [pauseBeforeReply] stream its reply. */
+    fun continueReply() {
+        replyContinued = true
     }
 
     val target: AiTarget
@@ -104,6 +118,7 @@ internal class ScriptedAiBackend : AiBackend {
             )
             reasoningRequested += request.includeReasoning
             released = false
+            replyContinued = false
             Thread({ run(listener) }, "speech-test-reply").apply { isDaemon = true }.start()
         }
 
@@ -114,6 +129,7 @@ internal class ScriptedAiBackend : AiBackend {
                 listener.onReasoningDelta(chunk)
                 SystemClock.sleep(chunkDelayMillis)
             }
+            while (pauseBeforeReply && !replyContinued && !cancelled) SystemClock.sleep(POLL_MILLIS)
             for (chunk in reply) {
                 if (cancelled) return
                 listener.onTextDelta(chunk)

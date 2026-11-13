@@ -282,7 +282,6 @@
     <string name="online_ai_credential_required_after_destination_change">プロバイダーまたは HTTPS オリジンを変更するときは API キーを再入力してください.</string>
     <string name="online_ai_delete_message">&quot;%1$s&quot; と保存された API キーを削除しますか? この操作は元に戻せません.</string>
     <string name="online_ai_delete_title">サービスを削除しますか?</string>
-    <string name="online_ai_edit_profile_title">サービスを編集</string>
     <string name="online_ai_form_invalid">サービス名, 正確なモデル ID, HTTPS base URL を確認してください.</string>
     <string name="online_ai_key_clear_failed">API キーを消去できませんでした</string>
     <string name="online_ai_key_cleared">API キーを消去しました</string>
@@ -317,9 +316,6 @@
     <string name="online_ai_test_success">接続テストに成功しました</string>
     <string name="online_ai_test_timed_out">接続テストがタイムアウトしました</string>
     <string name="online_ai_test_title">接続をテストしますか?</string>
-    <string name="online_ai_vision_help">このサービスで画像入力に対応するモデルのみ選択してください. ホストが要求した画像は選択したサービスに送信されます. 既存モデルは選択するまで無効です.</string>
-    <string name="online_ai_vision_models">画像入力対応モデル</string>
-    <string name="online_ai_vision_none">無効</string>
     <string name="plugin_description">プライベートなローカルモデルとユーザー設定オンラインサービスによる AI テキスト生成</string>
     <string name="release_history_load_failed">ローカルのバージョン履歴を読み込めません</string>
     <string name="release_history_title">バージョン履歴</string>

@@ -21,7 +21,6 @@
     <string name="model_picker_tag_vision">Image input</string>
     <string name="model_picker_unfavorite">Remove from favorites</string>
     <string name="online_ai_default_effort">Default effort</string>
-    <string name="online_ai_default_effort_help">New conversations start at this level. A level the model does not support falls back to the nearest supported level below it.</string>
     <string name="online_ai_fast_mode">Fast mode by default</string>
     <string name="online_ai_fast_mode_help">Anthropic only. Replies arrive faster at a higher price. Models without fast mode return an error.</string>
 </resources>

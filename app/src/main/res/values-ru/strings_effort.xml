@@ -21,7 +21,6 @@
     <string name="model_picker_tag_vision">Ввод изображений</string>
     <string name="model_picker_unfavorite">Удалить из избранного</string>
     <string name="online_ai_default_effort">Глубина рассуждений по умолчанию</string>
-    <string name="online_ai_default_effort_help">Новые диалоги начинаются с этого уровня. Если модель не поддерживает уровень, используется ближайший поддерживаемый уровень ниже.</string>
     <string name="online_ai_fast_mode">Быстрый режим по умолчанию</string>
     <string name="online_ai_fast_mode_help">Только Anthropic. Ответы приходят быстрее, но стоят дороже. Модели без быстрого режима вернут ошибку.</string>
 </resources>

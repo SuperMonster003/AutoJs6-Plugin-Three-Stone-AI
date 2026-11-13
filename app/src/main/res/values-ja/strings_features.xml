@@ -90,7 +90,6 @@
     <string name="online_ai_clone_name">%1$s のコピー</string>
     <string name="online_ai_custom_model_ids">カスタム</string>
     <string name="online_ai_custom_model_ids_hint">1 行に 1 つのモデル ID</string>
-    <string name="online_ai_default_model">優先モデル</string>
     <string name="online_ai_export_empty">エクスポートするサービスがありません</string>
     <string name="online_ai_export_failed">サービスをエクスポートできませんでした</string>
     <string name="online_ai_export_profiles">サービスをエクスポート</string>
@@ -98,10 +97,6 @@
     <string name="online_ai_import_failed">サービスをインポートできませんでした. 有効な 3-Stone AI エクスポートファイルか確認してください.</string>
     <string name="online_ai_import_profiles">サービスをインポート</string>
     <string name="online_ai_import_succeeded">%1$d 件のサービスをインポートしました. 使用前に API key を入力してください.</string>
-    <string name="online_ai_model_ids">モデル ID</string>
-    <string name="online_ai_model_ids_help">プリセットを複数選択し, プロバイダーの正確なモデル ID を追加できます. プリセットは入力用で可用性を保証しません.</string>
-    <string name="online_ai_model_ids_invalid">有効なモデル ID を 1 から 32 個選択してください</string>
-    <string name="online_ai_model_presets">プリセット</string>
     <string name="online_ai_profile_clone_failed">サービスを複製できませんでした</string>
     <string name="online_ai_profile_cloned">API key を含めずにサービスを複製しました</string>
 </resources>

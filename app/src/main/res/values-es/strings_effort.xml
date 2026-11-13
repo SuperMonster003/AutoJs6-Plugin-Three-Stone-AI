@@ -21,7 +21,6 @@
     <string name="model_picker_tag_vision">Entrada de imágenes</string>
     <string name="model_picker_unfavorite">Quitar de favoritos</string>
     <string name="online_ai_default_effort">Esfuerzo predeterminado</string>
-    <string name="online_ai_default_effort_help">Las conversaciones nuevas empiezan en este nivel. Si el modelo no admite un nivel, se usa el nivel admitido más cercano por debajo.</string>
     <string name="online_ai_fast_mode">Modo rápido de forma predeterminada</string>
     <string name="online_ai_fast_mode_help">Solo Anthropic. Las respuestas llegan antes a un precio mayor. Los modelos sin modo rápido devuelven un error.</string>
 </resources>

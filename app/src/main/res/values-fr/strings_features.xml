@@ -90,7 +90,6 @@
     <string name="online_ai_clone_name">Copie de %1$s</string>
     <string name="online_ai_custom_model_ids">Personnalisé</string>
     <string name="online_ai_custom_model_ids_hint">Un ID de modèle par ligne</string>
-    <string name="online_ai_default_model">Modèle préféré</string>
     <string name="online_ai_export_empty">Aucun service à exporter</string>
     <string name="online_ai_export_failed">Impossible d\'exporter les services</string>
     <string name="online_ai_export_profiles">Exporter les services</string>
@@ -98,10 +97,6 @@
     <string name="online_ai_import_failed">Impossible d\'importer les services. Vérifiez que le fichier est un export 3-Stone AI valide.</string>
     <string name="online_ai_import_profiles">Importer des services</string>
     <string name="online_ai_import_succeeded">%1$d services importés. Saisissez les clés API avant utilisation.</string>
-    <string name="online_ai_model_ids">ID de modèle</string>
-    <string name="online_ai_model_ids_help">Sélectionnez des préréglages et ajoutez les ID exacts du fournisseur. Ce sont des raccourcis sans garantie de disponibilité.</string>
-    <string name="online_ai_model_ids_invalid">Sélectionnez de 1 à 32 ID de modèle valides</string>
-    <string name="online_ai_model_presets">Préréglages</string>
     <string name="online_ai_profile_clone_failed">Impossible de cloner le service</string>
     <string name="online_ai_profile_cloned">Service cloné sans sa clé API</string>
 </resources>

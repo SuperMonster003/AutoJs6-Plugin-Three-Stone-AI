@@ -21,7 +21,6 @@
     <string name="model_picker_tag_vision">이미지 입력</string>
     <string name="model_picker_unfavorite">즐겨찾기에서 제거</string>
     <string name="online_ai_default_effort">기본 추론 강도</string>
-    <string name="online_ai_default_effort_help">새 대화는 이 단계에서 시작합니다. 모델이 지원하지 않는 단계는 아래쪽의 가장 가까운 지원 단계로 내려갑니다.</string>
     <string name="online_ai_fast_mode">기본으로 빠른 모드 사용</string>
     <string name="online_ai_fast_mode_help">Anthropic 전용입니다. 응답이 빨라지고 요금이 높아집니다. 빠른 모드를 지원하지 않는 모델은 오류를 반환합니다.</string>
 </resources>

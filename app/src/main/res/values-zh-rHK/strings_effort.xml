@@ -21,7 +21,6 @@
     <string name="model_picker_tag_vision">圖片輸入</string>
     <string name="model_picker_unfavorite">取消收藏</string>
     <string name="online_ai_default_effort">預設推理強度</string>
-    <string name="online_ai_default_effort_help">新對話由這一檔開始. 模型不支援的檔位會降到下方最接近的支援檔位.</string>
     <string name="online_ai_fast_mode">預設使用快速模式</string>
     <string name="online_ai_fast_mode_help">只限 Anthropic. 回覆更快, 價格更高. 不支援快速模式的模型會傳回錯誤.</string>
 </resources>

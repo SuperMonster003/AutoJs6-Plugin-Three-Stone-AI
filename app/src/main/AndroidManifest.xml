@@ -153,6 +153,13 @@
             android:parentActivityName=".ModelManagerActivity" />
 
         <activity
+            android:name=".ServiceDetailActivity"
+            android:exported="false"
+            android:label="@string/service_detail_title"
+            android:parentActivityName=".ModelManagerActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".WakeActivity"
             android:excludeFromRecents="true"
             android:exported="true"

@@ -282,7 +282,6 @@
     <string name="online_ai_credential_required_after_destination_change">أدخل مفتاح API مجددا عند تغيير المزود أو مصدر HTTPS.</string>
     <string name="online_ai_delete_message">هل تريد حذف &quot;%1$s&quot; ومفتاح API المحفوظ? لا يمكن التراجع عن هذا الإجراء.</string>
     <string name="online_ai_delete_title">حذف الخدمة?</string>
-    <string name="online_ai_edit_profile_title">تعديل الخدمة</string>
     <string name="online_ai_form_invalid">تحقق من اسم الخدمة ومعرف النموذج الدقيق وعنوان HTTPS الأساسي.</string>
     <string name="online_ai_key_clear_failed">تعذر مسح مفتاح API</string>
     <string name="online_ai_key_cleared">تم مسح مفتاح API</string>
@@ -317,9 +316,6 @@
     <string name="online_ai_test_success">نجح اختبار الاتصال</string>
     <string name="online_ai_test_timed_out">انتهت مهلة اختبار الاتصال</string>
     <string name="online_ai_test_title">اختبار الاتصال?</string>
-    <string name="online_ai_vision_help">حدد فقط النماذج التي تدعم الصور في هذه الخدمة. سترسل الصور التي يطلبها المضيف إلى الخدمة المحددة. تبقى النماذج الحالية معطلة حتى تختارها.</string>
-    <string name="online_ai_vision_models">نماذج تدعم إدخال الصور</string>
-    <string name="online_ai_vision_none">معطل</string>
     <string name="plugin_description">توليد نص بالذكاء الاصطناعي بنماذج محلية خاصة وخدمات عبر الإنترنت يعدها المستخدم</string>
     <string name="release_history_load_failed">تعذر تحميل سجل الإصدارات المحلي</string>
     <string name="release_history_title">سجل الإصدارات</string>

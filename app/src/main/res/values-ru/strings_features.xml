@@ -90,7 +90,6 @@
     <string name="online_ai_clone_name">Копия %1$s</string>
     <string name="online_ai_custom_model_ids">Пользовательские</string>
     <string name="online_ai_custom_model_ids_hint">Один ID модели в строке</string>
-    <string name="online_ai_default_model">Предпочтительная модель</string>
     <string name="online_ai_export_empty">Нет сервисов для экспорта</string>
     <string name="online_ai_export_failed">Не удалось экспортировать сервисы</string>
     <string name="online_ai_export_profiles">Экспорт сервисов</string>
@@ -98,10 +97,6 @@
     <string name="online_ai_import_failed">Не удалось импортировать сервисы. Убедитесь, что файл является экспортом сервисов 3-Stone AI.</string>
     <string name="online_ai_import_profiles">Импорт сервисов</string>
     <string name="online_ai_import_succeeded">Импортировано сервисов: %1$d. Перед использованием введите API keys.</string>
-    <string name="online_ai_model_ids">ID моделей</string>
-    <string name="online_ai_model_ids_help">Выберите предустановки и добавьте точные ID моделей провайдера. Это только быстрый ввод без гарантии доступности.</string>
-    <string name="online_ai_model_ids_invalid">Выберите от 1 до 32 допустимых ID моделей</string>
-    <string name="online_ai_model_presets">Предустановки</string>
     <string name="online_ai_profile_clone_failed">Не удалось клонировать сервис</string>
     <string name="online_ai_profile_cloned">Сервис клонирован без API key</string>
 </resources>

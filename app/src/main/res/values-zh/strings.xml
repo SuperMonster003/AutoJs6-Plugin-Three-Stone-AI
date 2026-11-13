@@ -370,10 +370,8 @@
     <string name="online_ai_credential_required_after_destination_change">更换提供方或 HTTPS 来源时, 请重新输入 API Key.</string>
     <string name="online_ai_custom_model_ids">自定义</string>
     <string name="online_ai_custom_model_ids_hint">每行一个模型 ID</string>
-    <string name="online_ai_default_model">首选模型</string>
     <string name="online_ai_delete_message">要删除 &quot;%1$s&quot; 及其保存的 API Key 吗? 此操作无法撤销.</string>
     <string name="online_ai_delete_title">删除服务?</string>
-    <string name="online_ai_edit_profile_title">编辑服务</string>
     <string name="online_ai_export_empty">没有可导出的服务</string>
     <string name="online_ai_export_failed">无法导出服务</string>
     <string name="online_ai_export_profiles">导出服务</string>
@@ -386,10 +384,6 @@
     <string name="online_ai_key_cleared">API Key 已清除</string>
     <string name="online_ai_metered_save_failed">无法更新网络访问策略</string>
     <string name="online_ai_metered_saved">网络访问策略已更新</string>
-    <string name="online_ai_model_ids">模型 ID</string>
-    <string name="online_ai_model_ids_help">可多选预置项并添加提供方的准确模型 ID. 预置项仅用于快捷填写, 不代表提供方保证可用.</string>
-    <string name="online_ai_model_ids_invalid">请选择 1 至 32 个有效模型 ID</string>
-    <string name="online_ai_model_presets">预置模型</string>
     <string name="online_ai_profile_action_hint">服务操作</string>
     <string name="online_ai_profile_clone_failed">无法克隆服务</string>
     <string name="online_ai_profile_cloned">服务已克隆, API Key 未复制</string>
@@ -421,9 +415,6 @@
     <string name="online_ai_test_success">连接测试成功</string>
     <string name="online_ai_test_timed_out">连接测试超时</string>
     <string name="online_ai_test_title">测试连接?</string>
-    <string name="online_ai_vision_help">仅选择此服务中支持图片输入的模型. 宿主请求使用的图片会发送给所选服务. 已有模型默认关闭, 需在此选中后启用.</string>
-    <string name="online_ai_vision_models">支持图片输入的模型</string>
-    <string name="online_ai_vision_none">未启用</string>
     <string name="plugin_description">使用私有本地模型与用户配置在线服务的 AI 文本生成</string>
     <string name="release_history_load_failed">无法加载本地版本历史</string>
     <string name="release_history_title">版本历史</string>

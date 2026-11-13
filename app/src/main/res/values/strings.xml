@@ -370,10 +370,8 @@
     <string name="online_ai_credential_required_after_destination_change">Enter the API key again when changing provider or HTTPS origin.</string>
     <string name="online_ai_custom_model_ids">Custom</string>
     <string name="online_ai_custom_model_ids_hint">One model ID per line</string>
-    <string name="online_ai_default_model">Preferred model</string>
     <string name="online_ai_delete_message">Delete &quot;%1$s&quot; and its saved API key? This cannot be undone.</string>
     <string name="online_ai_delete_title">Delete service?</string>
-    <string name="online_ai_edit_profile_title">Edit service</string>
     <string name="online_ai_export_empty">There are no services to export</string>
     <string name="online_ai_export_failed">Could not export services</string>
     <string name="online_ai_export_profiles">Export services</string>
@@ -386,10 +384,6 @@
     <string name="online_ai_key_cleared">API key cleared</string>
     <string name="online_ai_metered_save_failed">Could not update the network access policy</string>
     <string name="online_ai_metered_saved">Network access policy updated</string>
-    <string name="online_ai_model_ids">Model IDs</string>
-    <string name="online_ai_model_ids_help">Select any number of presets and add exact provider model IDs. Presets are shortcuts, not an availability guarantee.</string>
-    <string name="online_ai_model_ids_invalid">Select 1 to 32 valid model IDs</string>
-    <string name="online_ai_model_presets">Presets</string>
     <string name="online_ai_profile_action_hint">Service actions</string>
     <string name="online_ai_profile_clone_failed">Could not clone the service</string>
     <string name="online_ai_profile_cloned">Service cloned without its API key</string>
@@ -421,9 +415,6 @@
     <string name="online_ai_test_success">Connection test succeeded</string>
     <string name="online_ai_test_timed_out">Connection test timed out</string>
     <string name="online_ai_test_title">Test connection?</string>
-    <string name="online_ai_vision_help">Select only models that support image input at this service. Images requested by the host will be sent to the selected service. Existing models remain disabled until selected.</string>
-    <string name="online_ai_vision_models">Models with image input</string>
-    <string name="online_ai_vision_none">Disabled</string>
     <string name="plugin_description">AI text generation with private local models and user-configured online services</string>
     <string name="release_history_load_failed">Unable to load local version history</string>
     <string name="release_history_title">Version history</string>

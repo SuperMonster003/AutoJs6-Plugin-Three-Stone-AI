@@ -135,6 +135,7 @@ class DefaultTargetTest {
         val failing = object : DefaultTargetStore {
             override fun readOrMigrate(migrated: () -> String?): String? = throw java.io.IOException("disk")
             override fun write(targetId: String?) = Unit
+            override fun replace(mapping: Map<String, String>) = Unit
         }
         val plain = backend(null, localDefault = local.targetId, onlineDefault = null).catalog()
 
@@ -198,6 +199,24 @@ class DefaultTargetTest {
         assertThrows(IllegalArgumentException::class.java) { store.write("") }
     }
 
+    @Test
+    fun fileStoreReplaceFollowsAReorderedServiceOnlyForAStoredChoice() {
+        val directory = folder.newFolder("files")
+        val store = fileStore(directory)
+        val mapping = mapOf(remote.targetId to otherRemote.targetId, otherRemote.targetId to remote.targetId)
+
+        store.replace(mapping)
+        assertEquals(local.targetId, store.readOrMigrate { local.targetId })
+
+        store.write(remote.targetId)
+        store.replace(mapping)
+        assertEquals(otherRemote.targetId, fileStore(directory).readOrMigrate { error("already migrated") })
+
+        store.replace(mapOf(local.targetId to otherLocal.targetId))
+        assertEquals(otherRemote.targetId, store.readOrMigrate { error("already migrated") })
+        assertThrows(IllegalArgumentException::class.java) { store.replace(mapOf(otherRemote.targetId to "a b")) }
+    }
+
     private fun fileStore(directory: File) = FileDefaultTargetStore(directory) { source, target ->
         Files.move(source.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
     }
@@ -236,6 +255,10 @@ class DefaultTargetTest {
         override fun write(targetId: String?) {
             migrated = true
             value = targetId
+        }
+
+        override fun replace(mapping: Map<String, String>) {
+            value?.let(mapping::get)?.let { value = it }
         }
     }
 

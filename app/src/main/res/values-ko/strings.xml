@@ -282,7 +282,6 @@
     <string name="online_ai_credential_required_after_destination_change">제공자 또는 HTTPS 원본을 변경할 때 API 키를 다시 입력하세요.</string>
     <string name="online_ai_delete_message">&quot;%1$s&quot; 및 저장된 API 키를 삭제할까요? 이 작업은 취소할 수 없습니다.</string>
     <string name="online_ai_delete_title">서비스를 삭제할까요?</string>
-    <string name="online_ai_edit_profile_title">서비스 편집</string>
     <string name="online_ai_form_invalid">서비스 이름, 정확한 모델 ID 및 HTTPS base URL을 확인하세요.</string>
     <string name="online_ai_key_clear_failed">API 키를 지울 수 없습니다</string>
     <string name="online_ai_key_cleared">API 키 지워짐</string>
@@ -317,9 +316,6 @@
     <string name="online_ai_test_success">연결 테스트 성공</string>
     <string name="online_ai_test_timed_out">연결 테스트 시간 초과</string>
     <string name="online_ai_test_title">연결을 테스트할까요?</string>
-    <string name="online_ai_vision_help">이 서비스에서 이미지 입력을 지원하는 모델만 선택하세요. 호스트가 요청한 이미지는 선택한 서비스로 전송됩니다. 기존 모델은 선택할 때까지 비활성화됩니다.</string>
-    <string name="online_ai_vision_models">이미지 입력 지원 모델</string>
-    <string name="online_ai_vision_none">비활성화</string>
     <string name="plugin_description">비공개 로컬 모델과 사용자 설정 온라인 서비스를 사용하는 AI 텍스트 생성</string>
     <string name="release_history_load_failed">로컬 버전 기록을 불러올 수 없습니다</string>
     <string name="release_history_title">버전 기록</string>

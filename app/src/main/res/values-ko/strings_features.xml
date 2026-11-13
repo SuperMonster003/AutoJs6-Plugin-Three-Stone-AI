@@ -90,7 +90,6 @@
     <string name="online_ai_clone_name">%1$s 사본</string>
     <string name="online_ai_custom_model_ids">사용자 지정</string>
     <string name="online_ai_custom_model_ids_hint">한 줄에 모델 ID 하나</string>
-    <string name="online_ai_default_model">우선 모델</string>
     <string name="online_ai_export_empty">내보낼 서비스가 없습니다</string>
     <string name="online_ai_export_failed">서비스를 내보낼 수 없습니다</string>
     <string name="online_ai_export_profiles">서비스 내보내기</string>
@@ -98,10 +97,6 @@
     <string name="online_ai_import_failed">서비스를 가져올 수 없습니다. 유효한 3-Stone AI 서비스 내보내기 파일인지 확인하세요.</string>
     <string name="online_ai_import_profiles">서비스 가져오기</string>
     <string name="online_ai_import_succeeded">서비스 %1$d개를 가져왔습니다. 사용 전에 API key를 입력하세요.</string>
-    <string name="online_ai_model_ids">모델 ID</string>
-    <string name="online_ai_model_ids_help">프리셋을 여러 개 선택하고 제공자의 정확한 모델 ID를 추가할 수 있습니다. 프리셋은 입력 단축 기능이며 사용 가능성을 보장하지 않습니다.</string>
-    <string name="online_ai_model_ids_invalid">유효한 모델 ID를 1개에서 32개 선택하세요</string>
-    <string name="online_ai_model_presets">프리셋</string>
     <string name="online_ai_profile_clone_failed">서비스를 복제할 수 없습니다</string>
     <string name="online_ai_profile_cloned">API key 없이 서비스를 복제했습니다</string>
 </resources>

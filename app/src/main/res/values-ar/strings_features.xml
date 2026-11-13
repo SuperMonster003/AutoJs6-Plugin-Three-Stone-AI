@@ -90,7 +90,6 @@
     <string name="online_ai_clone_name">نسخة من %1$s</string>
     <string name="online_ai_custom_model_ids">مخصص</string>
     <string name="online_ai_custom_model_ids_hint">معرف نموذج واحد في كل سطر</string>
-    <string name="online_ai_default_model">النموذج المفضل</string>
     <string name="online_ai_export_empty">لا توجد خدمات لتصديرها</string>
     <string name="online_ai_export_failed">تعذر تصدير الخدمات</string>
     <string name="online_ai_export_profiles">تصدير الخدمات</string>
@@ -98,10 +97,6 @@
     <string name="online_ai_import_failed">تعذر استيراد الخدمات. تحقق من أن الملف تصدير صالح لخدمات ⁨3-Stone AI⁩.</string>
     <string name="online_ai_import_profiles">استيراد الخدمات</string>
     <string name="online_ai_import_succeeded">تم استيراد %1$d خدمات. أدخل مفاتيح API قبل الاستخدام.</string>
-    <string name="online_ai_model_ids">معرفات النماذج</string>
-    <string name="online_ai_model_ids_help">حدد إعدادات مسبقة وأضف معرفات النماذج الدقيقة للمزود. هذه اختصارات إدخال ولا تضمن التوفر.</string>
-    <string name="online_ai_model_ids_invalid">حدد من 1 إلى 32 معرف نموذج صالحا</string>
-    <string name="online_ai_model_presets">إعدادات مسبقة</string>
     <string name="online_ai_profile_clone_failed">تعذر استنساخ الخدمة</string>
     <string name="online_ai_profile_cloned">تم استنساخ الخدمة من دون مفتاح API</string>
 </resources>

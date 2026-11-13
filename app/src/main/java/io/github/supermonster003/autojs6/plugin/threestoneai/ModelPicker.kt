@@ -120,6 +120,14 @@ internal class ModelPickerFavoritesStore(context: Context) {
         return updated
     }
 
+    /** Follows a service's reordered models (D122): favorites keep pointing at the same model. */
+    fun replace(mapping: Map<String, String>) {
+        if (mapping.isEmpty()) return
+        val current = load()
+        val updated = current.mapTo(mutableSetOf()) { targetId -> mapping[targetId] ?: targetId }
+        if (updated != current) preferences.edit().putStringSet(KEY_FAVORITES, updated).apply()
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "model_picker"
         const val KEY_FAVORITES = "favorite_target_ids"

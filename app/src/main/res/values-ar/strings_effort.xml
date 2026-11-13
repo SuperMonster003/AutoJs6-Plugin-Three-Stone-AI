@@ -21,7 +21,6 @@
     <string name="model_picker_tag_vision">إدخال الصور</string>
     <string name="model_picker_unfavorite">إزالة من المفضلة</string>
     <string name="online_ai_default_effort">مستوى الاستدلال الافتراضي</string>
-    <string name="online_ai_default_effort_help">تبدأ المحادثات الجديدة بهذا المستوى. إذا لم يدعم النموذج مستوى ما فسينخفض إلى أقرب مستوى مدعوم أدناه.</string>
     <string name="online_ai_fast_mode">الوضع السريع افتراضيا</string>
     <string name="online_ai_fast_mode_help">لنماذج Anthropic فقط. تصل الردود أسرع بسعر أعلى. تعيد النماذج التي لا تدعم الوضع السريع خطأ.</string>
 </resources>

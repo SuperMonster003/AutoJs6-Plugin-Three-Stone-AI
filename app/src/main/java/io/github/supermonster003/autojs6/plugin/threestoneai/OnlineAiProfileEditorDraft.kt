@@ -5,7 +5,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationE
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
 
 /**
- * Non-secret values shown by the online profile editor sheet (roadmap D105). The API key is kept
+ * Non-secret values shown by the service details page (roadmap D105, P5.4). The API key is kept
  * out of this class so that it never appears in equality checks or in [toString].
  */
 internal data class OnlineAiProfileEditorValues(
@@ -36,8 +36,9 @@ internal object OnlineAiProfileEditorPolicy {
 
 /**
  * Editor state kept across activity recreation and process death (D105). It lives only in memory
- * and in the saved-instance-state Bundle; nothing here is written to app storage. [credential]
- * should be wiped by the caller once it is back in the field.
+ * and in the saved-instance-state Bundle; nothing here is written to app storage. The Bundle holds
+ * [credential] by reference until it is parceled, so only the restoring caller wipes it, once it is
+ * back in the field.
  */
 internal class OnlineAiProfileEditorDraft(
     val profileId: String?,

@@ -282,7 +282,6 @@
     <string name="online_ai_credential_required_after_destination_change">Introduce otra vez la clave API al cambiar de proveedor u origen HTTPS.</string>
     <string name="online_ai_delete_message">Eliminar &quot;%1$s&quot; y su clave API guardada? Esta acción no se puede deshacer.</string>
     <string name="online_ai_delete_title">Eliminar el servicio?</string>
-    <string name="online_ai_edit_profile_title">Editar servicio</string>
     <string name="online_ai_form_invalid">Revisa el nombre del servicio, el ID exacto del modelo y la URL base HTTPS.</string>
     <string name="online_ai_key_clear_failed">No se pudo borrar la clave API</string>
     <string name="online_ai_key_cleared">Clave API borrada</string>
@@ -317,9 +316,6 @@
     <string name="online_ai_test_success">Prueba de conexión correcta</string>
     <string name="online_ai_test_timed_out">La prueba de conexión agotó el tiempo</string>
     <string name="online_ai_test_title">Probar la conexión?</string>
-    <string name="online_ai_vision_help">Seleccione solo modelos que admitan imágenes en este servicio. Las imágenes solicitadas por el anfitrión se enviarán al servicio seleccionado. Los modelos existentes permanecen desactivados hasta seleccionarlos.</string>
-    <string name="online_ai_vision_models">Modelos con entrada de imágenes</string>
-    <string name="online_ai_vision_none">Desactivado</string>
     <string name="plugin_description">Generación de texto con IA mediante modelos locales privados y servicios en línea configurados por el usuario</string>
     <string name="release_history_load_failed">No se pudo cargar el historial de versiones local</string>
     <string name="release_history_title">Historial de versiones</string>

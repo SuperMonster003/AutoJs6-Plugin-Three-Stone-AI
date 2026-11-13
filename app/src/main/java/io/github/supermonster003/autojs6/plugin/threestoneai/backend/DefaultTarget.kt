@@ -33,6 +33,12 @@ internal interface DefaultTargetStore {
 
     /** Stores [targetId] as the choice; null means "no choice", which leaves the automatic default. */
     fun write(targetId: String?)
+
+    /**
+     * Replaces the stored choice when [mapping] has an entry for it (a service's models were
+     * reordered, D122). Does nothing when no choice was stored or migrated yet.
+     */
+    fun replace(mapping: Map<String, String>)
 }
 
 /**
@@ -57,6 +63,15 @@ internal class FileDefaultTargetStore(
     override fun write(targetId: String?) {
         require(targetId == null || DefaultTargetPolicy.isValidId(targetId)) { "Invalid default target ID" }
         exclusive { store(targetId) }
+    }
+
+    override fun replace(mapping: Map<String, String>) {
+        if (mapping.isEmpty()) return
+        require(mapping.values.all(DefaultTargetPolicy::isValidId)) { "Invalid default target ID" }
+        exclusive {
+            val current = read()?.targetId ?: return@exclusive
+            mapping[current]?.let(::store)
+        }
     }
 
     private fun read(): Stored? {

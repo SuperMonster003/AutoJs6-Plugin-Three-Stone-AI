@@ -239,6 +239,11 @@ class ChatActivity : ConfiguredActivity() {
     internal val generatingForTest: Boolean
         get() = isGenerating
 
+    /** Instrumentation only: the target the open conversation uses (P5.7). */
+    @VisibleForTesting
+    internal val conversationTargetIdForTest: String?
+        get() = conversationTarget?.targetId
+
     /** Instrumentation only: where the voice conversation stands. */
     @VisibleForTesting
     internal val currentVoicePhase: VoicePhase

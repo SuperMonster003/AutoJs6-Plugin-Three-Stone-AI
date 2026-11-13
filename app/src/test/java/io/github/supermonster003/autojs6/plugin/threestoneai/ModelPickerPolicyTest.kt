@@ -34,27 +34,47 @@ class ModelPickerPolicyTest {
     }
 
     @Test
-    fun `favorites are pinned on top and stay in their own group`() {
+    fun `favorites appear only in the favorites group (D101)`() {
         val sections = ModelPickerPolicy.sections(targets, setOf(fable.targetId, gemma.targetId), "", ::searchText)
 
-        assertEquals(ModelPickerSectionKind.FAVORITES, sections.first().kind)
+        assertEquals(
+            listOf(ModelPickerSectionKind.FAVORITES, ModelPickerSectionKind.PROFILE, ModelPickerSectionKind.PROFILE),
+            sections.map(ModelPickerSection::kind),
+        )
         assertEquals(ModelPickerPolicy.FAVORITES_KEY, sections.first().groupKey)
-        assertEquals(listOf(fable, gemma), sections.first().targets)
-        assertEquals(listOf(opus, fable), sections[1].targets)
-        assertEquals(4, sections.size)
+        assertEquals("Favorites keep catalog order", listOf(fable, gemma), sections.first().targets)
+        assertEquals(listOf(opus), sections[1].targets)
+        assertEquals(listOf(gpt), sections[2].targets)
+        assertEquals("Each target is listed once", targets.size, sections.sumOf { it.targets.size })
     }
 
     @Test
-    fun `every query word must match and empty sections are dropped`() {
+    fun `unfavoriting puts a target back in its group in catalog order`() {
+        val allOfA = ModelPickerPolicy.sections(targets, setOf(opus.targetId, fable.targetId), "", ::searchText)
+        assertEquals(listOf("favorites", "profile:$PROFILE_B", ModelPickerPolicy.LOCAL_KEY), allOfA.map(ModelPickerSection::groupKey))
+
+        val back = ModelPickerPolicy.sections(targets, setOf(opus.targetId), "", ::searchText)
+        assertEquals(listOf(fable), back.single { it.groupKey == "profile:$PROFILE_A" }.targets)
+        val none = ModelPickerPolicy.sections(targets, emptySet(), "", ::searchText)
+        assertEquals(listOf(opus, fable), none.single { it.groupKey == "profile:$PROFILE_A" }.targets)
+    }
+
+    @Test
+    fun `search lists every match once without groups and every query word must match`() {
         val fableOnly = ModelPickerPolicy.sections(targets, setOf(gpt.targetId), "  FABLE\tanthropic ", ::searchText)
-        assertEquals(1, fableOnly.size)
+        assertEquals(ModelPickerSectionKind.SEARCH, fableOnly.single().kind)
+        assertEquals(ModelPickerPolicy.SEARCH_KEY, fableOnly.single().groupKey)
         assertEquals(listOf(fable), fableOnly.single().targets)
+
+        val across = ModelPickerPolicy.sections(targets, setOf(gemma.targetId, fable.targetId), "e", ::searchText)
+        assertEquals("No favorites group while searching", 1, across.size)
+        assertEquals("Catalog order, favorites included", targets, across.single().targets)
 
         val none = ModelPickerPolicy.sections(targets, emptySet(), "fable openai", ::searchText)
         assertTrue(none.isEmpty())
 
-        val local = ModelPickerPolicy.sections(targets, emptySet(), "gemma", ::searchText)
-        assertEquals(listOf(ModelPickerSectionKind.LOCAL), local.map(ModelPickerSection::kind))
+        val blank = ModelPickerPolicy.sections(targets, emptySet(), " \t ", ::searchText)
+        assertEquals("A blank query groups as usual", 3, blank.size)
     }
 
     @Test

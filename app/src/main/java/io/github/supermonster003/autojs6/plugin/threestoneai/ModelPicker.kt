@@ -2,6 +2,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.content.Context
 import android.text.Editable
+import android.text.format.Formatter
 import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
@@ -15,6 +16,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiEffortSupport
+import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelRepository
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.Ui
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.accentRipple
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.applyThemedSelectableBackground
@@ -32,7 +34,8 @@ import java.util.Locale
  * per-conversation effort row); no RikkaHub code is used (AGPL-3.0).
  */
 
-internal enum class ModelPickerSectionKind { FAVORITES, PROFILE, LOCAL }
+/** [SEARCH] is the single ungrouped list of search results; it has no header. */
+internal enum class ModelPickerSectionKind { FAVORITES, PROFILE, LOCAL, SEARCH }
 
 internal enum class ModelPickerTag { VISION, REASONING, FAST }
 
@@ -46,11 +49,14 @@ internal data class ModelPickerSection(
 internal object ModelPickerPolicy {
     const val FAVORITES_KEY = "favorites"
     const val LOCAL_KEY = "local"
+    const val SEARCH_KEY = "search"
 
     /**
-     * Favorites first, then one group per online profile and one for local models, each in catalog
-     * order. Every word of [query] must appear in the target's [searchText] (case-insensitive);
-     * favorites stay in their own group as well, and empty sections are dropped.
+     * Every target appears once (D101). Without a query, favorites form the top group and are left
+     * out of their own groups, followed by one group per online service and one for local models,
+     * each in catalog order; empty groups are dropped. With a query the matches form one ungrouped
+     * list in catalog order: every word of [query] must appear in the target's [searchText]
+     * (case-insensitive).
      */
     fun sections(
         targets: List<AiTarget>,
@@ -59,16 +65,23 @@ internal object ModelPickerPolicy {
         searchText: (AiTarget) -> String,
     ): List<ModelPickerSection> {
         val words = words(query)
-        val matching = targets.filter { target ->
-            val text = searchText(target).lowercase(Locale.ROOT)
-            words.all(text::contains)
+        if (words.isNotEmpty()) {
+            val matching = targets.filter { target ->
+                val text = searchText(target).lowercase(Locale.ROOT)
+                words.all(text::contains)
+            }
+            return if (matching.isEmpty()) {
+                emptyList()
+            } else {
+                listOf(ModelPickerSection(ModelPickerSectionKind.SEARCH, SEARCH_KEY, matching))
+            }
         }
         val sections = ArrayList<ModelPickerSection>()
-        val favoriteTargets = matching.filter { target -> target.targetId in favorites }
+        val (favoriteTargets, others) = targets.partition { target -> target.targetId in favorites }
         if (favoriteTargets.isNotEmpty()) {
             sections += ModelPickerSection(ModelPickerSectionKind.FAVORITES, FAVORITES_KEY, favoriteTargets)
         }
-        matching.groupBy(::groupKey).forEach { (key, group) ->
+        others.groupBy(::groupKey).forEach { (key, group) ->
             val kind = if (key == LOCAL_KEY) ModelPickerSectionKind.LOCAL else ModelPickerSectionKind.PROFILE
             sections += ModelPickerSection(kind, key, group)
         }
@@ -171,10 +184,28 @@ internal class TargetPickerTexts(private val context: Context) {
     fun rowTitle(target: AiTarget): String =
         if (target.locality == AiTargetLocality.LOCAL) name(target) else target.modelId
 
-    /** Local models show their ID under the name; unavailable targets say so. */
+    /**
+     * Sizes of imported local models by model ID, read once from the catalog; a model missing here
+     * (or an unreadable catalog) simply shows no size.
+     */
+    private val localSizes: Map<String, Long> by lazy {
+        runCatching {
+            ModelRepository(context).catalogSnapshot().entries.associate { entry -> entry.modelId to entry.sizeBytes }
+        }.getOrDefault(emptyMap())
+    }
+
+    /**
+     * Service models show their service and local models their size (D101), so a row reads the
+     * same in the favorites group and in search results; unavailable targets say so.
+     */
     fun rowSubtitle(target: AiTarget): String? {
         val parts = buildList {
-            if (target.locality == AiTargetLocality.LOCAL && target.modelId != name(target)) add(target.modelId)
+            when (target.locality) {
+                AiTargetLocality.REMOTE -> add(name(target))
+                AiTargetLocality.LOCAL -> localSizes[target.modelId]?.takeIf { it > 0L }?.let { bytes ->
+                    add(Formatter.formatFileSize(context, bytes))
+                }
+            }
             if (!isUsable(target)) add(context.getString(R.string.chat_target_unavailable_suffix).trimStart(' ', '|'))
         }
         return parts.joinToString(" | ").ifEmpty { null }
@@ -183,6 +214,7 @@ internal class TargetPickerTexts(private val context: Context) {
     fun groupTitle(section: ModelPickerSection): String = when (section.kind) {
         ModelPickerSectionKind.FAVORITES -> context.getString(R.string.model_picker_favorites)
         ModelPickerSectionKind.LOCAL -> context.getString(R.string.model_picker_local)
+        ModelPickerSectionKind.SEARCH -> ""
         ModelPickerSectionKind.PROFILE -> section.targets.first().let { target ->
             context.getString(
                 R.string.chat_model_switch_summary,
@@ -256,7 +288,9 @@ internal fun ConfiguredActivity.showModelPickerSheet(
             return
         }
         sections.forEach { section ->
-            list.addView(pickerSectionHeader(actions.groupTitle(section)))
+            if (section.kind != ModelPickerSectionKind.SEARCH) {
+                list.addView(pickerSectionHeader(actions.groupTitle(section)))
+            }
             section.targets.forEach { target ->
                 list.addView(
                     pickerRow(

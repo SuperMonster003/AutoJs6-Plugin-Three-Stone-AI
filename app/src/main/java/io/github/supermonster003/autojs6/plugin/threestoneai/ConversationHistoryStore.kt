@@ -23,6 +23,8 @@ internal class ConversationHistoryStore(context: Context) {
     private val historyFile = AtomicFile(File(applicationContext.filesDir, HISTORY_FILE_NAME))
     private val preferences = applicationContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
     private val recallStore = ConversationRecallStore(applicationContext)
+    /** Attachment directories follow their conversations (roadmap P4.3, D71). */
+    private val attachmentStore = ChatAttachmentStore(applicationContext)
 
     fun loadAll(): List<StoredConversation> {
         val (conversations, mutationEpoch) = synchronized(PROCESS_LOCK) {
@@ -30,6 +32,22 @@ internal class ConversationHistoryStore(context: Context) {
         }
         scheduleRecallReconciliation(conversations, mutationEpoch)
         return conversations
+    }
+
+    /**
+     * Like [loadAll], but null when a stored history exists and cannot be read: the attachment sweep
+     * (D136) must not take an unreadable history for an empty one.
+     */
+    fun loadAllOrNull(): List<StoredConversation>? = synchronized(PROCESS_LOCK) {
+        val baseFile = historyFile.baseFile
+        val backupFile = File(baseFile.path + ".bak")
+        if (!baseFile.exists() && !backupFile.exists()) return@synchronized emptyList()
+        if (baseFile.length() > ConversationHistoryCodec.MAXIMUM_FILE_BYTES) return@synchronized null
+        runCatching {
+            historyFile.openRead().use { input -> ConversationHistoryCodec.decode(input.readBytes()) }
+        }.onFailure { error ->
+            Log.e(TAG, "Unable to read conversation history", error)
+        }.getOrNull()
     }
 
     fun find(id: String?): StoredConversation? {
@@ -55,10 +73,10 @@ internal class ConversationHistoryStore(context: Context) {
         }
         HISTORY_MUTATION_EPOCH.incrementAndGet()
         recallStore.synchronize(conversation)
-        recallStore.delete(
-            existing.mapTo(HashSet(), StoredConversation::id) -
-                normalized.mapTo(HashSet(), StoredConversation::id),
-        )
+        val pruned = existing.mapTo(HashSet(), StoredConversation::id) -
+            normalized.mapTo(HashSet(), StoredConversation::id)
+        recallStore.delete(pruned)
+        pruned.forEach(attachmentStore::deleteConversation)
         DELETED_CONVERSATION_IDS.remove(conversation.id)
         rememberLastConversation(conversation.id)
         true
@@ -72,6 +90,8 @@ internal class ConversationHistoryStore(context: Context) {
         if (deleted > 0 && writeUnlocked(retained)) {
             HISTORY_MUTATION_EPOCH.incrementAndGet()
             recallStore.delete(conversationIds)
+            existing.filter { conversation -> conversation.id in conversationIds }
+                .forEach { conversation -> attachmentStore.deleteConversation(conversation.id) }
             DELETED_CONVERSATION_IDS += existing
                 .asSequence()
                 .map(StoredConversation::id)
@@ -92,6 +112,7 @@ internal class ConversationHistoryStore(context: Context) {
         if (!writeUnlocked(emptyList())) return@synchronized 0
         HISTORY_MUTATION_EPOCH.incrementAndGet()
         recallStore.clear()
+        attachmentStore.deleteAllConversations()
         DELETED_CONVERSATION_IDS += existing.map(StoredConversation::id)
         preferences.edit().remove(KEY_LAST_CONVERSATION_ID).apply()
         existing.size
@@ -126,9 +147,9 @@ internal class ConversationHistoryStore(context: Context) {
                 check(writeUnlocked(normalized)) { "Unable to save imported conversation history" }
                 HISTORY_MUTATION_EPOCH.incrementAndGet()
                 changed.forEach(recallStore::replace)
-                recallStore.delete(
-                    merged.keys - normalized.mapTo(HashSet(), StoredConversation::id),
-                )
+                val pruned = merged.keys - normalized.mapTo(HashSet(), StoredConversation::id)
+                recallStore.delete(pruned)
+                pruned.forEach(attachmentStore::deleteConversation)
                 DELETED_CONVERSATION_IDS.removeAll(incoming.map(StoredConversation::id).toSet())
                 updateLastConversationAfterMutation(normalized)
             }

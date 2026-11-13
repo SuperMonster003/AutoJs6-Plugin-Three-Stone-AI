@@ -65,6 +65,10 @@ internal class OnlineAiHttpExecution private constructor(
         return baseCapabilities.copy(
             structuredJson = OnlineAiProviderCatalog.templateFor(normalized.provider).structuredJson,
             vision = normalized.modelId in normalized.visionModelIds,
+            attachments = OnlineAiAttachments.input(
+                normalized.provider.protocol,
+                normalized.modelId in normalized.visionModelIds,
+            ),
             effortLevels = OnlineAiEffortSupport.levels(normalized.provider.protocol, normalized.modelId),
             fastMode = OnlineAiEffortSupport.supportsFast(normalized.provider.protocol),
         )
@@ -409,7 +413,8 @@ internal class OnlineAiSession(
         tools = tools.toList(),
     )
 
-    private fun GenerationMessage.snapshot() = copy(textParts = textParts.toList(), images = images.toList())
+    private fun GenerationMessage.snapshot() =
+        copy(textParts = textParts.toList(), images = images.toList(), attachments = attachments.toList())
 
     private fun ResponseBody.isEventStream(): Boolean = contentType()?.let { type ->
         type.type.equals("text", ignoreCase = true) &&

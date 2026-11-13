@@ -33,6 +33,11 @@ import java.nio.ByteBuffer
  * - [MESSAGE_REASONING_TRUNCATED] "reasoning.cut": one byte 1 when the text was cut.
  *
  * The "reasoning.*" keys are ignored without "reasoning". Builds before 1.6.0 skip all three.
+ *
+ * Message key of user messages (roadmap P4.3, D135; absent without attachments):
+ * - [MESSAGE_ATTACHMENTS] "attachments": the attachment metadata in [ChatAttachmentCodec] format
+ *   (version byte 1). The files stay in `filesDir/attachments/<conversation id>/`. Builds before
+ *   1.7.0 skip the key, so the message shows without its attachments there.
  */
 internal object ConversationHistoryProperties {
     const val CONVERSATION_EFFORT = "effort"
@@ -40,6 +45,7 @@ internal object ConversationHistoryProperties {
     const val MESSAGE_REASONING = "reasoning"
     const val MESSAGE_REASONING_MILLIS = "reasoning.ms"
     const val MESSAGE_REASONING_TRUNCATED = "reasoning.cut"
+    const val MESSAGE_ATTACHMENTS = "attachments"
 
     const val MAXIMUM_ENTRIES = 64
     const val MAXIMUM_KEY_BYTES = 32
@@ -54,6 +60,7 @@ internal object ConversationHistoryProperties {
     }
 
     fun messageTable(message: ChatMessage): Map<String, ByteArray> = buildMap {
+        if (message.attachments.isNotEmpty()) put(MESSAGE_ATTACHMENTS, ChatAttachmentCodec.encode(message.attachments))
         val stored = message.reasoning
             ?.let { value -> ChatMessageReasoning.bounded(value.text, value.durationMillis, value.truncated) }
             ?.takeIf { value -> value.text.isNotEmpty() }
@@ -64,6 +71,9 @@ internal object ConversationHistoryProperties {
         }
         if (stored.truncated) put(MESSAGE_REASONING_TRUNCATED, byteArrayOf(1))
     }
+
+    fun attachments(table: Map<String, ByteArray>): List<ChatAttachment> =
+        table[MESSAGE_ATTACHMENTS]?.let(ChatAttachmentCodec::decode).orEmpty()
 
     fun reasoning(table: Map<String, ByteArray>): ChatMessageReasoning? {
         val text = table[MESSAGE_REASONING]?.toString(Charsets.UTF_8)?.takeIf(String::isNotEmpty) ?: return null

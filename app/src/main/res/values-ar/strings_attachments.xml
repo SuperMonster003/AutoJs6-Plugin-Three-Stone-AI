@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_attachment_add">إضافة مرفق</string>
+    <string name="chat_attachment_conversation_full">بلغت مرفقات هذه المحادثة الحد الأقصى %1$d MB. ابدأ محادثة جديدة لإضافة المزيد</string>
+    <string name="chat_attachment_failed_pdf_pages">يتجاوز %1$s مئة صفحة ولا يمكن إضافته</string>
+    <string name="chat_attachment_failed_pdf_protected">%1$s محمي بكلمة مرور ولا يمكن إضافته</string>
+    <string name="chat_attachment_failed_read">تعذرت قراءة %1$s</string>
+    <string name="chat_attachment_failed_size">%1$s كبير جدا. الحدود: الصور 5 MB, الملفات النصية 256 KB, ملفات PDF 32 MB</string>
+    <string name="chat_attachment_failed_text">%1$s ليس نصا بترميز UTF-8. يمكنك إضافة الصور والملفات النصية بترميز UTF-8 وملفات PDF</string>
+    <string name="chat_attachment_failed_type">نوع %1$s غير مدعوم. يمكنك إضافة الصور والملفات النصية بترميز UTF-8 وملفات PDF</string>
+    <string name="chat_attachment_importing" tools:ignore="TypographyEllipsis">جار قراءة المرفقات...</string>
+    <string name="chat_attachment_message_too_large">لا يمكن أن يتجاوز مجموع مرفقات رسالة واحدة %1$d MB</string>
+    <string name="chat_attachment_missing">ملف المرفق مفقود. أضفه مرة أخرى</string>
+    <string name="chat_attachment_open_failed">تعذر فتح هذا المرفق. ربما لا يوجد تطبيق يمكنه عرضه</string>
+    <string name="chat_attachment_pick_files">اختيار ملفات (نص أو PDF)</string>
+    <string name="chat_attachment_pick_images">اختيار صور</string>
+    <string name="chat_attachment_pick_images_unsupported">اختيار صور (إدخال الصور متوقف لهذا النموذج)</string>
+    <string name="chat_attachment_picker_unavailable">لا يتوفر منتقي ملفات</string>
+    <string name="chat_attachment_remove">إزالة %1$s</string>
+    <string name="chat_attachment_send_too_large">تتجاوز المرفقات ما يقبله الهدف الحالي في طلب واحد (%1$d MB إجمالا, و%2$d صورة كحد أقصى)</string>
+    <string name="chat_attachment_send_unsupported">لا يدعم الهدف الحالي هذه المرفقات: %1$s. أزلها قبل الإرسال</string>
+    <string name="chat_attachment_too_many">يمكن إرفاق %1$d ملفا كحد أقصى في كل رسالة</string>
+    <string name="chat_attachment_unavailable_editing">لا يمكن إضافة مرفقات أثناء تعديل رسالة</string>
+    <string name="chat_attachment_unavailable_target">النماذج المحلية لا تقبل المرفقات. انتقل إلى خدمة عبر الإنترنت لإضافة الصور والملفات</string>
+    <string name="chat_attachment_unnamed">ملف بلا اسم</string>
+    <string name="chat_attachment_unsupported_now">لا يدعم الهدف الحالي %1$s. أزله أو بدل الهدف قبل الإرسال</string>
+</resources>

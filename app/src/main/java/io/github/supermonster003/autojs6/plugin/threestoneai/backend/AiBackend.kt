@@ -27,6 +27,8 @@ internal data class AiTargetCapabilities(
     val effortLevels: List<GenerationEffort> = emptyList(),
     /** Whether the chat screen may offer the fast output mode for this target (D74). */
     val fastMode: Boolean = false,
+    /** Chat attachments this target accepts; null takes none (roadmap P4, D70). */
+    val attachments: AiAttachmentInput? = null,
 )
 
 internal data class AiTargetLimits(
@@ -258,6 +260,8 @@ internal data class GenerationMessage(
     val textParts: List<String>,
     val nativeToolMessage: NativeToolMessage? = null,
     val images: List<GenerationImage> = emptyList(),
+    /** Chat attachments of a user message (roadmap P4); scripts never send them. */
+    val attachments: List<GenerationAttachment> = emptyList(),
 )
 
 internal data class GenerationSamplingOptions(

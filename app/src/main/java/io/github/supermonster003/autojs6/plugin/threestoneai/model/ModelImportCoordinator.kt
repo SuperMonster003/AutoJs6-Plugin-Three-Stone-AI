@@ -7,6 +7,10 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import io.github.supermonster003.autojs6.plugin.threestoneai.ChatAttachment
+import io.github.supermonster003.autojs6.plugin.threestoneai.ChatAttachmentStore
+import io.github.supermonster003.autojs6.plugin.threestoneai.ChatComposerDraftStore
+import io.github.supermonster003.autojs6.plugin.threestoneai.ConversationHistoryStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmModelHealthChecker
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.ModelHealthChecker
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectory
@@ -769,7 +773,13 @@ internal class ModelImportCoordinator private constructor(context: Context) {
     }
 
     private fun executeStorageCleanup(active: ActiveStorageCleanup) {
-        val result = runCatching { repository.cleanUnreferencedModelFiles() }
+        val result = runCatching { repository.cleanUnreferencedModelFiles() }.map { cleanup ->
+            val attachments = sweepAttachments()
+            cleanup.copy(
+                removedFileCount = cleanup.removedFileCount + attachments.files,
+                releasedBytes = cleanup.releasedBytes + attachments.bytes,
+            )
+        }
         result.exceptionOrNull()?.let { error -> logStorageCleanupFailure(active, error) }
         val reread = if (result.isFailure) runCatching { repository.managerSnapshot() } else null
         reread?.exceptionOrNull()?.let { error -> logStorageCleanupFailure(active, error) }
@@ -972,6 +982,24 @@ internal class ModelImportCoordinator private constructor(context: Context) {
             Log.e(TAG, message)
         }
     }
+
+    /**
+     * Chat attachments nobody refers to any more (roadmap P4.3, D136). It is skipped when the history
+     * cannot be read; a failure leaves the model cleanup result as it is.
+     */
+    private fun sweepAttachments(): ChatAttachmentStore.SweepResult = runCatching {
+        val conversations = ConversationHistoryStore(applicationContext).loadAllOrNull()
+            ?: return@runCatching ChatAttachmentStore.SweepResult(0, 0L)
+        val store = ChatAttachmentStore(applicationContext)
+        store.sweep(
+            referenced = store.references(conversations),
+            keepPending = ChatComposerDraftStore(applicationContext).loadAttachments()
+                .mapTo(HashSet(), ChatAttachment::fileName),
+            nowMillis = System.currentTimeMillis(),
+        )
+    }.onFailure { error ->
+        Log.w(TAG, "Unable to clean chat attachments", error)
+    }.getOrDefault(ChatAttachmentStore.SweepResult(0, 0L))
 
     private fun logStorageCleanupFailure(active: ActiveStorageCleanup, error: Throwable) {
         val message =

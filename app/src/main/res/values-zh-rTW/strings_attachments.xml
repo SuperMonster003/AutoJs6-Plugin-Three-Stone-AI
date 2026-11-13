@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_attachment_add">新增附件</string>
+    <string name="chat_attachment_conversation_full">此對話的附件已達 %1$d MB 上限, 新增對話後可繼續新增</string>
+    <string name="chat_attachment_failed_pdf_pages">%1$s 超過 100 頁, 無法新增</string>
+    <string name="chat_attachment_failed_pdf_protected">%1$s 設有密碼, 無法新增</string>
+    <string name="chat_attachment_failed_read">無法讀取 %1$s</string>
+    <string name="chat_attachment_failed_size">%1$s 太大. 上限: 圖片 5 MB, 文字檔 256 KB, PDF 32 MB</string>
+    <string name="chat_attachment_failed_text">%1$s 不是 UTF-8 文字. 可以新增圖片, UTF-8 文字檔和 PDF</string>
+    <string name="chat_attachment_failed_type">不支援 %1$s 的類型. 可以新增圖片, UTF-8 文字檔和 PDF</string>
+    <string name="chat_attachment_importing" tools:ignore="TypographyEllipsis">正在讀取附件...</string>
+    <string name="chat_attachment_message_too_large">一則訊息的附件總計不能超過 %1$d MB</string>
+    <string name="chat_attachment_missing">附件檔案已遺失, 請重新新增</string>
+    <string name="chat_attachment_open_failed">無法開啟此附件, 可能沒有能檢視它的應用程式</string>
+    <string name="chat_attachment_pick_files">選取檔案 (文字或 PDF)</string>
+    <string name="chat_attachment_pick_images">選取圖片</string>
+    <string name="chat_attachment_pick_images_unsupported">選取圖片 (目前模型未開啟圖片輸入)</string>
+    <string name="chat_attachment_picker_unavailable">沒有可用的檔案選擇器</string>
+    <string name="chat_attachment_remove">移除 %1$s</string>
+    <string name="chat_attachment_send_too_large">附件超出目前目標單次請求的上限 (總計 %1$d MB, 最多 %2$d 張圖片)</string>
+    <string name="chat_attachment_send_unsupported">目前目標不支援這些附件: %1$s. 移除後再傳送</string>
+    <string name="chat_attachment_too_many">每則訊息最多 %1$d 個附件</string>
+    <string name="chat_attachment_unavailable_editing">編輯訊息時無法新增附件</string>
+    <string name="chat_attachment_unavailable_target">本機模型不支援附件, 切換到線上服務後可以新增圖片和檔案</string>
+    <string name="chat_attachment_unnamed">未命名檔案</string>
+    <string name="chat_attachment_unsupported_now">目前目標不支援 %1$s, 傳送前請移除它或切換目標</string>
+</resources>

@@ -38,9 +38,12 @@ internal object ConversationHistoryPolicy {
     const val MAXIMUM_MESSAGES_PER_CONVERSATION = 256
 
     fun titleFor(messages: List<ChatMessage>, fallback: String): String {
-        val firstPrompt = messages.firstOrNull { message ->
-            message.role == ChatMessageRole.USER && message.text.isNotBlank()
-        }?.text ?: return fallback
+        val first = messages.firstOrNull { message ->
+            message.role == ChatMessageRole.USER && (message.text.isNotBlank() || message.attachments.isNotEmpty())
+        } ?: return fallback
+        // A conversation that starts with files only is named after the first file (P4), so the
+        // title does not change when a later message adds text.
+        val firstPrompt = first.text.takeIf(String::isNotBlank) ?: first.attachments.first().name
         val compact = firstPrompt.replace(WHITESPACE, " ").trim()
         val codePointCount = compact.codePointCount(0, compact.length)
         return if (codePointCount <= MAXIMUM_TITLE_CHARACTERS) {
@@ -105,6 +108,7 @@ internal object ConversationHistoryPolicy {
 
     private fun ChatMessage.estimatedBytes(): Int = text.toByteArray(Charsets.UTF_8).size + target.estimatedBytes() +
         (reasoning?.text?.toByteArray(Charsets.UTF_8)?.size?.coerceAtMost(ChatMessageReasoning.MAXIMUM_BYTES) ?: 0) +
+        attachments.sumOf { attachment -> attachment.name.length + ATTACHMENT_OVERHEAD_BYTES } +
         MESSAGE_OVERHEAD_BYTES
 
     private fun StoredConversation.estimatedBytes(): Int = estimatedMessageBytes() +
@@ -135,6 +139,7 @@ internal object ConversationHistoryPolicy {
     private const val MAXIMUM_CONVERSATION_MESSAGE_BYTES = 1 * 1_024 * 1_024
     private const val MAXIMUM_HISTORY_BYTES = 24 * 1_024 * 1_024
     private const val MESSAGE_OVERHEAD_BYTES = 80
+    private const val ATTACHMENT_OVERHEAD_BYTES = 96
     private const val CONVERSATION_OVERHEAD_BYTES = 128
     private const val TARGET_OVERHEAD_BYTES = 64
     private const val CONTEXT_ITEM_OVERHEAD_BYTES = 64
@@ -362,6 +367,9 @@ internal object ConversationHistoryCodec {
                 val messageProperties = if (version >= VERSION) ConversationHistoryProperties.read(input) else emptyMap()
                 val reasoning = ConversationHistoryProperties.reasoning(messageProperties)
                     ?.takeIf { role == ChatMessageRole.ASSISTANT }
+                val attachments = ConversationHistoryProperties.attachments(messageProperties)
+                    .takeIf { role == ChatMessageRole.USER }
+                    .orEmpty()
                 add(
                     ChatMessage(
                         id = messageId,
@@ -372,6 +380,7 @@ internal object ConversationHistoryCodec {
                         target = messageTarget,
                         truncated = truncated,
                         reasoning = reasoning,
+                        attachments = attachments,
                     ),
                 )
             }

@@ -136,6 +136,14 @@ internal class OnlineAiBackend(
                 output.writeInt(target.capabilities.effortLevels.size)
                 target.capabilities.effortLevels.forEach { level -> output.writeLengthPrefixed(level.persistentId) }
                 output.writeBoolean(target.capabilities.fastMode)
+                output.writeBoolean(target.capabilities.attachments != null)
+                target.capabilities.attachments?.let { input ->
+                    output.writeBoolean(input.images)
+                    output.writeBoolean(input.pdf)
+                    output.writeLong(input.maximumPdfBytes)
+                    output.writeLong(input.maximumRequestBytes)
+                    output.writeInt(input.maximumRequestImages)
+                }
                 output.writeLengthPrefixed(target.defaultEffort.persistentId)
                 output.writeBoolean(target.defaultFast)
                 output.writeNullableLong(target.limits.maximumContextBytes)
@@ -168,7 +176,7 @@ internal class OnlineAiBackend(
 
     companion object {
         const val BACKEND_ID = "online"
-        private const val CATALOG_GENERATION_SCHEMA = 4
+        private const val CATALOG_GENERATION_SCHEMA = 5
 
         private val UNIMPLEMENTED_CAPABILITIES = AiTargetCapabilities(
             streaming = false,

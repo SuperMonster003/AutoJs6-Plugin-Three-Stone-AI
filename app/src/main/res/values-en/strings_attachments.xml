@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_attachment_add">Add attachment</string>
+    <string name="chat_attachment_conversation_full">This conversation has reached its %1$d MB attachment limit. Start a new conversation to add more</string>
+    <string name="chat_attachment_failed_pdf_pages">%1$s has more than 100 pages and cannot be added</string>
+    <string name="chat_attachment_failed_pdf_protected">%1$s is password protected and cannot be added</string>
+    <string name="chat_attachment_failed_read">Unable to read %1$s</string>
+    <string name="chat_attachment_failed_size">%1$s is too large. Limits: images 5 MB, text files 256 KB, PDF 32 MB</string>
+    <string name="chat_attachment_failed_text">%1$s is not UTF-8 text. You can add images, UTF-8 text files and PDFs</string>
+    <string name="chat_attachment_failed_type">The type of %1$s is not supported. You can add images, UTF-8 text files and PDFs</string>
+    <string name="chat_attachment_importing" tools:ignore="TypographyEllipsis">Reading attachments...</string>
+    <string name="chat_attachment_message_too_large">Attachments of one message cannot exceed %1$d MB in total</string>
+    <string name="chat_attachment_missing">The attachment file is missing. Add it again</string>
+    <string name="chat_attachment_open_failed">Unable to open this attachment. There may be no app that can view it</string>
+    <string name="chat_attachment_pick_files">Choose files (text or PDF)</string>
+    <string name="chat_attachment_pick_images">Choose images</string>
+    <string name="chat_attachment_pick_images_unsupported">Choose images (image input is off for this model)</string>
+    <string name="chat_attachment_picker_unavailable">No file picker is available</string>
+    <string name="chat_attachment_remove">Remove %1$s</string>
+    <string name="chat_attachment_send_too_large">The attachments exceed what the current target accepts in one request (%1$d MB in total, up to %2$d images)</string>
+    <string name="chat_attachment_send_unsupported">The current target does not support these attachments: %1$s. Remove them before sending</string>
+    <string name="chat_attachment_too_many">Up to %1$d attachments per message</string>
+    <string name="chat_attachment_unavailable_editing">Attachments cannot be added while editing a message</string>
+    <string name="chat_attachment_unavailable_target">Local models do not take attachments. Switch to an online service to add images and files</string>
+    <string name="chat_attachment_unnamed">Unnamed file</string>
+    <string name="chat_attachment_unsupported_now">The current target does not support %1$s. Remove it or switch targets before sending</string>
+</resources>

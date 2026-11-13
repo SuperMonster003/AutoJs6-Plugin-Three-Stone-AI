@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_attachment_add">Añadir adjunto</string>
+    <string name="chat_attachment_conversation_full">Esta conversación alcanzó su límite de %1$d MB de adjuntos. Inicia una conversación nueva para añadir más</string>
+    <string name="chat_attachment_failed_pdf_pages">%1$s tiene más de 100 páginas y no se puede añadir</string>
+    <string name="chat_attachment_failed_pdf_protected">%1$s está protegido con contraseña y no se puede añadir</string>
+    <string name="chat_attachment_failed_read">No se puede leer %1$s</string>
+    <string name="chat_attachment_failed_size">%1$s es demasiado grande. Límites: imágenes 5 MB, archivos de texto 256 KB, PDF 32 MB</string>
+    <string name="chat_attachment_failed_text">%1$s no es texto UTF-8. Puedes añadir imágenes, archivos de texto UTF-8 y PDF</string>
+    <string name="chat_attachment_failed_type">El tipo de %1$s no es compatible. Puedes añadir imágenes, archivos de texto UTF-8 y PDF</string>
+    <string name="chat_attachment_importing" tools:ignore="TypographyEllipsis">Leyendo adjuntos...</string>
+    <string name="chat_attachment_message_too_large">Los adjuntos de un mensaje no pueden superar %1$d MB en total</string>
+    <string name="chat_attachment_missing">Falta el archivo adjunto. Vuelve a añadirlo</string>
+    <string name="chat_attachment_open_failed">No se puede abrir este adjunto. Puede que no haya ninguna app que pueda mostrarlo</string>
+    <string name="chat_attachment_pick_files">Elegir archivos (texto o PDF)</string>
+    <string name="chat_attachment_pick_images">Elegir imágenes</string>
+    <string name="chat_attachment_pick_images_unsupported">Elegir imágenes (la entrada de imágenes está desactivada para este modelo)</string>
+    <string name="chat_attachment_picker_unavailable">No hay ningún selector de archivos disponible</string>
+    <string name="chat_attachment_remove">Quitar %1$s</string>
+    <string name="chat_attachment_send_too_large">Los adjuntos superan lo que el destino actual acepta en una solicitud (%1$d MB en total, hasta %2$d imágenes)</string>
+    <string name="chat_attachment_send_unsupported">El destino actual no admite estos adjuntos: %1$s. Quítalos antes de enviar</string>
+    <string name="chat_attachment_too_many">Hasta %1$d adjuntos por mensaje</string>
+    <string name="chat_attachment_unavailable_editing">No se pueden añadir adjuntos mientras editas un mensaje</string>
+    <string name="chat_attachment_unavailable_target">Los modelos locales no admiten adjuntos. Cambia a un servicio en línea para añadir imágenes y archivos</string>
+    <string name="chat_attachment_unnamed">Archivo sin nombre</string>
+    <string name="chat_attachment_unsupported_now">El destino actual no admite %1$s. Quítalo o cambia de destino antes de enviar</string>
+</resources>

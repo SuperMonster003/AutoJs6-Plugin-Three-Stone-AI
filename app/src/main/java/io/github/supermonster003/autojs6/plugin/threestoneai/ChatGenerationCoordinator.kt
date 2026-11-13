@@ -11,6 +11,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationAttachment
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationMessage
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRole
@@ -71,6 +72,8 @@ internal data class ChatTurnRequest(
     val effort: GenerationEffort? = null,
     /** Conversation override or the target default; only Anthropic targets send it (roadmap D74). */
     val fast: Boolean? = null,
+    /** Attachments of the new user message, already moved to the conversation directory (P4). */
+    val promptAttachments: List<ChatAttachment> = emptyList(),
 )
 
 /** History access the coordinator needs when no screen holds the conversation (roadmap D77). */
@@ -85,6 +88,9 @@ internal interface ChatGenerationStore {
         query: String,
         excludedMessageIds: Set<Long>,
     ): List<ConversationRecallChunk>
+
+    /** The stored file of [attachment] as request content; null when it is gone (P4, D134). */
+    fun attachment(conversationId: String, attachment: ChatAttachment): GenerationAttachment? = null
 }
 
 internal interface ChatGenerationScheduler {
@@ -454,7 +460,10 @@ internal class ChatGenerationCoordinator internal constructor(
         val generationId = generation.generationId
         val target = request.target
         val settings = request.settings
-        val prompt = GenerationMessage(GenerationRole.USER, listOf(request.prompt))
+        val prompt = promptMessage(request)
+        val attachmentReplay = ChatAttachmentReplay(target.capabilities.attachments) { attachment ->
+            store.attachment(request.conversationId, attachment)
+        }
         val requestedTarget = generation.requestedTarget
         val budget = ContextBudgetCalculator.calculate(
             targetLimits = target.limits,
@@ -507,6 +516,14 @@ internal class ChatGenerationCoordinator internal constructor(
             val reusable = target.capabilities.persistentSession &&
                 activeBackend != null && telemetry != null && installedContextMatches &&
                 ConversationRecallPolicy.sameChunks(stickyRecall, mergedRecall) &&
+                ChatAttachmentSessionPolicy.fitsSession(
+                    committed = telemetry.committedMessages,
+                    prompt = prompt,
+                    input = target.capabilities.attachments,
+                    accountingTokens = telemetry.accounting.tokens,
+                    hardWatermarkTokens = budget.hardWatermarkTokens,
+                    tokensPerUtf8Byte = estimator.tokensPerUtf8Byte,
+                ) &&
                 !ContextAccountingPolicy.shouldRotateBackend(
                     accounting = telemetry.accounting,
                     budget = budget,
@@ -551,6 +568,7 @@ internal class ChatGenerationCoordinator internal constructor(
                 contextState = contextStateSnapshot,
                 includeDerivedContext = !emergencyDerivedContextDrop,
                 recalledHistory = recallForRebuild,
+                attachmentReplay = attachmentReplay,
             ),
         )
         if (compiled.exceedsInputBudget) {
@@ -627,6 +645,29 @@ internal class ChatGenerationCoordinator internal constructor(
             val listener = generationListener(generationId, actualTarget)
             created.stream(generationRequest(history, prompt, request), listener)
         }
+    }
+
+    /**
+     * The new user message (P4): its attachments when the target takes them, otherwise a note in
+     * their place, like [ChatConversationPolicy.compileContext] does for earlier turns.
+     */
+    private fun promptMessage(request: ChatTurnRequest): GenerationMessage {
+        val input = request.target.capabilities.attachments
+        val unsupported = ChatAttachmentLimits.unsupported(request.promptAttachments, input).toSet()
+        val included = ArrayList<GenerationAttachment>()
+        val omitted = ArrayList<ChatAttachment>()
+        request.promptAttachments.forEach { attachment ->
+            val resolved = attachment.takeIf { it !in unsupported }
+                ?.let { store.attachment(request.conversationId, it) }
+            if (resolved == null) omitted += attachment else included += resolved
+        }
+        val note = ChatAttachmentNotes.omitted(omitted)
+        val textParts = when {
+            note == null -> listOf(request.prompt)
+            request.prompt.isEmpty() -> listOf(note)
+            else -> listOf(request.prompt, "\n\n$note")
+        }
+        return GenerationMessage(GenerationRole.USER, textParts, attachments = included)
     }
 
     private fun generationRequest(
@@ -741,7 +782,10 @@ internal class ChatGenerationCoordinator internal constructor(
         }
         val completedObservation = observation ?: return
         val completedMessages = committedMessages ?: return
-        val calibrationObservation = statistics?.let { usage ->
+        // D138: attachment tokens are only estimated, so such turns do not move the UTF-8 coefficient.
+        val calibrationObservation = statistics?.takeIf {
+            completedMessages.none { message -> message.attachments.isNotEmpty() }
+        }?.let { usage ->
             ContextTokenCalibrationObservation(
                 utf8Bytes = completedObservation.calibrationInput.utf8Bytes,
                 messageCount = completedObservation.calibrationInput.messageCount,
@@ -1278,6 +1322,7 @@ internal class ChatGenerationCoordinator internal constructor(
         private fun create(context: Context): ChatGenerationCoordinator {
             val application = context as ThreeStoneAiApplication
             val history = ConversationHistoryStore(context)
+            val attachments = ChatAttachmentStore(context)
             val handler = Handler(Looper.getMainLooper())
             return ChatGenerationCoordinator(
                 backend = { application.aiBackend },
@@ -1289,6 +1334,9 @@ internal class ChatGenerationCoordinator internal constructor(
 
                     override fun recall(conversationId: String, query: String, excludedMessageIds: Set<Long>) =
                         history.recall(conversationId, query, excludedMessageIds)
+
+                    override fun attachment(conversationId: String, attachment: ChatAttachment) =
+                        attachments.generationAttachment(conversationId, attachment)
                 },
                 calibrationStore = ContextTokenCalibrationStore(context),
                 scheduler = object : ChatGenerationScheduler {

@@ -21,6 +21,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
             "Online AI profile does not use the Gemini GenerateContent protocol"
         }
         OnlineAiImages.requireSupported(normalized, messages)
+        OnlineAiAttachments.requireSupported(normalized, messages)
         val messageBytes = OnlineAiTools.requireRequest(turn, OnlineAiRequestSupport.requireConversation(messages))
         val body = JsonObject().apply {
             if (turn.tools.isNotEmpty()) add("tools", JsonArray().apply {
@@ -56,7 +57,15 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
                             if (message.nativeToolMessage != null) {
                                 require(message.nativeToolMessage.protocol == normalized.provider.protocol)
                                 add("parts", OnlineAiImages.replay(message.nativeToolMessage))
-                            } else add("parts", OnlineAiImages.content(OnlineAiRequestSupport.text(message), message.images, normalized.provider.protocol))
+                            } else add(
+                                "parts",
+                                OnlineAiImages.content(
+                                    OnlineAiRequestSupport.text(message),
+                                    message.images,
+                                    normalized.provider.protocol,
+                                    message.attachments,
+                                ),
+                            )
                         })
                     }
             })
@@ -92,7 +101,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
             url = endpoint(normalized.baseUrl, normalized.modelId),
             json = body,
             credential = credential,
-            withImages = messages.any { it.images.isNotEmpty() || it.nativeToolMessage?.imageResults.orEmpty().isNotEmpty() },
+            withImages = OnlineAiImages.hasBinaryContent(messages),
             credentialHeader = OnlineAiCredentialHeader.GEMINI_API_KEY,
         )
     }

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_attachment_add">添付ファイルを追加</string>
+    <string name="chat_attachment_conversation_full">この会話の添付ファイルが上限の %1$d MB に達しました. 追加するには新しい会話を始めてください</string>
+    <string name="chat_attachment_failed_pdf_pages">%1$s は 100 ページを超えているため追加できません</string>
+    <string name="chat_attachment_failed_pdf_protected">%1$s はパスワードで保護されているため追加できません</string>
+    <string name="chat_attachment_failed_read">%1$s を読み取れません</string>
+    <string name="chat_attachment_failed_size">%1$s が大きすぎます. 上限: 画像 5 MB, テキストファイル 256 KB, PDF 32 MB</string>
+    <string name="chat_attachment_failed_text">%1$s は UTF-8 テキストではありません. 追加できるのは画像, UTF-8 テキストファイル, PDF です</string>
+    <string name="chat_attachment_failed_type">%1$s の種類には対応していません. 追加できるのは画像, UTF-8 テキストファイル, PDF です</string>
+    <string name="chat_attachment_importing" tools:ignore="TypographyEllipsis">添付ファイルを読み込み中...</string>
+    <string name="chat_attachment_message_too_large">1 件のメッセージの添付ファイルは合計 %1$d MB までです</string>
+    <string name="chat_attachment_missing">添付ファイルが見つかりません. もう一度追加してください</string>
+    <string name="chat_attachment_open_failed">この添付ファイルを開けません. 表示できるアプリがない可能性があります</string>
+    <string name="chat_attachment_pick_files">ファイルを選択 (テキストまたは PDF)</string>
+    <string name="chat_attachment_pick_images">画像を選択</string>
+    <string name="chat_attachment_pick_images_unsupported">画像を選択 (このモデルは画像入力がオフです)</string>
+    <string name="chat_attachment_picker_unavailable">使用できるファイル選択ツールがありません</string>
+    <string name="chat_attachment_remove">%1$s を削除</string>
+    <string name="chat_attachment_send_too_large">添付ファイルが現在のターゲットの 1 回のリクエストの上限を超えています (合計 %1$d MB, 画像は最大 %2$d 枚)</string>
+    <string name="chat_attachment_send_unsupported">現在のターゲットは次の添付ファイルに対応していません: %1$s. 削除してから送信してください</string>
+    <string name="chat_attachment_too_many">1 件のメッセージに添付できるのは %1$d 個までです</string>
+    <string name="chat_attachment_unavailable_editing">メッセージの編集中は添付ファイルを追加できません</string>
+    <string name="chat_attachment_unavailable_target">ローカルモデルは添付ファイルに対応していません. 画像やファイルを追加するにはオンラインサービスに切り替えてください</string>
+    <string name="chat_attachment_unnamed">名前のないファイル</string>
+    <string name="chat_attachment_unsupported_now">現在のターゲットは %1$s に対応していません. 送信前に削除するか, ターゲットを切り替えてください</string>
+</resources>

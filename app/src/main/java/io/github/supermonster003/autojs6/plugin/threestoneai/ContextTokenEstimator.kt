@@ -62,8 +62,13 @@ internal class ContextTokenEstimator(
     fun estimateMessage(message: GenerationMessage): ContextTokenEstimate =
         estimateMessages(listOf(message))
 
+    /**
+     * Attachments (P4, D71) add their own estimate to [ContextTokenEstimate.estimatedTokens] but not
+     * to [ContextTokenEstimate.utf8Bytes], which stays the text transport measure.
+     */
     fun estimateMessages(messages: List<GenerationMessage>): ContextTokenEstimate {
         var utf8Bytes = 0L
+        var attachmentTokens = 0L
         messages.forEach { message ->
             message.textParts.forEach { part ->
                 utf8Bytes = saturatedAdd(
@@ -71,8 +76,14 @@ internal class ContextTokenEstimator(
                     part.toByteArray(Charsets.UTF_8).size.toLong(),
                 )
             }
+            message.attachments.forEach { attachment ->
+                attachmentTokens = saturatedAdd(attachmentTokens, attachment.estimatedTokens(tokensPerUtf8Byte))
+            }
         }
-        return estimatePayload(utf8Bytes, messages.size)
+        val text = estimatePayload(utf8Bytes, messages.size)
+        return if (attachmentTokens == 0L) text else text.copy(
+            estimatedTokens = saturatedAdd(text.estimatedTokens, attachmentTokens),
+        )
     }
 
     fun estimatePayload(utf8Bytes: Long, messageCount: Int): ContextTokenEstimate {

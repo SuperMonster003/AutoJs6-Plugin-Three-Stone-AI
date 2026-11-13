@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_attachment_add">添加附件</string>
+    <string name="chat_attachment_conversation_full">本会话的附件已达 %1$d MB 上限, 新建会话后可继续添加</string>
+    <string name="chat_attachment_failed_pdf_pages">%1$s 超过 100 页, 无法添加</string>
+    <string name="chat_attachment_failed_pdf_protected">%1$s 设有密码, 无法添加</string>
+    <string name="chat_attachment_failed_read">无法读取 %1$s</string>
+    <string name="chat_attachment_failed_size">%1$s 太大. 上限: 图片 5 MB, 文本文件 256 KB, PDF 32 MB</string>
+    <string name="chat_attachment_failed_text">%1$s 不是 UTF-8 文本. 可以添加图片, UTF-8 文本文件和 PDF</string>
+    <string name="chat_attachment_failed_type">不支持 %1$s 的类型. 可以添加图片, UTF-8 文本文件和 PDF</string>
+    <string name="chat_attachment_importing" tools:ignore="TypographyEllipsis">正在读取附件...</string>
+    <string name="chat_attachment_message_too_large">一条消息的附件合计不能超过 %1$d MB</string>
+    <string name="chat_attachment_missing">附件文件已丢失, 请重新添加</string>
+    <string name="chat_attachment_open_failed">无法打开该附件, 可能没有能查看它的应用</string>
+    <string name="chat_attachment_pick_files">选择文件 (文本或 PDF)</string>
+    <string name="chat_attachment_pick_images">选择图片</string>
+    <string name="chat_attachment_pick_images_unsupported">选择图片 (当前模型未开启图片输入)</string>
+    <string name="chat_attachment_picker_unavailable">没有可用的文件选择器</string>
+    <string name="chat_attachment_remove">移除 %1$s</string>
+    <string name="chat_attachment_send_too_large">附件超出当前目标单次请求的上限 (合计 %1$d MB, 最多 %2$d 张图片)</string>
+    <string name="chat_attachment_send_unsupported">当前目标不支持这些附件: %1$s. 移除后再发送</string>
+    <string name="chat_attachment_too_many">每条消息最多 %1$d 个附件</string>
+    <string name="chat_attachment_unavailable_editing">编辑消息时不能添加附件</string>
+    <string name="chat_attachment_unavailable_target">本地模型不支持附件, 切换到在线服务后可以添加图片和文件</string>
+    <string name="chat_attachment_unnamed">未命名文件</string>
+    <string name="chat_attachment_unsupported_now">当前目标不支持 %1$s, 发送前请移除它或切换目标</string>
+</resources>

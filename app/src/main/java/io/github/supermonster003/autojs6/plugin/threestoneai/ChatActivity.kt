@@ -34,9 +34,11 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
@@ -114,6 +116,10 @@ class ChatActivity : ConfiguredActivity() {
     private lateinit var historyStore: ConversationHistoryStore
     private lateinit var uiSettingsStore: ChatUiSettingsStore
     private lateinit var draftStore: ChatComposerDraftStore
+    private lateinit var attachmentStore: ChatAttachmentStore
+    private lateinit var attachmentViews: ChatAttachmentViews
+    private lateinit var attachmentBar: android.widget.HorizontalScrollView
+    private lateinit var attachButton: android.widget.ImageButton
     private lateinit var contextTokenCalibrationStore: ContextTokenCalibrationStore
     private lateinit var updateController: AppUpdateController
     private lateinit var drawerLayout: DrawerLayout
@@ -151,6 +157,10 @@ class ChatActivity : ConfiguredActivity() {
     private val markdownCache = HashMap<Long, CachedMarkdown>()
     /** Thinking cards the user opened or closed during the current reply (D79). */
     private val reasoningExpanded = HashMap<Long, Boolean>()
+    /** Files picked for the next message (P4.1); they wait in `attachments/.pending/`. */
+    private val pendingAttachments = ArrayList<ChatAttachment>()
+    private var renderedAttachmentKey: String? = null
+    private val attachmentImportReceiver: (ChatAttachmentImport) -> Unit = { result -> onAttachmentImported(result) }
     private val mainHandler = Handler(Looper.getMainLooper())
     // The reply being generated belongs to the process-wide coordinator (roadmap D77), so a
     // configuration change or leaving the chat does not interrupt it.
@@ -331,6 +341,12 @@ class ChatActivity : ConfiguredActivity() {
         if (uri != null) exportDrawerConversation(uri)
         pendingDrawerExportId = null
     }
+    private val attachmentImagePicker = registerForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(ChatAttachmentLimits.MAXIMUM_PER_MESSAGE),
+    ) { uris -> importAttachments(uris) }
+    private val attachmentFilePicker = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris -> importAttachments(uris) }
 
     private val persistConversationRunnable = Runnable {
         persistenceScheduled = false
@@ -401,6 +417,8 @@ class ChatActivity : ConfiguredActivity() {
         historyStore = ConversationHistoryStore(applicationContext)
         uiSettingsStore = ChatUiSettingsStore(applicationContext)
         draftStore = ChatComposerDraftStore(applicationContext)
+        attachmentStore = ChatAttachmentStore(applicationContext)
+        attachmentViews = ChatAttachmentViews(this, attachmentStore) { drawerLayout }
         contextTokenCalibrationStore = ContextTokenCalibrationStore(applicationContext)
         uiSettings = uiSettingsStore.load()
         speechAvailability = SpeechDeviceProbe.availability(this, uiSettings.preferMacawSpeech)
@@ -421,6 +439,7 @@ class ChatActivity : ConfiguredActivity() {
             )
         }
         if (savedInstanceState == null) restoredComposerText = draftStore.load()
+        restorePendingAttachments(savedInstanceState)
         title = getString(R.string.chat_screen_title)
         setContentView(createContentView())
         installBackNavigation()
@@ -437,6 +456,8 @@ class ChatActivity : ConfiguredActivity() {
         renderTargetUi()
         applyUiSettings()
         historyStore.rememberLastConversation(currentConversationId)
+        // Files read while the previous instance closed (rotation) arrive here.
+        ChatAttachmentImportQueue.attach(attachmentImportReceiver)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -731,6 +752,7 @@ class ChatActivity : ConfiguredActivity() {
         outState.putString(STATE_DRAFT_BEFORE_EDITING, draftBeforeEditing)
         outState.putString(STATE_PENDING_DRAWER_EXPORT_ID, pendingDrawerExportId)
         outState.putString(STATE_PENDING_DICTATION, pendingDictation?.name)
+        outState.putByteArray(STATE_PENDING_ATTACHMENTS, ChatAttachmentCodec.encode(pendingAttachments))
         persistComposerDraft()
         super.onSaveInstanceState(outState)
     }
@@ -750,6 +772,8 @@ class ChatActivity : ConfiguredActivity() {
         detachGeneration()
         mainHandler.removeCallbacksAndMessages(null)
         if (::speechOutput.isInitialized) speechOutput.shutdown()
+        ChatAttachmentImportQueue.detach(attachmentImportReceiver)
+        if (::attachmentViews.isInitialized) attachmentViews.shutdown()
         super.onDestroy()
     }
 
@@ -1579,10 +1603,38 @@ class ChatActivity : ConfiguredActivity() {
             },
         )
 
+        // Files picked for the next message (P4.1); hidden while a sent message is edited.
+        attachmentBar = attachmentViews.createComposerBar()
+        addView(
+            attachmentBar,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply {
+                marginStart = dp(12)
+                marginEnd = dp(12)
+                topMargin = dp(8)
+            },
+        )
+
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.BOTTOM
             isBaselineAligned = false
+
+            // "+" for pictures and files (P4.1); it stays tappable to explain why it is unavailable.
+            attachButton = android.widget.ImageButton(context).apply {
+                tag = ChatViewTags.COMPOSER_ATTACH
+                scaleType = ImageView.ScaleType.CENTER
+                setImageDrawable(tintedDrawable(R.drawable.ic_add_24, appPalette.secondaryText))
+                contentDescription = getString(R.string.chat_attachment_add)
+                applySelectableBackground(this)
+                setOnClickListener { view -> onAttachClicked(view) }
+            }
+            addView(attachButton, LinearLayout.LayoutParams(dp(40), dp(46)).apply {
+                gravity = Gravity.BOTTOM
+                marginEnd = dp(4)
+            })
 
             input = EditText(context).apply {
                 tag = ChatViewTags.COMPOSER_INPUT
@@ -1770,7 +1822,11 @@ class ChatActivity : ConfiguredActivity() {
         if (::drawerLayout.isInitialized) drawerLayout.closeDrawer(GravityCompat.START)
         if (editingMessageId != null) cancelEditing()
         val draft = input.text.toString()
-        startNewConversation(conversationTarget ?: targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot))
+        // The unsent draft, attachments included, stays in the composer (see SEND below).
+        startNewConversation(
+            conversationTarget ?: targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot),
+            keepPendingAttachments = true,
+        )
         when (
             VoiceCommandPolicy.disposition(
                 command = command,
@@ -1926,6 +1982,10 @@ class ChatActivity : ConfiguredActivity() {
                 estimator = estimator,
                 maximumInputTokens = budget.compactionTargetTokens,
                 contextState = conversationContextState,
+                // Estimates need the metadata only; no file is read here (P4.2).
+                attachmentReplay = ChatAttachmentReplay(target.capabilities.attachments) { attachment ->
+                    attachment.toGeneration { ByteArray(0) }
+                },
             ),
         )
         return ContextUsagePolicy.snapshot(
@@ -2063,7 +2123,13 @@ class ChatActivity : ConfiguredActivity() {
                 else -> R.string.chat_send
             },
         )
-        sendButton.isEnabled = isGenerating || (targetReady && input.text.toString().isNotBlank())
+        sendButton.isEnabled = isGenerating || (
+            targetReady && ChatAttachmentImportQueue.running == 0 &&
+                (input.text.toString().isNotBlank() || composerAttachments().isNotEmpty())
+            )
+        val readyTarget = resolvedConversationTarget()?.takeIf { targetReady }
+        renderAttachButton(readyTarget)
+        renderAttachmentBar(readyTarget)
         renderMicButton(targetReady)
         if (::suggestionButtons.isInitialized) {
             suggestionButtons.forEach { suggestion ->
@@ -2203,6 +2269,26 @@ class ChatActivity : ConfiguredActivity() {
         applyConversationTarget(target, announce = false)
         return true
     }
+
+    /** Instrumentation only: the conversation's effort choice, as the model picker sets it (Q15 round). */
+    @VisibleForTesting
+    internal fun useEffortForTest(effort: GenerationEffort?) {
+        conversationEffortOverride = effort
+        generationOverridesChanged()
+    }
+
+    /** Instrumentation only: imports [uris] as a picker result would (P4.4, real-device runs). */
+    @VisibleForTesting
+    internal fun importAttachmentsForTest(uris: List<Uri>) = importAttachments(uris)
+
+    /** Instrumentation only: the files picked for the next message, and whether imports are running. */
+    @VisibleForTesting
+    internal val pendingAttachmentsForTest: List<ChatAttachment>
+        get() = pendingAttachments.toList()
+
+    @VisibleForTesting
+    internal val attachmentImportsRunningForTest: Boolean
+        get() = ChatAttachmentImportQueue.running > 0
 
     private fun applyVoiceEffect(effect: VoiceEffect) {
         when (effect) {
@@ -2442,6 +2528,19 @@ class ChatActivity : ConfiguredActivity() {
         } else {
             null
         }
+        if (userMessage) {
+            attachmentViews.createMessageStrip(currentConversationId, message.attachments) {
+                showMessageActions(message.id)
+            }?.let { strip ->
+                row.addView(
+                    strip,
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ).apply { bottomMargin = dp(6) },
+                )
+            }
+        }
         val body = MarkdownMessageView(this, appPalette).apply {
             applyBubbleStyle(message.role, bubbleStyle)
             setMessageLongClickListener { showMessageActions(message.id) }
@@ -2598,6 +2697,9 @@ class ChatActivity : ConfiguredActivity() {
             holder.body.showPlainText(message.text, noticeTextSizeSp())
             return
         }
+        if (message.role == ChatMessageRole.USER) {
+            holder.body.visibility = if (message.text.isEmpty() && message.attachments.isNotEmpty()) View.GONE else View.VISIBLE
+        }
         val visibleText = message.text.ifEmpty {
             getString(
                 when (message.status) {
@@ -2749,13 +2851,34 @@ class ChatActivity : ConfiguredActivity() {
         checkNotNull(target)
         val promptText = (promptOverride ?: input.text.toString()).trim()
             .take(ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS)
-        if (promptText.isEmpty()) return null
         val messageBeingEdited = editingMessageId
+        // An edited or regenerated message keeps its attachments; a voice turn carries none (P4).
+        val promptAttachments = when {
+            messageBeingEdited != null ->
+                messages.singleOrNull { message -> message.id == messageBeingEdited }?.attachments.orEmpty()
+            promptOverride == null -> pendingAttachments.toList()
+            else -> emptyList()
+        }
+        val newAttachments = messageBeingEdited == null && promptAttachments.isNotEmpty()
+        if (promptOverride == null && messageBeingEdited == null && ChatAttachmentImportQueue.running > 0) {
+            showSnackbar(drawerLayout, getString(R.string.chat_attachment_importing))
+            return null
+        }
+        if (promptText.isEmpty() && promptAttachments.isEmpty()) return null
+        if (newAttachments && !attachmentsSendable(target, promptAttachments)) return null
         val retainedPrefix = messageBeingEdited?.let { messageId ->
             ConversationEditPolicy.prefixBefore(messages, messageId)
         }
         if (messageBeingEdited != null && retainedPrefix == null) {
             cancelEditing()
+            return null
+        }
+        if (newAttachments && !attachmentStore.commit(currentConversationId, promptAttachments)) {
+            // A file vanished from .pending (storage cleared meanwhile); keep the ones still there.
+            pendingAttachments.removeAll { attachment -> !attachmentStore.pendingFile(attachment).isFile }
+            persistComposerDraft()
+            renderComposerState()
+            showSnackbar(drawerLayout, getString(R.string.chat_attachment_missing))
             return null
         }
         allowDeletedConversationRevival = true
@@ -2764,6 +2887,10 @@ class ChatActivity : ConfiguredActivity() {
             dispatchVoice(VoiceEvent.ConversationChanged)
             input.text.clear()
             draftStore.clear()
+            if (newAttachments) {
+                pendingAttachments.clear()
+                draftStore.saveAttachments(emptyList())
+            }
             hideKeyboard()
         }
         stopReading()
@@ -2772,6 +2899,7 @@ class ChatActivity : ConfiguredActivity() {
             id = messageBeingEdited ?: allocateMessageId(),
             role = ChatMessageRole.USER,
             text = promptText,
+            attachments = promptAttachments,
         )
         val assistantMessage = ChatMessage(
             id = allocateMessageId(),
@@ -2785,6 +2913,8 @@ class ChatActivity : ConfiguredActivity() {
         if (retainedPrefix != null) {
             invalidateConversationContextFrom(checkNotNull(messageBeingEdited))
             closeCurrentBackend(reason = "edit")
+            val keptAttachmentIds = promptAttachments.mapTo(HashSet(), ChatAttachment::id)
+            deleteAttachmentsOfDroppedMessages(retainedPrefix) { attachment -> attachment.id !in keptAttachmentIds }
             messages.clear()
             messages.addAll(retainedPrefix)
             messages += userMessage
@@ -2825,6 +2955,7 @@ class ChatActivity : ConfiguredActivity() {
                 settings = uiSettings,
                 effort = conversationEffort(target),
                 fast = conversationFast(target),
+                promptAttachments = promptAttachments,
             ),
         )
         return assistantMessage.id
@@ -2931,6 +3062,7 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun startNewConversation(
         target: ConversationTargetSnapshot? = targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot),
+        keepPendingAttachments: Boolean = false,
     ) {
         dispatchVoice(VoiceEvent.ConversationChanged)
         stopReading()
@@ -2958,6 +3090,7 @@ class ChatActivity : ConfiguredActivity() {
         closeSearch()
         input.text.clear()
         draftStore.clear()
+        if (!keepPendingAttachments) discardPendingAttachments()
         historyStore.rememberLastConversation(currentConversationId)
         renderTargetUi()
     }
@@ -3123,10 +3256,221 @@ class ChatActivity : ConfiguredActivity() {
         renderContextUsage()
     }
 
+    private fun restorePendingAttachments(state: Bundle?) {
+        val saved = state?.getByteArray(STATE_PENDING_ATTACHMENTS)?.let(ChatAttachmentCodec::decode)
+        pendingAttachments.clear()
+        pendingAttachments += (saved ?: draftStore.loadAttachments())
+            .filter { attachment -> attachmentStore.pendingFile(attachment).isFile }
+    }
+
+    /** Attachments the send button would send: the edited message's, or the picked ones. */
+    private fun composerAttachments(): List<ChatAttachment> {
+        val editing = editingMessageId ?: return pendingAttachments
+        return messages.singleOrNull { message -> message.id == editing }?.attachments.orEmpty()
+    }
+
+    /** "+" left of the input (P4.1): pictures through the photo picker, other files as documents. */
+    private fun onAttachClicked(anchor: View) {
+        if (editingMessageId != null) {
+            showSnackbar(drawerLayout, getString(R.string.chat_attachment_unavailable_editing))
+            return
+        }
+        val target = resolvedConversationTarget()
+        if (!isTargetReady(target)) {
+            showTargetSelector()
+            return
+        }
+        val attachmentInput = checkNotNull(target).capabilities.attachments
+        if (attachmentInput == null) {
+            showSnackbar(drawerLayout, getString(R.string.chat_attachment_unavailable_target))
+            return
+        }
+        if (pendingAttachments.size + ChatAttachmentImportQueue.running >= ChatAttachmentLimits.MAXIMUM_PER_MESSAGE) {
+            showAttachmentRefusal(ChatAttachmentRefusal.TOO_MANY)
+            return
+        }
+        PopupMenu(this, anchor).apply {
+            menu.add(
+                Menu.NONE,
+                MENU_ATTACH_IMAGES,
+                0,
+                if (attachmentInput.images) R.string.chat_attachment_pick_images else R.string.chat_attachment_pick_images_unsupported,
+            ).isEnabled = attachmentInput.images
+            menu.add(Menu.NONE, MENU_ATTACH_FILES, 1, R.string.chat_attachment_pick_files)
+            setOnMenuItemClickListener { item ->
+                try {
+                    when (item.itemId) {
+                        MENU_ATTACH_IMAGES -> attachmentImagePicker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                        )
+                        MENU_ATTACH_FILES -> attachmentFilePicker.launch(arrayOf("*/*"))
+                    }
+                } catch (_: ActivityNotFoundException) {
+                    showSnackbar(drawerLayout, getString(R.string.chat_attachment_picker_unavailable))
+                }
+                true
+            }
+            show()
+        }
+    }
+
+    private fun importAttachments(uris: List<Uri>) {
+        if (destroyed) return
+        val picked = uris.distinct()
+        if (picked.isEmpty()) return
+        val free = ChatAttachmentLimits.MAXIMUM_PER_MESSAGE - pendingAttachments.size - ChatAttachmentImportQueue.running
+        val accepted = picked.take(free.coerceAtLeast(0))
+        if (accepted.size < picked.size) showAttachmentRefusal(ChatAttachmentRefusal.TOO_MANY)
+        if (accepted.isEmpty()) return
+        ChatAttachmentImportQueue.submit(attachmentStore, accepted)
+        renderComposerState()
+    }
+
+    private fun onAttachmentImported(result: ChatAttachmentImport) {
+        when (result) {
+            is ChatAttachmentImport.Failed -> showSnackbar(drawerLayout, attachmentImportFailureText(result))
+            is ChatAttachmentImport.Imported -> {
+                val attachment = result.attachment
+                val refusal = ChatAttachmentLimits.refusal(
+                    pending = pendingAttachments,
+                    conversationBytes = ChatAttachmentLimits.conversationBytes(messages),
+                    candidate = attachment,
+                )
+                if (refusal != null) {
+                    attachmentStore.discardPending(listOf(attachment))
+                    showAttachmentRefusal(refusal)
+                } else {
+                    pendingAttachments += attachment
+                    persistComposerDraft()
+                    val target = resolvedConversationTarget()?.takeIf(::isTargetReady)
+                    if (
+                        target != null &&
+                        ChatAttachmentLimits.unsupported(listOf(attachment), target.capabilities.attachments).isNotEmpty()
+                    ) {
+                        showSnackbar(drawerLayout, getString(R.string.chat_attachment_unsupported_now, attachment.name))
+                    }
+                }
+            }
+        }
+        renderComposerState()
+    }
+
+    private fun attachmentImportFailureText(result: ChatAttachmentImport.Failed): String = getString(
+        when (result.failure) {
+            ChatAttachmentImportFailure.UNSUPPORTED_TYPE -> R.string.chat_attachment_failed_type
+            ChatAttachmentImportFailure.TOO_LARGE -> R.string.chat_attachment_failed_size
+            ChatAttachmentImportFailure.UNREADABLE -> R.string.chat_attachment_failed_read
+            ChatAttachmentImportFailure.BINARY_TEXT -> R.string.chat_attachment_failed_text
+            ChatAttachmentImportFailure.PDF_PROTECTED -> R.string.chat_attachment_failed_pdf_protected
+            ChatAttachmentImportFailure.PDF_TOO_MANY_PAGES -> R.string.chat_attachment_failed_pdf_pages
+        },
+        result.name.ifEmpty { getString(R.string.chat_attachment_unnamed) },
+    )
+
+    private fun showAttachmentRefusal(refusal: ChatAttachmentRefusal) {
+        showSnackbar(
+            drawerLayout,
+            when (refusal) {
+                ChatAttachmentRefusal.TOO_MANY ->
+                    getString(R.string.chat_attachment_too_many, ChatAttachmentLimits.MAXIMUM_PER_MESSAGE)
+                ChatAttachmentRefusal.MESSAGE_TOO_LARGE ->
+                    getString(R.string.chat_attachment_message_too_large, mebibytes(ChatAttachmentLimits.MAXIMUM_MESSAGE_BYTES))
+                ChatAttachmentRefusal.CONVERSATION_TOO_LARGE ->
+                    getString(R.string.chat_attachment_conversation_full, mebibytes(ChatAttachmentLimits.MAXIMUM_CONVERSATION_BYTES))
+            },
+        )
+    }
+
+    /** Checks the picked attachments against the target before anything is committed. */
+    private fun attachmentsSendable(target: AiTarget, attachments: List<ChatAttachment>): Boolean {
+        val attachmentInput = target.capabilities.attachments
+        val unsupported = ChatAttachmentLimits.unsupported(attachments, attachmentInput)
+        val refusal = when {
+            unsupported.isNotEmpty() -> getString(
+                R.string.chat_attachment_send_unsupported,
+                unsupported.joinToString(", ") { attachment -> attachment.name },
+            )
+            !ChatAttachmentLimits.fitsRequest(attachments, checkNotNull(attachmentInput)) -> getString(
+                R.string.chat_attachment_send_too_large,
+                mebibytes(attachmentInput.maximumRequestBytes),
+                attachmentInput.maximumRequestImages,
+            )
+            ChatAttachmentLimits.conversationBytes(messages) + attachments.sumOf(ChatAttachment::sizeBytes) >
+                ChatAttachmentLimits.MAXIMUM_CONVERSATION_BYTES -> getString(
+                R.string.chat_attachment_conversation_full,
+                mebibytes(ChatAttachmentLimits.MAXIMUM_CONVERSATION_BYTES),
+            )
+            else -> null
+        } ?: return true
+        showSnackbar(drawerLayout, refusal)
+        return false
+    }
+
+    private fun mebibytes(bytes: Long): Long = bytes / (1024L * 1024L)
+
+    private fun removePendingAttachment(attachment: ChatAttachment) {
+        if (!pendingAttachments.remove(attachment)) return
+        attachmentStore.discardPending(listOf(attachment))
+        persistComposerDraft()
+        renderComposerState()
+    }
+
+    /** A new or another conversation starts with an empty composer, picked files included. */
+    private fun discardPendingAttachments() {
+        if (pendingAttachments.isEmpty()) return
+        attachmentStore.discardPending(pendingAttachments.toList())
+        pendingAttachments.clear()
+        draftStore.saveAttachments(emptyList())
+    }
+
+    /** Files of messages that leave the transcript (edit, regenerate, delete from here) go at once. */
+    private fun deleteAttachmentsOfDroppedMessages(
+        retained: List<ChatMessage>,
+        filter: (ChatAttachment) -> Boolean,
+    ) {
+        val retainedIds = retained.mapTo(HashSet(), ChatMessage::id)
+        val dropped = messages.filterNot { message -> message.id in retainedIds }
+            .flatMap(ChatMessage::attachments)
+            .filter(filter)
+        if (dropped.isNotEmpty()) attachmentStore.deleteFiles(currentConversationId, dropped)
+    }
+
+    private fun renderAttachButton(target: AiTarget?) {
+        if (!::attachButton.isInitialized) return
+        val available = target != null && editingMessageId == null && target.capabilities.attachments != null
+        attachButton.alpha = if (available) 1f else Ui.DISABLED_ALPHA
+    }
+
+    private fun renderAttachmentBar(target: AiTarget?) {
+        if (!::attachmentBar.isInitialized) return
+        val editing = editingMessageId != null
+        val unsupported = if (target == null) {
+            emptySet()
+        } else {
+            ChatAttachmentLimits.unsupported(pendingAttachments, target.capabilities.attachments)
+                .mapTo(HashSet(), ChatAttachment::id)
+        }
+        val importing = ChatAttachmentImportQueue.running > 0
+        val key = buildString {
+            append(editing).append(importing)
+            pendingAttachments.forEach { attachment ->
+                append('|').append(attachment.id).append(attachment.id in unsupported)
+            }
+        }
+        if (key == renderedAttachmentKey) return
+        renderedAttachmentKey = key
+        if (editing) {
+            attachmentBar.visibility = View.GONE
+            return
+        }
+        attachmentViews.render(attachmentBar, pendingAttachments, unsupported, importing, ::removePendingAttachment)
+    }
+
     private fun persistComposerDraft() {
         if (!::draftStore.isInitialized || !::input.isInitialized) return
         val draft = if (editingMessageId == null) input.text else draftBeforeEditing
         draftStore.save(draft)
+        draftStore.saveAttachments(pendingAttachments)
     }
 
     private fun editorImeOptions(): Int = when (uiSettings.enterKeyBehavior) {
@@ -3230,6 +3574,7 @@ class ChatActivity : ConfiguredActivity() {
         closeSearch()
         input.text.clear()
         draftStore.clear()
+        discardPendingAttachments()
         applyStoredConversation(target)
         renderTranscript()
         renderTargetUi()
@@ -3545,6 +3890,7 @@ class ChatActivity : ConfiguredActivity() {
         closeCurrentBackend(reason = "delete-messages")
         closeSearch()
         cancelEditing(restoreDraft = true)
+        deleteAttachmentsOfDroppedMessages(retained) { true }
         messages.clear()
         messages.addAll(retained)
         markdownCache.clear()
@@ -3953,6 +4299,9 @@ class ChatActivity : ConfiguredActivity() {
         const val STATE_SEARCH_QUERY = "chatSearchQuery"
         const val STATE_EDITING_MESSAGE_ID = "chatEditingMessageId"
         const val STATE_DRAFT_BEFORE_EDITING = "chatDraftBeforeEditing"
+        const val STATE_PENDING_ATTACHMENTS = "chatPendingAttachments"
+        const val MENU_ATTACH_IMAGES = 1
+        const val MENU_ATTACH_FILES = 2
         const val STATE_PENDING_DRAWER_EXPORT_ID = "pendingDrawerConversationExportId"
         const val STATE_PENDING_DICTATION = "chatPendingDictation"
         const val MIME_CONVERSATIONS = "application/vnd.three-stone-ai.conversations"
@@ -3964,6 +4313,8 @@ class ChatActivity : ConfiguredActivity() {
 
 /** View tags that the speech device tests look up. */
 internal object ChatViewTags {
+    const val COMPOSER_ATTACH = "chat-composer-attach"
+    const val COMPOSER_ATTACHMENTS = "chat-composer-attachments"
     const val COMPOSER_INPUT = "chat-composer-input"
     const val COMPOSER_MIC = "chat-composer-mic"
     const val COMPOSER_SEND = "chat-composer-send"

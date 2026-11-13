@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_attachment_add">Ajouter une pièce jointe</string>
+    <string name="chat_attachment_conversation_full">Cette conversation a atteint sa limite de %1$d Mo de pièces jointes. Démarrez une nouvelle conversation pour en ajouter</string>
+    <string name="chat_attachment_failed_pdf_pages">%1$s dépasse 100 pages et ne peut pas être ajouté</string>
+    <string name="chat_attachment_failed_pdf_protected">%1$s est protégé par un mot de passe et ne peut pas être ajouté</string>
+    <string name="chat_attachment_failed_read">Impossible de lire %1$s</string>
+    <string name="chat_attachment_failed_size">%1$s est trop volumineux. Limites: images 5 Mo, fichiers texte 256 Ko, PDF 32 Mo</string>
+    <string name="chat_attachment_failed_text">%1$s n\'est pas du texte UTF-8. Vous pouvez ajouter des images, des fichiers texte UTF-8 et des PDF</string>
+    <string name="chat_attachment_failed_type">Le type de %1$s n\'est pas pris en charge. Vous pouvez ajouter des images, des fichiers texte UTF-8 et des PDF</string>
+    <string name="chat_attachment_importing" tools:ignore="TypographyEllipsis">Lecture des pièces jointes...</string>
+    <string name="chat_attachment_message_too_large">Les pièces jointes d\'un message ne peuvent pas dépasser %1$d Mo au total</string>
+    <string name="chat_attachment_missing">Le fichier joint est introuvable. Ajoutez-le de nouveau</string>
+    <string name="chat_attachment_open_failed">Impossible d\'ouvrir cette pièce jointe. Aucune application ne peut peut-être l\'afficher</string>
+    <string name="chat_attachment_pick_files">Choisir des fichiers (texte ou PDF)</string>
+    <string name="chat_attachment_pick_images">Choisir des images</string>
+    <string name="chat_attachment_pick_images_unsupported">Choisir des images (entrée d\'images désactivée pour ce modèle)</string>
+    <string name="chat_attachment_picker_unavailable">Aucun sélecteur de fichiers disponible</string>
+    <string name="chat_attachment_remove">Retirer %1$s</string>
+    <string name="chat_attachment_send_too_large">Les pièces jointes dépassent ce que la cible actuelle accepte en une requête (%1$d Mo au total, %2$d images au maximum)</string>
+    <string name="chat_attachment_send_unsupported">La cible actuelle ne prend pas en charge ces pièces jointes: %1$s. Retirez-les avant l\'envoi</string>
+    <string name="chat_attachment_too_many">%1$d pièces jointes au maximum par message</string>
+    <string name="chat_attachment_unavailable_editing">Impossible d\'ajouter des pièces jointes pendant la modification d\'un message</string>
+    <string name="chat_attachment_unavailable_target">Les modèles locaux n\'acceptent pas de pièces jointes. Passez à un service en ligne pour ajouter des images et des fichiers</string>
+    <string name="chat_attachment_unnamed">Fichier sans nom</string>
+    <string name="chat_attachment_unsupported_now">La cible actuelle ne prend pas en charge %1$s. Retirez-le ou changez de cible avant l\'envoi</string>
+</resources>

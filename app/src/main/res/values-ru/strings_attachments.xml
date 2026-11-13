@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_attachment_add">Добавить вложение</string>
+    <string name="chat_attachment_conversation_full">В этом диалоге достигнут лимит вложений %1$d МБ. Чтобы добавить ещё, начните новый диалог</string>
+    <string name="chat_attachment_failed_pdf_pages">В %1$s больше 100 страниц, добавить нельзя</string>
+    <string name="chat_attachment_failed_pdf_protected">%1$s защищён паролем, добавить нельзя</string>
+    <string name="chat_attachment_failed_read">Не удалось прочитать %1$s</string>
+    <string name="chat_attachment_failed_size">%1$s слишком большой. Лимиты: изображения 5 МБ, текстовые файлы 256 КБ, PDF 32 МБ</string>
+    <string name="chat_attachment_failed_text">%1$s не является текстом UTF-8. Можно добавлять изображения, текстовые файлы UTF-8 и PDF</string>
+    <string name="chat_attachment_failed_type">Тип %1$s не поддерживается. Можно добавлять изображения, текстовые файлы UTF-8 и PDF</string>
+    <string name="chat_attachment_importing" tools:ignore="TypographyEllipsis">Чтение вложений...</string>
+    <string name="chat_attachment_message_too_large">Вложения одного сообщения не могут превышать %1$d МБ в сумме</string>
+    <string name="chat_attachment_missing">Файл вложения пропал. Добавьте его снова</string>
+    <string name="chat_attachment_open_failed">Не удалось открыть вложение. Возможно, нет приложения для его просмотра</string>
+    <string name="chat_attachment_pick_files">Выбрать файлы (текст или PDF)</string>
+    <string name="chat_attachment_pick_images">Выбрать изображения</string>
+    <string name="chat_attachment_pick_images_unsupported">Выбрать изображения (у этой модели выключен ввод изображений)</string>
+    <string name="chat_attachment_picker_unavailable">Нет доступного средства выбора файлов</string>
+    <string name="chat_attachment_remove">Убрать %1$s</string>
+    <string name="chat_attachment_send_too_large">Вложения превышают то, что текущая цель принимает за один запрос (всего %1$d МБ, не более %2$d изображений)</string>
+    <string name="chat_attachment_send_unsupported">Текущая цель не поддерживает эти вложения: %1$s. Уберите их перед отправкой</string>
+    <string name="chat_attachment_too_many">Не более %1$d вложений в одном сообщении</string>
+    <string name="chat_attachment_unavailable_editing">Во время редактирования сообщения добавлять вложения нельзя</string>
+    <string name="chat_attachment_unavailable_target">Локальные модели не принимают вложения. Чтобы добавить изображения и файлы, переключитесь на онлайн-сервис</string>
+    <string name="chat_attachment_unnamed">Файл без имени</string>
+    <string name="chat_attachment_unsupported_now">Текущая цель не поддерживает %1$s. Перед отправкой уберите его или смените цель</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only chat attachment files (sent and pending) can be opened in other apps (roadmap P4.3). -->
+<paths>
+    <files-path name="attachments" path="attachments/" />
+</paths>

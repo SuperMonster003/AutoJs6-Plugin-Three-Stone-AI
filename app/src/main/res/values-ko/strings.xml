@@ -241,7 +241,7 @@
     <string name="litert_catalog_imported">가져옴</string>
     <string name="model_catalog_loading">모델 카탈로그를 불러오는 중</string>
     <string name="model_catalog_unavailable">모델 카탈로그를 사용할 수 없습니다</string>
-    <string name="model_cleanup_empty">참조되지 않은 모델 파일이 없습니다</string>
+    <string name="model_cleanup_empty">참조되지 않은 모델 파일이나 채팅 첨부 파일이 없습니다</string>
     <string name="model_cleanup_failed">저장 공간 정리에 실패했습니다</string>
     <string name="model_cleanup_succeeded">정리 완료: 파일 %1$d개 삭제, %2$s 확보</string>
     <string name="model_delete_confirm_message">"%1$s" 모델을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>

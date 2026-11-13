@@ -240,6 +240,8 @@ internal class LiteRtLocalSession(
         )
 
     private fun toLiteRtMessage(message: GenerationMessage): Message {
+        // P4 / D70: local targets take no attachments; the chat screen disables the entry.
+        require(message.attachments.isEmpty()) { "Local models do not accept attachments" }
         val contents = Contents.of(message.textParts.map(Content::Text))
         return when (message.role) {
             GenerationRole.SYSTEM -> Message.system(contents)

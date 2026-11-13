@@ -103,7 +103,10 @@ internal object OnlineAiRequestSupport {
         }
         var totalBytes = 0L
         messages.forEach { message ->
-            require(message.textParts.isNotEmpty() || message.images.isNotEmpty() || message.nativeToolMessage != null) { "Online AI messages must contain content" }
+            require(
+                message.textParts.isNotEmpty() || message.images.isNotEmpty() || message.attachments.isNotEmpty() ||
+                    message.nativeToolMessage != null,
+            ) { "Online AI messages must contain content" }
             (message.textParts + listOfNotNull(message.nativeToolMessage?.json)).forEach { part ->
                 totalBytes = try {
                     Math.addExact(totalBytes, part.toByteArray(Charsets.UTF_8).size.toLong())
@@ -140,7 +143,9 @@ internal object OnlineAiRequestSupport {
     }
 
     fun text(message: GenerationMessage): String {
-        require(message.textParts.isNotEmpty() || message.images.isNotEmpty()) { "Online AI messages must contain text" }
+        require(message.textParts.isNotEmpty() || message.images.isNotEmpty() || message.attachments.isNotEmpty()) {
+            "Online AI messages must contain text"
+        }
         return message.textParts.joinToString(separator = "")
     }
 
@@ -170,6 +175,7 @@ internal object OpenAiCompatibleRequestFactory {
             "Online AI profile does not use the OpenAI-compatible protocol"
         }
         OnlineAiImages.requireSupported(normalized, messages)
+        OnlineAiAttachments.requireSupported(normalized, messages)
         val messageBytes = OnlineAiTools.requireRequest(turn, OnlineAiRequestSupport.requireConversation(messages))
 
         val json = JsonObject().apply {
@@ -222,7 +228,7 @@ internal object OpenAiCompatibleRequestFactory {
             url = endpoint(normalized.baseUrl),
             json = json,
             credential = credential,
-            withImages = messages.any { it.images.isNotEmpty() || it.nativeToolMessage?.imageResults.orEmpty().isNotEmpty() },
+            withImages = OnlineAiImages.hasBinaryContent(messages),
             credentialHeader = OnlineAiCredentialHeader.BEARER,
         )
     }
@@ -248,8 +254,16 @@ internal object OpenAiCompatibleRequestFactory {
                     GenerationRole.ASSISTANT -> "assistant"
                 },
             )
-            if (images.isEmpty()) addProperty("content", OnlineAiRequestSupport.text(this@toOpenAiJson))
-            else add("content", OnlineAiImages.content(OnlineAiRequestSupport.text(this@toOpenAiJson), images, OnlineAiProtocol.OPENAI_COMPATIBLE))
+            if (images.isEmpty() && attachments.isEmpty()) addProperty("content", OnlineAiRequestSupport.text(this@toOpenAiJson))
+            else add(
+                "content",
+                OnlineAiImages.content(
+                    OnlineAiRequestSupport.text(this@toOpenAiJson),
+                    images,
+                    OnlineAiProtocol.OPENAI_COMPATIBLE,
+                    attachments,
+                ),
+            )
         }
     }
 

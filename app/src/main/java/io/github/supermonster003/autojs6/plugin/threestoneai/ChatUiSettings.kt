@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.content.Context
+import android.util.Base64
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationSamplingOptions
 import org.autojs.plugin.ai.provider.api.AiProviderSamplingDefaults
 
@@ -202,8 +203,26 @@ internal class ChatComposerDraftStore(context: Context) {
         preferences.edit().remove(KEY_TEXT).apply()
     }
 
+    /** Attachments picked for the unsent message (P4.1); their files wait in `attachments/.pending`. */
+    fun loadAttachments(): List<ChatAttachment> =
+        preferences.getString(KEY_ATTACHMENTS, null)
+            ?.let { value -> runCatching { Base64.decode(value, Base64.NO_WRAP) }.getOrNull() }
+            ?.let(ChatAttachmentCodec::decode)
+            .orEmpty()
+
+    fun saveAttachments(attachments: List<ChatAttachment>) {
+        preferences.edit().apply {
+            if (attachments.isEmpty()) {
+                remove(KEY_ATTACHMENTS)
+            } else {
+                putString(KEY_ATTACHMENTS, Base64.encodeToString(ChatAttachmentCodec.encode(attachments), Base64.NO_WRAP))
+            }
+        }.apply()
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "chat-composer-draft"
         const val KEY_TEXT = "text"
+        const val KEY_ATTACHMENTS = "attachments"
     }
 }

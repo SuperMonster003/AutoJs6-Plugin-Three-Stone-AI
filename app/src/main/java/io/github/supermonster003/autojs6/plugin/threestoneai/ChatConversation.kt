@@ -1,5 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationAttachment
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationAttachmentKind
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationMessage
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationRole
 
@@ -80,6 +82,8 @@ internal data class ChatMessage(
     val truncated: Boolean = false,
     /** Thinking text of an assistant reply (P3); null when the target returned none. */
     val reasoning: ChatMessageReasoning? = null,
+    /** Files attached to a user message (P4, D71), in the order the user added them. */
+    val attachments: List<ChatAttachment> = emptyList(),
 ) {
     init {
         require(id > 0L)
@@ -98,6 +102,10 @@ internal data class ChatMessage(
         require(reasoning == null || role == ChatMessageRole.ASSISTANT) {
             "Only assistant messages may carry reasoning"
         }
+        require(attachments.isEmpty() || role == ChatMessageRole.USER) {
+            "Only user messages may carry attachments"
+        }
+        require(attachments.size <= ChatAttachmentLimits.MAXIMUM_PER_MESSAGE)
     }
 }
 
@@ -118,6 +126,8 @@ internal data class ContextCompilationPolicy(
     val recalledHistory: List<ConversationRecallChunk> = emptyList(),
     val maximumRecalledHistoryTokens: Long =
         ConversationRecallPolicy.MAXIMUM_RECALL_LAYER_TOKENS,
+    /** Resending earlier attachments (P4, D134); null leaves a note in their place. */
+    val attachmentReplay: ChatAttachmentReplay? = null,
 ) {
     init {
         require(maximumInputTokens > 0L)
@@ -278,9 +288,10 @@ internal object ChatConversationPolicy {
             retainedUtf8Bytes = saturatedAdd(retainedUtf8Bytes, turnBytes)
         }
         val retained = retainedReversed.asReversed()
+        val replayed = replayAttachments(policy, prompt, derivedMessages + recalledMessages, retained)
         val rawMessages = retained.flatMap { turn ->
             listOf(
-                GenerationMessage(GenerationRole.USER, listOf(turn.user.text)),
+                userMessage(turn.user, replayed),
                 GenerationMessage(GenerationRole.ASSISTANT, listOf(turn.assistant.text)),
             )
         }
@@ -325,6 +336,60 @@ internal object ChatConversationPolicy {
         )
     }
 
+    /**
+     * D134: after the text turns are chosen, earlier attachments are resent newest first while the
+     * target accepts their kind, the request byte and image bounds hold and the token estimate stays
+     * within [ContextCompilationPolicy.maximumInputTokens]. The prompt's own attachments always count.
+     */
+    private fun replayAttachments(
+        policy: ContextCompilationPolicy,
+        prompt: GenerationMessage,
+        derivedMessages: List<GenerationMessage>,
+        retained: List<CompletedChatTurn>,
+    ): Map<String, GenerationAttachment> {
+        val replay = policy.attachmentReplay ?: return emptyMap()
+        val input = replay.input ?: return emptyMap()
+        val candidates = retained.asReversed().flatMap { turn -> turn.user.attachments }
+        if (candidates.isEmpty()) return emptyMap()
+        val textOnly = derivedMessages + retained.flatMap { turn ->
+            listOf(
+                userMessage(turn.user, emptyMap()),
+                GenerationMessage(GenerationRole.ASSISTANT, listOf(turn.assistant.text)),
+            )
+        } + prompt
+        var tokens = policy.estimator.estimateMessages(textOnly).estimatedTokens
+        var bytes = prompt.attachments.sumOf(GenerationAttachment::byteCount)
+        var images = prompt.attachments.count { attachment -> attachment.kind == GenerationAttachmentKind.IMAGE }
+        val selected = LinkedHashMap<String, GenerationAttachment>()
+        candidates.forEach { attachment ->
+            if (attachment.id in selected) return@forEach
+            if (ChatAttachmentLimits.unsupported(listOf(attachment), input).isNotEmpty()) return@forEach
+            if (bytes + attachment.sizeBytes > input.maximumRequestBytes) return@forEach
+            val image = attachment.kind == ChatAttachmentKind.IMAGE
+            if (image && images + 1 > input.maximumRequestImages) return@forEach
+            val resolved = replay.resolve(attachment) ?: return@forEach
+            val attachmentTokens = resolved.estimatedTokens(policy.estimator.tokensPerUtf8Byte)
+            if (saturatedAdd(tokens, attachmentTokens) > policy.maximumInputTokens) return@forEach
+            selected[attachment.id] = resolved
+            tokens = saturatedAdd(tokens, attachmentTokens)
+            bytes += attachment.sizeBytes
+            if (image) images += 1
+        }
+        return selected
+    }
+
+    /** A history user message with its resent attachments and a note for the others. */
+    private fun userMessage(message: ChatMessage, replayed: Map<String, GenerationAttachment>): GenerationMessage {
+        val included = message.attachments.mapNotNull { attachment -> replayed[attachment.id] }
+        val note = ChatAttachmentNotes.omitted(message.attachments.filterNot { attachment -> attachment.id in replayed })
+        val textParts = when {
+            note == null -> listOf(message.text)
+            message.text.isEmpty() -> listOf(note)
+            else -> listOf(message.text, "\n\n$note")
+        }
+        return GenerationMessage(GenerationRole.USER, textParts, attachments = included)
+    }
+
     private fun fits(
         policy: ContextCompilationPolicy,
         prompt: GenerationMessage,
@@ -333,7 +398,7 @@ internal object ChatConversationPolicy {
     ): Boolean {
         val rawMessages = retainedReversed.asReversed().flatMap { turn ->
             listOf(
-                GenerationMessage(GenerationRole.USER, listOf(turn.user.text)),
+                userMessage(turn.user, emptyMap()),
                 GenerationMessage(GenerationRole.ASSISTANT, listOf(turn.assistant.text)),
             )
         }

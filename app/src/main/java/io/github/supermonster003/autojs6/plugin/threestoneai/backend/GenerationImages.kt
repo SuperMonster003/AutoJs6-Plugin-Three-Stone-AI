@@ -45,9 +45,22 @@ internal object OnlineAiImages {
         }
     }
 
-    fun content(text: String, images: List<GenerationImage>, protocol: OnlineAiProtocol): JsonArray = JsonArray().apply {
-        if (text.isNotEmpty() || images.isEmpty()) add(textPart(text, protocol))
+    /** Chat attachments (P4) come first; script messages keep "text, then images". */
+    fun content(
+        text: String,
+        images: List<GenerationImage>,
+        protocol: OnlineAiProtocol,
+        attachments: List<GenerationAttachment> = emptyList(),
+    ): JsonArray = JsonArray().apply {
+        OnlineAiAttachments.parts(attachments, protocol).forEach(::add)
+        if (text.isNotEmpty() || (images.isEmpty() && attachments.isEmpty())) add(textPart(text, protocol))
         images.forEach { add(imagePart(it, protocol)) }
+    }
+
+    /** Requests with images or attachments may use the larger request body bound. */
+    fun hasBinaryContent(messages: List<GenerationMessage>): Boolean = messages.any { message ->
+        message.images.isNotEmpty() || message.attachments.isNotEmpty() ||
+            message.nativeToolMessage?.imageResults.orEmpty().isNotEmpty()
     }
 
     /** Expand binary attachments only while building the bounded, erasable HTTP body. */

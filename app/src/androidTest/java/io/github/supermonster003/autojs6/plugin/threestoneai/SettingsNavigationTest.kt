@@ -121,16 +121,23 @@ class SettingsNavigationTest {
     @Test
     fun modelsAndServicesShowsTheDefaultTargetAboveBothSections() {
         ActivityScenario.launch<ModelManagerActivity>(Intent(context, ModelManagerActivity::class.java)).use { scenario ->
-            val expected = listOf(
-                R.string.model_manager_title,
-                R.string.models_default_target,
-                R.string.online_ai_allow_metered_network,
-                R.string.online_ai_profiles_section,
-                R.string.online_ai_add_profile,
-                R.string.models_local_section,
-                R.string.button_browse_litert_models,
-                R.string.button_import_model,
-            ).map(context::getString)
+            // The page follows the AutoJs6 host language, which may differ from the system locale
+            // of the instrumentation context; read the texts through the activity.
+            var expected = emptyList<String>()
+            var unavailable = ""
+            scenario.onActivity { activity ->
+                expected = listOf(
+                    R.string.model_manager_title,
+                    R.string.models_default_target,
+                    R.string.online_ai_allow_metered_network,
+                    R.string.online_ai_profiles_section,
+                    R.string.online_ai_add_profile,
+                    R.string.models_local_section,
+                    R.string.button_browse_litert_models,
+                    R.string.button_import_model,
+                ).map(activity::getString)
+                unavailable = activity.getString(R.string.online_ai_settings_unavailable)
+            }
             var shown = emptyList<String>()
             val deadline = SystemClock.uptimeMillis() + TIMEOUT_MILLIS
             while (SystemClock.uptimeMillis() < deadline) {
@@ -140,7 +147,7 @@ class SettingsNavigationTest {
             }
             expected.forEach { text -> assertEquals("\"$text\" shown once", 1, shown.count { it == text }) }
             assertEquals("Rows in page order", expected, shown.filter { it in expected })
-            assertFalse(context.getString(R.string.online_ai_settings_unavailable) in shown)
+            assertFalse(unavailable in shown)
         }
     }
 

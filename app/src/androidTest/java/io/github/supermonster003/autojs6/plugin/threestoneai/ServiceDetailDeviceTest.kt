@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import android.content.Context
 import android.graphics.Rect
 import android.os.Build
 import android.os.Parcel
@@ -25,6 +26,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiPro
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ChatTestEnvironment.Companion.views
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ChatTestEnvironment.Companion.waitUntil
+import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -32,19 +34,39 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
+import org.junit.Before
 import org.junit.Test
 
 /**
  * The service details page (roadmap 1.7.0 P5.4, D96, D122): a new service is stored only on Save,
  * the draft (typed API key included) survives recreation, leaving asks before discarding, and the
  * model list edits (drag, preferred, image input, add) are saved together. Every service this test
- * creates is deleted again and the default target and favorites are put back. No request is sent;
- * the API key is a placeholder that never leaves the form.
+ * creates is deleted again and the default target, favorites and base URL history are put back.
+ * No request is sent; the API key is a placeholder that never leaves the form.
  */
 class ServiceDetailDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
     private val application get() = context.applicationContext as ThreeStoneAiApplication
+
+    /** Texts as the page shows them: it follows the AutoJs6 host language, not the system locale. */
+    private val strings by lazy { AppConfiguration.wrap(context) }
+
+    /** Saving a service records its base URL in the address history; each test puts the user's history back. */
+    private var baseUrlHistory: Map<String, *> = emptyMap<String, Any>()
+
+    @Before
+    fun keepBaseUrlHistory() {
+        baseUrlHistory = baseUrlHistoryPreferences().all.toMap()
+    }
+
+    @After
+    fun restoreBaseUrlHistory() {
+        // Written synchronously: the process may end right after the last test.
+        baseUrlHistoryPreferences().edit().clear().apply {
+            baseUrlHistory.forEach { (key, value) -> if (value is String) putString(key, value) }
+        }.commit()
+    }
 
     @Test
     fun aNewServiceKeepsItsDraftAcrossRecreationAndIsStoredOnlyOnSave() {
@@ -68,9 +90,9 @@ class ServiceDetailDeviceTest {
 
             hideKeyboard(scenario)
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            val title = context.getString(R.string.form_discard_changes_title)
-            val discard = context.getString(R.string.form_discard_changes_confirm)
-            val cancel = context.getString(android.R.string.cancel)
+            val title = strings.getString(R.string.form_discard_changes_title)
+            val discard = strings.getString(R.string.form_discard_changes_confirm)
+            val cancel = strings.getString(android.R.string.cancel)
             waitUntil("Back asks before discarding") { onMain { dialogButton(title, discard) != null } }
             onMain { checkNotNull(dialogButton(title, cancel)).performClick() }
             waitUntil("keeping the changes closes only the question") { onMain { dialogButton(title, discard) == null } }
@@ -97,7 +119,7 @@ class ServiceDetailDeviceTest {
                 created = (profileIds() - profilesBefore.toSet()).single()
                 assertFalse(onActivity(scenario) { it.hasUnsavedChanges() })
                 assertEquals(
-                    context.getString(R.string.service_detail_test_needs_key),
+                    strings.getString(R.string.service_detail_test_needs_key),
                     onMain { rowSummary(scenario, R.string.online_ai_action_test) },
                 )
                 hideKeyboard(scenario)
@@ -141,7 +163,7 @@ class ServiceDetailDeviceTest {
             launch(id).use { scenario ->
                 assertEquals(listOf("model-a", "model-b", "model-c"), onActivity(scenario) { it.shownModelOrder })
                 assertEquals(
-                    context.getString(R.string.service_detail_test_needs_key),
+                    strings.getString(R.string.service_detail_test_needs_key),
                     onMain { rowSummary(scenario, R.string.online_ai_action_test) },
                 )
 
@@ -151,7 +173,7 @@ class ServiceDetailDeviceTest {
                 }
                 assertEquals(listOf("model-c", "model-a", "model-b"), onActivity(scenario) { it.shownModelOrder })
                 assertEquals(
-                    context.getString(R.string.service_detail_test_save_first),
+                    strings.getString(R.string.service_detail_test_save_first),
                     onMain { rowSummary(scenario, R.string.online_ai_action_test) },
                 )
                 onActivity(scenario) {
@@ -225,7 +247,7 @@ class ServiceDetailDeviceTest {
         }
 
     private fun activityField(scenario: ActivityScenario<ServiceDetailActivity>, @StringRes hint: Int): EditText {
-        val text = context.getString(hint)
+        val text = strings.getString(hint)
         var root: View? = null
         scenario.onActivity { root = it.window.decorView }
         val layout = views(checkNotNull(root)).filterIsInstance<TextInputLayout>().first { it.hint?.toString() == text }
@@ -234,7 +256,7 @@ class ServiceDetailDeviceTest {
 
     /** The summary under the settings row titled [title]. */
     private fun rowSummary(scenario: ActivityScenario<ServiceDetailActivity>, @StringRes title: Int): String {
-        val text = context.getString(title)
+        val text = strings.getString(title)
         var root: View? = null
         scenario.onActivity { root = it.window.decorView }
         val titleView = views(checkNotNull(root)).filterIsInstance<TextView>().first { it.text.toString() == text }
@@ -244,7 +266,7 @@ class ServiceDetailDeviceTest {
 
     /** Drags the handle of row [from] until the row sits at [to], with injected touches. */
     private fun dragHandle(scenario: ActivityScenario<ServiceDetailActivity>, from: Int, to: Int) {
-        val description = context.getString(R.string.service_detail_drag_handle)
+        val description = strings.getString(R.string.service_detail_drag_handle)
         hideKeyboard(scenario)
         fun handles(): List<ImageView> {
             var root: View? = null
@@ -283,7 +305,7 @@ class ServiceDetailDeviceTest {
 
     /** Opens "Add models", types [lines] into the custom field and confirms. */
     private fun addTypedModels(scenario: ActivityScenario<ServiceDetailActivity>, lines: String) {
-        val addTitle = context.getString(R.string.service_detail_add_model)
+        val addTitle = strings.getString(R.string.service_detail_add_model)
         onMain {
             var root: View? = null
             scenario.onActivity { root = it.window.decorView }
@@ -292,10 +314,10 @@ class ServiceDetailDeviceTest {
             while (!row.isClickable) row = row.parent as View
             row.performClick()
         }
-        val hint = context.getString(R.string.online_ai_custom_model_ids)
+        val hint = strings.getString(R.string.online_ai_custom_model_ids)
         waitUntil("the add models sheet opens") { onMain { sheetField(hint) != null } }
         onMain { checkNotNull(sheetField(hint)).setText(lines) }
-        val confirm = context.getString(R.string.service_detail_add_confirm)
+        val confirm = strings.getString(R.string.service_detail_add_confirm)
         onMain {
             WindowInspector.getGlobalWindowViews().flatMap(::views).filterIsInstance<Button>()
                 .first { it.isShown && it.text.toString().equals(confirm, ignoreCase = true) }
@@ -345,7 +367,15 @@ class ServiceDetailDeviceTest {
         val current = store.load()
         (current - original).forEach(store::toggle)
         (original - store.load()).forEach(store::toggle)
+        // toggle() applies asynchronously, and the process ends right after the last test: write the
+        // restored set synchronously so it is not lost (a real device kept a deleted service's favorite).
+        context.getSharedPreferences("model_picker", Context.MODE_PRIVATE).edit()
+            .putStringSet("favorite_target_ids", store.load())
+            .commit()
     }
+
+    private fun baseUrlHistoryPreferences() =
+        context.getSharedPreferences("online-ai-base-url-history", Context.MODE_PRIVATE)
 
     private fun profileIds(): List<String> =
         application.onlineProfileRegistry.snapshot().profiles.map { it.profile.profileId }.sorted()

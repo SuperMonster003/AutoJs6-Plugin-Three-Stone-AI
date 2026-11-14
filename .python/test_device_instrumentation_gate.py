@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from device_instrumentation_gate import compare, content_digest, signer_problem, summarize
+from device_instrumentation_gate import compare, content_digest, run_as_problem, signer_problem, summarize
 
 RUN = """INSTRUMENTATION_STATUS: class=x.SettingsNavigationTest
 INSTRUMENTATION_STATUS: test=opensTheFiveEntries
@@ -94,6 +94,16 @@ class SignerTest(unittest.TestCase):
 
     def test_different_signers_are_refused(self):
         self.assertIn("different signers", signer_problem({"app": ("31a6", False), "test": ("9f00", False)}))
+
+
+class RunAsTest(unittest.TestCase):
+    def test_a_debuggable_install_is_readable(self):
+        self.assertIsNone(run_as_problem("uid=10234(u0_a234) gid=10234(u0_a234) groups=10234(u0_a234)\n"))
+
+    def test_a_release_install_is_refused_instead_of_reading_as_gone(self):
+        # run-as prints "package not debuggable" on stderr; stdout stays empty.
+        self.assertIn("firstInstallTime", run_as_problem(""))
+        self.assertIn("not debuggable", run_as_problem("run-as: package not debuggable: example"))
 
 
 if __name__ == "__main__":

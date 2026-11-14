@@ -14,7 +14,9 @@ of every preference file, the names and sizes in files/models, the number of att
 plus the content of the services document and of the model catalog without their revision
 counters. A class that adds and deletes a test service stores the same services again with a
 higher revision; that counts as kept when the content is the same. Only same / changed per item
-is printed, never file content, keys, IDs or digests.
+is printed, never file content, keys, IDs or digests. Both refuse when run-as cannot reach the app:
+on a release install (not debuggable) every item would read as gone, and an unchanged dumpsys
+firstInstallTime is what shows that its data was kept.
 
 --build points at the checkout whose app/build/outputs hold the APKs (default: this checkout), so
 a clean clone of the release commit can be tested. The instrumentation output stays under
@@ -142,6 +144,10 @@ def main():
     print(f"device {args.serial} model={model} api={sdk} abi={abi} versionCode={version_code()}")
 
     if args.snapshot:
+        problem = run_as_problem(run_as("id"))
+        if problem:
+            print(f"FAIL {problem}; nothing recorded")
+            return 1
         recorded = state()
         (output / f"state-{args.snapshot}.json").write_text(json.dumps(recorded, indent=1), encoding="utf-8")
         present = sum(1 for key, value in recorded.items() if key in DOCUMENTS and value)
@@ -198,10 +204,15 @@ def main():
         passed &= not left
 
     if args.compare:
-        saved = json.loads((output / f"state-{args.compare}.json").read_text(encoding="utf-8"))
-        same, lines = compare(saved, state(), args.compare)
-        print("\n".join(lines))
-        passed &= same
+        problem = run_as_problem(run_as("id"))
+        if problem:
+            print(f"FAIL {problem}; nothing compared")
+            passed = False
+        else:
+            saved = json.loads((output / f"state-{args.compare}.json").read_text(encoding="utf-8"))
+            same, lines = compare(saved, state(), args.compare)
+            print("\n".join(lines))
+            passed &= same
     print(f"{'PASS' if passed else 'FAIL'} instrumentation gate")
     return 0 if passed else 1
 
@@ -234,6 +245,14 @@ def signer_problem(signers):
     if len({digest for digest, _ in signers.values()}) != 1:
         return "the app and test APKs have different signers"
     return None
+
+
+def run_as_problem(output):
+    """Why run-as cannot read the app data, from the stdout of `run-as <package> id`, or None."""
+    if output.strip().startswith("uid="):
+        return None
+    return ("run-as cannot read the app data (a release install is not debuggable; there an unchanged "
+            "dumpsys firstInstallTime shows the data was kept)")
 
 
 def content_digest(text):

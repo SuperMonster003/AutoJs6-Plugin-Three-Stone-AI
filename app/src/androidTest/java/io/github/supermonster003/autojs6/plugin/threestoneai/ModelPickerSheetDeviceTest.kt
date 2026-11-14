@@ -54,7 +54,8 @@ class ModelPickerSheetDeviceTest {
                 assertTrue("Favorites come first", shown.indexOf(favoritesHeader) < shown.indexOf(fable.modelId))
                 assertTrue("The favorite is not repeated under its service", shown.indexOf(fable.modelId) < shown.indexOf(groupHeaderA))
                 assertEquals("Service rows show the service name (favorite included)", 2, shown.count { it == ANTHROPIC })
-                val unavailable = context.getString(R.string.chat_target_unavailable_suffix).trimStart(' ', '|')
+                // The sheet follows the AutoJs6 host language; the instrumentation context may not.
+                val unavailable = dialog.context.getString(R.string.chat_target_unavailable_suffix).trimStart(' ', '|')
                 assertTrue("Unavailable rows say so after the service", "$CODEX | $unavailable" in shown)
 
                 unfavoriteButton(dialog).performClick()
@@ -66,7 +67,7 @@ class ModelPickerSheetDeviceTest {
             }
             scenario.onActivity {
                 views(dialog.window!!.decorView).filterIsInstance<ImageView>()
-                    .first { it.contentDescription == context.getString(R.string.model_picker_favorite) && rowTitle(it) == fable.modelId }
+                    .first { it.contentDescription == dialog.context.getString(R.string.model_picker_favorite) && rowTitle(it) == fable.modelId }
                     .performClick()
                 assertTrue(favoritesHeader in texts(dialog))
                 searchField(dialog).setText("claude")
@@ -114,7 +115,7 @@ class ModelPickerSheetDeviceTest {
 
     private fun unfavoriteButton(dialog: BottomSheetDialog): View =
         views(dialog.window!!.decorView).filterIsInstance<ImageView>()
-            .single { it.contentDescription == context.getString(R.string.model_picker_unfavorite) }
+            .single { it.contentDescription == dialog.context.getString(R.string.model_picker_unfavorite) }
 
     /** The title of the row a star button belongs to: the first text in the row's column. */
     private fun rowTitle(star: View): String? {

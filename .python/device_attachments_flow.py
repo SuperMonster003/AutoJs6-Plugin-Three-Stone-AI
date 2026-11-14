@@ -47,6 +47,8 @@ DOCUMENTS = {
 CASES = ("image", "pdf", "effort")
 STATUS = {"0": "PASS", "-2": "FAIL", "-1": "ERROR", "-3": "SKIPPED", "-4": "SKIPPED"}
 SHA256 = re.compile(r"[0-9a-f]{64}")
+# Written by the app itself, not by a flow: the daily automatic update check runs when a page opens.
+VOLATILE_PREFERENCES = {("app-update-settings", "last-automatic-attempt")}
 
 
 def main():
@@ -147,6 +149,8 @@ def read_state(run_as):
         if name.endswith(".xml"):
             # Entries, not bytes: a rewrite with the same values may store them in another order.
             values = preference_values(run_as("cat", f"shared_prefs/{name}"))
+            if values is not None:
+                values = {key: value for key, value in values.items() if (name[:-4], key) not in VOLATILE_PREFERENCES}
             canonical = "unparsable" if values is None else json.dumps(sorted(values.items()))
             state[f"prefs {name[:-4]}"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     models = []

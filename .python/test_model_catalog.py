@@ -275,6 +275,23 @@ class SourceParserTest(unittest.TestCase):
         self.assertEqual(retired, {"gpt-retired"})
         self.assertEqual(upcoming, {"gpt-old": "2099-01-01"})
 
+    def test_bold_italic_and_linked_shutdown_dates_are_read(self):
+        # The deprecations page has bolded the shutdown dates since 2026-11-13.
+        document = """| Shutdown date | Model snapshot | Recommended replacement |
+| --- | --- | --- |
+| **Dec 1, 2099** | `gpt-bold` | `gpt-new` |
+| *2099-02-03* | `gpt-italic` | `gpt-new` |
+| **[March 4, 2099](https://example.com/notice)** | `gpt-linked` | `gpt-new` |
+| __Mar 26, 2025__ | `gpt-retired` | `gpt-new` |
+"""
+        retired, upcoming = catalog.openai_retirements(document, date(2026, 9, 26))
+        self.assertEqual(retired, {"gpt-retired"})
+        self.assertEqual(upcoming, {"gpt-bold": "2099-12-01", "gpt-italic": "2099-02-03", "gpt-linked": "2099-03-04"})
+        for value in ("**Dec** 1, 2099", "**soon**", "**", "[](https://example.com)"):
+            with self.subTest(value=value):
+                with self.assertRaises(catalog.CatalogError):
+                    catalog.retirement_date(value)
+
     def test_trust_boundary_rejects_other_hosts_credentials_queries_and_paths(self):
         self.assertTrue(catalog.trusted_url(catalog.OPENAI_INDEX))
         self.assertTrue(catalog.trusted_url("https://developers.openai.com/api/docs/models/gpt-99.md"))

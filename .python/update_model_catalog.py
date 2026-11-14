@@ -245,6 +245,13 @@ def general_openai(model: str) -> bool:
 
 def retirement_date(value: str) -> date:
     value = re.sub(r"[\u2010-\u2015]", "-", value).replace("\u00a0", " ").strip()
+    # The OpenAI deprecations page bolds its dates since 2026-11-13; a date may also be
+    # italic or a link. Read the text inside; anything else is still refused below.
+    previous = None
+    while value != previous:
+        previous = value
+        value = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", value)
+        value = re.sub(r"^(\*\*|__|\*|_)(.+)\1$", r"\2", value).strip()
     for pattern in ("%Y-%m-%d", "%b %d, %Y", "%B %d, %Y"):
         try:
             return datetime.strptime(value, pattern).date()

@@ -6,7 +6,7 @@
 
 # v1.7.0
 
-###### 2026/11/12
+###### 2026/11/14
 
 * `Feature` You can now add attachments in chat: tap "+" to the left of the input box to choose images or files, up to 20 per message. Supported are images (up to 5 MB each; oversized images are scaled down automatically), UTF-8 text files (such as txt, md, json, csv and code files, up to 256 KB) and PDFs (up to 32 MB and 100 pages). Images need "Image input" turned on for the current model; PDFs can currently be sent only to services whose provider is Anthropic or Gemini (for Gemini, the attachments of one request may total at most 20 MB); local models do not take attachments yet. Attachments the current model does not support are dimmed; remove them or switch to another model before sending
 * `Feature` Attachments are saved with the message in the app's data: the message shows image thumbnails or file names, and tapping one opens it in another app; attachments that are chosen but not yet sent are kept when the screen rotates or the app is closed. When the conversation continues later, earlier attachments are sent to the model again as far as the context allows; for those that do not fit, the model is told only the file names. The attachments of one conversation may total at most 48 MB; deleting a conversation deletes its attachments, and "Clean unreferenced files" on the "Models and services" page also removes attachments that are no longer used

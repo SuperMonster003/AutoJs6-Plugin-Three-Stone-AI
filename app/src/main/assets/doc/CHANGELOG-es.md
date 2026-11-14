@@ -6,7 +6,7 @@
 
 # v1.7.0
 
-###### 2026/11/12
+###### 2026/11/14
 
 * `Función` Ahora se pueden añadir adjuntos en el chat: toca "+" a la izquierda del cuadro de texto para elegir imágenes o archivos, hasta 20 por mensaje. Se admiten imágenes (hasta 5 MB cada una; las imágenes demasiado grandes se reducen automáticamente), archivos de texto UTF-8 (por ejemplo txt, md, json, csv y archivos de código, hasta 256 KB) y PDF (hasta 32 MB y 100 páginas). Las imágenes requieren que "Entrada de imágenes" esté activado para el modelo actual; por ahora los PDF solo se pueden enviar a servicios cuyo proveedor sea Anthropic o Gemini (con Gemini, los adjuntos de una solicitud no pueden superar 20 MB en total); los modelos locales aún no admiten adjuntos. Los adjuntos que el modelo actual no admite se muestran atenuados; quítalos o cambia de modelo antes de enviar
 * `Función` Los adjuntos se guardan con el mensaje en los datos de la aplicación: el mensaje muestra miniaturas de las imágenes o los nombres de los archivos, y al tocar uno se abre en otra aplicación; los adjuntos elegidos pero aún no enviados se conservan al girar la pantalla o si se cierra la aplicación. Al continuar la conversación más adelante, los adjuntos anteriores se vuelven a enviar al modelo en la medida en que lo permita el contexto; de los que no caben, solo se indica al modelo el nombre del archivo. Los adjuntos de una conversación no pueden superar 48 MB en total; al eliminar una conversación se eliminan también sus adjuntos, y "Limpiar archivos sin referencia" en la página "Modelos y servicios" también elimina los adjuntos que ya no se usan

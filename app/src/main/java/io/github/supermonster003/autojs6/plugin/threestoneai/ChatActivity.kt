@@ -349,6 +349,14 @@ class ChatActivity : ConfiguredActivity() {
     private val attachmentFilePicker = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris -> importAttachments(uris) }
+    private val markdownExportPicker = registerForActivityResult(
+        ActivityResultContracts.CreateDocument(ChatExportController.MIME_MARKDOWN),
+    ) { uri -> exportController.onMarkdownDocument(uri) }
+
+    /** Markdown and image export of a conversation (roadmap P7.1); test hooks read its state. */
+    @VisibleForTesting
+    internal lateinit var exportController: ChatExportController
+        private set
 
     private val persistConversationRunnable = Runnable {
         persistenceScheduled = false
@@ -428,6 +436,14 @@ class ChatActivity : ConfiguredActivity() {
         voiceCommandStore = VoiceCommandStore(applicationContext)
         voiceCommandCheckPending = intent.getBooleanExtra(VoiceCommandInbox.EXTRA_CHECK_INBOX, false)
         pendingDrawerExportId = savedInstanceState?.getString(STATE_PENDING_DRAWER_EXPORT_ID)
+        exportController = ChatExportController(
+            activity = this,
+            historyStore = historyStore,
+            attachmentStore = attachmentStore,
+            uiSettings = { uiSettings },
+            snackbarAnchor = { drawerLayout },
+            markdownPicker = markdownExportPicker,
+        ).also { controller -> controller.restore(savedInstanceState) }
         pendingDictation = savedInstanceState?.getString(STATE_PENDING_DICTATION)
             ?.let { name -> runCatching { DictationMode.valueOf(name) }.getOrNull() }
         updateController = AppUpdateController(this)
@@ -509,6 +525,8 @@ class ChatActivity : ConfiguredActivity() {
                 }
             })
         }
+        menu.add(0, MENU_EXPORT_MARKDOWN, 3, R.string.chat_export_markdown)
+        menu.add(0, MENU_EXPORT_IMAGE, 3, R.string.chat_export_image)
         menu.add(0, MENU_APP_SETTINGS, 4, R.string.app_settings_title)
         toolbar.post { tintToolbarIcons(toolbar) }
         return true
@@ -546,6 +564,13 @@ class ChatActivity : ConfiguredActivity() {
             isEnabled = searchExpanded || messages.any { message -> message.text.isNotBlank() }
             icon = tintedDrawable(R.drawable.ic_search_24, appPalette.primaryText)
         }
+        // A reply still being generated is refused with a message rather than a disabled item (D155).
+        listOf(MENU_EXPORT_MARKDOWN, MENU_EXPORT_IMAGE).forEach { id ->
+            menu.findItem(id)?.apply {
+                isVisible = !searchExpanded
+                isEnabled = messages.isNotEmpty()
+            }
+        }
     }
 
     private fun refreshOptionsMenuState() {
@@ -570,11 +595,35 @@ class ChatActivity : ConfiguredActivity() {
             showSearch()
             true
         }
+        MENU_EXPORT_MARKDOWN -> {
+            requestConversationExport(currentConversationId, ChatExportKind.MARKDOWN)
+            true
+        }
+        MENU_EXPORT_IMAGE -> {
+            requestConversationExport(currentConversationId, ChatExportKind.IMAGE)
+            true
+        }
         MENU_APP_SETTINGS -> {
             startActivity(Intent(this, AppSettingsActivity::class.java))
             true
         }
         else -> super.onOptionsItemSelected(item)
+    }
+
+    /**
+     * Exports what history holds for [conversationId] (D149, D155): the current conversation is saved
+     * first, and a conversation whose reply is still being generated is refused until it finishes.
+     */
+    @VisibleForTesting
+    internal fun requestConversationExport(conversationId: String, kind: ChatExportKind) {
+        if (generationCoordinator.activeFor(conversationId) != null ||
+            (conversationId == currentConversationId && isGenerating)
+        ) {
+            showSnackbar(drawerLayout, getString(R.string.chat_export_generating))
+            return
+        }
+        if (conversationId == currentConversationId) persistConversationNow()
+        exportController.start(conversationId, kind)
     }
 
     override fun onStart() {
@@ -753,6 +802,7 @@ class ChatActivity : ConfiguredActivity() {
         editingMessageId?.let { id -> outState.putLong(STATE_EDITING_MESSAGE_ID, id) }
         outState.putString(STATE_DRAFT_BEFORE_EDITING, draftBeforeEditing)
         outState.putString(STATE_PENDING_DRAWER_EXPORT_ID, pendingDrawerExportId)
+        exportController.save(outState)
         outState.putString(STATE_PENDING_DICTATION, pendingDictation?.name)
         outState.putByteArray(STATE_PENDING_ATTACHMENTS, ChatAttachmentCodec.encode(pendingAttachments))
         persistComposerDraft()
@@ -776,6 +826,7 @@ class ChatActivity : ConfiguredActivity() {
         if (::speechOutput.isInitialized) speechOutput.shutdown()
         ChatAttachmentImportQueue.detach(attachmentImportReceiver)
         if (::attachmentViews.isInitialized) attachmentViews.shutdown()
+        if (::exportController.isInitialized) exportController.shutdown()
         super.onDestroy()
     }
 
@@ -1310,18 +1361,23 @@ class ChatActivity : ConfiguredActivity() {
         }
     }
 
+    /** Instrumentation only: the last conversation menu shown in the drawer (P7.2). */
+    @VisibleForTesting
+    internal var drawerActionsDialog: AlertDialog? = null
+        private set
+
     private fun showDrawerHistoryActions(conversation: StoredConversation) {
-        val actions = listOf(
-            DrawerConversationAction.COPY_ALL,
-            DrawerConversationAction.EXPORT,
-            DrawerConversationAction.DELETE,
-        )
-        materialDialog()
+        val actions = DrawerConversationAction.entries
+        drawerActionsDialog = materialDialog()
             .setTitle(conversation.title)
             .setItems(actions.map { action -> getString(action.labelResource) }.toTypedArray()) { _, index ->
                 when (actions[index]) {
                     DrawerConversationAction.COPY_ALL -> copyDrawerConversation(conversation)
                     DrawerConversationAction.EXPORT -> beginDrawerConversationExport(conversation)
+                    DrawerConversationAction.EXPORT_MARKDOWN ->
+                        requestConversationExport(conversation.id, ChatExportKind.MARKDOWN)
+                    DrawerConversationAction.SHARE_IMAGE ->
+                        requestConversationExport(conversation.id, ChatExportKind.IMAGE)
                     DrawerConversationAction.DELETE -> confirmDrawerConversationDeletion(conversation)
                 }
             }
@@ -4400,9 +4456,12 @@ class ChatActivity : ConfiguredActivity() {
         STOP_READING(R.string.chat_message_stop_reading),
     }
 
+    /** The drawer conversation menu, in display order (D149 adds the two P7.1 exports). */
     private enum class DrawerConversationAction(val labelResource: Int) {
         COPY_ALL(R.string.chat_history_copy_all),
         EXPORT(R.string.chat_history_export),
+        EXPORT_MARKDOWN(R.string.chat_export_markdown),
+        SHARE_IMAGE(R.string.chat_export_image),
         DELETE(R.string.chat_history_delete_selected),
     }
 
@@ -4412,6 +4471,8 @@ class ChatActivity : ConfiguredActivity() {
         const val MENU_CONVERSATION_HISTORY = 3
         const val MENU_SEARCH = 4
         const val MENU_APP_SETTINGS = 6
+        const val MENU_EXPORT_MARKDOWN = 7
+        const val MENU_EXPORT_IMAGE = 8
         const val MILLIS_PER_SECOND = 1_000L
         const val PERSISTENCE_DELAY_MILLIS = 750L
         const val KEYBOARD_REQUEST_DELAY_MILLIS = 180L

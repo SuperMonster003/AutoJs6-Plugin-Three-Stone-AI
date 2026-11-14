@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_export_generating">답변 생성이 끝난 뒤에 이 대화를 내보내세요</string>
+    <string name="chat_export_image">이미지로 공유</string>
+    <string name="chat_export_image_failed">대화 이미지를 만들 수 없습니다</string>
+    <string name="chat_export_image_progress" tools:ignore="TypographyEllipsis">이미지를 만드는 중...</string>
+    <string name="chat_export_image_too_large">메모리가 부족해 이미지를 만들 수 없습니다. Markdown으로 내보내 보세요</string>
+    <string name="chat_export_include_reasoning">생각 내용 포함</string>
+    <string name="chat_export_markdown">Markdown으로 내보내기</string>
+    <string name="chat_export_markdown_failed">대화를 내보낼 수 없습니다</string>
+    <string name="chat_export_markdown_succeeded">대화를 Markdown으로 내보냈습니다</string>
+    <string name="chat_export_md_attachments">첨부 파일</string>
+    <string name="chat_export_md_created">생성 시각</string>
+    <string name="chat_export_md_exported">내보낸 시각</string>
+    <string name="chat_export_md_model">모델</string>
+    <string name="chat_export_md_updated">업데이트 시각</string>
+    <string name="chat_export_share_title">대화 이미지 공유</string>
+</resources>

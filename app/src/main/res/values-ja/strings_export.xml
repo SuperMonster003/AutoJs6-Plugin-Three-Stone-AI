@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_export_generating">返信の生成が終わってからこの会話をエクスポートしてください</string>
+    <string name="chat_export_image">画像として共有</string>
+    <string name="chat_export_image_failed">会話の画像を作成できませんでした</string>
+    <string name="chat_export_image_progress" tools:ignore="TypographyEllipsis">画像を作成しています...</string>
+    <string name="chat_export_image_too_large">メモリが足りないため画像を作成できません. Markdown でのエクスポートをお試しください</string>
+    <string name="chat_export_include_reasoning">思考内容を含める</string>
+    <string name="chat_export_markdown">Markdown でエクスポート</string>
+    <string name="chat_export_markdown_failed">会話をエクスポートできませんでした</string>
+    <string name="chat_export_markdown_succeeded">会話を Markdown でエクスポートしました</string>
+    <string name="chat_export_md_attachments">添付ファイル</string>
+    <string name="chat_export_md_created">作成日時</string>
+    <string name="chat_export_md_exported">エクスポート日時</string>
+    <string name="chat_export_md_model">モデル</string>
+    <string name="chat_export_md_updated">更新日時</string>
+    <string name="chat_export_share_title">会話の画像を共有</string>
+</resources>

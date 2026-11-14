@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_export_generating">Дождитесь окончания ответа, прежде чем экспортировать этот разговор</string>
+    <string name="chat_export_image">Поделиться изображением</string>
+    <string name="chat_export_image_failed">Не удалось создать изображение разговора</string>
+    <string name="chat_export_image_progress" tools:ignore="TypographyEllipsis">Создание изображения...</string>
+    <string name="chat_export_image_too_large">Недостаточно памяти для создания изображения. Попробуйте экспорт в Markdown</string>
+    <string name="chat_export_include_reasoning">Включить размышления</string>
+    <string name="chat_export_markdown">Экспорт в Markdown</string>
+    <string name="chat_export_markdown_failed">Не удалось экспортировать разговор</string>
+    <string name="chat_export_markdown_succeeded">Разговор экспортирован в Markdown</string>
+    <string name="chat_export_md_attachments">Вложения</string>
+    <string name="chat_export_md_created">Создан</string>
+    <string name="chat_export_md_exported">Экспортирован</string>
+    <string name="chat_export_md_model">Модель</string>
+    <string name="chat_export_md_updated">Обновлен</string>
+    <string name="chat_export_share_title">Поделиться изображением разговора</string>
+</resources>

@@ -254,6 +254,17 @@
                 android:resource="@xml/attachment_paths" />
         </provider>
 
+        <!-- Conversation images shared with other apps; serves only cache/share (roadmap P7.1, D153). -->
+        <provider
+            android:name=".ShareFileProvider"
+            android:authorities="${applicationId}.share"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_paths" />
+        </provider>
+
         <receiver android:name=".LauncherIconUpdateReceiver" android:exported="false">
             <intent-filter><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /></intent-filter>
         </receiver>

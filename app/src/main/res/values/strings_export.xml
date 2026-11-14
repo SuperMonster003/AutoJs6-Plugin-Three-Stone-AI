@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_export_generating">Wait for the reply to finish before exporting this conversation</string>
+    <string name="chat_export_image">Share as image</string>
+    <string name="chat_export_image_failed">Could not create the conversation image</string>
+    <string name="chat_export_image_progress" tools:ignore="TypographyEllipsis">Creating the image...</string>
+    <string name="chat_export_image_too_large">Not enough memory to create the image. Try exporting as Markdown instead</string>
+    <string name="chat_export_include_reasoning">Include reasoning</string>
+    <string name="chat_export_markdown">Export as Markdown</string>
+    <string name="chat_export_markdown_failed">Could not export the conversation</string>
+    <string name="chat_export_markdown_succeeded">Conversation exported as Markdown</string>
+    <string name="chat_export_md_attachments">Attachments</string>
+    <string name="chat_export_md_created">Created</string>
+    <string name="chat_export_md_exported">Exported</string>
+    <string name="chat_export_md_model">Model</string>
+    <string name="chat_export_md_updated">Updated</string>
+    <string name="chat_export_share_title">Share conversation image</string>
+</resources>

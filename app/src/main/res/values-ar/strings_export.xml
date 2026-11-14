@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_export_generating">انتظر حتى يكتمل الرد قبل تصدير هذه المحادثة</string>
+    <string name="chat_export_image">مشاركة كصورة</string>
+    <string name="chat_export_image_failed">تعذر إنشاء صورة المحادثة</string>
+    <string name="chat_export_image_progress" tools:ignore="TypographyEllipsis">جارٍ إنشاء الصورة...</string>
+    <string name="chat_export_image_too_large">الذاكرة غير كافية لإنشاء الصورة. جرّب التصدير بصيغة Markdown بدلا من ذلك</string>
+    <string name="chat_export_include_reasoning">تضمين التفكير</string>
+    <string name="chat_export_markdown">تصدير بصيغة Markdown</string>
+    <string name="chat_export_markdown_failed">تعذر تصدير المحادثة</string>
+    <string name="chat_export_markdown_succeeded">تم تصدير المحادثة بصيغة Markdown</string>
+    <string name="chat_export_md_attachments">المرفقات</string>
+    <string name="chat_export_md_created">تاريخ الإنشاء</string>
+    <string name="chat_export_md_exported">تاريخ التصدير</string>
+    <string name="chat_export_md_model">النموذج</string>
+    <string name="chat_export_md_updated">تاريخ التحديث</string>
+    <string name="chat_export_share_title">مشاركة صورة المحادثة</string>
+</resources>

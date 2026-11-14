@@ -24,6 +24,11 @@ internal object SpeechDeviceReport {
         File(directory(), "$name.json").writeText(json.toString(2))
     }
 
+    /** A file the test made from its own sample data (an export), for the flow script to collect. */
+    fun file(name: String, bytes: ByteArray) {
+        File(directory(), name).writeBytes(bytes)
+    }
+
     fun screenshot(name: String) {
         instrumentation.waitForIdleSync()
         // Some devices (HyperOS on API 35) present the frame after a scroll noticeably later.

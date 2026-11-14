@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only conversation images in cache/share can be shared with other apps (roadmap P7.1, D153). -->
+<paths>
+    <cache-path name="share" path="share/" />
+</paths>

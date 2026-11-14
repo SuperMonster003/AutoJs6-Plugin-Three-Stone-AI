@@ -78,7 +78,12 @@ internal class ChatTestEnvironment(scripted: Boolean = true) : Closeable {
         application.aiBackendOverride = null
         val created = history.loadAll().map { it.id }.toSet() - existingConversations
         if (created.isNotEmpty()) history.delete(created)
-        lastConversation?.let(history::rememberLastConversation)
+        // Committed, not applied: the process may end right after the last test. When nothing was
+        // remembered before, the ID of a deleted test conversation is not left behind either.
+        context.getSharedPreferences("conversation-navigation", Context.MODE_PRIVATE).edit().apply {
+            if (lastConversation != null) putString("last-conversation-id", lastConversation)
+            else remove("last-conversation-id")
+        }.commit()
         preferenceBackups.forEach { (name, values) -> restore(name, values) }
         forgetCalibration(ScriptedAiBackend.TARGET_ID)
     }

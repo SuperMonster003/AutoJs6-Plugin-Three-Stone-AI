@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="chat_export_generating">请等回复生成完再导出这个会话</string>
+    <string name="chat_export_image">分享为长图</string>
+    <string name="chat_export_image_failed">无法生成会话长图</string>
+    <string name="chat_export_image_progress" tools:ignore="TypographyEllipsis">正在生成长图...</string>
+    <string name="chat_export_image_too_large">内存不足, 无法生成长图. 可以改为导出 Markdown</string>
+    <string name="chat_export_include_reasoning">包含思考内容</string>
+    <string name="chat_export_markdown">导出为 Markdown</string>
+    <string name="chat_export_markdown_failed">无法导出会话</string>
+    <string name="chat_export_markdown_succeeded">会话已导出为 Markdown</string>
+    <string name="chat_export_md_attachments">附件</string>
+    <string name="chat_export_md_created">创建时间</string>
+    <string name="chat_export_md_exported">导出时间</string>
+    <string name="chat_export_md_model">模型</string>
+    <string name="chat_export_md_updated">更新时间</string>
+    <string name="chat_export_share_title">分享会话长图</string>
+</resources>

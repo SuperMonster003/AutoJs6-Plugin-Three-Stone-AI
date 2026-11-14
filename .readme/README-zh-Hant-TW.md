@@ -272,7 +272,7 @@ AI Provider V2 透過分頁目錄統一公開 `local:*` 與 `profile:*` 目標. 
 .\gradlew.bat :app:assembleRelease
 ```
 
-建置參數來自 `version.properties`. 目前最低 SDK 為 24, 目標 SDK 為 36, 建置 JDK 為 21 或更高版本.
+建置參數來自 `version.properties`. 目前最低 SDK 為 24, 目標 SDK 為 37, 建置 JDK 為 21 或更高版本.
 
 協定 ABI 由儲存庫 `libs` 目錄中的本機 AAR 提供:
 

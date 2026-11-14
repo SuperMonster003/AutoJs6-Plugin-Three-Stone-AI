@@ -272,7 +272,7 @@ Compilación de versión:
 .\gradlew.bat :app:assembleRelease
 ```
 
-Los parámetros proceden de `version.properties`. El SDK mínimo actual es 24, el SDK objetivo es 36 y se requiere JDK 21 o posterior.
+Los parámetros proceden de `version.properties`. El SDK mínimo actual es 24, el SDK objetivo es 37 y se requiere JDK 21 o posterior.
 
 La ABI del protocolo se suministra mediante AAR locales del repositorio en `libs`:
 

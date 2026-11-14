@@ -100,7 +100,7 @@
   "h5_for_more_release_history": "For more releases",
   "h3_build": "Build",
   "text_release_build": "Release build",
-  "p_build_params": "Build parameters come from `version.properties`. The current minimum SDK is 24, the target SDK is 36, and JDK 21 or later is required",
+  "p_build_params": "Build parameters come from `version.properties`. The current minimum SDK is 24, the target SDK is 37, and JDK 21 or later is required",
   "p_local_aars": "The protocol ABI is supplied by repository-local AARs in `libs`",
   "p_build_architecture": "The runtime uses {{ runtime_dependency }} from Maven. Release builds retain LiteRT-LM runtime classes and produce two ABI APKs plus one universal APK.",
   "h3_license": "License",

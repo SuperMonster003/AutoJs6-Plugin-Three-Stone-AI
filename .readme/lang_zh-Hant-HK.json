@@ -100,7 +100,7 @@
   "h5_for_more_release_history": "更多版本",
   "h3_build": "構建",
   "text_release_build": "發佈構建",
-  "p_build_params": "構建參數來自 `version.properties`. 目前最低 SDK 為 24, 目標 SDK 為 36, 構建 JDK 為 21 或更高版本",
+  "p_build_params": "構建參數來自 `version.properties`. 目前最低 SDK 為 24, 目標 SDK 為 37, 構建 JDK 為 21 或更高版本",
   "p_local_aars": "協議 ABI 由儲存庫 `libs` 目錄中的本地 AAR 提供",
   "p_build_architecture": "執行階段透過 Maven 使用 {{ runtime_dependency }}. 發佈構建保留 LiteRT-LM runtime 類別, 並生成兩個 ABI APK 和一個 universal APK.",
   "h3_license": "授權條款",

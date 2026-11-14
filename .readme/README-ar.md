@@ -272,7 +272,7 @@ required host build: 5276
 .\gradlew.bat :app:assembleRelease
 ```
 
-تأتي المعلمات من `version.properties`. الحد الأدنى الحالي SDK هو 24 والهدف SDK هو 36 ويلزم JDK 21 أو أحدث.
+تأتي المعلمات من `version.properties`. الحد الأدنى الحالي SDK هو 24 والهدف SDK هو 37 ويلزم JDK 21 أو أحدث.
 
 تتوفر ABI الخاصة بالبروتوكول من ملفات AAR المحلية في `libs`:
 

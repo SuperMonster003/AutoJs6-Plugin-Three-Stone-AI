@@ -100,7 +100,7 @@
   "h5_for_more_release_history": "その他のリリース",
   "h3_build": "ビルド",
   "text_release_build": "リリースビルド",
-  "p_build_params": "ビルド設定は `version.properties` から取得します. 現在の最小 SDK は 24, ターゲット SDK は 36 で, JDK 21 以降が必要です",
+  "p_build_params": "ビルド設定は `version.properties` から取得します. 現在の最小 SDK は 24, ターゲット SDK は 37 で, JDK 21 以降が必要です",
   "p_local_aars": "プロトコル ABI は `libs` にあるリポジトリローカル AAR から提供されます",
   "p_build_architecture": "Runtime は Maven の {{ runtime_dependency }} を使用します. リリースビルドは LiteRT-LM runtime クラスを保持し, 2 個の ABI APK と 1 個の universal APK を生成します.",
   "h3_license": "ライセンス",

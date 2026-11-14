@@ -272,7 +272,7 @@ AI Provider V2 は `local:*` と `profile:*` ターゲットを 1 つのペー�
 .\gradlew.bat :app:assembleRelease
 ```
 
-ビルド設定は `version.properties` から取得します. 現在の最小 SDK は 24, ターゲット SDK は 36 で, JDK 21 以降が必要です.
+ビルド設定は `version.properties` から取得します. 現在の最小 SDK は 24, ターゲット SDK は 37 で, JDK 21 以降が必要です.
 
 プロトコル ABI は `libs` にあるリポジトリローカル AAR から提供されます:
 

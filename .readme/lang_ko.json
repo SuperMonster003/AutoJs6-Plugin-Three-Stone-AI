@@ -100,7 +100,7 @@
   "h5_for_more_release_history": "추가 릴리스",
   "h3_build": "빌드",
   "text_release_build": "릴리스 빌드",
-  "p_build_params": "빌드 매개변수는 `version.properties`에서 가져옵니다. 현재 최소 SDK는 24, 대상 SDK는 36이고 JDK 21 이상이 필요합니다",
+  "p_build_params": "빌드 매개변수는 `version.properties`에서 가져옵니다. 현재 최소 SDK는 24, 대상 SDK는 37이고 JDK 21 이상이 필요합니다",
   "p_local_aars": "프로토콜 ABI는 `libs`의 저장소 로컬 AAR에서 제공됩니다",
   "p_build_architecture": "Runtime은 Maven의 {{ runtime_dependency }}을 사용합니다. 릴리스 빌드는 LiteRT-LM runtime 클래스를 유지하고 ABI APK 2개와 universal APK 1개를 만듭니다.",
   "h3_license": "라이선스",

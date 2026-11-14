@@ -100,7 +100,7 @@
   "h5_for_more_release_history": "Más versiones",
   "h3_build": "Compilación",
   "text_release_build": "Compilación de versión",
-  "p_build_params": "Los parámetros proceden de `version.properties`. El SDK mínimo actual es 24, el SDK objetivo es 36 y se requiere JDK 21 o posterior",
+  "p_build_params": "Los parámetros proceden de `version.properties`. El SDK mínimo actual es 24, el SDK objetivo es 37 y se requiere JDK 21 o posterior",
   "p_local_aars": "La ABI del protocolo se suministra mediante AAR locales del repositorio en `libs`",
   "p_build_architecture": "El runtime usa {{ runtime_dependency }} desde Maven. Las builds de versión conservan las clases de LiteRT-LM y producen dos APK por ABI y un APK universal.",
   "h3_license": "Licencia",

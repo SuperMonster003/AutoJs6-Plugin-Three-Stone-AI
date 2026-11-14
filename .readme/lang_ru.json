@@ -100,7 +100,7 @@
   "h5_for_more_release_history": "Другие выпуски",
   "h3_build": "Сборка",
   "text_release_build": "Релизная сборка",
-  "p_build_params": "Параметры берутся из `version.properties`. Текущий минимальный SDK 24, целевой SDK 36, требуется JDK 21 или новее",
+  "p_build_params": "Параметры берутся из `version.properties`. Текущий минимальный SDK 24, целевой SDK 37, требуется JDK 21 или новее",
   "p_local_aars": "ABI протокола предоставляется локальными AAR репозитория в `libs`",
   "p_build_architecture": "Runtime использует {{ runtime_dependency }} из Maven. Релиз сохраняет классы LiteRT-LM и создает два APK для ABI и один universal APK.",
   "h3_license": "Лицензия",

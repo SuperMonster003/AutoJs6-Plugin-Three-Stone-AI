@@ -100,7 +100,7 @@
   "h5_for_more_release_history": "إصدارات أخرى",
   "h3_build": "البناء",
   "text_release_build": "بناء الإصدار",
-  "p_build_params": "تأتي المعلمات من `version.properties`. الحد الأدنى الحالي SDK هو 24 والهدف SDK هو 36 ويلزم JDK 21 أو أحدث",
+  "p_build_params": "تأتي المعلمات من `version.properties`. الحد الأدنى الحالي SDK هو 24 والهدف SDK هو 37 ويلزم JDK 21 أو أحدث",
   "p_local_aars": "تتوفر ABI الخاصة بالبروتوكول من ملفات AAR المحلية في `libs`",
   "p_build_architecture": "يستخدم runtime الحزمة {{ runtime_dependency }} من Maven. تحتفظ بنى الإصدار بفئات LiteRT-LM وتنتج ملفي APK للـ ABI وملف universal APK واحدا.",
   "h3_license": "الترخيص",

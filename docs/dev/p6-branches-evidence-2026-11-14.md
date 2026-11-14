@@ -48,7 +48,7 @@ Emulator check (AVD_API_33 read-only instance emulator-5972, x86_64): `.python/r
 
 ### XQ-DQ72
 
-The two files the P4 card left in `cache/litertlm` (2.21 GB from 2026-10-17, 1.55 GB from 2026-11-13 14:28) are checked with `.python/device_engine_caches.py` before and after the install of the P6 build (see the XQ-DQ72 section below).
+The two files the P4 card left in `cache/litertlm` (2.21 GB from 2026-10-17, 1.55 GB from 2026-11-13 14:28) were checked with `.python/device_engine_caches.py` before and after the install of the P6 build: the 1.55 GB file was an orphan and is gone, the 2.21 GB file belongs to the model still in the catalog and stays (see the XQ-DQ72 section below).
 
 ## P6.1 - P6.3 Message versions (D82, D148)
 
@@ -107,4 +107,17 @@ So an older build shows the version that was selected and, as soon as it saves t
 
 ## XQ-DQ72
 
-Pending: the install of this build over debug 339 needs the maintainer's consent first. Planned: `.python/device_branches_flow.py --snapshot before`, the install (overwrite only, data kept), `--request "AIGoCode (Codex)" gpt-6.1-sol` (three real requests), `--compare before`, and `.python/device_engine_caches.py` before and after for the two files in `cache/litertlm`.
+On 2026-11-14 08:13 - 08:23, after the maintainer agreed (through the dispatch session) to the install. Remote adb server 100.107.160.16:5037; the build is the debug APK versionCode 346 built from 17f455b (code of 4a01616), arm64-v8a split, installed over debug 339 with `adb install -r` (data kept, the app was never uninstalled).
+
+| Step | Result |
+| --- | --- |
+| `device_engine_caches.py` before | catalog 1 model; `cache/litertlm` 2 files: 2.21 GB (2026-10-17, model size in the name matches the model in the catalog, keep), 1.55 GB (2026-11-13 14:28, Qwen2.5 1.5B left by the P4 card, orphan) |
+| `device_branches_flow.py --snapshot before` | versionCode 339; 4 / 4 documents, 9 preference files, 2 entries in `files/models`, 0 attachment files |
+| `--install` | versionCode 346 |
+| `--request "AIGoCode (Codex)" gpt-6.1-sol` | `ChatBranchRealDeviceFlowTest` PASS in 18.2 s; 3 real requests, each reply COMPLETE (5 s, 2 s, 3 s); switch 1/3 -> 3/3 -> 1/3 pass; after reopening 1/3 is kept and 3 versions are stored; the test conversation was deleted and the default target restored; the test APK was uninstalled afterwards |
+| `--compare before` | 14 of 15 items the same, among them the conversation history, the default target, the services, the local model catalog, `files/models` and 8 of 9 preference files; `app-update-settings` changed |
+| `device_engine_caches.py --expect-no-orphans` after | `cache/litertlm` 1 file (the 2.21 GB one, kept), 0 orphans |
+
+The changed `app-update-settings` holds a single entry, `last-automatic-attempt`, written 1.7 minutes before it was read: the daily automatic update check of the app itself, which runs when a page opens and would run the same way whenever the maintainer opens the app. The flow did not write it. `device_attachments_flow.read_state` now leaves this entry out (1f71826); a read-only `--snapshot after --compare after` with the change passes, and every other item of that snapshot equals the one recorded before the install.
+
+State left on the device: 3-Stone AI debug versionCode 346 with the maintainer's data (conversation history unchanged, no test conversation, default target unchanged), no test APK, `cache/litertlm` 2.21 GB. Going back to 339 would lose nothing: no stored conversation has other versions.

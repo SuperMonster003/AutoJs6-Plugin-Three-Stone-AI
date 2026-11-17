@@ -53,4 +53,52 @@ The AVD was closed right after the run.
 
 `:app:lintDebug`: no errors. The warnings in the changed files are the free-space hint on the existing check before a start (`UsableSpace`, unchanged code) and dependency / version-catalog hints on `app/build.gradle.kts`; nothing new to act on.
 
-The release build and the release smoke are recorded with the release below.
+## Release 1.7.1
+
+The maintainer approved pushing and releasing in the card's conversation (D27: 3-Stone AI asks before each push), with the two commits after `1123a0c`: `0e6a1f5` (README target SDK, made before this card) and `d8dde3e` (this change).
+
+### Commits, tag and CI
+
+- `d8dde3e` feat(download): fetch models through the shared download library of the official plugins. VERSION_NAME 1.7.1, VERSION_BUILD 359 (= reachable commits), released_date 2026/11/17 in all ten changelog languages, so no separate date commit was needed.
+- `D:/idea-projects/prepush_check.py`: 8 / 8 checks passed (clean worktree, build number drift 0, generated documentation, icon resources, repository contract, both Python test sets, `:app:testDebugUnitTest`).
+- Pushed `1123a0c..d8dde3e` to master. CI on `d8dde3e`: Documentation (run 44046635557) and Build and plugin contract (run 44046635500) passed.
+- Annotated tag `v1.7.1` ("Release 1.7.1") on `d8dde3e05f34c3f884d33d885d643a702a578091`, pushed 2026-11-17 08:33 UTC (16:33 +08:00). The release APKs carry versionCode 359.
+
+### Release build
+
+Clean clone of `d8dde3e` in `E:/.cache/stone-p13-171` (ignored `local.properties`, `sign.properties` and `app/sm003.jks` copied in, `git status` clean), `sourceDirty` false: `:app:appendDigestToReleasedFiles` (4 min 46 s), then `-PreleaseAbiSmoke=true :app:assembleDebugAndroidTest` for the smoke test APK (same signer). `release_archive.py` checked every APK against the configured signer.
+
+| File | Bytes | SHA-256 (first 12) |
+| --- | ---: | --- |
+| autojs6-plugin-three-stone-ai-v1.7.1-universal-3BB842B1.apk | 50316258 | 956d0b00c399 |
+| autojs6-plugin-three-stone-ai-v1.7.1-arm64-v8a-903C95DD.apk | 25092527 | d6acee1948d5 |
+| autojs6-plugin-three-stone-ai-v1.7.1-x86_64-2E95582E.apk | 29115284 | 668842905550 |
+| autojs6-plugin-three-stone-ai-v1.7.1-armeabi-v7a-C976D055.apk | 3882317 | 7f9d22820d4e |
+| autojs6-plugin-three-stone-ai-v1.7.1-x86-C976D055.apk | 3882317 | 7f9d22820d4e |
+| SHA256SUMS | 623 | e4268d35ae51 |
+
+- release-manifest.json: sourceRevision `d8dde3e05f34c3f884d33d885d643a702a578091`, sourceDirty false, versionCode 359 for all five. Compared with 1.7.0 the APKs grew by 74,730 bytes (armeabi-v7a, x86) to 83,846 bytes (the others): the library, minus the removed transfer code.
+- The armeabi-v7a and x86 APKs carry no native libraries and are byte-identical, as before.
+- Signer certificate SHA-256 `31a681fcfffb3e428420cae280ded89292b12a3b0f59e19b7a73e32a8ae4c213` (apksigner on the arm64-v8a and x86_64 APKs), the same as 1.7.0.
+- `SHA256SUMS` was written from the release manifest in the 1.7.0 format and order (`<sha256>  <file>`, LF); `sha256sum -c` passed for all five.
+
+### Release smoke
+
+`device_release_smoke.py` from the clean clone, without `--force`, on the temporary AVD `pc2_p13_stone_api33` (API 33 x86_64, emulator-5644, started for this step and closed right after it). The AVD still had the debug build of this change (versionCode 357, same signer) from the device tests, so the release APK was installed over it:
+
+- `PASS sha256 autojs6-plugin-three-stone-ai-v1.7.1-x86_64-2E95582E.apk`
+- `PASS install versionCode=359 primaryCpuAbi=x86_64`
+- `PASS smoke releaseAbiSmoke=passed process64=true pageSize=4096`
+
+`firstInstallTime` stayed 2026-11-17 16:11:06, so the data was kept; the DEBUGGABLE flag is gone; the test package is uninstalled. No phone was used: the download change is covered by the device tests above, and the card asked for verification on an emulator with a local HTTP service.
+
+### GitHub Release
+
+- Release `1.7.1` on tag `v1.7.1`, published 2026-11-17 08:34 UTC (16:34 +08:00) and marked Latest (`/releases/latest` returns `v1.7.1`). Body in the 1.7.0 format: the source commit, the one changelog entry of v1.7.1 from CHANGELOG-en.md (Improvement), then the pointer to `SHA256SUMS`.
+- Assets: the five APKs and `SHA256SUMS`. Size and GitHub's SHA-256 digest of every asset were compared with the local files: all six match.
+
+### Official index
+
+- `release-manifests/io.github.supermonster003.autojs6.plugin.threestoneai/359.json` in AutoJs6-Official-Plugins-Index (releaseTag v1.7.1, sourceCommit `d8dde3e`, versionCode 359, the release signer, the five APKs with SHA-256 and size, ABIs arm64-v8a / armeabi-v7a / x86_64 / x86), written from the release manifest with every digest recomputed from the files.
+- The index workflow had already added the 1.7.1 release from GitHub (`f22e073`, without the admission fields). `tools/generate_official_plugin_index.py` (authenticated; the first unauthenticated run hit the GitHub API rate limit) regenerated `plugins.official.generated.json` on top of `64eefc4`: of 85 entries only the 3-Stone AI entry changed, and only its five 1.7.1 assets, which gained package, version, signer, source commit and ABI fields; top-level fields and entry order unchanged. The index tool unit tests passed (81 tests), `git diff --check` clean.
+- Index commit `117f927` feat(index): admit 3-Stone AI v1.7.1, pushed to main without conflicts.

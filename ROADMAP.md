@@ -681,3 +681,14 @@ P0 -> P1 -> P2 -> P3 -> P8 -> P10 -> P5a -> P5b -> P4 -> P6 -> P7 -> P9, 每次�
 - OpenAI 兼容: reasoning_effort (low / medium / high, 部分模型支持 xhigh); 图片用 image_url data URL; 推理文本的流式字段名因服务商而异 (reasoning_content / reasoning), 要按资料实测; finish_reason = length 表示输出上限.
 - Gemini generateContent: thinkingConfig { thinkingLevel 或 thinkingBudget, includeThoughts: true } 后 parts[] 带 thought: true; inline_data 支持 application/pdf (<= 20 MB, 更大需 Files API, 本期不做); finishReason = MAX_TOKENS 表示输出上限.
 - RikkaHub 参考位置 (master 2026-11-02): ChatInput.kt (effort 按钮只在模型有 REASONING 能力时显示), ReasoningPicker.kt (OFF / AUTO / LOW ... MAX 滑杆面板), ModelList.kt (搜索 + 收藏 + 分组的模型面板), ChatMessageReasoning.kt (思考卡片三态), ChatMessageBranch.kt 与 data/model/Conversation.kt (消息节点多版本), ConversationExport.kt (Markdown / PNG 导出), ChatAttachmentPicker.kt 与 FilesPicker.kt (附件入口), service/ChatService.kt 与 ChatVM.kt (生成归应用级单例, Activity 只订阅), SettingPage.kt 与 SettingPreferencesPage.kt (两级设置结构). RikkaHub 没有 fast 模式 / beta 头处理, 其 ClaudeStreamDecoder 把连接中断当正常结束, 这两点不作参考.
+
+## 2026-11-17 1.7.1 模型下载改用官方插件共用下载库 (AutoJs6 plugin-center P13.3)
+
+来源: AutoJs6 宿主 plugin-center 第二期 (宿主 `docs/plugin-center/ROADMAP.md` 第 6 节, 看板 `.claude/boards/plugin-center.md`), 维护者决定 D22 (宿主与 Ace Editor, 3-Macaw Speech, 3-Stone AI 共用同一份取包器, 非推荐项, 不要建议改回), D26 (共用库只给官方插件, AAR 进 `libs/`), D27 (发版并登记官方索引, 本插件推送前逐次问), Q51 A (用户设备上旧格式的未完成文件导入共用库继续续传). 条目在宿主 roadmap 里勾选 (由宿主的 P14 回填), 本节只记本仓库的实现.
+
+- [x] 传输与暂存改用共用库 `libs/download-kit.aar` (宿主 `b38fb2c467`, SHA-256 登记在 `libs/SHA256SUMS`); `ModelDownloadCoordinator` 的状态机, 阶段, 下载卡片与对外 API 不变. 新增 `ModelDownloadStorage` (仓库 `files/model-downloads`, 只当暂存, 校验通过后改名为 `files/models/.download-<sha256>.part` 再交给导入) 与 `ModelDownloadTransport` / `PolicyRedirectConnection` (重定向白名单: 共用库强制自动跟随重定向, 由插件的连接自己逐跳打开并检查); 删除 `ModelDownloadHttpClient.kt` 与 `ModelDownloadTransfer.kt`.
+- [x] Q51 A: 1.7.0 留下的 `files/models/.download-<sha256>.part` 在冷启动恢复与每次开始前经 `DownloadStore.importPartial` 移入仓库 (同一文件系统内改名), 接着已下载的字节续传.
+- [x] 保留语义与 1.7.0 相同: 不按时间删除未完成的下载 (`Limits` 的闲置与 `.part` 期限都设为不限), 只保留一个模型的下载, 取消, 内容无效, 校验不符时删除. 有意改变: 中断后自动重试两次 (2 s, 5 s) 并续传, 两次都失败才显示失败.
+- [x] 单测 694 例 0 失败 (新增 `ModelDownloadStorageTest` 14 例: 续传, 换镜像, 旧文件导入, 哈希不符, 内容无效, 暂停, 重定向白名单与跳数上限, 一个下载的规则, 失败映射); 仪器测试 `ModelDownloadDeviceTest` 6 / 6 (临时 AVD API 33, 测试进程内的回环 HTTP 服务: 中断后自动续传, 失败后重试续传, 暂停 / 继续, 冷启动恢复, 旧文件导入后续传, 哈希不符被拒绝). 证据 `docs/dev/p13-download-kit-evidence-2026-11-17.md`.
+- [x] changelog v1.7.1 一条 (10 种语言), README 10 种语言的下载与安全说明 (新位置, 自动重试, 旧文件迁移).
+- [ ] 发布 1.7.1: 推送前问维护者 (D27); 发布记录写进证据文档.

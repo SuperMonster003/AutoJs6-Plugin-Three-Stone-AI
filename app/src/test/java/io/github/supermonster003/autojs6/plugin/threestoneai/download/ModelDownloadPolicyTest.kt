@@ -67,26 +67,6 @@ class ModelDownloadPolicyTest {
         assertFalse(ModelDownloadPolicy.isBelowMemoryRequirement(gib(1.0), 0))
     }
 
-    @Test
-    fun resumedResponseMustCoverExactlyTheMissingRange() {
-        HttpsModelDownloadClient.requireMatchingRange("bytes 100-999/1000", 100L, 1_000L)
-        HttpsModelDownloadClient.requireMatchingRange(" Bytes 100-999/1000 ", 100L, 1_000L)
-        listOf(
-            null,
-            "",
-            "bytes 99-999/1000",
-            "bytes 100-998/1000",
-            "bytes 100-999/1001",
-            "bytes 100-999/*",
-            "bytes */1000",
-        ).forEach { header ->
-            val failure = assertThrows(header.toString(), ModelDownloadFailureException::class.java) {
-                HttpsModelDownloadClient.requireMatchingRange(header, 100L, 1_000L)
-            }
-            assertEquals(ModelDownloadFailureReason.INTEGRITY_MISMATCH, failure.reason)
-        }
-    }
-
     private fun gib(value: Double): Long = (value * 1024.0 * 1024.0 * 1024.0).toLong()
 
     private companion object {

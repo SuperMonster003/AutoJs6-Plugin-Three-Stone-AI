@@ -12,12 +12,10 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.model.PRIVATE_MODEL
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.VerifiedDownloadImport
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.VerifiedDownloadImportOutcome
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.VerifiedDownloadImportStart
+import org.autojs.plugin.downloadkit.DownloadFetcher
+import java.io.Closeable
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.IOException
-import java.io.RandomAccessFile
-import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CopyOnWriteArraySet
@@ -30,14 +28,17 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Owns the single process-local model download independently of Activity lifetime (D99, D126).
- * The model is written to a hash-named partial file in private storage, verified against its
- * pinned size and SHA-256 and then handed to [ModelImportCoordinator], which publishes it like an
- * import. A paused, failed or interrupted download keeps its partial file and resumes with an HTTP
- * Range request; after a process death the next cold start shows it as a paused download.
+ * The shared download library of the official plugins ([ModelDownloadStorage], plugin-center
+ * P13.3) fetches the model into its private store, resumes it with HTTP Range requests, retries a
+ * cut transfer by itself and verifies the pinned size and SHA-256; the verified file is then handed
+ * to [ModelImportCoordinator], which publishes it like an import. A paused, failed or interrupted
+ * download keeps its partial file; after a process death the next cold start shows it as a paused
+ * download, including a partial file left by the downloader of an older version (Q51).
  */
 internal class ModelDownloadCoordinator private constructor(
     context: Context,
-    private val client: ModelDownloadClient = HttpsModelDownloadClient,
+    transport: ModelDownloadTransport = HttpsModelDownloadTransport,
+    retryDelaysMillis: LongArray = DownloadFetcher.DEFAULT_RETRY_DELAYS_MILLIS,
 ) {
     fun interface Observer {
         fun onStateChanged(state: ModelDownloadState)
@@ -45,6 +46,15 @@ internal class ModelDownloadCoordinator private constructor(
 
     private val applicationContext = context.applicationContext
     private val directory = File(applicationContext.filesDir, PRIVATE_MODEL_DIRECTORY_NAME)
+    private val debuggable =
+        applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+    internal val storage = ModelDownloadStorage(
+        modelDirectory = directory,
+        downloadDirectory = File(applicationContext.filesDir, ModelDownloadStorage.DOWNLOAD_DIRECTORY_NAME),
+        transport = transport,
+        retryDelaysMillis = retryDelaysMillis,
+        log = { message -> if (debuggable) Log.i(TAG, message) },
+    )
     private val stateMachine = ModelDownloadStateMachine()
     private val observers = CopyOnWriteArraySet<Observer>()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -98,10 +108,7 @@ internal class ModelDownloadCoordinator private constructor(
                 else -> null
             } ?: 0L
             val operationId = stateMachine.begin(model, knownBytes) ?: return false
-            val control = ModelDownloadOperationControl { progress ->
-                if (stateMachine.updateProgress(operationId, progress)) publishState()
-            }
-            ActiveDownload(operationId, model, partFile(model), control).also { activeDownload = it }
+            ActiveDownload(operationId, model, ModelDownloadOperationControl()).also { activeDownload = it }
         }
         publishState()
         try {
@@ -137,7 +144,7 @@ internal class ModelDownloadCoordinator private constructor(
      * download already handed to the import is cancelled from the import panel instead.
      */
     fun cancelDownload(operationId: Long): Boolean {
-        var discarded: File? = null
+        var discarded: RecommendedModel? = null
         val active = synchronized(lifecycleLock) {
             val state = stateMachine.snapshot()
             val current = activeDownload?.takeIf { it.operationId == operationId }
@@ -145,7 +152,7 @@ internal class ModelDownloadCoordinator private constructor(
                 if (state is ModelDownloadState.Cancelled && state.operationId == operationId) return true
                 val model = state.cardModel ?: return false
                 if (!stateMachine.discard(operationId)) return false
-                discarded = partFile(model)
+                discarded = model
                 null
             } else {
                 when {
@@ -170,9 +177,9 @@ internal class ModelDownloadCoordinator private constructor(
             active.interruptWorker()
             active.closeResourcesAsync()
         }
-        discarded?.let { file ->
+        discarded?.let { model ->
             try {
-                executor.execute { deletePartialFile(file) }
+                executor.execute { discardDownload(model) }
             } catch (error: RejectedExecutionException) {
                 logFailure(operationId, ModelDownloadFailureReason.UNKNOWN, error)
             }
@@ -201,12 +208,10 @@ internal class ModelDownloadCoordinator private constructor(
     /** Returns true once the import owns the verified file and will report its outcome. */
     private fun transfer(active: ActiveDownload): Boolean {
         val model = active.model
-        val part = active.partFile
         val control = active.control
         control.ensureActive()
         prepareDirectory()
-        discardPartialFilesExcept(part)
-        val existing = trimPartialFile(part, model)
+        val existing = storage.prepare(model)
         if (!ModelDownloadPolicy.hasStorageFor(directory.usableSpace, model.expectedSizeBytes - existing)) {
             throw ModelDownloadFailureException(
                 ModelDownloadFailureReason.INSUFFICIENT_STORAGE,
@@ -214,72 +219,74 @@ internal class ModelDownloadCoordinator private constructor(
             )
         }
         alignProgress(active, existing)
+        enterStage(
+            active,
+            if (existing > 0L) ModelDownloadStage.CHECKING_PARTIAL else ModelDownloadStage.CONNECTING,
+        )
 
-        var digest = MessageDigest.getInstance("SHA-256")
-        if (existing > 0L) {
-            enterStage(active, ModelDownloadStage.CHECKING_PARTIAL)
-            val input = try {
-                FileInputStream(part)
-            } catch (error: IOException) {
-                throw destinationFailure(error)
-            }
-            control.registerCancellationResource(input)
-            digest = input.use {
-                ModelDownloadTransfer.seedPartial(
-                    input = it,
-                    length = existing,
-                    ensureActive = control::ensureActive,
-                )
-            }
+        // A pause or cancellation sets the flag and closes the open connections (registered by
+        // the storage); the library's transfer then stops and keeps the partial file.
+        val cancel = AtomicBoolean(false)
+        control.registerCancellationResource(Closeable { cancel.set(true) })
+        val result = storage.fetch(model, control, cancel, FetchEvents(active))
+        val ready = when (result) {
+            is ModelFetchResult.Ready -> result.outcome
+            is ModelFetchResult.Failed -> throw ModelDownloadFailureException(result.reason, result.message)
+            ModelFetchResult.Cancelled -> throw InterruptedException("Model download was cancelled")
         }
-        val verified = if (existing == model.expectedSizeBytes) {
-            ModelDownloadTransfer.verifyDigest(digest, existing, model)
-        } else {
-            enterStage(active, ModelDownloadStage.CONNECTING)
-            val opened = client.open(model, control, existing)
-            val restart = existing > 0L && opened.startOffset == 0L
-            if (restart) {
-                digest = MessageDigest.getInstance("SHA-256")
-                if (stateMachine.restartProgress(active.operationId)) publishState()
-            }
-            val copied = if (restart) 0L else existing
-            val output = try {
-                FileOutputStream(part, copied > 0L)
-            } catch (error: IOException) {
-                throw destinationFailure(error)
-            }
-            control.registerCancellationResource(output)
-            enterStage(active, ModelDownloadStage.DOWNLOADING)
-            opened.input.use { input ->
-                output.use { destination ->
-                    ModelDownloadTransfer.resumeAndVerify(
-                        input = input,
-                        output = destination,
-                        model = model,
-                        alreadyCopied = copied,
-                        digest = digest,
-                        ensureActive = control::ensureActive,
-                        progressListener = control::reportProgress,
-                    ).also {
-                        try {
-                            destination.flush()
-                            destination.fd.sync()
-                        } catch (error: IOException) {
-                            throw destinationFailure(error)
-                        }
-                    }
-                }
-            }
+        check(ready.sizeBytes == model.expectedSizeBytes && ready.sha256 == model.expectedSha256)
+        control.ensureActive()
+        val handOffFile = try {
+            storage.handOff(model, ready)
+        } catch (error: IOException) {
+            throw destinationFailure(error)
         }
-        check(verified.byteCount == model.expectedSizeBytes && verified.sha256 == model.expectedSha256)
-        return handOffToImport(active)
+        return handOffToImport(active, handOffFile)
     }
 
-    private fun handOffToImport(active: ActiveDownload): Boolean {
+    /** Turns the events of the library's transfer into stages and monotonic progress. */
+    private inner class FetchEvents(private val active: ActiveDownload) : ModelFetchEvents {
+        override fun onVerifying() = updateStageQuietly(active, ModelDownloadStage.CHECKING_PARTIAL)
+
+        override fun onReconnecting() = updateStageQuietly(active, ModelDownloadStage.CONNECTING)
+
+        override fun onProgress(downloadedBytes: Long) {
+            val changed = synchronized(lifecycleLock) {
+                if (active.control.isCancellationRequested()) return
+                val running = stateMachine.snapshot() as? ModelDownloadState.Running ?: return
+                if (running.operationId != active.operationId) return
+                var changed = stateMachine.updateStage(active.operationId, ModelDownloadStage.DOWNLOADING)
+                // The library started over (the server sent the whole file, or the resumed bytes
+                // were refused): the progress goes back to zero only this way.
+                if (downloadedBytes < running.progress.processedBytes) {
+                    changed = stateMachine.restartProgress(active.operationId) || changed
+                }
+                if (downloadedBytes > 0L) {
+                    changed = stateMachine.updateProgress(
+                        active.operationId,
+                        ModelDownloadProgress(downloadedBytes, active.model.expectedSizeBytes),
+                    ) || changed
+                }
+                changed
+            }
+            if (changed) publishState()
+        }
+    }
+
+    /** [enterStage] for the library's callbacks, which must not throw once a pause is accepted. */
+    private fun updateStageQuietly(active: ActiveDownload, stage: ModelDownloadStage) {
+        val changed = synchronized(lifecycleLock) {
+            !active.control.isCancellationRequested() &&
+                stateMachine.updateStage(active.operationId, stage)
+        }
+        if (changed) publishState()
+    }
+
+    private fun handOffToImport(active: ActiveDownload, handOffFile: File): Boolean {
         val importCoordinator = ModelImportCoordinator.get(applicationContext)
         enterStage(active, ModelDownloadStage.WAITING_FOR_IMPORT)
         val handOff = VerifiedDownloadImport(
-            partFile = active.partFile,
+            partFile = handOffFile,
             sha256 = active.model.expectedSha256,
             byteCount = active.model.expectedSizeBytes,
             displayName = active.model.fileName,
@@ -362,7 +369,7 @@ internal class ModelDownloadCoordinator private constructor(
                 else -> false
             }
             check(changed) { "Model download terminal state did not match its active operation" }
-            if (deletePart) deletePartialFile(active.partFile)
+            if (deletePart) discardDownload(active.model)
             activeDownload = null
         }
         publishState()
@@ -370,12 +377,7 @@ internal class ModelDownloadCoordinator private constructor(
 
     /** The verified prefix a resume can start from; a stale or foreign file counts as nothing. */
     private fun keptPartialBytes(active: ActiveDownload): Long =
-        runCatching {
-            ModelDownloadPolicy.resumableLength(
-                partLength = if (active.partFile.isFile) active.partFile.length() else 0L,
-                expectedSizeBytes = active.model.expectedSizeBytes,
-            )
-        }.getOrDefault(0L)
+        runCatching { storage.storedBytes(active.model) }.getOrDefault(0L)
 
     private fun enterStage(active: ActiveDownload, stage: ModelDownloadStage) {
         val changed = synchronized(lifecycleLock) {
@@ -419,87 +421,37 @@ internal class ModelDownloadCoordinator private constructor(
         }
     }
 
-    /** Truncates a partial file to its resumable length and returns that length. */
-    private fun trimPartialFile(part: File, model: RecommendedModel): Long {
-        if (!part.exists()) return 0L
-        if (!part.isFile) {
-            throw ModelDownloadFailureException(
-                ModelDownloadFailureReason.DESTINATION_UNAVAILABLE,
-                "Partial model download is not a regular file",
-            )
-        }
-        val length = part.length()
-        val resumable = ModelDownloadPolicy.resumableLength(length, model.expectedSizeBytes)
-        if (resumable == 0L) {
-            deletePartialFile(part)
-            if (part.exists()) {
-                throw ModelDownloadFailureException(
-                    ModelDownloadFailureReason.DESTINATION_UNAVAILABLE,
-                    "Stale partial model download cannot be removed",
-                )
-            }
-        } else if (resumable != length) {
-            try {
-                RandomAccessFile(part, "rw").use { it.setLength(resumable) }
-            } catch (error: IOException) {
-                throw destinationFailure(error)
-            }
-        }
-        return resumable
-    }
-
-    private fun discardPartialFilesExcept(keep: File) {
-        partialFiles().filter { it.name != keep.name }.forEach(::deletePartialFile)
-    }
-
-    private fun partialFiles(): List<File> =
-        directory.listFiles()
-            ?.filter { file -> file.isFile && ModelDownloadPolicy.partFileSha256(file.name) != null }
-            .orEmpty()
-
-    private fun deletePartialFile(file: File) {
-        if (ModelDownloadPolicy.partFileSha256(file.name) == null) return
-        if (!file.delete() && file.exists()) {
-            Log.w(TAG, "Partial model download could not be deleted")
+    /** Deletes the download of [model] wherever its bytes are; runs on the download thread. */
+    private fun discardDownload(model: RecommendedModel) {
+        runCatching { storage.discard(model) }.onFailure { error ->
+            Log.w(TAG, "Partial model download could not be deleted: ${error.javaClass.name}")
         }
     }
-
-    private fun partFile(model: RecommendedModel): File =
-        File(directory, ModelDownloadPolicy.partFileName(model.expectedSha256))
 
     /**
-     * Cold start: keeps the newest partial file of a recommended model that is not imported yet
-     * as a paused download and removes every other partial file.
+     * Cold start: keeps the newest partial download of a recommended model that is not imported
+     * yet as a paused download and removes every other one. A partial file the downloader of an
+     * older version left in the model directory is moved into the download store first (Q51).
      */
     private fun restorePartialDownload() {
         runCatching {
-            val candidates = partialFiles()
-            if (candidates.isEmpty()) return
+            if (storage.legacyFiles().isEmpty() && storage.store.entries().isEmpty()) return
             val importedSha256 = runCatching {
                 ModelRepository(applicationContext).catalogSnapshot().entries.mapTo(hashSetOf()) { it.sha256 }
             }.getOrDefault(emptySet())
-            val restored = candidates
-                .mapNotNull { file ->
-                    val sha256 = ModelDownloadPolicy.partFileSha256(file.name) ?: return@mapNotNull null
-                    val model = RecommendedModelCatalog.models.firstOrNull { it.expectedSha256 == sha256 }
-                        ?: return@mapNotNull null
-                    if (sha256 in importedSha256) return@mapNotNull null
-                    val bytes = ModelDownloadPolicy.resumableLength(file.length(), model.expectedSizeBytes)
-                    if (bytes == 0L) null else Triple(file, model, bytes)
-                }
-                .maxByOrNull { (file) -> file.lastModified() }
+            val restored = storage.findResumable(RecommendedModelCatalog.models, importedSha256)
             val accepted = synchronized(lifecycleLock) {
                 if (activeDownload != null) {
                     false
                 } else if (restored == null) {
                     true
                 } else {
-                    stateMachine.restorePaused(restored.second, restored.third)
+                    stateMachine.restorePaused(restored.first, restored.second)
                 }
             }
-            // A download started meanwhile cleans the other partial files itself.
+            // A download started meanwhile cleans the other partial downloads itself.
             if (!accepted) return
-            candidates.filter { it != restored?.first }.forEach(::deletePartialFile)
+            storage.retainOnly(restored?.first?.expectedSha256)
             if (restored != null) publishState()
         }.onFailure { error ->
             logFailure(operationId = null, ModelDownloadFailureReason.UNKNOWN, error)
@@ -524,15 +476,12 @@ internal class ModelDownloadCoordinator private constructor(
         val message =
             "Model download failure: operation=${operationId ?: "restore"} reason=$reason " +
                 "type=${error.javaClass.name}"
-        val debuggable =
-            applicationContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         if (debuggable) Log.e(TAG, message, error) else Log.e(TAG, message)
     }
 
     private inner class ActiveDownload(
         val operationId: Long,
         val model: RecommendedModel,
-        val partFile: File,
         val control: ModelDownloadOperationControl,
     ) {
         private val worker = AtomicReference<Thread?>()
@@ -574,13 +523,18 @@ internal class ModelDownloadCoordinator private constructor(
 
         /**
          * Device tests only: replaces the process instance with a new one that downloads through
-         * [client], as a cold start would (a partial file left behind is restored as paused).
-         * Pass [HttpsModelDownloadClient] to put the production client back.
+         * [transport], as a cold start would (a partial file left behind is restored as paused).
+         * Pass [HttpsModelDownloadTransport] to put the production transport back.
          */
         @VisibleForTesting
-        internal fun replaceForTesting(context: Context, client: ModelDownloadClient): ModelDownloadCoordinator =
+        internal fun replaceForTesting(
+            context: Context,
+            transport: ModelDownloadTransport,
+            retryDelaysMillis: LongArray = DownloadFetcher.DEFAULT_RETRY_DELAYS_MILLIS,
+        ): ModelDownloadCoordinator =
             synchronized(this) {
-                ModelDownloadCoordinator(context.applicationContext, client).also { instance = it }
+                ModelDownloadCoordinator(context.applicationContext, transport, retryDelaysMillis)
+                    .also { instance = it }
             }
     }
 }

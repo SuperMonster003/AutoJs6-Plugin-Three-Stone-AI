@@ -13,9 +13,11 @@ import com.google.ai.edge.litertlm.MessageCallback
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmEngineFactory
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmModelHealthChecker
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectory
-import io.github.supermonster003.autojs6.plugin.threestoneai.download.HttpsModelDownloadClient
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.HttpsModelDownloadTransport
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadOperationControl
-import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadTransfer
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelDownloadStorage
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelFetchEvents
+import io.github.supermonster003.autojs6.plugin.threestoneai.download.ModelFetchResult
 import io.github.supermonster003.autojs6.plugin.threestoneai.download.RecommendedModelCatalog
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelCatalogCodec
 import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelCatalogEntry
@@ -31,6 +33,7 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -187,22 +190,22 @@ class LiteRtRealModelInferenceInstrumentationTest {
         }
         val directory = requireNotNull(staged.parentFile)
         check(directory.mkdirs() || directory.isDirectory)
-        val partial = File(directory, staged.name + ".download.partial")
+        // The production transfer: the shared download library with the pinned HTTPS policy.
+        val downloads = File(directory, staged.name + ".downloads")
+        val storage = ModelDownloadStorage(directory, downloads, HttpsModelDownloadTransport)
         val control = ModelDownloadOperationControl()
         val startedNanos = System.nanoTime()
         try {
-            val download = HttpsModelDownloadClient.open(model, control, offset = 0L)
-            download.input.use { input ->
-                partial.outputStream().use { output ->
-                    ModelDownloadTransfer.copyAndVerify(input, output, model, control::ensureActive)
-                }
-            }
-            check(partial.renameTo(staged)) { "Unable to stage the verified download" }
+            val result = storage.fetch(model, control, AtomicBoolean(false), object : ModelFetchEvents {})
+            val ready = (result as? ModelFetchResult.Ready)?.outcome
+                ?: throw AssertionError("Pinned model download did not finish: $result")
+            check(ready.file.renameTo(staged)) { "Unable to stage the verified download" }
             receipt.put("stagingSource", "pinned-catalog-https")
             receipt.put("downloadMillis", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedNanos))
         } finally {
             control.closeCancellationResources()
-            if (partial.exists()) partial.delete()
+            storage.discard(model)
+            downloads.deleteRecursively()
         }
     }
 

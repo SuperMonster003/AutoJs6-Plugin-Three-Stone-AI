@@ -16,7 +16,14 @@ plugins {
 }
 
 // Local host SDK inputs are audited as one release build, independent of sibling repositories.
-val hostApiNames = setOf("common-plugin-api.aar", "protocol-wire-api.aar", "ai-common-api.aar", "ai-provider-api.aar")
+val hostApiNames = setOf(
+    "common-plugin-api.aar",
+    "protocol-wire-api.aar",
+    "ai-common-api.aar",
+    "ai-provider-api.aar",
+    // The shared download library of the official plugins (plugin-center P13.3, see libs/README.md).
+    "download-kit.aar",
+)
 val hostApiChecksums = rootProject.file("libs/SHA256SUMS").readLines().filter { it.isNotBlank() }.associate { line ->
     val fields = line.trim().split(Regex("\\s+"))
     check(fields.size == 2 && fields[0].matches(Regex("[0-9a-f]{64}"))) { "Invalid host API checksum record" }
@@ -189,8 +196,11 @@ dependencies {
     implementation(files("$rootDir/libs/protocol-wire-api.aar"))
     implementation(files("$rootDir/libs/ai-common-api.aar"))
     implementation(files("$rootDir/libs/ai-provider-api.aar"))
+    implementation(files("$rootDir/libs/download-kit.aar"))
 
     testImplementation(libs.junit)
+    // The download library keeps its metadata with org.json, which android.jar only stubs.
+    testImplementation("org.json:json:20231013")
     androidTestImplementation(libs.test.ext.junit)
     androidTestImplementation(libs.test.runner)
 }

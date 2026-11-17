@@ -5,6 +5,12 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "依賴",
   "$data": {
+    "v1.7.1": {
+      "released_date": "2026/11/17",
+      "improvement": [
+        "推薦的本地模型下載中斷時 (例如網絡中斷) 會自動再試兩次 (約 2 秒及 5 秒後), 每次都從中斷處繼續, 兩次都失敗後才顯示下載失敗. 由 1.7.0 升級後, 之前未下載完的模型繼續下載時會接著已下載的部分, 不必重新開始"
+      ]
+    },
     "v1.7.0": {
       "released_date": "2026/11/14",
       "feature": [

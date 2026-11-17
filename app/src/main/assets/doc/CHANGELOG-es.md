@@ -4,6 +4,12 @@
 
 ******
 
+# v1.7.1
+
+###### 2026/11/17
+
+* `Mejora` Cuando se interrumpe la descarga de un modelo local recomendado (por ejemplo, si se corta la red), se reintenta automáticamente dos veces (tras unos 2 y 5 segundos), cada vez desde donde se detuvo; la descarga solo se muestra como fallida si ambos reintentos fallan. Tras actualizar desde la 1.7.0, una descarga de modelo sin terminar continúa desde la parte ya descargada en lugar de empezar de nuevo
+
 # v1.7.0
 
 ###### 2026/11/14

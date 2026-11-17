@@ -4,6 +4,12 @@
 
 ******
 
+# v1.7.1
+
+###### 2026/11/17
+
+* `Amélioration` Lorsque le téléchargement d'un modèle local recommandé est interrompu (par exemple si le réseau est coupé), il est relancé automatiquement deux fois (après environ 2 puis 5 secondes), chaque fois à partir de l'endroit où il s'était arrêté; l'échec n'est affiché que si ces deux tentatives échouent aussi. Après une mise à jour depuis la 1.7.0, un téléchargement de modèle inachevé reprend à partir de la partie déjà téléchargée au lieu de recommencer depuis le début
+
 # v1.7.0
 
 ###### 2026/11/14

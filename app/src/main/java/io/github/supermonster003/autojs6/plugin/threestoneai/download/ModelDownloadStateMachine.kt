@@ -1,5 +1,15 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.download
 
+internal data class ModelDownloadProgress(
+    val processedBytes: Long,
+    val totalBytes: Long,
+) {
+    init {
+        require(totalBytes > 0L) { "Model download total must be positive" }
+        require(processedBytes in 0L..totalBytes) { "Model download progress is invalid" }
+    }
+}
+
 /** What a running download is doing; only the first three stages can be paused (D99). */
 internal enum class ModelDownloadStage {
     CHECKING_PARTIAL,

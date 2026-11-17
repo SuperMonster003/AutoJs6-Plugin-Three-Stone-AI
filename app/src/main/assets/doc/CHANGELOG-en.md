@@ -4,6 +4,12 @@
 
 ******
 
+# v1.7.1
+
+###### 2026/11/17
+
+* `Improvement` When a recommended local model download is interrupted (for example, the network drops), it is retried automatically twice (after about 2 and 5 seconds), each time continuing from where it stopped; the download is shown as failed only when both retries fail. After updating from 1.7.0, a model download that had not finished continues from the part already downloaded instead of starting over
+
 # v1.7.0
 
 ###### 2026/11/14

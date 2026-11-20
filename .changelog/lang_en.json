@@ -5,6 +5,18 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.7.2": {
+      "released_date": "2026/11/20",
+      "improvement": [
+        "The release history page now expands and collapses by version: a collapsed version shows its date and the number of entries per category, an expanded one names each category once; all versions can be expanded or collapsed at once, the newest one opens expanded and the subtitle shows the plugin name; the page and its entry in \"Updates and about\" are now called \"Release history\" instead of \"Version history\"",
+        "Rewrote the instructions shown in Plugin Center in five parts: getting started, main features, using it in scripts, requirements and FAQ"
+      ],
+      "dependency": [
+        "Added Jetpack Compose BOM 2026.09.00 (release history page)",
+        "Upgraded AndroidX Core to 1.16.0, AndroidX Activity to 1.12.2 and AndroidX Lifecycle to 2.9.4 (needed by Jetpack Compose)",
+        "Upgraded shared build plugins version 1.9.0 -> 1.9.7"
+      ]
+    },
     "v1.7.1": {
       "released_date": "2026/11/17",
       "improvement": [

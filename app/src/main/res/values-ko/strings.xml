@@ -322,8 +322,12 @@
     <string name="online_ai_test_timed_out">연결 테스트 시간 초과</string>
     <string name="online_ai_test_title">연결을 테스트할까요?</string>
     <string name="plugin_description">비공개 로컬 모델과 사용자 설정 온라인 서비스를 사용하는 AI 텍스트 생성</string>
-    <string name="release_history_load_failed">로컬 버전 기록을 불러올 수 없습니다</string>
-    <string name="release_history_title">버전 기록</string>
+    <string name="release_history_collapse_all">모두 접기</string>
+    <string name="release_history_collapsed">접힘</string>
+    <string name="release_history_expand_all">모두 펼치기</string>
+    <string name="release_history_expanded">펼쳐짐</string>
+    <string name="release_history_load_failed">릴리스 기록을 불러올 수 없습니다</string>
+    <string name="release_history_title">릴리스 기록</string>
     <string name="theme_picker_custom">사용자 지정 색상</string>
     <string name="theme_picker_input">HEX / RGB</string>
     <string name="theme_picker_invalid">#RRGGBB, RRGGBB 또는 rgb(r, g, b)를 입력하세요. RGB 값은 0..255여야 합니다.</string>

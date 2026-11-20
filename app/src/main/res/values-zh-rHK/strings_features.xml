@@ -22,7 +22,7 @@
     <string name="app_update_manage_ignored">管理已忽略更新</string>
     <string name="app_update_no_ignored">目前沒有被忽略的發行版</string>
     <string name="app_update_open_failed">無法開啟發行版頁面</string>
-    <string name="app_update_release_history_summary">檢視應用內置的版本歷史</string>
+    <string name="app_update_release_history_summary">檢視應用程式內置的發行歷史</string>
     <string name="app_update_stop_ignoring">取消忽略</string>
     <string name="app_update_up_to_date">已是最新版本</string>
     <string name="app_update_view_release">檢視發行版</string>

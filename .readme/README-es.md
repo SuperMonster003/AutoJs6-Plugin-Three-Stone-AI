@@ -209,6 +209,16 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 ******
 
+# v1.7.2
+
+###### 2026/11/20
+
+* `Mejora` La página del historial de versiones ahora se expande o contrae por versión: una versión contraída muestra su fecha y el número de entradas por categoría, una expandida nombra cada categoría una sola vez; todas las versiones se pueden expandir o contraer a la vez, la más reciente se abre expandida y el subtítulo muestra el nombre del plugin
+* `Mejora` Se reescribieron las instrucciones del Centro de plugins en cinco partes: primeros pasos, funciones principales, uso en scripts, requisitos y preguntas frecuentes
+* `Dependencia` Se añadió Jetpack Compose BOM 2026.09.00 (página Historial de versiones)
+* `Dependencia` Se actualizaron AndroidX Core a 1.16.0, AndroidX Activity a 1.12.2 y AndroidX Lifecycle a 2.9.4 (los requiere Jetpack Compose)
+* `Dependencia` Se actualizaron los plugins de compilación compartidos versión 1.9.0 -> 1.9.7
+
 # v1.7.1
 
 ###### 2026/11/17
@@ -231,20 +241,6 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 * `Mejora` Los servicios ahora se añaden y editan en una página de pantalla completa "Detalles del servicio" en lugar del antiguo formulario que aparecía desde abajo: arriba están los datos de conexión (nombre del servicio, proveedor, Base URL, clave API, etc.) y debajo la "Lista de modelos"; mantenga pulsada una fila o arrastre su controlador para cambiar el orden, o use el menú de cada fila para establecerlo como modelo preferido, marcarlo para "Entrada de imágenes", subirlo, bajarlo o quitarlo, y añada varios modelos a la vez. Por eso desaparecen los antiguos selectores "ID del modelo", "Modelo predeterminado" y "Modelos con entrada de imágenes". Toque la marca de verificación arriba a la derecha para guardar y después pruebe la conexión en la misma página; al volver con cambios sin guardar se pregunta antes, y lo que haya escrito se conserva al girar la pantalla o si el sistema recupera la aplicación en segundo plano. Tras cambiar el orden, el destino predeterminado y los favoritos siguen apuntando a los mismos modelos
 * `Mejora` Descargar un modelo local recomendado ahora se hace en un solo paso: tras confirmar, el modelo se descarga en el almacenamiento privado de la aplicación y se importa automáticamente una vez verificado, sin tener que "Elegir ubicación" antes ni "Importar modelo descargado" después. Durante la descarga, la página "Modelos y servicios" muestra una tarjeta de descarga para pausar, reanudar o cancelar, y reintentar tras un error; si se corta la red o se cierra la aplicación, la parte descargada se conserva y al reanudar o reintentar se continúa desde donde se detuvo. La confirmación de descarga muestra la memoria mínima del modelo y avisa cuando el dispositivo tiene menos, aunque sigue permitiendo la descarga. Los archivos de modelo descargados antes en otra ubicación se pueden seguir añadiendo con "Importar archivo de modelo". Los modelos descargados se guardan en los datos de la aplicación y se eliminan al borrar esos datos o desinstalar la aplicación
 * `Mejora` En el panel para cambiar de modelo, cada modelo aparece ahora una sola vez: los favoritos se muestran solo en el grupo "Favoritos" de arriba, ya no también bajo su servicio, y vuelven a su sitio al quitarlos de favoritos; los resultados de búsqueda ya no se agrupan y se muestran en una sola lista en el orden habitual. Cada fila muestra debajo su servicio, y los modelos locales muestran el tamaño del archivo; el grupo "En este dispositivo" pasa a llamarse "Modelos locales"
-
-# v1.6.0
-
-###### 2026/11/12
-
-* `Función` Los perfiles en línea pueden fijar un esfuerzo predeterminado (Bajo, Medio, Alto, Muy alto o Máximo; con "Predeterminado" decide el modelo), y los perfiles de Anthropic pueden usar el modo rápido de forma predeterminada (respuestas más rápidas a un precio mayor); ambos también se pueden cambiar solo para la conversación actual, el cambio se guarda con la conversación y las conversaciones nuevas empiezan con los valores del perfil. Si un modelo no admite el nivel elegido, se usa el nivel inferior más cercano
-* `Función` Cambiar de modelo ahora abre un panel desde abajo: búsqueda, modelos agrupados por perfil, favoritos fijados arriba y etiquetas que indican qué modelos admiten entrada de imágenes, razonamiento y modo rápido; el panel también cambia el esfuerzo y el modo rápido de la conversación actual, y "Administrar modelos y servicios" abajo abre los ajustes de modelos. La barra superior del chat muestra el esfuerzo y el modo rápido de la conversación actual
-* `Función` El chat ahora muestra cómo piensa el modelo (Claude 5 y posteriores, Gemini 2.5 y posteriores, y los servicios compatibles con OpenAI que devuelven su razonamiento, como DeepSeek): mientras se genera la respuesta, el razonamiento aparece en tiempo real en una tarjeta encima de ella; al terminar, la tarjeta se contrae en "Pensó durante N s", y al tocarla se abre o se cierra. El razonamiento se guarda con la conversación, pero no se lee en voz alta ni aparece en la búsqueda de mensajes. Las opciones "Mostrar el razonamiento durante la generación" y "Contraer el razonamiento al terminar" están activadas de forma predeterminada y se pueden desactivar. Los scripts que llaman a la IA a través del plugin no reciben el razonamiento
-* `Corrección` Una respuesta en generación se detenía al girar la pantalla o al cambiar el modo oscuro, el idioma o el tamaño de letra de los mensajes; ahora la respuesta sigue generándose, y una respuesta que termina mientras estás fuera del chat se muestra completa al volver
-* `Corrección` Tras pulsar "Detener", la solicitud en línea seguía en segundo plano hasta completar la respuesta (y seguía contando en el uso); ahora pulsar Detener corta la solicitud en menos de 1 segundo, y lo mismo ocurre al crear una conversación, cambiar de conversación, cambiar de modelo o eliminar mensajes
-* `Corrección` Los modelos Claude más recientes rechazaban las solicitudes de perfiles de Anthropic que fijaban temperatura, Top K o Top P; ahora los perfiles de Anthropic ya no envían estos tres ajustes, y la página de ajustes lo indica
-* `Corrección` Tras cambiar el modelo predeterminado de un perfil, una conversación nueva ya abierta y sin mensajes seguía usando el modelo predeterminado anterior; ahora pasa al nuevo modelo predeterminado (salvo que hayas elegido otro modelo en esa conversación)
-* `Corrección` Al añadir o editar un perfil en línea, deslizar hacia abajo sobre el formulario lo cerraba con facilidad y se perdía todo lo escrito; ahora el formulario solo se cierra con el botón de cerrar de arriba a la derecha, "Cancelar" o Atrás, pregunta antes de descartar los cambios sin guardar y conserva lo escrito al girar la pantalla
-* `Corrección` Fallo de actualización automática del catálogo de modelos en línea tras el traslado de la documentación de Gemini y el cambio de formato de sus tablas
 
 ##### Más versiones
 

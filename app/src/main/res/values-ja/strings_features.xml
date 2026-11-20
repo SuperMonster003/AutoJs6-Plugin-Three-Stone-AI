@@ -22,7 +22,7 @@
     <string name="app_update_manage_ignored">無視した更新を管理</string>
     <string name="app_update_no_ignored">無視しているリリースはありません</string>
     <string name="app_update_open_failed">リリースページを開けませんでした</string>
-    <string name="app_update_release_history_summary">このアプリに含まれるバージョン履歴を表示</string>
+    <string name="app_update_release_history_summary">アプリに含まれるリリース履歴を表示します</string>
     <string name="app_update_stop_ignoring">無視を解除</string>
     <string name="app_update_up_to_date">最新です</string>
     <string name="app_update_view_release">リリースを表示</string>

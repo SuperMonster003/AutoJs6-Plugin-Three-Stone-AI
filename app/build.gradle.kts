@@ -13,6 +13,7 @@ plugins {
     id("org.autojs.build.signs")
     id("org.autojs.build.jvm-convention")
     id("com.android.application")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 // Local host SDK inputs are audited as one release build, independent of sibling repositories.
@@ -44,6 +45,10 @@ val buildTypeRelease = "release"
 val supportedAbis = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
 // LiteRT-LM 0.15.0 ships only 64-bit JNI libraries. The 32-bit APKs run online AI.
 extra["nativeRuntimeAbis"] = setOf("arm64-v8a", "x86_64")
+// Compose ui-graphics (release history page) depends on androidx.graphics:graphics-path, whose
+// libandroidx.graphics.path.so is packaged for all four ABIs, the 32-bit APKs included. The release
+// archive and the CI contract allow exactly this library beside the 64-bit runtime.
+extra["anyAbiNativeLibraries"] = setOf("libandroidx.graphics.path.so")
 // The SUPPORTED_ABIS meta-data read by the host and the official index would otherwise come from the
 // native libraries alone and leave out the 32-bit APKs, which have none.
 nativeAlignment.supportedAbis.set(supportedAbis)
@@ -113,6 +118,7 @@ android {
 
     buildFeatures {
         aidl = true
+        compose = true
         resValues = true
     }
 
@@ -192,6 +198,16 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.15.0")
 
+    // Jetpack Compose, only for the release history page (plugin-center P21.9).
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.runtime)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.animation)
+    implementation(libs.compose.activity)
+    debugImplementation(libs.compose.ui.test.manifest)
+
     implementation(files("$rootDir/libs/common-plugin-api.aar"))
     implementation(files("$rootDir/libs/protocol-wire-api.aar"))
     implementation(files("$rootDir/libs/ai-common-api.aar"))
@@ -203,6 +219,9 @@ dependencies {
     testImplementation("org.json:json:20231013")
     androidTestImplementation(libs.test.ext.junit)
     androidTestImplementation(libs.test.runner)
+    androidTestImplementation(libs.test.espresso.core)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
 }
 
 tasks {

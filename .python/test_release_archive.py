@@ -89,6 +89,46 @@ class ReleaseMatrixTest(unittest.TestCase):
             with self.subTest(abi=abi), self.assertRaisesRegex(ReleaseError, "Native ABIs differ"):
                 verify_native(self.apk, abi, ["arm64-v8a", "x86_64"])
 
+    def test_compose_graphics_path_library_is_allowed_on_every_abi_beside_the_64_bit_runtime(self):
+        library = "libandroidx.graphics.path.so"
+        native_abis = ["arm64-v8a", "x86_64"]
+        supported = ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"]
+
+        # A bare ELF header (its program headers are not read for this class), stored compressed so that the ZIP
+        # alignment rule for uncompressed libraries does not apply.
+        elf = b"\x7fELF\x01\x01\x01" + bytes(45)
+
+        def write(runtime, graphics):
+            with zipfile.ZipFile(self.apk, "w") as archive:
+                for abi in runtime:
+                    archive.writestr(f"lib/{abi}/liblitertlm_jni.so", elf, compress_type=zipfile.ZIP_DEFLATED)
+                for abi in graphics:
+                    archive.writestr(f"lib/{abi}/{library}", elf, compress_type=zipfile.ZIP_DEFLATED)
+
+        def check(abi):
+            return verify_native(self.apk, abi, native_abis, [library], supported)
+
+        for abi in ["armeabi-v7a", "x86"]:
+            with self.subTest(abi=abi):
+                write([], [abi])
+                self.assertEqual([], check(abi))
+        for abi in native_abis:
+            with self.subTest(abi=abi):
+                write([abi], [abi])
+                self.assertEqual([abi], check(abi))
+        write(native_abis, supported)
+        self.assertEqual(native_abis, check("universal"))
+        # The runtime still may not reach a 32-bit APK, and the library must follow the APK's ABIs.
+        write(["x86_64"], ["x86"])
+        with self.assertRaisesRegex(ReleaseError, "Native ABIs differ"):
+            check("x86")
+        write([], ["x86", "x86_64"])
+        with self.assertRaisesRegex(ReleaseError, "ABIs of libandroidx.graphics.path.so differ"):
+            check("x86")
+        write(native_abis, native_abis)
+        with self.assertRaisesRegex(ReleaseError, "ABIs of libandroidx.graphics.path.so differ"):
+            check("universal")
+
     def test_missing_variant(self):
         self.manifest["variants"].append({**self.expected, "name": "serverRelease"})
         with self.assertRaisesRegex(ReleaseError, "variants differ"):

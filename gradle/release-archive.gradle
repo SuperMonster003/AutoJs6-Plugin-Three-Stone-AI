@@ -15,7 +15,11 @@ releaseComponents.onVariants(releaseComponents.selector().withBuildType('release
         }
         // Application ABI support includes Java-only APKs; native payloads are a separate contract.
         def nativeAbis = project.ext.get('nativeRuntimeAbis').toList().sort()
-        [name: variant.name, applicationId: variant.applicationId.get(), nativeAbis: nativeAbis, outputs: outputs]
+        // Libraries a dependency packages for every supported ABI (Compose graphics-path) are checked apart from the runtime.
+        def anyAbiLibraries = project.ext.has('anyAbiNativeLibraries') ? project.ext.get('anyAbiNativeLibraries').toList().sort() : []
+        def supportedAbis = outputs.collect { it.abi }.findAll { it != 'universal' }.sort()
+        [name: variant.name, applicationId: variant.applicationId.get(), nativeAbis: nativeAbis,
+         anyAbiLibraries: anyAbiLibraries, supportedAbis: supportedAbis, outputs: outputs]
     }
 }
 

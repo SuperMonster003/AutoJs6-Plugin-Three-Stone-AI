@@ -22,7 +22,7 @@
     <string name="app_update_manage_ignored">Управление игнорируемыми обновлениями</string>
     <string name="app_update_no_ignored">Игнорируемых выпусков нет</string>
     <string name="app_update_open_failed">Не удалось открыть страницу выпуска</string>
-    <string name="app_update_release_history_summary">Прочитать историю версий из этого приложения</string>
+    <string name="app_update_release_history_summary">Открыть встроенную историю выпусков приложения</string>
     <string name="app_update_stop_ignoring">Не игнорировать</string>
     <string name="app_update_up_to_date">Установлена последняя версия</string>
     <string name="app_update_view_release">Открыть выпуск</string>

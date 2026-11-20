@@ -22,7 +22,7 @@
     <string name="app_update_manage_ignored">إدارة التحديثات المتجاهلة</string>
     <string name="app_update_no_ignored">لا توجد إصدارات متجاهلة</string>
     <string name="app_update_open_failed">تعذر فتح صفحة الإصدار</string>
-    <string name="app_update_release_history_summary">قراءة سجل الإصدارات المضمن في هذا التطبيق</string>
+    <string name="app_update_release_history_summary">عرض سجل الإصدارات المضمن في التطبيق</string>
     <string name="app_update_stop_ignoring">إيقاف التجاهل</string>
     <string name="app_update_up_to_date">أحدث إصدار مثبت</string>
     <string name="app_update_view_release">عرض الإصدار</string>

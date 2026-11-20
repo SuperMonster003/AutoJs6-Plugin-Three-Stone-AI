@@ -129,12 +129,19 @@ def verify_elf64(data, label):
             require(alignment >= 16384 and (offset - address) % 16384 == 0, f"64-bit ELF is not 16 KB aligned: {label}")
 
 
-def verify_native(apk, abi, native_abis):
+def verify_native(apk, abi, native_abis, any_abi_libraries=(), supported_abis=()):
     with zipfile.ZipFile(apk) as archive:
         libraries = [item for item in archive.infolist() if re.fullmatch(r"lib/[^/]+/[^/]+\.so", item.filename)]
-        actual_abis = {item.filename.split("/")[1] for item in libraries}
+        # A library that a dependency packages for every supported ABI (the Compose graphics-path library) is checked
+        # on its own; the native runtime keeps its 64-bit ABIs and the 32-bit APKs stay free of it.
+        runtime = [item for item in libraries if item.filename.split("/")[2] not in any_abi_libraries]
+        actual_abis = {item.filename.split("/")[1] for item in runtime}
         expected_abis = set(native_abis) if abi == "universal" else {abi} & set(native_abis)
         require(actual_abis == expected_abis, f"Native ABIs differ in {apk.name}: expected {sorted(expected_abis)}, found {sorted(actual_abis)}")
+        shared_expected = set(supported_abis) if abi == "universal" else {abi}
+        for name in any_abi_libraries:
+            found = {item.filename.split("/")[1] for item in libraries if item.filename.split("/")[2] == name}
+            require(found == shared_expected, f"ABIs of {name} differ in {apk.name}: expected {sorted(shared_expected)}, found {sorted(found)}")
         for item in libraries:
             verify_elf64(archive.read(item), f"{apk.name}:{item.filename}")
             if item.compress_type == zipfile.ZIP_STORED:
@@ -156,7 +163,7 @@ def verify_apk(apk, variant, output, manifest):
     signers = re.findall(r"Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]+)", signature)
     require(signers == [manifest["signerSha256"]], f"APK was not signed with the configured release key: {apk.name}")
     require("CN=Android Debug" not in signature, f"Debug certificate cannot be published: {apk.name}")
-    return verify_native(apk, output["abi"], variant["nativeAbis"])
+    return verify_native(apk, output["abi"], variant["nativeAbis"], variant.get("anyAbiLibraries", []), variant.get("supportedAbis", []))
 
 
 def archive_release(manifest, verify_only=False):

@@ -322,7 +322,11 @@
     <string name="online_ai_test_timed_out">Délai du test de connexion dépassé</string>
     <string name="online_ai_test_title">Tester la connexion?</string>
     <string name="plugin_description">Génération de texte IA avec des modèles locaux privés et des services en ligne configurés par l\'utilisateur</string>
-    <string name="release_history_load_failed">Impossible de charger l\'historique local des versions</string>
+    <string name="release_history_collapse_all">Tout réduire</string>
+    <string name="release_history_collapsed">Réduit</string>
+    <string name="release_history_expand_all">Tout développer</string>
+    <string name="release_history_expanded">Développé</string>
+    <string name="release_history_load_failed">Impossible de charger l\'historique des versions</string>
     <string name="release_history_title">Historique des versions</string>
     <string name="theme_picker_custom">Couleur personnalisée</string>
     <string name="theme_picker_input">HEX / RGB</string>

@@ -22,7 +22,7 @@
     <string name="app_update_manage_ignored">Gestionar actualizaciones ignoradas</string>
     <string name="app_update_no_ignored">No hay versiones ignoradas</string>
     <string name="app_update_open_failed">No se pudo abrir la página de la versión</string>
-    <string name="app_update_release_history_summary">Leer el historial de versiones incluido en esta app</string>
+    <string name="app_update_release_history_summary">Consultar el historial de versiones incluido en la aplicación</string>
     <string name="app_update_stop_ignoring">Dejar de ignorar</string>
     <string name="app_update_up_to_date">Está actualizado</string>
     <string name="app_update_view_release">Ver versión</string>

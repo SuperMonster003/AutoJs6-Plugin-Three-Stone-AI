@@ -16,6 +16,8 @@ metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
 elements = metadata['elements']
 expected = {'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'}
 native_abis = {'arm64-v8a', 'x86_64'}
+# Compose graphics-path (release history page) packages this library for every ABI, the 32-bit APKs included.
+any_abi_libraries = {'libandroidx.graphics.path.so'}
 splits = {e['filters'][0]['value']: e for e in elements if e.get('filters')}
 assert set(splits) == expected and len(elements) == 5, 'Unexpected ABI output set'
 universal = [e for e in elements if not e.get('filters')]
@@ -24,9 +26,14 @@ element = universal[0] if args.abi == 'universal' else splits[args.abi]
 apk = metadata_path.parent / element['outputFile']
 with zipfile.ZipFile(apk) as archive:
     assert archive.testzip() is None, 'Corrupt APK'
-    abis = {n.split('/')[1] for n in archive.namelist() if n.startswith('lib/') and n.endswith('.so')}
+    libraries = [n for n in archive.namelist() if n.startswith('lib/') and n.endswith('.so')]
+    abis = {n.split('/')[1] for n in libraries if n.split('/')[-1] not in any_abi_libraries}
     wanted = native_abis if args.abi == 'universal' else {args.abi} & native_abis
     assert abis == wanted, f'Actual native payload differs: expected {wanted}, found {abis}'
+    for name in any_abi_libraries:
+        found = {n.split('/')[1] for n in libraries if n.split('/')[-1] == name}
+        shared = expected if args.abi == 'universal' else {args.abi}
+        assert found == shared, f'ABIs of {name} differ: expected {shared}, found {found}'
 print(f'Verified {apk.name}: {args.abi}', flush=True)
 if args.pagesize is not None:
     assert args.abi != 'universal', 'Use a device ABI for instrumentation'

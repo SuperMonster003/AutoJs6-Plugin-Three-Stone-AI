@@ -25,11 +25,16 @@ class ApkContractTest(unittest.TestCase):
             self.apk(abi, payload)
         self.metadata()
 
-    def apk(self, abi, native_abis):
+    def apk(self, abi, native_abis, graphics_abis=None):
+        if graphics_abis is None:
+            graphics_abis = ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'] if abi == 'universal' else [abi]
         with zipfile.ZipFile(self.debug / f'{abi}.apk', 'w') as archive:
             archive.writestr('classes.dex', b'fixture')
             for native_abi in native_abis:
                 archive.writestr(f'lib/{native_abi}/liblitertlm_jni.so', b'fixture')
+            # Compose graphics-path, packaged for every ABI.
+            for graphics_abi in graphics_abis:
+                archive.writestr(f'lib/{graphics_abi}/libandroidx.graphics.path.so', b'fixture')
 
     def metadata(self):
         (self.debug / 'output-metadata.json').write_text(json.dumps({'elements': self.elements}), encoding='utf-8')
@@ -54,6 +59,14 @@ class ApkContractTest(unittest.TestCase):
 
     def test_universal_must_include_both_native_runtimes(self):
         self.apk('universal', ['x86_64'])
+        self.assertNotEqual(0, self.verify('universal').returncode)
+
+    def test_compose_graphics_path_library_must_match_the_apk_abis(self):
+        self.apk('x86', [], ['x86', 'x86_64'])
+        self.assertNotEqual(0, self.verify('x86').returncode)
+        self.apk('armeabi-v7a', [], [])
+        self.assertNotEqual(0, self.verify('armeabi-v7a').returncode)
+        self.apk('universal', ['arm64-v8a', 'x86_64'], ['arm64-v8a', 'x86_64'])
         self.assertNotEqual(0, self.verify('universal').returncode)
 
     def test_missing_32_bit_output_is_rejected(self):

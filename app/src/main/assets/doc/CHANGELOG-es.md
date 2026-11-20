@@ -4,6 +4,16 @@
 
 ******
 
+# v1.7.2
+
+###### 2026/11/20
+
+* `Mejora` La página del historial de versiones ahora se expande o contrae por versión: una versión contraída muestra su fecha y el número de entradas por categoría, una expandida nombra cada categoría una sola vez; todas las versiones se pueden expandir o contraer a la vez, la más reciente se abre expandida y el subtítulo muestra el nombre del plugin
+* `Mejora` Se reescribieron las instrucciones del Centro de plugins en cinco partes: primeros pasos, funciones principales, uso en scripts, requisitos y preguntas frecuentes
+* `Dependencia` Se añadió Jetpack Compose BOM 2026.09.00 (página Historial de versiones)
+* `Dependencia` Se actualizaron AndroidX Core a 1.16.0, AndroidX Activity a 1.12.2 y AndroidX Lifecycle a 2.9.4 (los requiere Jetpack Compose)
+* `Dependencia` Se actualizaron los plugins de compilación compartidos versión 1.9.0 -> 1.9.7
+
 # v1.7.1
 
 ###### 2026/11/17

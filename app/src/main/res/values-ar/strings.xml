@@ -322,7 +322,11 @@
     <string name="online_ai_test_timed_out">انتهت مهلة اختبار الاتصال</string>
     <string name="online_ai_test_title">اختبار الاتصال?</string>
     <string name="plugin_description">توليد نص بالذكاء الاصطناعي بنماذج محلية خاصة وخدمات عبر الإنترنت يعدها المستخدم</string>
-    <string name="release_history_load_failed">تعذر تحميل سجل الإصدارات المحلي</string>
+    <string name="release_history_collapse_all">طيّ الكل</string>
+    <string name="release_history_collapsed">مطوي</string>
+    <string name="release_history_expand_all">توسيع الكل</string>
+    <string name="release_history_expanded">موسَّع</string>
+    <string name="release_history_load_failed">تعذر تحميل سجل الإصدارات</string>
     <string name="release_history_title">سجل الإصدارات</string>
     <string name="theme_picker_custom">لون مخصص</string>
     <string name="theme_picker_input">HEX / RGB</string>

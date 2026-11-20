@@ -322,8 +322,12 @@
     <string name="online_ai_test_timed_out">Время проверки подключения истекло</string>
     <string name="online_ai_test_title">Проверить подключение?</string>
     <string name="plugin_description">Генерация текста ИИ с закрытыми локальными моделями и настроенными пользователем онлайн-сервисами</string>
-    <string name="release_history_load_failed">Не удалось загрузить локальную историю версий</string>
-    <string name="release_history_title">История версий</string>
+    <string name="release_history_collapse_all">Свернуть всё</string>
+    <string name="release_history_collapsed">Свёрнуто</string>
+    <string name="release_history_expand_all">Развернуть всё</string>
+    <string name="release_history_expanded">Развёрнуто</string>
+    <string name="release_history_load_failed">Не удалось загрузить историю выпусков</string>
+    <string name="release_history_title">История выпусков</string>
     <string name="theme_picker_custom">Свой цвет</string>
     <string name="theme_picker_input">HEX / RGB</string>
     <string name="theme_picker_invalid">Введите #RRGGBB, RRGGBB или rgb(r, g, b). Значения RGB должны быть от 0 до 255.</string>

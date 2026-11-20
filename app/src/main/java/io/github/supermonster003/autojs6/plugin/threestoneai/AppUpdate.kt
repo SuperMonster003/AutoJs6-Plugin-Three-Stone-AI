@@ -257,7 +257,7 @@ internal class AppUpdateController(
             .setNegativeButton(R.string.app_update_later, null)
             .setPositiveButton(R.string.app_update_view_release) { _, _ -> openRelease(release.pageUrl) }
         builder.setNeutralButton(R.string.release_history_title) { _, _ ->
-            activity.startActivity(Intent(activity, ReleaseHistoryActivity::class.java))
+            activity.openReleaseHistory()
         }
         builder.show().also(activity::tintDialogButtons)
     }

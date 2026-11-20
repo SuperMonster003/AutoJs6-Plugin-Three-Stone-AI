@@ -322,8 +322,12 @@
     <string name="online_ai_test_timed_out">接続テストがタイムアウトしました</string>
     <string name="online_ai_test_title">接続をテストしますか?</string>
     <string name="plugin_description">プライベートなローカルモデルとユーザー設定オンラインサービスによる AI テキスト生成</string>
-    <string name="release_history_load_failed">ローカルのバージョン履歴を読み込めません</string>
-    <string name="release_history_title">バージョン履歴</string>
+    <string name="release_history_collapse_all">すべて折りたたむ</string>
+    <string name="release_history_collapsed">折りたたみ中</string>
+    <string name="release_history_expand_all">すべて展開する</string>
+    <string name="release_history_expanded">展開中</string>
+    <string name="release_history_load_failed">リリース履歴を読み込めませんでした</string>
+    <string name="release_history_title">リリース履歴</string>
     <string name="theme_picker_custom">カスタム色</string>
     <string name="theme_picker_input">HEX / RGB</string>
     <string name="theme_picker_invalid">#RRGGBB, RRGGBB または rgb(r, g, b) を入力してください. RGB の値は 0..255 です.</string>

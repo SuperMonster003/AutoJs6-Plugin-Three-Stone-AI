@@ -209,6 +209,16 @@ The roadmap is organized around deliverable user-facing features, each independe
 
 ******
 
+# v1.7.2
+
+###### 2026/11/20
+
+* `Improvement` The release history page now expands and collapses by version: a collapsed version shows its date and the number of entries per category, an expanded one names each category once; all versions can be expanded or collapsed at once, the newest one opens expanded and the subtitle shows the plugin name; the page and its entry in "Updates and about" are now called "Release history" instead of "Version history"
+* `Improvement` Rewrote the instructions shown in Plugin Center in five parts: getting started, main features, using it in scripts, requirements and FAQ
+* `Dependency` Added Jetpack Compose BOM 2026.09.00 (release history page)
+* `Dependency` Upgraded AndroidX Core to 1.16.0, AndroidX Activity to 1.12.2 and AndroidX Lifecycle to 2.9.4 (needed by Jetpack Compose)
+* `Dependency` Upgraded shared build plugins version 1.9.0 -> 1.9.7
+
 # v1.7.1
 
 ###### 2026/11/17
@@ -231,20 +241,6 @@ The roadmap is organized around deliverable user-facing features, each independe
 * `Improvement` Services are now added and edited on a full-screen "Service details" page instead of the former bottom sheet form: the connection details (service name, provider, Base URL, API key and so on) are at the top, and the "Model list" is below; long-press a row or drag its handle to change the order, or use each row's menu to set it as the preferred model, mark it for "Image input", move it up or down, or remove it, and add several models at once. The former "Model ID", "Default model" and "Models with image input" selectors are therefore gone. Tap the check mark at the top right to save, then test the connection on the same page; going back with unsaved changes asks first, and what you have entered is kept when the screen rotates or the system reclaims the app in the background. After reordering, the default target and favorites still point to the same models
 * `Improvement` Downloading a recommended local model now takes one step: after you confirm, the model is downloaded to the app's private storage and imported automatically once it is verified, with no more "Choose save location" first and "Import downloaded model" afterwards. While it downloads, the "Models and services" page shows a download card where you can pause, resume or cancel, and retry after a failure; if the network drops or the app is closed, the downloaded part is kept and resuming or retrying continues from where it stopped. The download confirmation shows the model's minimum memory and warns when this device has less, but still allows the download. Model files downloaded elsewhere earlier can still be added with "Import model file". Downloaded models are stored in the app's data and are deleted when the app data is cleared or the app is uninstalled
 * `Improvement` In the model switching panel each model now appears only once: favorites are shown only in the "Favorites" group at the top instead of also appearing under their service, and return to their place when unfavorited; search results are no longer grouped and are listed in their usual order. Each row shows its service underneath, and local models show their file size; the "On this device" group is renamed "Local models"
-
-# v1.6.0
-
-###### 2026/11/12
-
-* `Feature` Online profiles can set a default effort (Low, Medium, High, Extra high or Max; with "Default" the model decides), and Anthropic profiles can use fast mode by default (faster replies at a higher price); both can also be changed for the current conversation only, the change is saved with the conversation, and new conversations start from the profile defaults. When a model does not support the chosen level, the closest lower level is used
-* `Feature` Switching models now opens a panel from the bottom: search, models grouped by profile, favorites pinned on top, and labels showing which models support image input, reasoning and fast mode; the panel also changes the effort and fast mode of the current conversation, and "Manage models and services" at the bottom opens the model settings. The bar at the top of the chat shows the effort and fast mode of the current conversation
-* `Feature` Chats now show how the model thinks (Claude 5 and newer, Gemini 2.5 and newer, and OpenAI-compatible services that return their reasoning, such as DeepSeek): while a reply is generated, the reasoning streams in a card above it; when the reply is done the card folds into "Thought for N s", and a tap opens or closes it. The reasoning is saved with the conversation, but it is not read aloud and message search does not match it. "Show reasoning while generating" and "Collapse reasoning when done" in the settings are on by default and can be turned off. Scripts that call AI through the plugin do not receive the reasoning
-* `Fix` A reply being generated was stopped when the screen was rotated or when dark mode, the language or the message font size was changed; the reply now keeps generating, and a reply that finishes while you are away from the chat is shown in full when you come back
-* `Fix` After tapping "Stop", the online request kept running in the background until the reply was complete (and still counted toward usage); tapping Stop now ends the request within 1 second, and so do starting a new conversation, switching conversations, switching models and deleting messages
-* `Fix` Newer Claude models rejected requests from Anthropic profiles that set temperature, Top K or Top P; Anthropic profiles no longer send these three settings, and the settings page says so
-* `Fix` After the default model of a profile was changed, a new conversation that was already open but had no messages kept the old default model; it now switches to the new default model (unless you picked another model in that conversation)
-* `Fix` When adding or editing an online profile, swiping down on the form easily closed it and everything you had typed was lost; the form now closes only with the close button at the top right, "Cancel" or Back, asks first when there are unsaved changes, and keeps what you typed when the screen is rotated
-* `Fix` Online model catalog updates failed after the Gemini documentation moved and changed its table format
 
 ##### For more releases
 

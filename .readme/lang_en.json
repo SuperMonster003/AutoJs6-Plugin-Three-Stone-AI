@@ -110,5 +110,58 @@
   "h3_links": "Links",
   "text_link_autojs6_docs": "AutoJs6 documentation",
   "text_link_upstream": "LiteRT-LM project",
-  "p_runtime_access": "Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests. This grant covers local models and saved online accounts. Online calls may consume paid quota. Use ai.hasAccess() and ai.requestAccess() in Node.js, Bun or Workers."
+  "p_runtime_access": "Independently signed applications can request explicit AI access in the plugin, bound to their identity and installation, with settings-based revocation that stops active requests. This grant covers local models and saved online accounts. Online calls may consume paid quota. Use ai.hasAccess() and ai.requestAccess() in Node.js, Bun or Workers.",
+  "instruction_p_what": "3-Stone AI brings AI chat and model management to AutoJs6: local models run offline on the phone, and online services (such as OpenAI, Anthropic and Gemini) use your own API key. The plugin has its own chat screen and also provides the models for the `ai` module in AutoJs6 scripts.",
+  "instruction_h3_start": "Getting started",
+  "instruction_start_steps": [
+    "Open 3-Stone AI from its home screen icon, tap \"Settings\" in the chat screen menu, then tap \"Models and services\".",
+    "To use a local model, tap \"Download model\" in the \"Local models\" section and choose a recommended model; it is imported automatically after it is downloaded and verified. If you already have a `.litertlm` file, tap \"Import model file\".",
+    "To use an online service, tap \"Add service\" in the \"Online services\" section, choose a provider, enter the model ID and API key, and save. You can then choose \"Test connection\" from the service menu.",
+    "Go back to the chat screen, tap the model name at the top to choose a model, then type a question and send it."
+  ],
+  "instruction_h3_features": "Main features",
+  "instruction_features": [
+    "**Chat**: conversations are saved automatically and the model's reasoning can be shown; regenerating or editing a message keeps every version, and you can switch between them.",
+    "**Attachments**: tap \"+\" on the left of the input box to add images, text files or PDFs. Images go to models with \"Image input\" turned on and PDFs only to Anthropic and Gemini services; local models do not support attachments yet.",
+    "**Switching models**: switch models at any time while chatting; scripts use the \"Default target\" on the \"Models and services\" page.",
+    "**Model management**: check, rename or delete models in the \"Local models\" section. API keys are stored only on the device and are left out when you export services.",
+    "**Voice**: tap the microphone to dictate, long-press it to start a voice conversation, and long-press a reply to choose \"Read aloud\"; with 3-Macaw Speech installed, dictation and reading aloud work offline.",
+    "**Export and share**: choose \"Export as Markdown\" or \"Share as image\" in the chat screen menu."
+  ],
+  "instruction_h3_script": "Using it in scripts",
+  "instruction_p_script": "AutoJs6 scripts use this plugin through the `ai` module. Without a target, the \"Default target\" is used:",
+  "instruction_p_script_target": "To pin a specific model, find its target with `ai.catalog()` and pass its `id` as `target`. This example uses the first available local model:",
+  "instruction_p_script_session": "For multi-turn conversations use `ai.session`, send only the new prompt each turn, and call `session.close()` when you are done:",
+  "instruction_script_notes": [
+    "`ai.chat` returns the full response including usage, and `ai.stream` returns text as it is generated.",
+    "`temperature`, `topK`, `topP` and `maxTokens` control sampling and output length; when the target supports structured output, passing `responseSchema` returns text that matches that JSON Schema.",
+    "If the target is unavailable or not configured, the request fails directly (for example with `TARGET_UNAVAILABLE`) and never switches to another model."
+  ],
+  "instruction_h3_requirements": "Requirements",
+  "instruction_requirements": [
+    "Android 7.0 or later, AutoJs6 6.8.0 or later.",
+    "Local models need a 64-bit device (arm64-v8a or x86_64) and enough storage; the download confirmation shows the minimum memory required. 32-bit devices can only use online services.",
+    "Online services need your own API key, and the provider may charge for usage.",
+    "The network permission is used to download models, reach online services and update the preset model list; local inference does not use the network. The plugin does not request storage or microphone permissions."
+  ],
+  "instruction_h3_faq": "FAQ",
+  "instruction_faq": [
+    {
+      "q": "Differences between local models and online services",
+      "a": "Local models run on the phone, so conversations never leave the device, but speed and quality depend on the phone. Online services send conversations to the chosen provider and need a network connection and an API key."
+    },
+    {
+      "q": "Why a failed request does not switch to another model",
+      "a": "Requests only use the model you chose, so conversations are never sent to another service without your knowledge. When a request fails, check that model in \"Models and services\" or switch models yourself."
+    },
+    {
+      "q": "When a local model cannot run",
+      "a": "Open that model's menu in the \"Local models\" section and tap \"Check model\" to see the reason; if memory is short, use a smaller recommended model."
+    },
+    {
+      "q": "When other apps ask to use AI",
+      "a": "Before an app packaged with AutoJs6 and signed separately can use AI, 3-Stone AI asks you to confirm. Once allowed, the app can use local models and saved online services, which may use paid quota; remove the access in \"Settings > Privacy and permissions > Apps with AI access\"."
+    }
+  ],
+  "instruction_p_more": "All options, events and error codes are in the [Artificial intelligence (AI)]({{ docs_autojs6_url }}/#/ai) chapter of the AutoJs6 documentation, and privacy details and limits are on the [project page]({{ repo_url }})."
 }

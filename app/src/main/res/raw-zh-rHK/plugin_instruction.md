@@ -1,36 +1,49 @@
-# AutoJs6 3-Stone AI
+3-Stone AI 為 AutoJs6 提供 AI 對話與模型管理: 本機模型在手機上離線運行, 網上服務 (例如 OpenAI, Anthropic, Gemini) 使用你自己的 API Key. 插件自帶聊天介面, 同時為 AutoJs6 腳本的 `ai` 模組提供模型.
 
-此插件透過 Android Storage Access Framework (SAF) 匯入一個本地 `.litertlm` 模型套件, 將其複製到應用程式私人儲存空間, 並使用 CPU-only LiteRT-LM 根據純文字歷史產生串流純文字或受 schema 約束嘅 JSON 文本.
+### 開始使用
 
-插件需要 AutoJs6 主程式構建版本 5276 或更高版本, 以及 Android API 24 或更高版本.
+1. 從桌面圖示開啟 3-Stone AI, 在聊天頁的選單中點按 "設定", 再點按 "模型與服務".
+2. 使用本機模型: 在 "本機模型" 段點按 "下載模型" 並選擇推薦模型, 下載並校驗後自動匯入; 已有 `.litertlm` 檔案時點按 "匯入模型檔案".
+3. 使用網上服務: 在 "網上服務" 段點按 "新增服務", 選擇供應商, 填寫模型 ID 與 API Key 後儲存, 然後可以在服務選單中選擇 "測試連線".
+4. 返回聊天頁, 點按頂部的模型名稱選擇模型, 輸入問題後傳送.
 
-需要主程式構建版本 5276 或更高版本及 Android 7.0 或更高版本. 構建產物包含 armeabi-v7a, arm64-v8a, x86, x86_64, universal APK. x86 和 armeabi-v7a 裝置請使用對應的獨立 APK, 支援應用程式介面, 線上 AI 和主程式插件整合. LiteRT-LM 本地推理需要 arm64-v8a 或 x86_64 及安裝包中的對應原生程式庫. universal APK 僅包含 64 位元原生程式庫, 無法安裝到僅支援 32 位元的裝置.
+### 主要功能
 
-## 取得模型
+- **聊天**: 對話自動儲存, 可以查看模型的思考過程; 重新生成或編輯訊息後保留各個版本, 可以來回切換.
+- **附件**: 點按輸入框左側的 "+" 加入圖片, 文字檔案或 PDF. 圖片傳送給已開啟 "圖片輸入" 的模型, PDF 只傳送給 Anthropic 與 Gemini 服務; 本機模型暫不支援附件.
+- **切換模型**: 聊天時隨時切換模型; 腳本預設使用 "模型與服務" 頁中的 "預設目標".
+- **模型管理**: 在 "本機模型" 段檢查, 重新命名或刪除模型. API Key 只儲存在本機, 匯出服務時不包含 API Key.
+- **語音**: 點按麥克風聽寫, 長按開始語音對話, 長按回覆可以 "朗讀"; 安裝了 3-Macaw Speech 時聽寫與朗讀離線完成.
+- **匯出與分享**: 在聊天頁的選單中選擇 "匯出為 Markdown" 或 "分享為長圖".
 
-喺插件嘅 **設定 > 模型與服務** 撳 "本機模型" 段嘅 **下載模型**, 即可查看內置嘅建議模型目錄同實用嘅運行資料; 喺項目上撳 **下載** 就一步完成: 模型直接寫入應用程式私有儲存空間, 插件會顯示進度, 可以暫停, 取消或者喺失敗後重試, 並喺驗證 LiteRT-LM 檔案頭, 精確字節數同 SHA-256 後自動匯入. 中斷咗嘅下載會由已下載嘅部分繼續. 本機推理從來唔使用網絡. 每個模型只會喺應用程式私有儲存空間保存一份, 解除安裝插件或清除佢嘅應用程式數據會一併刪除; 其他位置嘅 `.litertlm` 檔案可以用 **匯入模型檔案** 匯入.
+### 在腳本中使用
 
-## 快速開始 (推薦)
+在 AutoJs6 腳本中透過 `ai` 模組調用本插件, 不指定目標時使用 "預設目標":
 
-喺 AutoJs6 構建 5276 及以上版本中, 可直接通過全局 `ai` 模塊調用本插件. `plugin: true` 即選擇本插件; 只導入一個模型時可省略模型 ID.
-
-```javascript
-ai.ask("Hello", { plugin: true }).then((text) => {
+```js
+ai.ask('Introduce AutoJs6 in one sentence.').then((text) => {
     console.log(text);
 });
 ```
 
-需要多輪上下文時, 使用 `ai.session` 建立一個持久 Conversation. 後續輪次只發送新嘅用戶提示詞:
+要固定使用某個模型, 先用 `ai.catalog()` 找到目標, 再把它的 `id` 作為 `target` 傳入. 以下示例使用第一個可用的本機模型:
 
-```javascript
-ai.session({
-    plugin: true,
-    system: "Keep every answer short.",
-}).then((session) => {
-    return session.ask("Remember this code: Orion")
-        .then(() => session.chat("What code should you remember?"))
-        .then((response) => {
-            console.log(response.text);
+```js
+ai.catalog().then((catalog) => {
+    let target = catalog.targets.find((item) => item.available && item.locality === 'local');
+    if (!target) throw new Error('No available local model');
+    return ai.ask('Reply with OK.', { target: target.id, temperature: 0.7 });
+}).then((text) => console.log(text));
+```
+
+多輪對話使用 `ai.session`, 每輪只傳送新的提示詞, 用完後調用 `session.close()`:
+
+```js
+ai.session({ system: 'Keep every answer short.' }).then((session) => {
+    return session.ask('Remember this code: Orion.')
+        .then(() => session.ask('What code should you remember?'))
+        .then((text) => {
+            console.log(text);
             session.close();
         }, (error) => {
             session.close();
@@ -39,453 +52,33 @@ ai.session({
 });
 ```
 
-同一會話一次只允許一個活動輪次. 使用完畢後應調用 `session.close()`; 取消, 逾時或生成失敗亦會關閉整個會話.
+- `ai.chat` 返回包含用量的完整回應, `ai.stream` 邊生成邊返回文字.
+- `temperature`, `topK`, `topP` 與 `maxTokens` 控制取樣與輸出長度; 目標支援結構化輸出時, 傳入 `responseSchema` 可以得到符合該 JSON Schema 的文字.
+- 目標不可用或未設定時請求直接失敗 (例如 `TARGET_UNAVAILABLE`), 不會自動改用其他模型.
 
-<!-- persistent-context-policy: successful-turns-only; transparent-step-compaction; 512-KiB-transcript-guard; no-hidden-summary; fail-closed -->
-持久會話只會保留成功完成嘅 user/assistant 輪次. 達到 token 水位或 512 KiB 轉寫護欄時, 外掛會使用原始 SYSTEM 訊息同最近完整輪次後綴喺內部透明重建 backend; 唔會發起隱藏摘要請求. Binder session ID, 固定生成選項以及 stream/usage/completion 回調次序均保持不變. 如果 SYSTEM 訊息, 當前提示詞同最近輪次保底仍然超過絕對安全上限, 會話會使用現有 invalid-request 錯誤 fail-closed.
+### 運行要求
 
-可喺同一個 options 對象控制採樣同輸出長度:
+- Android 7.0 或更高版本, AutoJs6 6.8.0 或更高版本.
+- 本機模型需要 64 位元裝置 (arm64-v8a 或 x86_64) 與足夠的儲存空間, 下載確認框會顯示所需的最低記憶體; 32 位元裝置只能使用網上服務.
+- 網上服務需要你自己的 API Key, 服務商可能按用量收費.
+- 網絡權限用於下載模型, 存取網上服務與更新預置模型清單; 本機推理不連網. 插件不要求儲存空間與麥克風權限.
 
-```javascript
-ai.ask("Hello", {
-    plugin: true,
-    temperature: 0.7,
-    topK: 40,
-    topP: 0.9,
-    // maxTokens: 1024,
-}).then((text) => console.log(text));
-```
+### 常見問題
 
-傳入 `responseSchema` 就可以啟用原生結構化生成 (`structuredJson: true` 未提供 schema 時使用預設嘅對象根 schema). Promise 仍然解析為 JSON 文本, 所以只可以解析完整嘅 `ai.ask` 或 `ai.chat().text` 結果; `ai.stream` 嘅 delta 係未完整嘅 JSON 文本. 持久 `ai.session` 會喺所有輪次固定使用同一 schema:
+**本機模型與網上服務的分別**
 
-```javascript
-let schema = {
-    type: "object",
-    properties: {
-        answer: { type: "string" },
-        ok: { type: "boolean" },
-    },
-    required: [ "answer", "ok" ],
-};
+本機模型在手機上運行, 對話內容不會離開裝置, 速度與效果取決於手機效能. 網上服務把對話傳送給所選的服務商, 需要網絡與 API Key.
 
-ai.ask("Return answer as OK and ok as true.", {
-    plugin: true,
-    responseSchema: schema,
-}).then((text) => {
-    let value = JSON.parse(text);
-    console.log(value.answer, value.ok);
-});
-```
+**生成失敗時不自動改用其他模型的原因**
 
-列出全部本機及在線目標, 再用精確嘅 `target` ID 固定其中一個:
+請求只使用你選定的模型, 以免對話內容在你不知情時傳送到其他服務. 失敗時到 "模型與服務" 檢查該模型, 或手動切換.
 
-```javascript
-ai.catalog({ plugin: true }).then((catalog) => {
-    console.log("default:", catalog.defaultTarget);
-    catalog.targets.forEach((target) => {
-        console.log(target.id, target.displayName, target.locality);
-        console.log(target.backendProfiles);
-    });
-});
-```
+**本機模型無法運行時的處理**
 
-`ai.ask`, `ai.chat`, `ai.stream` 同 `ai.session` 接受同一個精確 `target`; 只傳入 `plugin: true` 時使用插件聲明嘅預設目標. 插件缺失或停用, 以及目標未設定或不可用時, Promise 會以 `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED` 或 `TARGET_UNAVAILABLE` 等穩定錯誤碼拒絕. 路由絕唔會自動切換.
+在 "本機模型" 段開啟該模型的選單, 點按 "檢查模型" 查看原因; 記憶體不足時改用較小的推薦模型.
 
-## 高級: 原始 Binder 訪問
+**其他應用程式要求使用 AI 的情形**
 
-以下章節展示唔經過 `ai` 模塊嘅底層協議路徑. 絕大多數腳本無需使用.
+以 AutoJs6 打包並獨立簽署的應用程式使用 AI 前, 3-Stone AI 會請你確認授權. 授權後該應用程式可以使用本機模型與已儲存的網上服務, 可能消耗付費額度; 可在 "設定 > 私隱與權限 > 已授權的應用程式" 中移除授權.
 
-## 使用範例
-
-以下完整 Rhino 腳本以 **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** 模型為例. 此固定版本的 SHA-256 為 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`, 因此匯入後的模型 ID 為 `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. 下載檔案可能名為 `gemma-4-E2B-it.litertlm`, 檔案名稱不影響模型 ID. 匯入後, 可使用插件說明頁右上角的複製操作複製整個腳本. 請將其作為一般 AutoJs6 Rhino 腳本執行, 不要使用 Node.js 模式. 只需修改 `PROMPT` 即可嘗試其他請求.
-
-使用其他模型時, 請喺 **設定 > 模型與服務** 嘅 "本機模型" 段撳該模型嘅卡片, 喺詳情中撳 **複製模型 ID**, 並替換腳本中的 `MODEL_ID`. 請勿沿用範例值.
-
-```javascript
-var PLUGIN_PACKAGE =
-    "io.github.supermonster003.autojs6.plugin.threestoneai";
-
-var SERVICE_CLASS =
-    PLUGIN_PACKAGE + ".provider.ThreeStoneAiProviderService";
-
-// 对应本次模型 SHA-256 的前 32 位
-var MODEL_ID =
-    "litertlm.ab7838cdfc8f77e54d8ca45eadceb204";
-
-var PROMPT =
-    "请用中文列出三条 Android 自动化脚本执行危险操作前应增加确认步骤的理由. 每条一句话.";
-
-var TextApi =
-    Packages.org.autojs.plugin.ai.provider.api;
-
-var CommonApi =
-    Packages.org.autojs.plugin.ai.common.api;
-
-var AiProviderCodec = TextApi.AiProviderCodec.INSTANCE;
-var AiCommonCodec = CommonApi.AiCommonCodec.INSTANCE;
-
-var TimeUnit = java.util.concurrent.TimeUnit;
-var CountDownLatch = java.util.concurrent.CountDownLatch;
-var AtomicBoolean = java.util.concurrent.atomic.AtomicBoolean;
-var AtomicInteger = java.util.concurrent.atomic.AtomicInteger;
-var AtomicReference = java.util.concurrent.atomic.AtomicReference;
-
-var connected = new CountDownLatch(1);
-var finished = new CountDownLatch(1);
-
-var providerRef = new AtomicReference(null);
-var bindError = new AtomicReference(null);
-var terminalError = new AtomicReference(null);
-var finalText = new AtomicReference(null);
-var usageRef = new AtomicReference(null);
-
-var terminalClaimed = new AtomicBoolean(false);
-var returnedCredits = new AtomicInteger(0);
-
-var session = null;
-var bound = false;
-
-function javaString(value) {
-    return new java.lang.String(String(value));
-}
-
-function failTerminal(message) {
-    if (terminalClaimed.compareAndSet(false, true)) {
-        terminalError.set(javaString(message));
-        finished.countDown();
-    }
-}
-
-function describeProtocolError(raw) {
-    try {
-        var error = AiCommonCodec.decodeError(raw);
-        return "AI 错误 code=" + error.getCode() +
-            (error.getMessage() == null
-                ? ""
-                : ": " + error.getMessage());
-    } catch (e) {
-        return "无法解析插件错误: " + e;
-    }
-}
-
-function closeDescriptors(fds) {
-    if (fds == null) return;
-
-    for (var i = 0; i < fds.length; i++) {
-        try {
-            if (fds[i] != null) fds[i].close();
-        } catch (_) {
-        }
-    }
-}
-
-var textCallback = new JavaAdapter(
-    TextApi.IAiCallback.Stub,
-    {
-        onStarted: function (raw) {
-            try {
-                var started =
-                    AiProviderCodec.decodeSessionStarted(raw);
-
-                console.log(
-                    "会话已启动: " + started.getSessionId()
-                );
-            } catch (e) {
-                failTerminal("无法解析会话信息: " + e);
-            }
-        },
-
-        onChunk: function (raw) {
-            try {
-                var chunk =
-                    AiProviderCodec.decodeTextChunk(raw);
-
-                console.log(
-                    "chunk[" + chunk.getSequence() + "]: " +
-                    chunk.getTextDelta()
-                );
-
-                // 只记录待补 credit, 不在 Binder 回调线程反向调用插件
-                returnedCredits.incrementAndGet();
-            } catch (e) {
-                failTerminal("无法解析流式文本: " + e);
-            }
-        },
-
-        onToolCalls: function (raw, fds) {
-            closeDescriptors(fds);
-            failTerminal("插件返回了本示例未启用的工具调用");
-        },
-
-        onUsage: function (raw) {
-            try {
-                usageRef.set(AiCommonCodec.decodeUsage(raw));
-            } catch (e) {
-                failTerminal("无法解析用量信息: " + e);
-            }
-        },
-
-        onCompleted: function (raw, fds) {
-            try {
-                if (!terminalClaimed.compareAndSet(false, true)) {
-                    return;
-                }
-
-                try {
-                    var result =
-                        AiProviderCodec.decodeCompletionResult(raw);
-
-                    var bytes =
-                        result.getOutput().getInlineBytes();
-
-                    if (bytes == null) {
-                        throw new Error("完成结果不是内联文本");
-                    }
-
-                    finalText.set(
-                        new java.lang.String(
-                            bytes,
-                            java.nio.charset.StandardCharsets.UTF_8
-                        )
-                    );
-                } catch (e) {
-                    terminalError.set(
-                        javaString("无法解析完成结果: " + e)
-                    );
-                } finally {
-                    finished.countDown();
-                }
-            } finally {
-                closeDescriptors(fds);
-            }
-        },
-
-        onFailed: function (raw) {
-            failTerminal(describeProtocolError(raw));
-        },
-
-        onCancelled: function () {
-            failTerminal("生成已取消");
-        }
-    }
-);
-
-var connection = new JavaAdapter(
-    android.content.ServiceConnection,
-    {
-        onServiceConnected: function (name, binder) {
-            try {
-                providerRef.set(
-                    TextApi.IAiProvider.Stub.asInterface(binder)
-                );
-            } catch (e) {
-                bindError.set(
-                    javaString("无法创建 provider 接口: " + e)
-                );
-            } finally {
-                connected.countDown();
-            }
-        },
-
-        onServiceDisconnected: function (name) {
-            if (providerRef.get() == null) {
-                bindError.compareAndSet(
-                    null,
-                    javaString("AI provider 已断开")
-                );
-                connected.countDown();
-            } else {
-                failTerminal("AI provider 已断开");
-            }
-        },
-
-        onNullBinding: function (name) {
-            bindError.compareAndSet(
-                null,
-                javaString("AI provider 返回了空 Binder")
-            );
-            connected.countDown();
-        },
-
-        onBindingDied: function (name) {
-            bindError.compareAndSet(
-                null,
-                javaString("AI provider 绑定已失效")
-            );
-            connected.countDown();
-            failTerminal("AI provider 绑定已失效");
-        }
-    }
-);
-
-try {
-    var intent = new android.content.Intent();
-
-    intent.setComponent(
-        new android.content.ComponentName(
-            PLUGIN_PACKAGE,
-            SERVICE_CLASS
-        )
-    );
-
-    bound = context.bindService(
-        intent,
-        connection,
-        android.content.Context.BIND_AUTO_CREATE
-    );
-
-    if (!bound) {
-        throw new Error("无法绑定 3-Stone AI 插件");
-    }
-
-    if (!connected.await(10, TimeUnit.SECONDS)) {
-        throw new Error("绑定 AI provider 超时");
-    }
-
-    if (bindError.get() != null) {
-        throw new Error(String(bindError.get()));
-    }
-
-    var provider = providerRef.get();
-
-    if (provider == null) {
-        throw new Error("AI provider 不可用");
-    }
-
-    // 构造 UTF-8 用户消息
-    var utf8 = new java.lang.String(PROMPT).getBytes(
-        java.nio.charset.StandardCharsets.UTF_8
-    );
-
-    var payload = new CommonApi.AiPayloadReference(
-        "text/plain",
-        utf8.length,
-        null,
-        utf8,
-        null,
-        "utf-8"
-    );
-
-    var part = new TextApi.AiContentPart(payload);
-
-    // role=2 表示 USER
-    var message = new TextApi.AiMessage(
-        2,
-        java.util.Collections.singletonList(part),
-        null
-    );
-
-    var options = new TextApi.AiGenerationOptions(
-        true,   // stream
-        false,  // reasoning
-        false,  // structured JSON
-        true,   // usage
-        65536,  // 插件输出安全上限 64 KiB
-        null,   // 不额外限制 token, 使用模型/引擎默认值
-        0,      // tool rounds
-        300000, // 插件侧超时 5 分钟
-        "text/plain",
-        null,
-        java.util.Arrays.asList("streaming", "usage"),
-        java.lang.Double.valueOf("0.7"), // temperature
-        java.lang.Integer.valueOf("40"), // topK
-        java.lang.Double.valueOf("0.9"), // topP
-        false,  // persistent session
-        "cpu"   // explicit backend profile
-    );
-
-    var request = new TextApi.AiProviderRequest(
-        java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(2, 0),
-        "autojs6.three-stone-ai",
-        MODEL_ID,
-        java.util.Collections.singletonList(message),
-        options,
-        java.util.Collections.emptyList()
-    );
-
-    var noDescriptors =
-        java.lang.reflect.Array.newInstance(
-            android.os.ParcelFileDescriptor,
-            0
-        );
-
-    // openSession 会立即开始模型生成
-    session = provider.openSession(
-        AiProviderCodec.encodeTextRequest(request),
-        noDescriptors,
-        textCallback
-    );
-
-    // 建立初始流式窗口
-    session.grantCredits(8);
-
-    var deadline =
-        android.os.SystemClock.elapsedRealtime() + 330000;
-
-    while (
-        finished.getCount() > 0 &&
-        android.os.SystemClock.elapsedRealtime() < deadline
-    ) {
-        finished.await(100, TimeUnit.MILLISECONDS);
-
-        // 在普通脚本线程补回已经消费的 credit
-        var credits = returnedCredits.getAndSet(0);
-
-        if (credits > 0 && finished.getCount() > 0) {
-            session.grantCredits(credits);
-        }
-    }
-
-    if (finished.getCount() > 0) {
-        session.cancel();
-        throw new Error("等待模型生成超时");
-    }
-
-    if (terminalError.get() != null) {
-        throw new Error(String(terminalError.get()));
-    }
-
-    var usage = usageRef.get();
-
-    if (usage == null) {
-        throw new Error("插件未返回用量信息");
-    }
-
-    console.log(
-        "usage: input=" + usage.getInputTokens() +
-        ", output=" + usage.getOutputTokens() +
-        ", total=" + usage.getTotalTokens() +
-        ", durationMillis=" + usage.getDurationMillis()
-    );
-
-    console.log(
-        "\n===== 完整结果 =====\n" + finalText.get()
-    );
-
-    toastLog("模型生成完成");
-} finally {
-    try {
-        if (session != null) session.close();
-    } catch (_) {
-    }
-
-    try {
-        if (bound) context.unbindService(connection);
-    } catch (_) {
-    }
-}
-```
-
-安全性和執行限制:
-
-- 模型匯入上限為 8 GiB, 完成後必須至少保留 256 MiB 可用空間.
-- 內容上限為 256 KiB, 輸出上限為 64 KiB, 同一時間僅允許一個生成工作階段.
-- `maxTokens` (原始協議欄位為 `maximumOutputTokens`) 接受 1 至 2,147,483,647, 且毋須 usage 上報即可執行. `temperature` 必須係非負有限數, `topK` 必須係正數, `topP` 必須係 0 至 1 嘅有限數.
-- 省略 `maxTokens` (或者喺原始協議將 `maximumOutputTokens` 傳做 `null`) 時會使用模型或引擎預設值; 插件嘅 64 KiB 輸出安全上限仍然生效.
-- 宣告 streaming, usage, persistent session, structured JSON, `text/plain` 同 `application/json`. 唔支援 reasoning 同 tools.
-- 響應 schema 必須係 JSON 對象且唔超過 64 KiB; 可用關鍵字以目前內置 LiteRT-LM/LLGuidance 運行時為準. 插件會嚴格解析同驗證完整結構化輸出, 因此應為整個 JSON 值預留足夠嘅 `maxTokens`.
-- Usage token 數來自 LiteRT-LM Conversation 嘅 KV cache 同 decode 計數, 唔會用字符數估算. `durationMillis` 只量度插件生成調用, 唔包括宿主發現, 綁定, 模型枚舉同分發時間.
-- 插件為用戶主動發起嘅建議模型下載, 用戶設定嘅網上目標請求, 同喺 "模型與服務" 頁從 GitHub 更新公開預設模型目錄使用 `INTERNET` 權限. 目錄更新唔需要 API Key, 唔會呼叫推理服務, 插件啟用同本機生成唔會觸發目錄連網. 本機推理唔使用網絡. 插件唔要求廣泛儲存權限; SAF 只授予對用戶所選來源或目標嘅存取.
-- 僅允許同簽名 AutoJs6 主程式綁定 provider 服務.
-- 為保證跨進程安全, 會保留先前以 SHA-256 hash 命名的模型代次, 它們會繼續佔用應用程式私人儲存空間.
+全部選項, 事件與錯誤碼見 AutoJs6 文檔的 [人工智能 (AI)](https://docs.autojs6.com/#/ai) 章節, 私隱與運行限制見 [項目主頁](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI).

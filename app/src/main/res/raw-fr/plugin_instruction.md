@@ -1,36 +1,49 @@
-# AutoJs6 3-Stone AI
+3-Stone AI apporte à AutoJs6 la conversation avec l'IA et la gestion des modèles: les modèles locaux s'exécutent hors ligne sur le téléphone, et les services en ligne (par exemple OpenAI, Anthropic, Gemini) utilisent votre propre clé API. Le plugin a sa propre interface de chat et fournit aussi les modèles du module `ai` des scripts AutoJs6.
 
-Ce plugin importe un paquet de modèle `.litertlm` local via Android Storage Access Framework (SAF), le copie dans le stockage privé de cette application et exécute une génération LiteRT-LM uniquement sur CPU avec un historique en texte brut et une sortie en streaming de texte brut ou JSON contraint par un schema.
+### Prise en main
 
-Le plugin exige la build hôte AutoJs6 5276 ou ultérieure et Android API 24 ou ultérieur.
+1. Ouvrez 3-Stone AI depuis son icône sur l'écran d'accueil, touchez "Paramètres" dans le menu de la page de chat, puis "Modèles et services".
+2. Pour un modèle local, touchez "Télécharger un modèle" dans la section "Modèles locaux" et choisissez un modèle recommandé; il est importé automatiquement après téléchargement et vérification. Si vous avez déjà un fichier `.litertlm`, touchez "Importer un fichier de modèle".
+3. Pour un service en ligne, touchez "Ajouter un service" dans la section "Services en ligne", choisissez un fournisseur, saisissez l'ID du modèle et la clé API, puis enregistrez. Vous pouvez ensuite choisir "Tester la connexion" dans le menu du service.
+4. Revenez à la page de chat, touchez le nom du modèle en haut pour choisir un modèle, puis saisissez une question et envoyez-la.
 
-La build hôte 5276 ou ultérieure et Android 7.0 ou ultérieur sont requis. Les builds produisent les APK armeabi-v7a, arm64-v8a, x86, x86_64, universal. Sur x86 et armeabi-v7a, utilisez l'APK individuel correspondant pour l'application, l'IA en ligne et l'intégration hôte. L'inférence locale LiteRT-LM nécessite arm64-v8a ou x86_64 et la bibliothèque native correspondante dans l'APK. L'APK universal contient uniquement des bibliothèques 64 bits et ne peut pas être installé sur un appareil exclusivement 32 bits.
+### Fonctionnalités principales
 
-## Obtenir un modèle
+- **Chat**: les conversations sont enregistrées automatiquement et le raisonnement du modèle peut être affiché; régénérer ou modifier un message conserve chaque version, entre lesquelles vous pouvez basculer.
+- **Pièces jointes**: touchez "+" à gauche du champ de saisie pour ajouter des images, des fichiers texte ou des PDF. Les images vont aux modèles dont "Entrée d'images" est activée, les PDF uniquement aux services Anthropic et Gemini; les modèles locaux ne prennent pas encore en charge les pièces jointes.
+- **Changer de modèle**: changez de modèle à tout moment pendant le chat; les scripts utilisent la "Cible par défaut" de la page "Modèles et services".
+- **Gestion des modèles**: vérifiez, renommez ou supprimez les modèles dans la section "Modèles locaux". Les clés API restent sur l'appareil et ne sont pas incluses lors de l'export des services.
+- **Voix**: touchez le micro pour dicter, appuyez longuement dessus pour démarrer une conversation vocale, et appuyez longuement sur une réponse pour choisir "Lire à voix haute"; avec 3-Macaw Speech installé, la dictée et la lecture fonctionnent hors ligne.
+- **Exporter et partager**: choisissez "Exporter en Markdown" ou "Partager en image" dans le menu de la page de chat.
 
-Dans **Paramètres > Modèles et services** du plugin, touchez **Télécharger un modèle** dans la section "Modèles locaux" pour consulter le catalogue intégré des modèles recommandés et les informations utiles d'exécution, puis touchez **Télécharger** sur une entrée pour terminer en une étape: le modèle est écrit directement dans le stockage privé de l'application, la progression est affichée avec pause, annulation et nouvelle tentative en cas d'échec, et le modèle est importé automatiquement après vérification de l'en-tête LiteRT-LM, du nombre exact d'octets et du SHA-256. Un téléchargement interrompu reprend à partir de la partie déjà reçue. L'inférence locale n'utilise jamais le réseau. Chaque modèle n'est stocké qu'une fois, dans le stockage privé de l'application: désinstaller le plugin ou effacer ses données le supprime; un fichier `.litertlm` situé ailleurs peut être ajouté avec **Importer un fichier de modèle**.
+### Utilisation dans les scripts
 
-## Démarrage rapide (recommandé)
+Les scripts AutoJs6 utilisent ce plugin via le module `ai`. Sans cible, la "Cible par défaut" est utilisée:
 
-Avec AutoJs6 build 5276 ou ultérieur, appelez le plugin directement via le module global `ai`. `plugin: true` sélectionne ce plugin ; si un seul modèle est importé, l'ID de modèle peut être omis.
-
-```javascript
-ai.ask("Hello", { plugin: true }).then((text) => {
+```js
+ai.ask('Introduce AutoJs6 in one sentence.').then((text) => {
     console.log(text);
 });
 ```
 
-Pour conserver un contexte multi-tour, créez une Conversation persistante avec `ai.session`. Les tours suivants envoient uniquement le nouveau prompt utilisateur:
+Pour fixer un modèle précis, trouvez sa cible avec `ai.catalog()` et passez son `id` comme `target`. Cet exemple utilise le premier modèle local disponible:
 
-```javascript
-ai.session({
-    plugin: true,
-    system: "Keep every answer short.",
-}).then((session) => {
-    return session.ask("Remember this code: Orion")
-        .then(() => session.chat("What code should you remember?"))
-        .then((response) => {
-            console.log(response.text);
+```js
+ai.catalog().then((catalog) => {
+    let target = catalog.targets.find((item) => item.available && item.locality === 'local');
+    if (!target) throw new Error('No available local model');
+    return ai.ask('Reply with OK.', { target: target.id, temperature: 0.7 });
+}).then((text) => console.log(text));
+```
+
+Pour une conversation à plusieurs tours, utilisez `ai.session`, n'envoyez que la nouvelle invite à chaque tour et appelez `session.close()` à la fin:
+
+```js
+ai.session({ system: 'Keep every answer short.' }).then((session) => {
+    return session.ask('Remember this code: Orion.')
+        .then(() => session.ask('What code should you remember?'))
+        .then((text) => {
+            console.log(text);
             session.close();
         }, (error) => {
             session.close();
@@ -39,453 +52,33 @@ ai.session({
 });
 ```
 
-Un seul tour peut être actif par session. Appelez toujours `session.close()` à la fin; une annulation, un timeout ou un échec de génération ferme également toute la session.
+- `ai.chat` renvoie la réponse complète avec l'utilisation, et `ai.stream` renvoie le texte au fil de la génération.
+- `temperature`, `topK`, `topP` et `maxTokens` règlent l'échantillonnage et la longueur de sortie; si la cible prend en charge la sortie structurée, passer `responseSchema` renvoie un texte conforme à ce JSON Schema.
+- Si la cible est indisponible ou non configurée, la requête échoue directement (par exemple avec `TARGET_UNAVAILABLE`) et ne bascule jamais vers un autre modèle.
 
-<!-- persistent-context-policy: successful-turns-only; transparent-step-compaction; 512-KiB-transcript-guard; no-hidden-summary; fail-closed -->
-Une session persistante ne conserve que les tours user/assistant terminés avec succès. Au seuil de tokens ou à la limite de transcription de 512 KiB, le plugin reconstruit le backend de façon transparente à partir des messages SYSTEM d'origine et d'un suffixe récent de tours complets; il ne lance jamais de requête de résumé cachée. Le Binder session ID, les options de génération fixes et l'ordre stream/usage/completion restent inchangés. Si les messages SYSTEM, le prompt actuel et le suffixe récent minimal dépassent encore la limite de sécurité absolue, la session échoue en mode fail-closed avec l'erreur invalid-request existante.
+### Prérequis
 
-L'échantillonnage et la longueur de sortie se règlent dans le même objet d'options :
+- Android 7.0 ou version ultérieure, AutoJs6 6.8.0 ou version ultérieure.
+- Les modèles locaux nécessitent un appareil 64 bits (arm64-v8a ou x86_64) et assez d'espace de stockage; la confirmation de téléchargement indique la mémoire minimale requise. Les appareils 32 bits ne peuvent utiliser que les services en ligne.
+- Les services en ligne nécessitent votre propre clé API, et le fournisseur peut facturer l'utilisation.
+- L'autorisation réseau sert à télécharger les modèles, à joindre les services en ligne et à mettre à jour la liste des modèles prédéfinis; l'inférence locale n'utilise pas le réseau. Le plugin ne demande pas d'autorisation de stockage ni de micro.
 
-```javascript
-ai.ask("Hello", {
-    plugin: true,
-    temperature: 0.7,
-    topK: 40,
-    topP: 0.9,
-    // maxTokens: 1024,
-}).then((text) => console.log(text));
-```
+### Questions fréquentes
 
-Passez `responseSchema` pour activer la génération structurée native (`structuredJson: true` sans schema utilise un schema objet-racine par défaut). La promesse produit toujours du texte JSON; n'analysez donc qu'un résultat `ai.ask` ou `ai.chat().text` complet, car les deltas de `ai.stream` sont du texte JSON partiel. Une `ai.session` persistante conserve un schema fixe pour tous ses tours:
+**Différences entre modèles locaux et services en ligne**
 
-```javascript
-let schema = {
-    type: "object",
-    properties: {
-        answer: { type: "string" },
-        ok: { type: "boolean" },
-    },
-    required: [ "answer", "ok" ],
-};
+Les modèles locaux s'exécutent sur le téléphone: les conversations ne quittent pas l'appareil, mais la vitesse et la qualité dépendent du téléphone. Les services en ligne envoient les conversations au fournisseur choisi et nécessitent un réseau et une clé API.
 
-ai.ask("Return answer as OK and ok as true.", {
-    plugin: true,
-    responseSchema: schema,
-}).then((text) => {
-    let value = JSON.parse(text);
-    console.log(value.answer, value.ok);
-});
-```
+**Raisons pour lesquelles un échec ne bascule pas vers un autre modèle**
 
-Énumérez toutes les cibles locales et en ligne, puis épinglez-en une avec son ID `target` exact :
+Les requêtes n'utilisent que le modèle choisi, afin que les conversations ne partent jamais vers un autre service à votre insu. En cas d'échec, vérifiez ce modèle dans "Modèles et services" ou changez de modèle vous-même.
 
-```javascript
-ai.catalog({ plugin: true }).then((catalog) => {
-    console.log("default:", catalog.defaultTarget);
-    catalog.targets.forEach((target) => {
-        console.log(target.id, target.displayName, target.locality);
-        console.log(target.backendProfiles);
-    });
-});
-```
+**Cas où un modèle local ne fonctionne pas**
 
-`ai.ask`, `ai.chat`, `ai.stream` et `ai.session` acceptent le même `target` exact ; `plugin: true` seul utilise la cible par défaut déclarée par le plugin. Un plugin absent ou désactivé et une cible non configurée ou indisponible sont rejetés avec des codes stables comme `AI_PROVIDER_UNAVAILABLE`, `AI_PROVIDER_DISABLED`, `TARGET_NOT_CONFIGURED` ou `TARGET_UNAVAILABLE`. La route ne change jamais automatiquement.
+Ouvrez le menu de ce modèle dans la section "Modèles locaux" et touchez "Vérifier le modèle" pour voir la raison; si la mémoire manque, utilisez un modèle recommandé plus petit.
 
-## Avancé : accès Binder brut
+**Cas où d'autres applications demandent à utiliser l'IA**
 
-Les sections suivantes montrent le chemin protocolaire de bas niveau sans le module `ai`. La plupart des scripts n'en ont pas besoin.
+Avant qu'une application empaquetée avec AutoJs6 et signée séparément puisse utiliser l'IA, 3-Stone AI vous demande de confirmer. Une fois autorisée, elle peut utiliser les modèles locaux et les services en ligne enregistrés, ce qui peut consommer un quota payant; retirez l'accès dans "Paramètres > Confidentialité et autorisations > Applications autorisées pour IA".
 
-## Exemple d'utilisation
-
-Le script Rhino complet ci-dessous utilise le modèle **[gemma-4-E2B-it.litertlm](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/ee5eb9da5d635904dd8f804d79bb6bc5cde92ba1/gemma-4-E2B-it.litertlm?download=true)** comme exemple. Ce téléchargement épinglé possède le SHA-256 `ab7838cdfc8f77e54d8ca45eadceb20452d9f01e4bfade03e5dce27911b27e42`; son identifiant après import est donc `litertlm.ab7838cdfc8f77e54d8ca45eadceb204`. Le fichier téléchargé peut s'appeler `gemma-4-E2B-it.litertlm`; son nom n'affecte pas l'identifiant du modèle. Après l'import, utilisez l'action de copie en haut à droite des instructions du plugin pour copier le script entier. Exécutez-le comme un script Rhino AutoJs6 normal, et non en mode Node.js. Modifiez uniquement `PROMPT` pour essayer une autre requête.
-
-Pour utiliser un autre modèle, touchez la carte du modèle dans la section "Modèles locaux" de **Paramètres > Modèles et services**, copiez son Model ID avec **Copier l'ID du modèle** dans ses détails, et remplacez `MODEL_ID` dans le script. Ne réutilisez pas la valeur de l'exemple.
-
-```javascript
-var PLUGIN_PACKAGE =
-    "io.github.supermonster003.autojs6.plugin.threestoneai";
-
-var SERVICE_CLASS =
-    PLUGIN_PACKAGE + ".provider.ThreeStoneAiProviderService";
-
-// 对应本次模型 SHA-256 的前 32 位
-var MODEL_ID =
-    "litertlm.ab7838cdfc8f77e54d8ca45eadceb204";
-
-var PROMPT =
-    "请用中文列出三条 Android 自动化脚本执行危险操作前应增加确认步骤的理由. 每条一句话.";
-
-var TextApi =
-    Packages.org.autojs.plugin.ai.provider.api;
-
-var CommonApi =
-    Packages.org.autojs.plugin.ai.common.api;
-
-var AiProviderCodec = TextApi.AiProviderCodec.INSTANCE;
-var AiCommonCodec = CommonApi.AiCommonCodec.INSTANCE;
-
-var TimeUnit = java.util.concurrent.TimeUnit;
-var CountDownLatch = java.util.concurrent.CountDownLatch;
-var AtomicBoolean = java.util.concurrent.atomic.AtomicBoolean;
-var AtomicInteger = java.util.concurrent.atomic.AtomicInteger;
-var AtomicReference = java.util.concurrent.atomic.AtomicReference;
-
-var connected = new CountDownLatch(1);
-var finished = new CountDownLatch(1);
-
-var providerRef = new AtomicReference(null);
-var bindError = new AtomicReference(null);
-var terminalError = new AtomicReference(null);
-var finalText = new AtomicReference(null);
-var usageRef = new AtomicReference(null);
-
-var terminalClaimed = new AtomicBoolean(false);
-var returnedCredits = new AtomicInteger(0);
-
-var session = null;
-var bound = false;
-
-function javaString(value) {
-    return new java.lang.String(String(value));
-}
-
-function failTerminal(message) {
-    if (terminalClaimed.compareAndSet(false, true)) {
-        terminalError.set(javaString(message));
-        finished.countDown();
-    }
-}
-
-function describeProtocolError(raw) {
-    try {
-        var error = AiCommonCodec.decodeError(raw);
-        return "AI 错误 code=" + error.getCode() +
-            (error.getMessage() == null
-                ? ""
-                : ": " + error.getMessage());
-    } catch (e) {
-        return "无法解析插件错误: " + e;
-    }
-}
-
-function closeDescriptors(fds) {
-    if (fds == null) return;
-
-    for (var i = 0; i < fds.length; i++) {
-        try {
-            if (fds[i] != null) fds[i].close();
-        } catch (_) {
-        }
-    }
-}
-
-var textCallback = new JavaAdapter(
-    TextApi.IAiCallback.Stub,
-    {
-        onStarted: function (raw) {
-            try {
-                var started =
-                    AiProviderCodec.decodeSessionStarted(raw);
-
-                console.log(
-                    "会话已启动: " + started.getSessionId()
-                );
-            } catch (e) {
-                failTerminal("无法解析会话信息: " + e);
-            }
-        },
-
-        onChunk: function (raw) {
-            try {
-                var chunk =
-                    AiProviderCodec.decodeTextChunk(raw);
-
-                console.log(
-                    "chunk[" + chunk.getSequence() + "]: " +
-                    chunk.getTextDelta()
-                );
-
-                // 只记录待补 credit, 不在 Binder 回调线程反向调用插件
-                returnedCredits.incrementAndGet();
-            } catch (e) {
-                failTerminal("无法解析流式文本: " + e);
-            }
-        },
-
-        onToolCalls: function (raw, fds) {
-            closeDescriptors(fds);
-            failTerminal("插件返回了本示例未启用的工具调用");
-        },
-
-        onUsage: function (raw) {
-            try {
-                usageRef.set(AiCommonCodec.decodeUsage(raw));
-            } catch (e) {
-                failTerminal("无法解析用量信息: " + e);
-            }
-        },
-
-        onCompleted: function (raw, fds) {
-            try {
-                if (!terminalClaimed.compareAndSet(false, true)) {
-                    return;
-                }
-
-                try {
-                    var result =
-                        AiProviderCodec.decodeCompletionResult(raw);
-
-                    var bytes =
-                        result.getOutput().getInlineBytes();
-
-                    if (bytes == null) {
-                        throw new Error("完成结果不是内联文本");
-                    }
-
-                    finalText.set(
-                        new java.lang.String(
-                            bytes,
-                            java.nio.charset.StandardCharsets.UTF_8
-                        )
-                    );
-                } catch (e) {
-                    terminalError.set(
-                        javaString("无法解析完成结果: " + e)
-                    );
-                } finally {
-                    finished.countDown();
-                }
-            } finally {
-                closeDescriptors(fds);
-            }
-        },
-
-        onFailed: function (raw) {
-            failTerminal(describeProtocolError(raw));
-        },
-
-        onCancelled: function () {
-            failTerminal("生成已取消");
-        }
-    }
-);
-
-var connection = new JavaAdapter(
-    android.content.ServiceConnection,
-    {
-        onServiceConnected: function (name, binder) {
-            try {
-                providerRef.set(
-                    TextApi.IAiProvider.Stub.asInterface(binder)
-                );
-            } catch (e) {
-                bindError.set(
-                    javaString("无法创建 provider 接口: " + e)
-                );
-            } finally {
-                connected.countDown();
-            }
-        },
-
-        onServiceDisconnected: function (name) {
-            if (providerRef.get() == null) {
-                bindError.compareAndSet(
-                    null,
-                    javaString("AI provider 已断开")
-                );
-                connected.countDown();
-            } else {
-                failTerminal("AI provider 已断开");
-            }
-        },
-
-        onNullBinding: function (name) {
-            bindError.compareAndSet(
-                null,
-                javaString("AI provider 返回了空 Binder")
-            );
-            connected.countDown();
-        },
-
-        onBindingDied: function (name) {
-            bindError.compareAndSet(
-                null,
-                javaString("AI provider 绑定已失效")
-            );
-            connected.countDown();
-            failTerminal("AI provider 绑定已失效");
-        }
-    }
-);
-
-try {
-    var intent = new android.content.Intent();
-
-    intent.setComponent(
-        new android.content.ComponentName(
-            PLUGIN_PACKAGE,
-            SERVICE_CLASS
-        )
-    );
-
-    bound = context.bindService(
-        intent,
-        connection,
-        android.content.Context.BIND_AUTO_CREATE
-    );
-
-    if (!bound) {
-        throw new Error("无法绑定 3-Stone AI 插件");
-    }
-
-    if (!connected.await(10, TimeUnit.SECONDS)) {
-        throw new Error("绑定 AI provider 超时");
-    }
-
-    if (bindError.get() != null) {
-        throw new Error(String(bindError.get()));
-    }
-
-    var provider = providerRef.get();
-
-    if (provider == null) {
-        throw new Error("AI provider 不可用");
-    }
-
-    // 构造 UTF-8 用户消息
-    var utf8 = new java.lang.String(PROMPT).getBytes(
-        java.nio.charset.StandardCharsets.UTF_8
-    );
-
-    var payload = new CommonApi.AiPayloadReference(
-        "text/plain",
-        utf8.length,
-        null,
-        utf8,
-        null,
-        "utf-8"
-    );
-
-    var part = new TextApi.AiContentPart(payload);
-
-    // role=2 表示 USER
-    var message = new TextApi.AiMessage(
-        2,
-        java.util.Collections.singletonList(part),
-        null
-    );
-
-    var options = new TextApi.AiGenerationOptions(
-        true,   // stream
-        false,  // reasoning
-        false,  // structured JSON
-        true,   // usage
-        65536,  // 插件输出安全上限 64 KiB
-        null,   // 不额外限制 token, 使用模型/引擎默认值
-        0,      // tool rounds
-        300000, // 插件侧超时 5 分钟
-        "text/plain",
-        null,
-        java.util.Arrays.asList("streaming", "usage"),
-        java.lang.Double.valueOf("0.7"), // temperature
-        java.lang.Integer.valueOf("40"), // topK
-        java.lang.Double.valueOf("0.9"), // topP
-        false,  // persistent session
-        "cpu"   // explicit backend profile
-    );
-
-    var request = new TextApi.AiProviderRequest(
-        java.util.UUID.randomUUID().toString(),
-        new CommonApi.AiProtocolVersion(2, 0),
-        "autojs6.three-stone-ai",
-        MODEL_ID,
-        java.util.Collections.singletonList(message),
-        options,
-        java.util.Collections.emptyList()
-    );
-
-    var noDescriptors =
-        java.lang.reflect.Array.newInstance(
-            android.os.ParcelFileDescriptor,
-            0
-        );
-
-    // openSession 会立即开始模型生成
-    session = provider.openSession(
-        AiProviderCodec.encodeTextRequest(request),
-        noDescriptors,
-        textCallback
-    );
-
-    // 建立初始流式窗口
-    session.grantCredits(8);
-
-    var deadline =
-        android.os.SystemClock.elapsedRealtime() + 330000;
-
-    while (
-        finished.getCount() > 0 &&
-        android.os.SystemClock.elapsedRealtime() < deadline
-    ) {
-        finished.await(100, TimeUnit.MILLISECONDS);
-
-        // 在普通脚本线程补回已经消费的 credit
-        var credits = returnedCredits.getAndSet(0);
-
-        if (credits > 0 && finished.getCount() > 0) {
-            session.grantCredits(credits);
-        }
-    }
-
-    if (finished.getCount() > 0) {
-        session.cancel();
-        throw new Error("等待模型生成超时");
-    }
-
-    if (terminalError.get() != null) {
-        throw new Error(String(terminalError.get()));
-    }
-
-    var usage = usageRef.get();
-
-    if (usage == null) {
-        throw new Error("插件未返回用量信息");
-    }
-
-    console.log(
-        "usage: input=" + usage.getInputTokens() +
-        ", output=" + usage.getOutputTokens() +
-        ", total=" + usage.getTotalTokens() +
-        ", durationMillis=" + usage.getDurationMillis()
-    );
-
-    console.log(
-        "\n===== 完整结果 =====\n" + finalText.get()
-    );
-
-    toastLog("模型生成完成");
-} finally {
-    try {
-        if (session != null) session.close();
-    } catch (_) {
-    }
-
-    try {
-        if (bound) context.unbindService(connection);
-    } catch (_) {
-    }
-}
-```
-
-Sécurité et limites opérationnelles:
-
-- Un import de modèle est limité à 8 GiB et doit laisser au moins 256 MiB libres.
-- Le contexte est limité à 256 KiB, la sortie à 64 KiB et une seule session de génération peut être active.
-- `maxTokens` (ou `maximumOutputTokens` dans le protocole direct) accepte de 1 à 2 147 483 647 et s'applique sans exiger de rapport usage. `temperature` doit être fini et positif ou nul, `topK` positif et `topP` fini entre 0 et 1.
-- Si `maxTokens` est omis (ou si `maximumOutputTokens` vaut `null` dans le protocole direct), la valeur par défaut du modèle ou du moteur est utilisée; la limite de sécurité de sortie de 64 KiB du fournisseur reste applicable.
-- Streaming, usage, les sessions persistantes, structured JSON, `text/plain` et `application/json` sont déclarés. Reasoning et tools ne sont pas pris en charge.
-- Le schema de réponse doit être un objet JSON de 64 KiB au maximum; les mots-clés acceptés sont ceux implémentés par le runtime LiteRT-LM/LLGuidance intégré. La sortie structurée complète est analysée et validée strictement, il faut donc réserver assez de `maxTokens` pour la valeur JSON entière.
-- Les tokens de usage proviennent des compteurs de cache KV et decode de Conversation dans LiteRT-LM, sans estimation par caractères. `durationMillis` mesure la génération du fournisseur et exclut la découverte, la liaison, la liste des modèles et la distribution de l'hôte.
-- Le plugin demande `INTERNET` pour les téléchargements de modèles recommandés déclenchés par l'utilisateur, les requêtes vers une cible en ligne configurée et les mises à jour du catalogue public de modèles prédéfinis depuis GitHub sur la page "Modèles et services". Ces mises à jour ne nécessitent aucune clé API, ne lancent aucune inférence et ne démarrent ni à l'activation du plugin ni pendant la génération locale. L'inférence locale n'utilise jamais le réseau. Aucune permission générale de stockage n'est demandée; SAF limite l'accès à la source ou destination choisie.
-- Seul le client AutoJs6 avec la même signature peut lier le service provider.
-- Les générations précédentes nommées par hash SHA-256 sont conservées pour la sécurité interprocessus et continuent d'occuper le stockage privé.
+Toutes les options, les événements et les codes d'erreur figurent au chapitre [Intelligence artificielle (IA)](https://docs.autojs6.com/#/ai) de la documentation AutoJs6; la confidentialité et les limites sont décrites sur la [page du projet](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI).

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!--
+            Debug builds only: the empty host of the Compose tests that set their own content, in place of the exported
+            androidx.activity.ComponentActivity of ui-test-manifest. Not exported; same theme as that activity.
+        -->
+        <activity
+            android:name=".ComposeTestActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+    </application>
+</manifest>

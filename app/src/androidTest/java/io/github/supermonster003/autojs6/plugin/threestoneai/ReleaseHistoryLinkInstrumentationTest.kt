@@ -5,6 +5,7 @@ import android.app.Instrumentation
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.PatternMatcher
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -113,6 +114,9 @@ class ReleaseHistoryLinkInstrumentationTest {
 
     /** For the screenshots of the acceptance list: `Android/data/<package>/files/shots/release-history-links.png`. */
     private fun saveShot() {
+        // captureToImage() copies the window with PixelCopy.request(Window, ...), which API 24 / 25 do not have.
+        // The shot is only acceptance evidence, so these versions keep the assertions above and skip it.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val directory = instrumentation.targetContext.getExternalFilesDir("shots") ?: return
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         File(directory, "release-history-links.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }

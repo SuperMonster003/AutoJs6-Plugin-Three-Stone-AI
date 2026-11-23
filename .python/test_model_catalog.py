@@ -127,6 +127,25 @@ class SourceParserTest(unittest.TestCase):
         with self.assertRaises(catalog.CatalogError):
             catalog.parse_openai_detail(detail, "gpt-11", set())
 
+    def test_openai_accepts_a_listed_model_id_without_a_default_snapshot(self):
+        detail = fixture("openai-detail.md").replace("- Default snapshot: `gpt-10`\n", "")
+        detail = detail.replace("## Snapshots", "## Model IDs")
+        self.assertEqual(catalog.parse_openai_detail(detail, "gpt-10", set()), "gpt-10")
+        self.assertIsNone(catalog.parse_openai_detail(detail, "gpt-10", {"gpt-10"}))
+        self.assertIsNone(catalog.parse_openai_detail(detail.replace("- streaming", "- other"), "gpt-10", set()))
+
+        for invalid in (detail.replace("## Model IDs", "## Examples"),
+                        detail.replace("- `gpt-10`", "- `gpt-10-pro`\n\n## Examples\n\n- `gpt-10`")):
+            with self.subTest(detail=invalid), self.assertRaises(catalog.CatalogError):
+                catalog.parse_openai_detail(invalid, "gpt-10", set())
+
+    def test_openai_checks_an_explicit_default_snapshot_even_with_a_listed_model_id(self):
+        detail = fixture("openai-detail.md").replace("## Snapshots", "## Model IDs")
+        detail = detail.replace("Default snapshot: `gpt-10`", "Default snapshot: `gpt-10-2025-01-01`")
+        self.assertIsNone(catalog.parse_openai_detail(detail, "gpt-10", {"gpt-10-2025-01-01"}))
+        with self.assertRaises(catalog.CatalogError):
+            catalog.parse_openai_detail(detail.replace("`gpt-10-2025-01-01`", "unknown"), "gpt-10", set())
+
     def test_anthropic_maps_current_aliases_and_excludes_retired_and_gated(self):
         pages = {catalog.ANTHROPIC_INDEX: fixture("anthropic-overview.md"),
                  catalog.ANTHROPIC_STATUS: fixture("anthropic-status.md")}

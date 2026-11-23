@@ -298,9 +298,15 @@ def parse_openai_detail(text: str, expected_slug: str, deprecated: set[str]) -> 
     require(match is not None and valid_id(match[1]), "OpenAI detail missing Model ID")
     model = match[1]
     require(model == expected_slug, "OpenAI detail Model ID differs from catalog link")
-    snapshot = re.search(r"^- Default snapshot:\s*`([^`]+)`", text, re.M)
-    require(snapshot is not None, f"OpenAI {model} missing default snapshot")
-    if model in deprecated or snapshot[1] in deprecated:
+    snapshot = re.search(r"^- Default snapshot:(?:\s*`([^`]+)`)?", text, re.M)
+    if snapshot:
+        require(valid_id(snapshot[1]), f"OpenAI {model} invalid default snapshot")
+    else:
+        # Newer pages list requestable model IDs without designating a default snapshot.
+        ids = re.search(r"^## Model IDs[ \t]*\r?\n(.*?)(?=^#{1,6}[ \t]|\Z)", text, re.M | re.S)
+        require(ids is not None and f"- `{model}`" in map(str.strip, ids[1].splitlines()),
+                f"OpenAI {model} missing from Model IDs")
+    if model in deprecated or (snapshot and snapshot[1] in deprecated):
         return None
     if re.search(r"\b(?:approved organizations|limited access|restricted access|trusted access)\b", text, re.I):
         return None

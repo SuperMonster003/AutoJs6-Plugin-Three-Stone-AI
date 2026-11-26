@@ -156,6 +156,10 @@ internal object OnlineAiHeaderPolicy {
         return SECRET_HINTS.any { hint -> hint in lower }
     }
 
+    /** Lower-case names of the secret entries of [headers], in list order. */
+    fun secretKeys(headers: List<OnlineAiCustomHeader>): List<String> =
+        headers.filter { header -> header.kind == OnlineAiHeaderValueKind.SECRET }.map(OnlineAiCustomHeader::key)
+
     /** Trims names and fixed values; keeps the user's order and spelling of names. */
     fun normalize(headers: List<OnlineAiCustomHeader>): List<OnlineAiCustomHeader> = headers.map { header ->
         header.copy(name = header.name.trim(), value = header.value?.trim())

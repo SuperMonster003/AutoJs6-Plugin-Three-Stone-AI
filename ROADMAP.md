@@ -748,6 +748,12 @@ P0 -> P1 -> P2 -> P3 -> P8 -> P10 -> P5a -> P5b -> P4 -> P6 -> P7 -> P9, 每次�
 | D169 | OpenCode Go 的提示 (issues Q74, 选 A, 推荐项) | Base URL 主机为 opencode.ai 且缺会话头时, 编辑页提示并给 "添加" 按钮; 收到 MissingSessionID 时错误说明给出同一入口; 不静默自动添加. |
 | D170 | 验收用的密钥 (立项新题, 选 A, 推荐项) | 不用真实的 OpenCode Go 密钥: 单测用假 `Call.Factory`; 真机用无效占位密钥测试连接, 返回从 400 MissingSessionID 变为 401 即证明请求头已送达. |
 | D171 | 采纳调研的派生技术决策 (T70 - T74), 子会话可在对应条目动工前推翻并登记 | (T70) 限额与校验: 名称 1 - 64 字节, 只允许 RFC 9110 token 字符, 不区分大小写唯一; 值 1 - 1024 字节, 只允许可见 ASCII 与空格 (去首尾空白), 禁止 CR / LF / NUL; 一个服务的全部自定义头合计不超过 8 KiB. (T71) schema 6 按需写: 没有服务用请求头时仍写 schema 5 (降级到 1.7.x 照常读), 有则写 schema 6, `headers` 键只出现在有请求头的服务上; 读取 schema 2 - 6. (T72) 一个服务的全部保密值合成一条加密记录, 记录 ID `<profileId>.headers`; 删除服务, 复制, 导入, 改提供方或主机时与 API Key 同步清除; "清除 API Key" 不动请求头. (T73) 会话号 = `ses_` + SHA-256("3-stone/x-session/v1" NUL profileId NUL 对话键) 的前 32 位小写十六进制; 对话键: 聊天 = conversationId, 摘要检查点 = 所属 conversationId, 脚本持久会话 = persistentSessionId, 其余 (连接测试, 一次性请求) = 每次随机 UUID; 经 `AiBackendSessionRequest` 新增的可选字段 `conversationKey` 传到在线会话再交给适配器. (T74) 单测用假 `Call.Factory`, 真机验收见 D170. |
+| D172 | 内置头名单 (P11.1 定) | 名单只在 `OnlineAiBuiltInHeaders.RESERVED` 定义, 共 22 个: 插件发送 7 个 (accept, cache-control, content-type, authorization, x-api-key, x-goog-api-key, anthropic-version), HTTP 栈管理 15 个 (host, content-length, transfer-encoding, connection, keep-alive, proxy-connection, te, trailer, upgrade, expect, accept-encoding, content-encoding, cookie, proxy-authorization, http2-settings). 三种协议共用一份, 所以任何服务都不能自定义其他协议的凭据头. 报错 `NameReserved(index, owner)` 区分 "由插件发送" 与 "由 HTTP 栈管理". User-Agent 与 anthropic-beta 不在名单里 (D161). |
+| D173 | 校验细节 (P11.1 定) | 名称与固定值先去首尾空白再校验; 名称保留用户写的大小写并照原样发出, 唯一性与名单比较不区分大小写. 合计 8 KiB = 各条名称字节 + 固定值字节 + 已存保密值的实际字节 + 每条 "每个对话自动生成" 按 36 字节 (`ses_` + 32 位十六进制) 计. 一次收集全部问题, 每个问题带行号, 类型为密封类 `OnlineAiHeaderProblem` (11 种, 文案归 P12); 异常消息只写问题类型, 不含任何值. |
+| D174 | 编码细节 (P11.2 定) | `headers` 键放在服务对象末尾 (`fastMode` 之后), 条目键依次为 name, kind, value; kind 取 `fixed` / `secret` / `conversation`; 固定值条目必须有 value, 另两种不得有. 空数组, 非数组, 重复键, 未知键, schema 5 及以下出现 `headers` 都拒绝; schema 6 但没有任何请求头的文件照常读, 下次写回 schema 5. 导出文件用同一格式, 保密值本来就不在服务配置里. |
+| D175 | 保密值的保留与清除 (P11.3 定) | 保存默认保留 (`Keep`): 仍是保密头且名称不变 (不区分大小写) 的值保留, 删除, 改名或改成其他取值方式的头的值丢弃 (改名后为 "未设置"). 复制与导入生成新的服务 ID, 保密值都是 "未设置". 改提供方或主机时与 API Key 一起清除 (同时先清旧值再写新配置). "清除 API Key" 与 "清除保密值" (`Clear`) 互不影响. |
+| D176 | 记录读不出时 (P11.3 定) | 保存与查询 (`configuredHeaderSecrets`) 把读不出的记录当作 "未设置", 不妨碍编辑, 下次写入覆盖; 发请求时读不出或格式不符, 整次请求以 CREDENTIAL_UNAVAILABLE 失败, 不在缺头的情况下发出. 从未设置值的保密头不发送 (P11.4). |
+| D177 | 保密值记录 (P11.3 定) | 记录只在服务声明了保密头时存在, 读取与清除也只在那时发生, 所以没有保密头的服务的凭据存取与 1.7.2 完全相同. 明文为 `v1` 行加每个值一行 `小写名称:值` (LF 结尾), 解析严格, 不符即视为读不出 (D176). |
 
 ### 3. 阶段条目
 
@@ -755,9 +761,9 @@ P0 -> P1 -> P2 -> P3 -> P8 -> P10 -> P5a -> P5b -> P4 -> P6 -> P7 -> P9, 每次�
 
 #### P11 数据与请求层 (约 3 天; 不动界面, 只用单测验收, 不需要设备)
 
-- [ ] P11.1 数据模型与校验: `OnlineAiProfile` 加 `headers` (D160), 按 T70 校验; 内置头名单与同名规则 (D161), 名单集中定义并由单测逐项覆盖 (不区分大小写).
-- [ ] P11.2 编码: schema 6 按需写, 读取 schema 2 - 6 (T71). 验收: 没有请求头的配置写出后与 1.7.2 的输出逐字节相同; 带请求头的配置往返一致; 未知键仍被拒绝.
-- [ ] P11.3 保密值存储与同步清理 (D162, T72): 加密记录, 删除 / 复制 / 导入 / 改提供方或主机时清除, "清除 API Key" 不动请求头; 导出不带保密值, 固定值随导出; 导入后保密值为 "未设置".
+- [x] P11.1 数据模型与校验: `OnlineAiProfile` 加 `headers` (D160), 按 T70 校验; 内置头名单与同名规则 (D161), 名单集中定义并由单测逐项覆盖 (不区分大小写). 完成 (`bee1852`): `OnlineAiCustomHeaders.kt` (D172, D173), `OnlineAiCustomHeadersTest` 12 例, 其中 22 个内置头逐个以小写, 大写, 首字母大写与带首尾空白四种写法核对.
+- [x] P11.2 编码: schema 6 按需写, 读取 schema 2 - 6 (T71). 验收: 没有请求头的配置写出后与 1.7.2 的输出逐字节相同; 带请求头的配置往返一致; 未知键仍被拒绝. 完成 (`bee1852`, D174): `OnlineAiProfileCodecHeadersTest` 5 例 (1.7.2 固定样本逐字节相同, 往返, 18 种畸形或未知键被拒, 导出带固定值不带保密值); 单测 707 -> 724 例.
+- [x] P11.3 保密值存储与同步清理 (D162, T72): 加密记录, 删除 / 复制 / 导入 / 改提供方或主机时清除, "清除 API Key" 不动请求头; 导出不带保密值, 固定值随导出; 导入后保密值为 "未设置". 完成 (提交 hash 随 P11.4 回填, D175 - D177): `OnlineAiHeaderSecrets.kt` 与注册表的 `headerSecretsUpdate`, `OnlineAiProfileRegistryHeaderSecretsTest` 13 例 (逐步核对凭据存储的读写清除顺序); 单测 724 -> 737 例.
 - [ ] P11.4 请求层: `OnlineAiRequestSupport.prepare` 合并自定义头, 三个协议适配器都传入 (D165); User-Agent 替换与 anthropic-beta 合并 (D161); 去掉 `fixedHeaders` 的静默覆盖. 验收: 假 `Call.Factory` 抓到的三种协议请求都带上配置的头, 内置头的值不被改写.
 - [ ] P11.5 会话号贯通 (D163, D164, T73): `conversationKey` 经聊天, 摘要检查点, 脚本持久会话, 连接测试四个调用方传入. 验收 (单测): 同一对话在后端会话重建 (压缩, 换同一服务的模型, 进程重启后恢复) 前后会话号相同; 不同对话或不同服务不同; 连接测试每次不同; 摘要检查点与所属对话相同.
 - [ ] P11.6 脱敏: 错误详情, 日志与诊断输出不含保密值 (与 API Key 同一套脱敏), 单测覆盖 4xx 回显请求头的情形.

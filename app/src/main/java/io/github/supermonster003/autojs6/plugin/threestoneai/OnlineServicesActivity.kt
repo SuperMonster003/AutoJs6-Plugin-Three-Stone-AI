@@ -441,6 +441,7 @@ abstract class OnlineServicesActivity : ConfiguredActivity() {
                 visionModelIds = profile.visionModelIds,
                 defaultEffort = profile.defaultEffort,
                 fastMode = profile.fastMode,
+                headers = profile.headers,
             )
         }.getOrElse {
             showSnackbar(screenRoot, getString(R.string.online_ai_profile_clone_failed), Snackbar.LENGTH_LONG)
@@ -513,6 +514,7 @@ abstract class OnlineServicesActivity : ConfiguredActivity() {
                         visionModelIds = source.visionModelIds,
                         defaultEffort = source.defaultEffort,
                         fastMode = source.fastMode,
+                        headers = source.headers,
                     ),
                     OnlineAiCredentialUpdate.Clear,
                 )

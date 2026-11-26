@@ -31,6 +31,11 @@ internal object OnlineAiProfileCodec {
     /** Schema 5: "defaultEffort" is a [GenerationEffort.persistentId], "fastMode" a boolean. */
     private val PROFILE_KEYS = VISION_PROFILE_KEYS + "defaultEffort" + "fastMode"
 
+    /** Schema 6: "headers" appears only on profiles that have at least one custom header (T71). */
+    private val HEADER_PROFILE_KEYS = PROFILE_KEYS + "headers"
+    private val FIXED_HEADER_KEYS = setOf("name", "kind", "value")
+    private val DERIVED_HEADER_KEYS = setOf("name", "kind")
+
     fun encode(document: OnlineAiProfileDocument): ByteArray {
         val normalized = OnlineAiProfilePolicy.normalize(document)
         val profiles = normalized.profiles.joinToString(",", "[", "]") { profile ->
@@ -44,16 +49,36 @@ internal object OnlineAiProfileCodec {
                 "\"visionModelIds\":${profile.visionModelIds.joinToString(",", "[", "]", transform = ::quote)}," +
                 "\"defaultEffort\":${quote(profile.defaultEffort.persistentId)}," +
                 "\"fastMode\":${profile.fastMode}" +
+                encodeHeaders(profile.headers) +
                 "}"
         }
+        val schema = if (normalized.profiles.any { it.headers.isNotEmpty() }) {
+            OnlineAiProfilePolicy.HEADERS_SCHEMA
+        } else {
+            OnlineAiProfilePolicy.EFFORT_SCHEMA
+        }
         return ("{" +
-            "\"schema\":${OnlineAiProfilePolicy.SCHEMA}," +
+            "\"schema\":$schema," +
             "\"revision\":${normalized.revision}," +
             "\"defaultProfileId\":${normalized.defaultProfileId?.let(::quote) ?: "null"}," +
             "\"allowMeteredNetwork\":${normalized.allowMeteredNetwork}," +
             "\"profiles\":$profiles" +
             "}").toByteArray(Charsets.UTF_8).also { bytes ->
             require(bytes.size in 1..MAXIMUM_DOCUMENT_BYTES) { "Online AI profile document is too large" }
+        }
+    }
+
+    /** Secret entries are written without a value: their values never leave the credential store. */
+    private fun encodeHeaders(headers: List<OnlineAiCustomHeader>): String {
+        if (headers.isEmpty()) return ""
+        return ",\"headers\":" + headers.joinToString(",", "[", "]") { header ->
+            "{" +
+                "\"name\":${quote(header.name)}," +
+                "\"kind\":${quote(header.kind.wireId)}" +
+                (header.value?.takeIf { header.kind == OnlineAiHeaderValueKind.FIXED }
+                    ?.let { value -> ",\"value\":${quote(value)}" }
+                    .orEmpty()) +
+                "}"
         }
     }
 
@@ -107,8 +132,11 @@ internal object OnlineAiProfileCodec {
         require(decodedProfiles.all { it.hasVisionModelIds == (decodedSchema >= OnlineAiProfilePolicy.VISION_SCHEMA) }) {
             "Online AI image capabilities do not match the document schema"
         }
-        require(decodedProfiles.all { it.hasEffortSettings == (decodedSchema >= OnlineAiProfilePolicy.SCHEMA) }) {
+        require(decodedProfiles.all { it.hasEffortSettings == (decodedSchema >= OnlineAiProfilePolicy.EFFORT_SCHEMA) }) {
             "Online AI effort settings do not match the document schema"
+        }
+        require(decodedSchema >= OnlineAiProfilePolicy.HEADERS_SCHEMA || decodedProfiles.none(DecodedProfile::hasHeaders)) {
+            "Online AI custom headers do not match the document schema"
         }
         return OnlineAiProfilePolicy.normalize(
             OnlineAiProfileDocument(
@@ -145,11 +173,12 @@ internal object OnlineAiProfileCodec {
         var visionModelIds: List<String>? = null
         var defaultEffort: GenerationEffort? = null
         var fastMode: Boolean? = null
+        var headers: List<OnlineAiCustomHeader>? = null
         val keys = linkedSetOf<String>()
         beginObject()
         while (hasNext()) {
             val name = nextName()
-            require(name in PROFILE_KEYS && keys.add(name)) { "Online AI profile keys are invalid" }
+            require(name in HEADER_PROFILE_KEYS && keys.add(name)) { "Online AI profile keys are invalid" }
             when (name) {
                 "profileId" -> profileId = nextStrictString("Online AI profile ID")
                 "displayName" -> displayName = nextStrictString("Online AI profile display name")
@@ -162,11 +191,16 @@ internal object OnlineAiProfileCodec {
                     nextStrictString("Online AI default effort"),
                 ) ?: throw IllegalArgumentException("Online AI default effort is unsupported")
                 "fastMode" -> fastMode = nextStrictBoolean("Online AI fast mode")
+                "headers" -> headers = readHeaders()
             }
         }
         endObject()
         require(
-            keys == LEGACY_PROFILE_KEYS || keys == MULTI_MODEL_KEYS || keys == VISION_PROFILE_KEYS || keys == PROFILE_KEYS,
+            keys == LEGACY_PROFILE_KEYS ||
+                keys == MULTI_MODEL_KEYS ||
+                keys == VISION_PROFILE_KEYS ||
+                keys == PROFILE_KEYS ||
+                keys == HEADER_PROFILE_KEYS,
         ) {
             "Online AI profile is incomplete"
         }
@@ -182,11 +216,52 @@ internal object OnlineAiProfileCodec {
                 visionModelIds = visionModelIds ?: emptyList(),
                 defaultEffort = defaultEffort ?: GenerationEffort.DEFAULT,
                 fastMode = fastMode ?: false,
+                headers = headers ?: emptyList(),
             ),
             hasModelIds = modelIds != null,
             hasVisionModelIds = visionModelIds != null,
             hasEffortSettings = defaultEffort != null,
+            hasHeaders = headers != null,
         )
+    }
+
+    /** A non-empty array of {name, kind[, value]}; content rules are applied by normalization (T70). */
+    private fun JsonReader.readHeaders(): List<OnlineAiCustomHeader> {
+        require(peek() == JsonToken.BEGIN_ARRAY) { "Online AI custom headers must be an array" }
+        val result = ArrayList<OnlineAiCustomHeader>()
+        beginArray()
+        while (hasNext()) {
+            require(result.size < OnlineAiHeaderPolicy.MAXIMUM_HEADERS) {
+                "An online AI profile has too many custom headers"
+            }
+            result += readHeader()
+        }
+        endArray()
+        require(result.isNotEmpty()) { "Online AI custom headers must not be empty" }
+        return result
+    }
+
+    private fun JsonReader.readHeader(): OnlineAiCustomHeader {
+        require(peek() == JsonToken.BEGIN_OBJECT) { "Online AI custom header must be an object" }
+        var name: String? = null
+        var kind: OnlineAiHeaderValueKind? = null
+        var value: String? = null
+        val keys = linkedSetOf<String>()
+        beginObject()
+        while (hasNext()) {
+            val key = nextName()
+            require(key in FIXED_HEADER_KEYS && keys.add(key)) { "Online AI custom header keys are invalid" }
+            when (key) {
+                "name" -> name = nextStrictString("Online AI custom header name")
+                "kind" -> kind = OnlineAiHeaderValueKind.fromWireId(nextStrictString("Online AI custom header kind"))
+                "value" -> value = nextStrictString("Online AI custom header value")
+            }
+        }
+        endObject()
+        val requiredKind = requireNotNull(kind) { "Online AI custom header is incomplete" }
+        val expectedKeys = if (requiredKind == OnlineAiHeaderValueKind.FIXED) FIXED_HEADER_KEYS else DERIVED_HEADER_KEYS
+        require(keys == expectedKeys) { "Online AI custom header is incomplete" }
+        return OnlineAiCustomHeader(name = requireNotNull(name), kind = requiredKind, value = value)
     }
 
     private fun JsonReader.readModelIds(): List<String> {
@@ -268,12 +343,14 @@ internal object OnlineAiProfileCodec {
         val hasModelIds: Boolean,
         val hasVisionModelIds: Boolean,
         val hasEffortSettings: Boolean,
+        val hasHeaders: Boolean,
     )
 
     private val SUPPORTED_SCHEMAS = setOf(
         OnlineAiProfilePolicy.LEGACY_SCHEMA,
         OnlineAiProfilePolicy.MULTI_MODEL_SCHEMA,
         OnlineAiProfilePolicy.VISION_SCHEMA,
-        OnlineAiProfilePolicy.SCHEMA,
+        OnlineAiProfilePolicy.EFFORT_SCHEMA,
+        OnlineAiProfilePolicy.HEADERS_SCHEMA,
     )
 }

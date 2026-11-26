@@ -68,6 +68,8 @@ internal data class OnlineAiProfile(
     val defaultEffort: GenerationEffort = GenerationEffort.DEFAULT,
     /** Fast output mode each new chat conversation starts from; only Anthropic profiles keep it (D74). */
     val fastMode: Boolean = false,
+    /** Ordered custom request headers sent with every inference request (D160); none by default. */
+    val headers: List<OnlineAiCustomHeader> = emptyList(),
 ) {
     val declaredHttpsOrigin: String
         get() = OnlineAiProfileUrls.origin(baseUrl)
@@ -82,6 +84,7 @@ internal data class OnlineAiProfile(
             visionModelIds: List<String> = emptyList(),
             defaultEffort: GenerationEffort = GenerationEffort.DEFAULT,
             fastMode: Boolean = false,
+            headers: List<OnlineAiCustomHeader> = emptyList(),
         ): OnlineAiProfile = OnlineAiProfilePolicy.normalizeProfile(
             OnlineAiProfile(
                 profileId = UUID.randomUUID().toString(),
@@ -93,6 +96,7 @@ internal data class OnlineAiProfile(
                 visionModelIds = visionModelIds,
                 defaultEffort = defaultEffort,
                 fastMode = fastMode,
+                headers = headers,
             ),
         )
     }
@@ -123,8 +127,14 @@ internal data class OnlineAiProfileDeletion(
 )
 
 internal object OnlineAiProfilePolicy {
+    /**
+     * Schema 6 adds per-profile custom request headers. It is written only when at least one
+     * profile has headers; otherwise documents stay schema 5, byte-identical to 1.7.2 (T71).
+     */
+    const val HEADERS_SCHEMA = 6
+
     /** Schema 5 adds defaultEffort and fastMode; older documents decode as DEFAULT / false. */
-    const val SCHEMA = 5
+    const val EFFORT_SCHEMA = 5
     const val VISION_SCHEMA = 4
     const val MULTI_MODEL_SCHEMA = 3
     const val LEGACY_SCHEMA = 2
@@ -181,6 +191,7 @@ internal object OnlineAiProfilePolicy {
             modelIds = modelIds,
             visionModelIds = modelIds.filter { it in visionModelIds },
             fastMode = profile.fastMode && OnlineAiEffortSupport.supportsFast(profile.provider.protocol),
+            headers = OnlineAiHeaderPolicy.requireValid(profile.headers),
         )
     }
 

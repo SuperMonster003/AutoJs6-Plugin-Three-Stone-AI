@@ -66,6 +66,7 @@ internal interface OnlineAiProtocolAdapter {
         messages: List<GenerationMessage>,
         turn: GenerationRequest,
         credential: ByteArray,
+        headers: OnlineAiRequestHeaders = OnlineAiRequestHeaders.NONE,
     ): PreparedOnlineAiRequest
 
     fun parseEvent(event: OnlineAiSseEvent, tools: OnlineAiToolCollector? = null): OnlineAiStreamChunk
@@ -88,11 +89,13 @@ private object OpenAiCompatibleProtocolAdapter : OnlineAiProtocolAdapter {
         messages: List<GenerationMessage>,
         turn: GenerationRequest,
         credential: ByteArray,
+        headers: OnlineAiRequestHeaders,
     ): PreparedOnlineAiRequest = OpenAiCompatibleRequestFactory.prepare(
         profile = profile,
         messages = messages,
         turn = turn,
         credential = credential,
+        headers = headers,
     )
 
     override fun parseEvent(event: OnlineAiSseEvent, tools: OnlineAiToolCollector?): OnlineAiStreamChunk =

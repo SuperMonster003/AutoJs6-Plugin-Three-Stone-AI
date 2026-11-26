@@ -605,6 +605,7 @@ internal class ChatGenerationCoordinator internal constructor(
                 AiBackendSessionRequest(
                     targetId = requestedTarget.targetId,
                     executionProfileId = request.executionProfileId,
+                    conversationKey = request.conversationId,
                 ),
             )
             val actualTarget = ConversationTargetSnapshot.from(created.target)
@@ -1177,6 +1178,7 @@ internal class ChatGenerationCoordinator internal constructor(
             SummaryCheckpointRequest(
                 targetId = target.targetId,
                 executionProfileId = target.chatExecutionProfileId(),
+                conversationId = conversationId,
                 structuredJson = target.capabilities.structuredJson,
                 plan = plan,
                 state = stateSnapshot,

@@ -20,6 +20,8 @@ class OnlineAiConnectionTestTest {
         OnlineAiConnectionTest(backend, PROFILE_ID).use { it.execute() }
 
         assertEquals(AiTargetIds.profile(PROFILE_ID), backend.request?.targetId)
+        // A connection test belongs to no conversation: every run gets a fresh session ID (T73).
+        assertEquals(null, backend.request?.conversationKey)
         val request = requireNotNull(session.request)
         assertTrue(request.history.isEmpty())
         assertEquals(GenerationRole.USER, request.prompt.role)

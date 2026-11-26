@@ -7,7 +7,6 @@ import android.util.Log
 import io.github.supermonster003.autojs6.plugin.threestoneai.ThreeStoneAiPlugin
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSession
-import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetUnavailableException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationStatistics
@@ -37,7 +36,6 @@ import org.autojs.plugin.ai.provider.api.AiProviderPayloadPolicy
 import org.autojs.plugin.ai.provider.api.AiProviderLimits
 import org.autojs.plugin.ai.provider.api.AiToolCallBatch
 import org.autojs.plugin.ai.provider.api.AiToolTurnPolicy
-import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
@@ -79,7 +77,7 @@ internal class RemoteThreeStoneAiSession(
     private val backendSession = AtomicReference<AiBackendSession?>()
     private val activeTurn = AtomicReference<Turn?>()
     private val fixedConfiguration = AtomicReference<FixedConfiguration?>()
-    private val persistentSessionId = AtomicReference<String?>()
+    private val sessionIdentity = ScriptSessionIdentity(persistent)
     private val persistentContext = PersistentSessionContext()
 
     override fun grantCredits(count: Int) {
@@ -454,9 +452,10 @@ internal class RemoteThreeStoneAiSession(
     private fun createAndInstallBackend(request: AiProviderRequest): AiBackendSession {
         val created = try {
             aiBackend.createSession(
-                AiBackendSessionRequest(
+                sessionIdentity.backendRequest(
                     targetId = request.targetId,
-                    executionProfileId = request.options.backendProfile,
+                    backendProfile = request.options.backendProfile,
+                    requestId = request.requestId,
                 ),
             )
         } catch (_: AiTargetUnavailableException) {
@@ -576,13 +575,9 @@ internal class RemoteThreeStoneAiSession(
 
         fun emitStarted(request: AiProviderRequest) {
             ensureActive()
-            val sessionId = persistentSessionId.get() ?: SessionIds.create(
-                request.requestId,
-                UUID.randomUUID().toString(),
-            ).also { created -> persistentSessionId.compareAndSet(null, created) }
             val metadata = AiSessionStarted(
                 requestId = request.requestId,
-                sessionId = persistentSessionId.get() ?: sessionId,
+                sessionId = sessionIdentity.sessionId(request.requestId),
                 protocolVersion = request.protocolVersion,
                 providerId = ThreeStoneAiPlugin.PROVIDER_ID,
                 targetId = request.targetId,

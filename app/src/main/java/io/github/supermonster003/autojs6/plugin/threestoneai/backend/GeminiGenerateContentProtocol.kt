@@ -15,6 +15,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
         messages: List<GenerationMessage>,
         turn: GenerationRequest,
         credential: ByteArray,
+        headers: OnlineAiRequestHeaders,
     ): PreparedOnlineAiRequest {
         val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
         require(normalized.provider.protocol == OnlineAiProtocol.GEMINI_GENERATE_CONTENT) {
@@ -103,6 +104,7 @@ internal object GeminiGenerateContentProtocolAdapter : OnlineAiProtocolAdapter {
             credential = credential,
             withImages = OnlineAiImages.hasBinaryContent(messages),
             credentialHeader = OnlineAiCredentialHeader.GEMINI_API_KEY,
+            customHeaders = headers,
         )
     }
 

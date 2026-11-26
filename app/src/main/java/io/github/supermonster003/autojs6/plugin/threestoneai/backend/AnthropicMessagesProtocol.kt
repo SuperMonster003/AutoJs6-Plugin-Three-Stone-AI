@@ -17,6 +17,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
         messages: List<GenerationMessage>,
         turn: GenerationRequest,
         credential: ByteArray,
+        headers: OnlineAiRequestHeaders,
     ): PreparedOnlineAiRequest {
         val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
         require(normalized.provider.protocol == OnlineAiProtocol.ANTHROPIC_MESSAGES) {
@@ -100,7 +101,7 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
                 })
             }
         }
-        val headers = buildMap {
+        val protocolHeaders = buildMap {
             put("anthropic-version", ANTHROPIC_VERSION)
             if (fast && OnlineAiEffortSupport.anthropicFastNeedsBeta(normalized.modelId)) {
                 put("anthropic-beta", OnlineAiEffortSupport.ANTHROPIC_FAST_BETA)
@@ -112,7 +113,8 @@ internal object AnthropicMessagesProtocolAdapter : OnlineAiProtocolAdapter {
             credential = credential,
             withImages = OnlineAiImages.hasBinaryContent(messages),
             credentialHeader = OnlineAiCredentialHeader.ANTHROPIC_API_KEY,
-            fixedHeaders = headers,
+            protocolHeaders = protocolHeaders,
+            customHeaders = headers,
         )
     }
 

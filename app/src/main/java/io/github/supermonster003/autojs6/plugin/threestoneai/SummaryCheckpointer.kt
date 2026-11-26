@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicReference
 internal data class SummaryCheckpointRequest(
     val targetId: String,
     val executionProfileId: String?,
+    /** The summarized conversation; its custom headers get the conversation's session ID (T73). */
+    val conversationId: String,
     val structuredJson: Boolean,
     val plan: SummaryCheckpointPlan,
     val state: ConversationContextState,
@@ -23,6 +25,7 @@ internal data class SummaryCheckpointRequest(
     init {
         require(targetId.isNotBlank())
         require(executionProfileId == null || executionProfileId.isNotBlank())
+        require(conversationId.isNotEmpty())
         require(maximumInputTokens > 0L)
     }
 }
@@ -125,6 +128,7 @@ internal class SummaryCheckpointer(
                     AiBackendSessionRequest(
                         targetId = request.targetId,
                         executionProfileId = request.executionProfileId,
+                        conversationKey = request.conversationId,
                     ),
                 )
             } catch (error: Throwable) {

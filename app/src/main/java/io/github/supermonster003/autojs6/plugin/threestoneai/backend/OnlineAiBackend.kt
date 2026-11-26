@@ -23,6 +23,8 @@ internal interface OnlineAiExecution {
         target: AiTarget,
         profile: OnlineAiProfile,
         credentialAccess: OnlineAiProfileCredentialAccess,
+        /** Conversation the session belongs to (T73); null gives a fresh random session ID. */
+        conversationKey: String? = null,
     ): AiBackendSession
 }
 
@@ -78,6 +80,7 @@ internal class OnlineAiBackend(
             target = selectedTarget,
             profile = effectiveProfile,
             credentialAccess = registry.bindCredential(configured.profile),
+            conversationKey = request.conversationKey,
         )
     }
 

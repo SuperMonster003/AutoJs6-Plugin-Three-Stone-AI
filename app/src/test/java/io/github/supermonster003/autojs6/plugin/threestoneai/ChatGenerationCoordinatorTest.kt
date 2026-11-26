@@ -296,6 +296,20 @@ class ChatGenerationCoordinatorTest {
     }
 
     @Test
+    fun `each conversation opens its backend with its own conversation key`() {
+        val coordinator = coordinator()
+        store.put(conversation("c1"))
+        coordinator.attach(Screen("c2"))
+        coordinator.start(request("c1"))
+        backend.sessions.single().listener.onTextDelta("background")
+        scheduler.runAll()
+
+        coordinator.start(request("c2"))
+
+        assertEquals(listOf("c1", "c2"), backend.sessionRequests.map { request -> request.conversationKey })
+    }
+
+    @Test
     fun `a new turn stops the background reply of another conversation`() {
         val coordinator = coordinator()
         store.put(conversation("c1"))
@@ -543,6 +557,7 @@ class ChatGenerationCoordinatorTest {
 
     private class FakeBackend(private val target: AiTarget) : AiBackend {
         val sessions = CopyOnWriteArrayList<FakeSession>()
+        val sessionRequests = CopyOnWriteArrayList<AiBackendSessionRequest>()
         private val created = CountDownLatch(1)
 
         @Volatile
@@ -556,6 +571,7 @@ class ChatGenerationCoordinatorTest {
 
         override fun createSession(request: AiBackendSessionRequest): AiBackendSession =
             FakeSession(target, blockStreams).also { session ->
+                sessionRequests += request
                 sessions += session
                 created.countDown()
             }

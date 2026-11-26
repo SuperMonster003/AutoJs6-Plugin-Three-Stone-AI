@@ -39,9 +39,15 @@ internal class OnlineAiFailureException(
     }
 
     /** The same failure with every occurrence of [secret] masked in [providerDetail]. */
-    fun withoutSecret(secret: ByteArray): OnlineAiFailureException {
+    fun withoutSecret(secret: ByteArray): OnlineAiFailureException = withoutSecrets(listOf(secret))
+
+    /**
+     * The same failure with the request's [secrets] (API Key and secret header values) masked in
+     * [providerDetail] (D181); the arrays stay owned by the caller.
+     */
+    fun withoutSecrets(secrets: List<ByteArray>): OnlineAiFailureException {
         val detail = providerDetail ?: return this
-        val masked = OnlineAiProviderDetail.withoutSecret(detail, secret)
+        val masked = OnlineAiProviderDetail.withoutSecrets(detail, secrets)
         return if (masked == detail) this else OnlineAiFailureException(reason, statusCode, masked)
     }
 

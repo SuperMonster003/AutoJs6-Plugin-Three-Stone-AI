@@ -53,12 +53,20 @@ internal object OnlineAiRequestSupport {
         .setStrictness(Strictness.STRICT)
         .create()
 
+    const val DEFAULT_USER_AGENT = "AutoJs6-Three-Stone-AI/1"
+
+    /**
+     * Builds the single inference request shape of every protocol. [protocolHeaders] are headers the
+     * plugin sends for the protocol (for example anthropic-version) and must not repeat the common
+     * ones; [customHeaders] come from the service configuration and are applied last (D161, D165).
+     */
     fun prepare(
         url: HttpUrl,
         json: JsonObject,
         credential: ByteArray,
         credentialHeader: OnlineAiCredentialHeader,
-        fixedHeaders: Map<String, String> = emptyMap(),
+        protocolHeaders: Map<String, String> = emptyMap(),
+        customHeaders: OnlineAiRequestHeaders = OnlineAiRequestHeaders.NONE,
         withImages: Boolean = false,
     ): PreparedOnlineAiRequest {
         requireCredential(credential)
@@ -70,25 +78,26 @@ internal object OnlineAiRequestSupport {
         val body = ErasableOneShotJsonRequestBody(content, JSON)
         return try {
             val credentialText = String(credential, Charsets.US_ASCII)
-            val request = Request.Builder()
+            val builder = Request.Builder()
                 .url(url)
                 .post(body)
-                .header("Accept", "text/event-stream")
-                .header("Cache-Control", "no-store")
-                .header("Content-Type", JSON.toString())
-                .header("User-Agent", "AutoJs6-Three-Stone-AI/1")
-                .apply {
-                    when (credentialHeader) {
-                        OnlineAiCredentialHeader.BEARER ->
-                            header("Authorization", "Bearer $credentialText")
-                        OnlineAiCredentialHeader.ANTHROPIC_API_KEY ->
-                            header("x-api-key", credentialText)
-                        OnlineAiCredentialHeader.GEMINI_API_KEY ->
-                            header("x-goog-api-key", credentialText)
-                    }
-                    fixedHeaders.forEach { (name, value) -> header(name, value) }
+            OnlineAiOutgoingHeaders(builder).apply {
+                plugin("Accept", "text/event-stream")
+                plugin("Cache-Control", "no-store")
+                plugin("Content-Type", JSON.toString())
+                plugin("User-Agent", DEFAULT_USER_AGENT)
+                when (credentialHeader) {
+                    OnlineAiCredentialHeader.BEARER ->
+                        plugin("Authorization", "Bearer $credentialText")
+                    OnlineAiCredentialHeader.ANTHROPIC_API_KEY ->
+                        plugin("x-api-key", credentialText)
+                    OnlineAiCredentialHeader.GEMINI_API_KEY ->
+                        plugin("x-goog-api-key", credentialText)
                 }
-                .build()
+                protocolHeaders.forEach { (name, value) -> plugin(name, value) }
+                custom(customHeaders)
+            }
+            val request = builder.build()
             PreparedOnlineAiRequest(request, body)
         } catch (error: Throwable) {
             body.close()
@@ -169,6 +178,7 @@ internal object OpenAiCompatibleRequestFactory {
         messages: List<GenerationMessage>,
         turn: GenerationRequest,
         credential: ByteArray,
+        headers: OnlineAiRequestHeaders = OnlineAiRequestHeaders.NONE,
     ): PreparedOnlineAiRequest {
         val normalized = OnlineAiProfilePolicy.normalizeProfile(profile)
         require(normalized.provider.protocol == OnlineAiProtocol.OPENAI_COMPATIBLE) {
@@ -230,6 +240,7 @@ internal object OpenAiCompatibleRequestFactory {
             credential = credential,
             withImages = OnlineAiImages.hasBinaryContent(messages),
             credentialHeader = OnlineAiCredentialHeader.BEARER,
+            customHeaders = headers,
         )
     }
 

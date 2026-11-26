@@ -136,10 +136,18 @@ internal data class AiTargetCatalog(
 internal data class AiBackendSessionRequest(
     val targetId: String,
     val executionProfileId: String? = null,
+    /**
+     * Stable key of the conversation the session serves (T73): the chat conversation ID, the
+     * conversation of a summary checkpoint, or the script persistent session ID. Online services
+     * derive the value of "per conversation" request headers from it; null means a request that
+     * belongs to no conversation and gets a fresh ID. Local backends ignore it.
+     */
+    val conversationKey: String? = null,
 ) {
     init {
         require(targetId.isNotBlank())
         require(executionProfileId == null || executionProfileId.isNotBlank())
+        require(conversationKey == null || conversationKey.isNotEmpty())
     }
 }
 

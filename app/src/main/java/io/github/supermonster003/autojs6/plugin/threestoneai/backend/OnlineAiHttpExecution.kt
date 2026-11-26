@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.backend
 
 import io.github.supermonster003.autojs6.plugin.threestoneai.credential.AiCredentialUnavailableException
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiHeaderSecrets
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfile
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileChangedException
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileCredentialAccess
@@ -21,6 +22,14 @@ import javax.net.ssl.SSLException
 
 internal fun interface OnlineAiCredentialRunner {
     fun run(action: (ByteArray) -> Unit)
+
+    /**
+     * Runs [action] with the API Key and the secret header values of the bound profile, captured
+     * together (T72). Runners without secret headers hand over [OnlineAiHeaderSecrets.NONE].
+     */
+    fun runWithHeaderSecrets(action: (ByteArray, OnlineAiHeaderSecrets) -> Unit) {
+        run { credential -> action(credential, OnlineAiHeaderSecrets.NONE) }
+    }
 }
 
 /** Production HTTPS execution boundary shared by all online provider protocols. */
@@ -84,6 +93,7 @@ internal class OnlineAiHttpExecution private constructor(
         target: AiTarget,
         profile: OnlineAiProfile,
         credentialAccess: OnlineAiProfileCredentialAccess,
+        conversationKey: String?,
     ): AiBackendSession {
         if (!available) {
             throw OnlineAiFailureException(OnlineAiFailureReason.EXECUTION_CLOSED)
@@ -104,9 +114,16 @@ internal class OnlineAiHttpExecution private constructor(
             callFactory = callFactory,
             executionAvailable = { this@OnlineAiHttpExecution.available },
             networkAccess = networkAccess,
-            credentialRunner = OnlineAiCredentialRunner { action ->
-                credentialAccess.withCredential { credential -> action(credential) }
+            credentialRunner = object : OnlineAiCredentialRunner {
+                override fun run(action: (ByteArray) -> Unit) {
+                    credentialAccess.withCredential { credential -> action(credential) }
+                }
+
+                override fun runWithHeaderSecrets(action: (ByteArray, OnlineAiHeaderSecrets) -> Unit) {
+                    credentialAccess.withCredentials { credential, secrets -> action(credential, secrets) }
+                }
             },
+            conversationKey = conversationKey,
         )
     }
 
@@ -132,8 +149,18 @@ internal class OnlineAiSession(
     private val executionAvailable: () -> Boolean = { true },
     private val networkAccess: OnlineAiNetworkAccess = OnlineAiNetworkAccess.UNRESTRICTED,
     private val credentialRunner: OnlineAiCredentialRunner,
+    conversationKey: String? = null,
 ) : AiBackendSession {
     private val profile = OnlineAiProfilePolicy.normalizeProfile(profile)
+
+    /**
+     * Value of "per conversation" headers (T73): derived from the service and the caller's
+     * conversation key, or from a fresh random key for sessions that belong to no conversation.
+     */
+    private val conversationSessionId = OnlineAiConversationSessionIds.derive(
+        this.profile.profileId,
+        conversationKey ?: OnlineAiConversationSessionIds.randomKey(),
+    )
     private val adapter = OnlineAiProtocolAdapters.forProfile(this.profile)
     private val stateLock = Any()
     private val callbackGate = CallbackQuiescenceGate()
@@ -218,13 +245,14 @@ internal class OnlineAiSession(
                 conversation.map { message -> message.snapshot() } + request.prompt
             }
 
-            credentialRunner.run credential@{ credential ->
+            credentialRunner.runWithHeaderSecrets credential@{ credential, secrets ->
                 if (isStopped()) return@credential
                 adapter.prepare(
                     profile = profile,
                     messages = outbound,
                     turn = request,
                     credential = credential,
+                    headers = OnlineAiRequestHeaders.resolve(profile, secrets, conversationSessionId),
                 ).use { prepared ->
                     if (isStopped()) return@use
                     val call = callFactory.newCall(prepared.request)
@@ -239,8 +267,12 @@ internal class OnlineAiSession(
                         try {
                             consume(call, progress, delivery)
                         } catch (failure: OnlineAiFailureException) {
-                            // A provider that echoes the key must not reach the user through the detail text.
-                            throw failure.withoutSecret(credential)
+                            // A provider that echoes the key or a secret header must not reach the user
+                            // through the detail text (D181).
+                            val secretValues = ArrayList<ByteArray>(1 + secrets.names.size)
+                            secretValues += credential
+                            secrets.forEachValue { value -> secretValues += value }
+                            throw failure.withoutSecrets(secretValues)
                         }
                     } finally {
                         activeCall.compareAndSet(call, null)

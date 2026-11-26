@@ -138,6 +138,10 @@ class OnlineAiBackendTest {
         assertEquals(target, session.target)
         assertEquals("execution-secret", execution.credential)
         assertEquals(profile(), execution.profile)
+        assertNull(execution.conversationKey)
+
+        backend.createSession(AiBackendSessionRequest(target.targetId, conversationKey = "conversation-1"))
+        assertEquals("conversation-1", execution.conversationKey)
     }
 
     @Test
@@ -296,6 +300,7 @@ class OnlineAiBackendTest {
         var credential: String? = null
         var profile: OnlineAiProfile? = null
         var credentialAccess: OnlineAiProfileCredentialAccess? = null
+        var conversationKey: String? = null
 
         override fun supports(profile: OnlineAiProfile): Boolean = true
 
@@ -307,9 +312,11 @@ class OnlineAiBackendTest {
             target: AiTarget,
             profile: OnlineAiProfile,
             credentialAccess: OnlineAiProfileCredentialAccess,
+            conversationKey: String?,
         ): AiBackendSession {
             this.profile = profile
             this.credentialAccess = credentialAccess
+            this.conversationKey = conversationKey
             if (readCredentialDuringCreation) {
                 credential = credentialAccess.withCredential { bytes -> bytes.toString(Charsets.UTF_8) }
             }

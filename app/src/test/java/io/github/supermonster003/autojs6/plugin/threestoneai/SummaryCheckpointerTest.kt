@@ -54,6 +54,19 @@ class SummaryCheckpointerTest {
     }
 
     @Test
+    fun `every attempt uses the conversation as its session key`() {
+        val backend = FakeBackend(success("{}"), success(validResponse()))
+
+        SummaryCheckpointer(backend, directExecutor).generate(request()) { }
+
+        assertEquals(2, backend.sessionRequests.size)
+        assertEquals(
+            listOf(CONVERSATION_ID, CONVERSATION_ID),
+            backend.sessionRequests.map { request -> request.conversationKey },
+        )
+    }
+
+    @Test
     fun `a fenced reply with surrounding prose succeeds without a retry`() {
         val backend = FakeBackend(success("Checkpoint:\n```json\n${validResponse()}\n```\nDone."))
         var outcome: SummaryCheckpointOutcome? = null
@@ -175,6 +188,7 @@ class SummaryCheckpointerTest {
         return SummaryCheckpointRequest(
             targetId = target.targetId,
             executionProfileId = null,
+            conversationId = CONVERSATION_ID,
             structuredJson = true,
             plan = plan,
             state = ConversationContextState.EMPTY,
@@ -292,7 +306,8 @@ class SummaryCheckpointerTest {
     }
 
     private companion object {
-        val responseTarget = ConversationTargetSnapshot(
+        const val CONVERSATION_ID = "conversation-1"
+        val responseTarget =ConversationTargetSnapshot(
             targetId = "local:test-model",
             providerId = "autojs6.three-stone-ai",
             modelId = "test-model",

@@ -125,6 +125,11 @@ class MacawSpeechDeviceTest {
     fun aRealSessionOpensCancelsAndFinishes() {
         val probed = probe()
         assumeTrue("3-Macaw Speech is not ready for a session here: ${probed.status}", probed.status == MacawSpeechStatus.AVAILABLE)
+        // The chat is in front, as when its microphone is pressed: on API 34+ 3-Macaw Speech records for a visible
+        // client only. The chat itself sees no 3-Macaw Speech (the hook), so the sessions below are the only ones.
+        val env = ChatTestEnvironment().also { environment = it }
+        val chat = env.launchChat()
+        MacawSpeechTestHooks.availability = null
         val events = CopyOnWriteArrayList<String>()
         var connection: MacawSpeechConnection? = null
         instrumentation.runOnMainSync { connection = MacawSpeechConnection(context) {}.also(MacawSpeechConnection::connect) }
@@ -173,6 +178,7 @@ class MacawSpeechDeviceTest {
             )
         } finally {
             instrumentation.runOnMainSync { connection?.disconnect() }
+            chat.close()
         }
     }
 

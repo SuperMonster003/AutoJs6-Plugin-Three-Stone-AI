@@ -18,7 +18,19 @@ kotlinx-coroutines itself, and `org.json` comes from the platform. It is not
 published to Maven Central and has no compatibility promise; a change of the
 library means a new AAR here, a new checksum and an adapted downloader.
 
+`speech-api.aar` is speech contract version 3 of `plugin-api/speech-api`
+(package `org.autojs.plugin.speech.api`: `ISpeechPlugin`, `ISpeechSession`,
+the session, wake, progress and resident observer callbacks and the constant
+objects). It is the release AAR of host commit `1b95cc0201` (2026-11-06, not
+yet public), assembled with `:plugin-api:speech-api:assembleRelease` in a clean
+clone; 3-Macaw Speech stages the byte-identical file (SHA-256
+`ad3dff26233d43afac148fce5d2844b3d631694a0517060621bf2dc4d0e1639c`, its
+`locks/host-api-aars.lock`). It was copied once on 2026-11-27 (roadmap D203,
+D208); the build never reads the 3-Macaw Speech checkout. The app binds
+3-Macaw Speech's `org.autojs.plugin.SPEECH` service directly, so the contract
+neither raises the minimum AutoJs6 version nor adds a permission.
+
 These are vendored inputs, not dependencies on a sibling build. Replace the
 four API AARs and their checksums together from one verified host revision,
-and `download-kit.aar` with its checksum on its own. No debug artifact or
+and `download-kit.aar` and `speech-api.aar` each with its checksum on its own. No debug artifact or
 signing material belongs in this directory.

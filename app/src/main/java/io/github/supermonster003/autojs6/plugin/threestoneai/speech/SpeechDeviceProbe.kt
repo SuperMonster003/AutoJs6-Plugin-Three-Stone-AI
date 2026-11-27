@@ -34,8 +34,9 @@ internal object SpeechDeviceProbe {
         }.getOrDefault(SpeechDeviceState.NONE)
     }
 
-    fun availability(context: Context, preferMacaw: Boolean): SpeechAvailability =
-        SpeechAvailabilityPolicy.resolve(probe(context), preferMacaw)
+    /** [macaw] is the probed speech service of 3-Macaw Speech, null while it is probed (P6-1). */
+    fun availability(context: Context, preferMacaw: Boolean, macaw: MacawSpeechAvailability? = null): SpeechAvailability =
+        SpeechAvailabilityPolicy.resolve(probe(context), preferMacaw, macaw)
 
     private fun recognitionIntent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
 

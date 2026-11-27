@@ -24,6 +24,8 @@ val hostApiNames = setOf(
     "ai-provider-api.aar",
     // The shared download library of the official plugins (plugin-center P13.3, see libs/README.md).
     "download-kit.aar",
+    // Speech contract version 3, byte-identical to the file 3-Macaw Speech stages (roadmap D203, D208).
+    "speech-api.aar",
 )
 val hostApiChecksums = rootProject.file("libs/SHA256SUMS").readLines().filter { it.isNotBlank() }.associate { line ->
     val fields = line.trim().split(Regex("\\s+"))
@@ -215,6 +217,7 @@ dependencies {
     implementation(files("$rootDir/libs/ai-common-api.aar"))
     implementation(files("$rootDir/libs/ai-provider-api.aar"))
     implementation(files("$rootDir/libs/download-kit.aar"))
+    implementation(files("$rootDir/libs/speech-api.aar"))
 
     testImplementation(libs.junit)
     // The download library keeps its metadata with org.json, which android.jar only stubs.

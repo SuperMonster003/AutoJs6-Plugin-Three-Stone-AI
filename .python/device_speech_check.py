@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the 3-Stone AI speech device tests (roadmap section 10, P5) on one device.
+"""Run the 3-Stone AI speech device tests (roadmap section 10, P5 and P6) on one device.
 
 Installs the debug APK for the device ABI and the androidTest APK, runs the selected
 instrumentation classes one after another, pulls receipts and screenshots into
@@ -8,6 +8,14 @@ of each receipt. Recognized and spoken text is never printed or stored.
 
 Dialogs that need a person (system chooser, permissions) are left to the maintainer;
 these tests use fake recognizers and engines unless a class says otherwise.
+
+P6 (live dictation through 3-Macaw Speech's session): `macaw` probes the real 3-Macaw Speech
+(the emulator checks the two fallbacks, a phone with it opens, cancels and finishes a session),
+`live` drives the chat with a fake session source; on request `live-acoustic` plays en.wav twice
+through the phone's speaker (media volume raised to --min-volume percent only when lower, restored),
+`live-permission` needs 3-Macaw Speech's microphone permission revoked (--revoke-macaw-microphone
+does it) and the maintainer to allow it in the dialog, `live-busy` needs another app's resident
+listener (3-Stove Agent) holding 3-Macaw Speech's microphone.
 """
 
 import argparse
@@ -31,20 +39,34 @@ CLASSES = {
     "engine": PACKAGE + ".speech.SpeechEngineLatencyDeviceTest",
     "conversation-local": PACKAGE + ".speech.SpeechConversationRealDeviceTest#localTargetTenRounds",
     "conversation-online": PACKAGE + ".speech.SpeechConversationRealDeviceTest#onlineTargetTenRounds",
+    "macaw": PACKAGE + ".speech.MacawSpeechDeviceTest",
+    "live": PACKAGE + ".speech.SpeechLiveDictationDeviceTest",
+    "live-acoustic": PACKAGE + ".speech.LiveDictationRealDeviceTest#twoSentencesThroughTheSpeaker",
 }
+MACAW_PACKAGE = "io.github.supermonster003.autojs6.plugin.three.macaw.speech"
 # These play sound through the speaker at the device's media volume: never on adjacent phones at once.
-ACOUSTIC = {"engine", "conversation-local", "conversation-online"}
+ACOUSTIC = {"engine", "conversation-local", "conversation-online", "live-acoustic"}
 # These wait for the maintainer on the phone (roadmap 10.5 E4); run one at a time on request.
 MANUAL = {
     "manual-dictation": "tap the microphone once and say a sentence",
     "manual-conversation": "long press the microphone, talk a few rounds, then cancel the recognizer",
     "manual-assistant": "hold the power button, speak, then tap \"3-Stone AI\"",
+    "live-permission": "allow 3-Macaw Speech to use the microphone in the dialog that opens",
+    "live-busy": "keep 3-Stove Agent's resident listener on during the run",
 }
 CLASSES.update({
     "manual-dictation": PACKAGE + ".speech.SpeechManualDeviceTest#dictateOnce",
     "manual-conversation": PACKAGE + ".speech.SpeechManualDeviceTest#voiceConversation",
     "manual-assistant": PACKAGE + ".speech.SpeechManualDeviceTest#voiceCommandFromTheAssistant",
+    "live-permission": PACKAGE + ".speech.LiveDictationRealDeviceTest#deniedMicrophoneOpensMacawsDialog",
+    "live-busy": PACKAGE + ".speech.LiveDictationRealDeviceTest#busyMicrophoneFallsBackToTheSheet",
 })
+# Instrumentation arguments that switch on the cases of a shared class.
+ARGUMENTS = {
+    "live-acoustic": ["-e", "acoustic", "true"],
+    "live-permission": ["-e", "permission", "true"],
+    "live-busy": ["-e", "busy", "true"],
+}
 
 
 def apk_from_metadata(directory, abi=None):
@@ -86,6 +108,10 @@ def main():
     parser.add_argument("--target-model", help="real-target conversations: the exact model ID to use")
     parser.add_argument("--list-targets", action="store_true",
                         help="real-target conversations: only list the ready targets (model and provider)")
+    parser.add_argument("--min-volume", type=int, default=70,
+                        help="live-acoustic: lowest media volume in percent (raised only when lower, then restored)")
+    parser.add_argument("--revoke-macaw-microphone", action="store_true",
+                        help="live-permission: revoke 3-Macaw Speech's RECORD_AUDIO first (the maintainer allows it again)")
     parser.add_argument("--output", type=Path, default=ROOT / "build/verification/speech")
     args = parser.parse_args()
     selected = [name.strip() for name in args.only.split(",") if name.strip()]
@@ -125,6 +151,8 @@ def main():
         adb("install", "-r", "-t", apk_from_metadata(ROOT / "app/build/outputs/apk/debug", abi))
         adb("install", "-r", "-t", apk_from_metadata(ROOT / "app/build/outputs/apk/androidTest/debug"))
     shell("rm", "-rf", REMOTE, check=False)
+    macaw = re.search(r"versionName=(\S+)", shell("dumpsys", "package", MACAW_PACKAGE, check=False))
+    print(f"  3-Macaw Speech {macaw.group(1) if macaw else 'not installed'}")
 
     all_passed = True
     try:
@@ -143,6 +171,12 @@ def main():
                 extra += ["-e", "targetModel", args.target_model]
             if args.list_targets:
                 extra += ["-e", "listTargets", "true"]
+            extra += ARGUMENTS.get(name, [])
+            if name == "live-acoustic":
+                extra += ["-e", "minVolume", str(args.min_volume)]
+            if name == "live-permission" and args.revoke_macaw_microphone:
+                shell("pm", "revoke", MACAW_PACKAGE, "android.permission.RECORD_AUDIO", check=False)
+                print("  revoked 3-Macaw Speech's microphone permission")
             result = shell("am", "instrument", "-w", "-r", *extra, "-e", "class", CLASSES[name], RUNNER, timeout=1800)
             (output / f"{name}-instrumentation.txt").write_text(result, encoding="utf-8")
             passed, tests, failures = summarize(result)

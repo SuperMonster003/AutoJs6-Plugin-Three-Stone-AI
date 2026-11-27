@@ -24,7 +24,14 @@ import java.util.UUID
  * fresh conversation. [close] deletes the conversations the test created and restores the chat
  * preferences, the remembered conversation and the composer draft.
  */
-internal class ChatTestEnvironment(scripted: Boolean = true) : Closeable {
+internal class ChatTestEnvironment(
+    scripted: Boolean = true,
+    /**
+     * The state of 3-Macaw Speech the chat sees; null probes the real one. The default keeps the recognizer sheet
+     * tests of P5 on the sheet on phones where 3-Macaw Speech would dictate live (P6-2).
+     */
+    macaw: MacawSpeechAvailability? = MacawSpeechAvailability.NOT_INSTALLED,
+) : Closeable {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
     val context: Context = instrumentation.targetContext
     val backend = ScriptedAiBackend()
@@ -37,6 +44,8 @@ internal class ChatTestEnvironment(scripted: Boolean = true) : Closeable {
     }
 
     init {
+        MacawSpeechTestHooks.availability = macaw
+        MacawSpeechTestHooks.source = null
         if (scripted) application.aiBackendOverride = backend
         // An unknown remembered ID makes the chat open a fresh, empty conversation.
         history.rememberLastConversation("speech-test-${UUID.randomUUID()}")
@@ -60,6 +69,15 @@ internal class ChatTestEnvironment(scripted: Boolean = true) : Closeable {
                 scenario.onActivity { activity -> ready = composer(activity).isEnabled }
                 ready
             }
+            // A cold start may recreate the chat once the AutoJs6 appearance arrives, which resets the counters the
+            // tests read; on a slow emulator that can land after the first press. Waits for it, without failing.
+            val deadline = SystemClock.elapsedRealtime() + APPEARANCE_WAIT_MILLIS
+            while (SystemClock.elapsedRealtime() < deadline) {
+                var settled = false
+                scenario.onActivity { activity -> settled = activity.appearanceSettledForTest }
+                if (settled) break
+                SystemClock.sleep(100L)
+            }
         }
 
     val fakeRecognizerPackage: String get() = instrumentation.context.packageName
@@ -75,6 +93,8 @@ internal class ChatTestEnvironment(scripted: Boolean = true) : Closeable {
         DictationIntents.testPackage = null
         DictationIntents.testExtras = null
         SpeechDeviceProbe.stateOverride = null
+        MacawSpeechTestHooks.availability = null
+        MacawSpeechTestHooks.source = null
         application.aiBackendOverride = null
         val created = history.loadAll().map { it.id }.toSet() - existingConversations
         if (created.isNotEmpty()) history.delete(created)
@@ -114,6 +134,7 @@ internal class ChatTestEnvironment(scripted: Boolean = true) : Closeable {
 
     companion object {
         private val PREFERENCE_FILES = listOf("chat-ui-settings", "chat-composer-draft", "voice-command", "application-settings")
+        private const val APPEARANCE_WAIT_MILLIS = 15_000L
 
         fun composer(activity: ChatActivity): EditText =
             activity.window.decorView.findViewWithTag(ChatViewTags.COMPOSER_INPUT)

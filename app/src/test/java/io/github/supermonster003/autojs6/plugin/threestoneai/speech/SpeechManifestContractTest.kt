@@ -8,7 +8,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import javax.xml.parsers.DocumentBuilderFactory
 
-/** Source-manifest checks for the speech entry points (roadmap D6, D16, D22, 10.6 (c)). */
+/** Source-manifest checks for the speech entry points (roadmap D6, D16, D22, D208, 10.6 (c)). */
 class SpeechManifestContractTest {
     private val manifest: Element by lazy {
         val path = projectRoot().resolve("app/src/main/AndroidManifest.xml")
@@ -19,14 +19,19 @@ class SpeechManifestContractTest {
     }
 
     @Test
-    fun `queries name only the host package and two speech actions`() {
+    fun `queries name only the host package and three speech actions`() {
         val queries = manifest.children("queries").single()
         val packages = queries.children("package").map { it.android("name") }
         val intents = queries.children("intent")
 
         assertEquals(listOf("org.autojs.autojs6"), packages)
         assertEquals(
-            listOf("android.speech.action.RECOGNIZE_SPEECH", "android.intent.action.TTS_SERVICE"),
+            // The third is the speech service of 3-Macaw Speech (roadmap D208), bound with setPackage.
+            listOf(
+                "android.speech.action.RECOGNIZE_SPEECH",
+                "android.intent.action.TTS_SERVICE",
+                "org.autojs.plugin.SPEECH",
+            ),
             intents.map { intent -> intent.children("action").single().android("name") },
         )
         // Action only, like 3-Stove Agent D59: no category, data or package narrowing.
@@ -37,6 +42,7 @@ class SpeechManifestContractTest {
 
     @Test
     fun `speech adds no permission and never records audio`() {
+        // Live dictation records in 3-Macaw Speech (roadmap D16, D208): still no RECORD_AUDIO here.
         val permissions = manifest.children("uses-permission").map { it.android("name") }
 
         assertEquals(

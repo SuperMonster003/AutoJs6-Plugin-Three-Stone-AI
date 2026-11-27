@@ -47,12 +47,17 @@ internal data class SpeechDeviceState(
 
 /** The resolved voice entry points for the chat and the settings screen. */
 internal data class SpeechAvailability(
+    /** Who answers the recognizer sheet: the fallback of live dictation and the voice conversation of P5. */
     val dictation: DictationProvider,
     val readAloud: ReadAloudProvider,
-    /** The "Prefer 3-Macaw Speech" row is shown only when either Macaw entry resolves (D17). */
+    /** The "Prefer 3-Macaw Speech" row is shown only when a Macaw entry resolves or live dictation works (D17). */
     val showPreferMacawSetting: Boolean,
-    /** Neither Macaw entry resolves, so the settings explain how to get offline speech (D8, D17). */
+    /** No Macaw entry resolves, so the settings explain how to get offline speech (D8, D17). */
     val showMacawInstallHint: Boolean,
+    /** The microphone button dictates live into the input box through 3-Macaw Speech's session (P6-2, D208). */
+    val liveDictation: Boolean = false,
+    /** The probed state of 3-Macaw Speech's speech service; null while it is still probed. */
+    val macaw: MacawSpeechAvailability? = null,
 ) {
     /** The package that dictation is pinned to, or null to let the system choose. */
     val dictationPackage: String?
@@ -62,7 +67,10 @@ internal data class SpeechAvailability(
     val ttsEnginePackage: String?
         get() = SpeechAvailabilityPolicy.MACAW_PACKAGE.takeIf { readAloud == ReadAloudProvider.MACAW }
 
-    val dictationAvailable: Boolean get() = dictation != DictationProvider.NONE
+    val dictationAvailable: Boolean get() = dictation != DictationProvider.NONE || liveDictation
+
+    /** The recognizer sheet resolves, so a live dictation that fails can fall back to it once (D209). */
+    val sheetDictationAvailable: Boolean get() = dictation != DictationProvider.NONE
     val readAloudAvailable: Boolean get() = readAloud != ReadAloudProvider.NONE
 }
 
@@ -75,7 +83,15 @@ internal data class SpeechAvailability(
 internal object SpeechAvailabilityPolicy {
     const val MACAW_PACKAGE = "io.github.supermonster003.autojs6.plugin.three.macaw.speech"
 
-    fun resolve(state: SpeechDeviceState, preferMacaw: Boolean): SpeechAvailability {
+    /**
+     * [macaw] is the probed speech service of 3-Macaw Speech (null while probing): with the preference on and a usable
+     * session, the microphone dictates live into the input box instead of opening a sheet (P6-2).
+     */
+    fun resolve(
+        state: SpeechDeviceState,
+        preferMacaw: Boolean,
+        macaw: MacawSpeechAvailability? = null,
+    ): SpeechAvailability {
         val anyRecognizer = state.anyRecognizer || state.macawRecognizer
         val anyEngine = state.anyTtsEngine || state.macawTtsEngine
         val dictation = when {
@@ -88,12 +104,15 @@ internal object SpeechAvailabilityPolicy {
             anyEngine -> ReadAloudProvider.SYSTEM
             else -> ReadAloudProvider.NONE
         }
-        val macawResolvable = state.macawRecognizer || state.macawTtsEngine
+        val macawLive = macaw?.liveDictation == true
+        val macawResolvable = state.macawRecognizer || state.macawTtsEngine || macawLive
         return SpeechAvailability(
             dictation = dictation,
             readAloud = readAloud,
             showPreferMacawSetting = macawResolvable,
             showMacawInstallHint = !macawResolvable,
+            liveDictation = preferMacaw && macawLive,
+            macaw = macaw,
         )
     }
 }

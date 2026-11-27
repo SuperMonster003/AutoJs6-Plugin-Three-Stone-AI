@@ -113,6 +113,49 @@ class SpeechAvailabilityPolicyTest {
         assertEquals(ReadAloudProvider.SYSTEM, off.readAloud)
     }
 
+    @Test
+    fun `a usable session dictates live while preferred and keeps the sheet as the fallback`() {
+        val live = MacawSpeechAvailability(MacawSpeechStatus.AVAILABLE, contractVersion = 3, resident = true)
+
+        val on = SpeechAvailabilityPolicy.resolve(everything, preferMacaw = true, macaw = live)
+        assertTrue(on.liveDictation)
+        assertTrue(on.dictationAvailable)
+        assertTrue(on.sheetDictationAvailable)
+        assertEquals(DictationProvider.MACAW, on.dictation)
+        assertEquals(live, on.macaw)
+
+        // Turned off, the system chooses a sheet as in 1.7.2 (P6-2).
+        assertFalse(SpeechAvailabilityPolicy.resolve(everything, preferMacaw = false, macaw = live).liveDictation)
+        // Without the microphone permission the session still opens and asks for it (D209).
+        val noMicrophone = live.copy(status = MacawSpeechStatus.NO_MICROPHONE_PERMISSION)
+        assertTrue(SpeechAvailabilityPolicy.resolve(everything, preferMacaw = true, macaw = noMicrophone).liveDictation)
+        // Probing, or a state without a session: the sheet.
+        listOf(
+            null,
+            MacawSpeechAvailability.NOT_INSTALLED,
+            live.copy(status = MacawSpeechStatus.NOT_BINDABLE),
+            live.copy(status = MacawSpeechStatus.INCOMPATIBLE),
+            live.copy(status = MacawSpeechStatus.NO_RECOGNITION_MODEL),
+        ).forEach { macaw ->
+            val availability = SpeechAvailabilityPolicy.resolve(everything, preferMacaw = true, macaw = macaw)
+            assertFalse(macaw.toString(), availability.liveDictation)
+            assertEquals(DictationProvider.MACAW, availability.dictation)
+        }
+    }
+
+    @Test
+    fun `live dictation alone shows the microphone and the preference`() {
+        val live = MacawSpeechAvailability(MacawSpeechStatus.AVAILABLE, contractVersion = 1, resident = false)
+
+        val availability = SpeechAvailabilityPolicy.resolve(SpeechDeviceState.NONE, preferMacaw = true, macaw = live)
+
+        assertEquals(DictationProvider.NONE, availability.dictation)
+        assertTrue(availability.dictationAvailable)
+        assertFalse("No sheet to fall back to", availability.sheetDictationAvailable)
+        assertTrue(availability.showPreferMacawSetting)
+        assertFalse(availability.showMacawInstallHint)
+    }
+
     private val everything = SpeechDeviceState(
         macawRecognizer = true,
         anyRecognizer = true,

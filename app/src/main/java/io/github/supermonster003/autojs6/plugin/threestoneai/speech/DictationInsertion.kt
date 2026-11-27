@@ -17,7 +17,8 @@ internal data class DictationEdit(
  * never sent automatically. A space is added on a side where the recognized text meets a letter or
  * digit of a script that separates words with spaces (Latin, Cyrillic, Greek, Hangul, Arabic and
  * others); Chinese, Japanese and similar scripts are joined directly. The result never exceeds the
- * composer limit; text beyond it is cut at a code point boundary and reported.
+ * composer limit; text beyond it is cut at a code point boundary and reported. Live dictation (P6-2, D216) also
+ * puts a space after the ASCII sentence punctuation that ends its previous sentence, before a spaced-script word.
  */
 internal object DictationInsertion {
     fun edit(
@@ -26,6 +27,7 @@ internal object DictationInsertion {
         selectionEnd: Int,
         recognized: String,
         maximumLength: Int,
+        spaceAfterPunctuation: Boolean = false,
     ): DictationEdit? {
         val text = recognized.trim()
         if (text.isEmpty()) return null
@@ -37,7 +39,11 @@ internal object DictationInsertion {
             minOf(selectionStart, selectionEnd).coerceIn(0, length) to
                 maxOf(selectionStart, selectionEnd).coerceIn(0, length)
         }
-        val leading = start > 0 && joinsWithSpace(codePointBefore(current, start), text.codePointAt(0))
+        val before = if (start > 0) codePointBefore(current, start) else -1
+        val leading = start > 0 && (
+            joinsWithSpace(before, text.codePointAt(0)) ||
+                spaceAfterPunctuation && before in SENTENCE_PUNCTUATION && isSpacedWord(text.codePointAt(0))
+            )
         val trailing = end < length &&
             joinsWithSpace(text.codePointBefore(text.length), Character.codePointAt(current, end))
         val capacity = maximumLength - (length - (end - start))
@@ -71,6 +77,9 @@ internal object DictationInsertion {
             truncated = truncated,
         )
     }
+
+    /** ASCII punctuation that the recognizers end a sentence or clause with (full-width marks join directly). */
+    private val SENTENCE_PUNCTUATION = ".,!?;:".map(Char::code).toSet()
 
     /** Whether a space belongs between two adjacent code points from separate pieces of text. */
     fun joinsWithSpace(before: Int, after: Int): Boolean = isSpacedWord(before) && isSpacedWord(after)

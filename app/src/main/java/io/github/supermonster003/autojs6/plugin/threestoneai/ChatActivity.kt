@@ -78,6 +78,15 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationInt
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationMode
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationOutcome
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.DictationOutcomePolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationComposer
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationEnd
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationListener
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationMode
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationRecovery
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationRecoveryPolicy
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationSession
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.MacawSpeech
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.MacawSpeechConnection
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadAloudMenuItem
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadAloudPolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadableReply
@@ -104,6 +113,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommandI
 import io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommandPolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.voice.VoiceCommandStore
 import org.autojs.plugin.ai.provider.api.AiProviderBackendProfile
+import org.autojs.plugin.speech.api.SpeechErrorCodes
 import java.text.DateFormat
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -221,6 +231,55 @@ class ChatActivity : ConfiguredActivity() {
     @VisibleForTesting
     internal val dictationPending: Boolean
         get() = pendingDictation != null
+
+    // Live dictation through 3-Macaw Speech's session (roadmap P6-2, D208, D209): bound while the chat is started.
+    private lateinit var macawSpeech: MacawSpeechConnection
+    private var liveRun: LiveDictationRun? = null
+    private var liveDictationPressPending = false
+    private val liveDictationPressTimeout = Runnable {
+        if (liveDictationPressPending) {
+            liveDictationPressPending = false
+            startDictation(DictationMode.SINGLE)
+        }
+    }
+
+    /** Instrumentation only: a live dictation session runs. */
+    @VisibleForTesting
+    internal val liveDictationActive: Boolean
+        get() = liveRun != null
+
+    /** Instrumentation only: live dictation sessions opened so far, and how the last one ended. */
+    @VisibleForTesting
+    internal var liveDictationRequestCount = 0
+        private set
+
+    @VisibleForTesting
+    internal var lastLiveDictationEnd: LiveDictationEnd? = null
+        private set
+
+    /** Instrumentation only: the gray partial in the input box, or null. */
+    @VisibleForTesting
+    internal val livePartialForTest: String?
+        get() = liveRun?.composer?.partialText
+
+    /** Instrumentation only: whether the microphone dictates live into the input box. */
+    @VisibleForTesting
+    internal val liveDictationAvailableForTest: Boolean
+        get() = speechAvailability.liveDictation
+
+    /** Instrumentation only: the AutoJs6 appearance is known, so the chat will not recreate itself for it. */
+    @VisibleForTesting
+    internal val appearanceSettledForTest: Boolean
+        get() = appearanceSettled
+
+    /** Instrumentation only: the probed state of 3-Macaw Speech, null while it is probed. */
+    @VisibleForTesting
+    internal val macawSpeechForTest: io.github.supermonster003.autojs6.plugin.threestoneai.speech.MacawSpeechAvailability?
+        get() = speechAvailability.macaw
+
+    /** Instrumentation only: sees the events of the current session after the input box (timings of P6-2). */
+    @VisibleForTesting
+    internal var liveDictationObserverForTest: LiveDictationListener? = null
 
     private lateinit var speechOutput: SpeechOutput
     private var readingSegmenter: SpeakableTextSegmenter? = null
@@ -433,6 +492,7 @@ class ChatActivity : ConfiguredActivity() {
         contextTokenCalibrationStore = ContextTokenCalibrationStore(applicationContext)
         uiSettings = uiSettingsStore.load()
         speechAvailability = SpeechDeviceProbe.availability(this, uiSettings.preferMacawSpeech)
+        macawSpeech = MacawSpeechConnection(this, ::onMacawSpeechChanged)
         speechOutput = SpeechOutput(this, speechListener)
         voiceCommandStore = VoiceCommandStore(applicationContext)
         voiceCommandCheckPending = intent.getBooleanExtra(VoiceCommandInbox.EXTRA_CHECK_INBOX, false)
@@ -632,6 +692,7 @@ class ChatActivity : ConfiguredActivity() {
         managerAttached = true
         renderManagerState(importCoordinator.attachManager(managerObserver))
         attachGeneration()
+        macawSpeech.connect()
     }
 
     private fun attachGeneration() {
@@ -699,6 +760,8 @@ class ChatActivity : ConfiguredActivity() {
             applyUiSettings()
         }
         refreshTargetCatalog(importCoordinator.managerState())
+        // A recognition model or the microphone permission of 3-Macaw Speech may have changed meanwhile.
+        macawSpeech.refresh()
         refreshSpeechAvailability()
         refreshDrawerHistory()
         updateController.checkAutomaticallyIfDue()
@@ -712,7 +775,8 @@ class ChatActivity : ConfiguredActivity() {
     // A cold start may recreate the chat once the AutoJs6 appearance is known; work started before
     // that (a voice command's reply and its reading) would be cut off.
     override fun defersAppearanceRecreation(): Boolean =
-        isGenerating || readingMessageId != null || pendingDictation != null || voicePhase != VoicePhase.IDLE
+        isGenerating || readingMessageId != null || pendingDictation != null || voicePhase != VoicePhase.IDLE ||
+            liveRun != null
 
     override fun onAppearanceSettled() {
         appearanceSettled = true
@@ -726,6 +790,9 @@ class ChatActivity : ConfiguredActivity() {
             dispatchVoice(VoiceEvent.LeftChat)
             stopReading()
         }
+        // Leaving the chat cancels live dictation; what it wrote stays (roadmap D209, D215).
+        cancelLiveDictation()
+        macawSpeech.disconnect()
         persistComposerDraft()
         // Store every character generated so far, not only what the last 32 ms delivery showed.
         generationCoordinator.activeFor(currentConversationId)?.let(::applyGenerationState)
@@ -739,6 +806,8 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        // Before API 28 this runs before onStop: the saved input box must not keep a session's gray partial.
+        cancelLiveDictation()
         // On API 28+ this runs after onStop, which already persisted; a detached chat must not
         // overwrite a reply the coordinator may write meanwhile.
         persistConversationNow()
@@ -824,6 +893,8 @@ class ChatActivity : ConfiguredActivity() {
         persistConversationNow()
         detachGeneration()
         mainHandler.removeCallbacksAndMessages(null)
+        cancelLiveDictation()
+        if (::macawSpeech.isInitialized) macawSpeech.disconnect()
         if (::speechOutput.isInitialized) speechOutput.shutdown()
         ChatAttachmentImportQueue.detach(attachmentImportReceiver)
         if (::attachmentViews.isInitialized) attachmentViews.shutdown()
@@ -1774,12 +1845,17 @@ class ChatActivity : ConfiguredActivity() {
                         visibility = View.GONE
                         applySelectableBackground(this)
                         setOnClickListener {
+                            // Pressed again while dictating live: the current sentence is finished (D209).
+                            if (liveRun != null) {
+                                finishLiveDictation()
+                                return@setOnClickListener
+                            }
                             if (voicePhase != VoicePhase.IDLE) dispatchVoice(VoiceEvent.Exit)
-                            startDictation(DictationMode.SINGLE)
+                            startComposerDictation()
                         }
                         // Long press starts a voice conversation (roadmap D13).
                         setOnLongClickListener {
-                            startVoiceConversation()
+                            if (liveRun != null) finishLiveDictation() else startVoiceConversation()
                             true
                         }
                         ViewCompat.replaceAccessibilityAction(
@@ -2167,6 +2243,7 @@ class ChatActivity : ConfiguredActivity() {
         input.isEnabled = targetReady
         input.hint = getString(
             when {
+                liveRun != null -> R.string.speech_live_dictation_listening
                 targetReady -> R.string.chat_input_hint
                 isConversationLocalModelDeleted() -> R.string.chat_input_local_model_deleted_hint
                 else -> R.string.chat_input_no_target_hint
@@ -2201,10 +2278,17 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun renderMicButton(targetReady: Boolean) {
         if (!::micButton.isInitialized) return
-        val shown = speechAvailability.dictationAvailable
+        val listening = liveRun != null
+        val shown = speechAvailability.dictationAvailable || listening
         micButton.visibility = if (shown) View.VISIBLE else View.GONE
-        micButton.isEnabled = targetReady
-        micButton.alpha = if (targetReady) 1f else Ui.DISABLED_ALPHA
+        // While dictating live the button is a stop button (D209) and stays usable.
+        micButton.isEnabled = targetReady || listening
+        micButton.alpha = if (micButton.isEnabled) 1f else Ui.DISABLED_ALPHA
+        micButton.setImageDrawable(
+            if (listening) tintedDrawable(R.drawable.ic_stop_24, appPalette.accent)
+            else tintedDrawable(R.drawable.ic_mic_24, appPalette.secondaryText),
+        )
+        micButton.contentDescription = getString(if (listening) R.string.speech_dictation_stop else R.string.speech_dictate)
         val endPadding = dp(if (shown) COMPOSER_TEXT_END_WITH_MIC_DP else COMPOSER_TEXT_END_DP)
         if (input.paddingEnd != endPadding) {
             input.setPaddingRelative(input.paddingStart, input.paddingTop, endPadding, input.paddingBottom)
@@ -2212,15 +2296,171 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun refreshSpeechAvailability() {
-        speechAvailability = SpeechDeviceProbe.availability(this, uiSettings.preferMacawSpeech)
+        speechAvailability = SpeechDeviceProbe.availability(
+            this,
+            uiSettings.preferMacawSpeech,
+            if (::macawSpeech.isInitialized) macawSpeech.availability else null,
+        )
         renderComposerState()
+    }
+
+    private fun onMacawSpeechChanged() {
+        if (destroyed) return
+        refreshSpeechAvailability()
+        if (liveDictationPressPending && speechAvailability.macaw != null) {
+            liveDictationPressPending = false
+            mainHandler.removeCallbacks(liveDictationPressTimeout)
+            startComposerDictation()
+        }
+    }
+
+    /** A short press: live dictation when 3-Macaw Speech offers it (P6-2), the recognizer sheet otherwise. */
+    private fun startComposerDictation() {
+        when {
+            speechAvailability.liveDictation -> startLiveDictation()
+            // 3-Macaw Speech is still being probed (a press right after the chat opened): wait for it briefly.
+            uiSettings.preferMacawSpeech && speechAvailability.macaw == null && liveRun == null -> {
+                liveDictationPressPending = true
+                mainHandler.removeCallbacks(liveDictationPressTimeout)
+                mainHandler.postDelayed(liveDictationPressTimeout, LIVE_DICTATION_PRESS_WAIT_MILLIS)
+            }
+            else -> startDictation(DictationMode.SINGLE)
+        }
+    }
+
+    private fun startLiveDictation(): Boolean {
+        if (destroyed || pendingDictation != null || liveRun != null) return false
+        if (!isConversationTargetReady()) return false
+        stopReading()
+        val run = LiveDictationRun(
+            LiveDictationComposer(input, appPalette.secondaryText, ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS),
+        )
+        liveRun = run
+        liveDictationRequestCount++
+        renderComposerState()
+        val session = macawSpeech.open(LiveDictationMode.CONTINUOUS, run)
+        // A source may end the session while opening it.
+        if (run.ended) session.cancel() else run.session = session
+        // The button and the hint change silently; say that it listens (deprecated for live regions on API 36).
+        @Suppress("DEPRECATION")
+        if (liveRun === run) input.announceForAccessibility(getString(R.string.speech_live_dictation_listening))
+        return true
+    }
+
+    /** The microphone pressed again: the pending sentence is finished, then the session ends. */
+    private fun finishLiveDictation() {
+        liveRun?.session?.finish()
+    }
+
+    /** Ends live dictation at once, keeping what it wrote (leaving the chat, sending, another conversation). */
+    private fun cancelLiveDictation() {
+        liveDictationPressPending = false
+        mainHandler.removeCallbacks(liveDictationPressTimeout)
+        val run = liveRun ?: return
+        val session = run.session
+        if (session != null) session.cancel() else onLiveDictationEnd(run, LiveDictationEnd.Cancelled)
+    }
+
+    private fun onLiveDictationEnd(run: LiveDictationRun, end: LiveDictationEnd) {
+        if (liveRun !== run) return
+        liveRun = null
+        run.composer.commitPartial()
+        lastLiveDictationEnd = end
+        if (destroyed) return
+        renderComposerState()
+        if (end is LiveDictationEnd.Failed) recoverLiveDictation(end)
+    }
+
+    /** SESSION_BUSY and MODEL_MISSING open the sheet this once, PERMISSION_DENIED 3-Macaw Speech's dialog (D209). */
+    private fun recoverLiveDictation(failure: LiveDictationEnd.Failed) {
+        val visible = lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+        when (LiveDictationRecoveryPolicy.recovery(failure)) {
+            LiveDictationRecovery.SHEET -> if (visible && speechAvailability.sheetDictationAvailable) {
+                startDictation(DictationMode.SINGLE)
+            } else {
+                showSnackbar(drawerLayout, liveDictationFailureText(failure.code))
+            }
+            LiveDictationRecovery.MICROPHONE_PERMISSION -> if (visible) openMacawMicrophonePermission()
+            LiveDictationRecovery.REPORT -> showSnackbar(drawerLayout, liveDictationFailureText(failure.code))
+        }
+    }
+
+    private fun openMacawMicrophonePermission() {
+        try {
+            startActivity(MacawSpeech.microphonePermissionIntent())
+            showSnackbar(
+                drawerLayout,
+                getString(R.string.speech_live_dictation_permission),
+                com.google.android.material.snackbar.Snackbar.LENGTH_LONG,
+            )
+        } catch (_: RuntimeException) {
+            // ActivityNotFoundException or SecurityException: an older 3-Macaw Speech, or no AutoJs6.
+            if (speechAvailability.sheetDictationAvailable) {
+                startDictation(DictationMode.SINGLE)
+            } else {
+                showSnackbar(drawerLayout, getString(R.string.speech_live_dictation_permission))
+            }
+        }
+    }
+
+    private fun liveDictationFailureText(code: String): String = getString(
+        when (code) {
+            SpeechErrorCodes.SESSION_BUSY -> R.string.speech_live_dictation_busy
+            SpeechErrorCodes.MODEL_MISSING -> R.string.speech_live_dictation_model_missing
+            SpeechErrorCodes.PERMISSION_DENIED -> R.string.speech_live_dictation_permission
+            else -> R.string.speech_dictation_failed
+        },
+    )
+
+    /** One live dictation session; its events reach the input box only while it is the current one. */
+    private inner class LiveDictationRun(val composer: LiveDictationComposer) : LiveDictationListener {
+        var session: LiveDictationSession? = null
+        var ended = false
+            private set
+
+        override fun onPartial(text: String) {
+            if (liveRun !== this) return
+            composer.partial(text)
+            liveDictationObserverForTest?.onPartial(text)
+        }
+
+        override fun onFinal(text: String) {
+            if (liveRun !== this) return
+            val edit = composer.final(text)
+            liveDictationObserverForTest?.onFinal(text)
+            if (edit == null) return
+            input.requestFocus()
+            if (!edit.limitReached) return
+            // Nothing more fits: end the session and say so (D209).
+            session?.cancel() ?: onLiveDictationEnd(this, LiveDictationEnd.Cancelled)
+            val limit = NumberFormat.getIntegerInstance().format(ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS)
+            showSnackbar(
+                drawerLayout,
+                getString(
+                    if (edit.truncated) R.string.speech_dictation_truncated else R.string.speech_live_dictation_limit,
+                    limit,
+                ),
+                com.google.android.material.snackbar.Snackbar.LENGTH_LONG,
+            )
+        }
+
+        override fun onReady() {
+            if (liveRun === this) liveDictationObserverForTest?.onReady()
+        }
+
+        override fun onEnd(end: LiveDictationEnd) {
+            ended = true
+            val current = liveRun === this
+            onLiveDictationEnd(this, end)
+            if (current) liveDictationObserverForTest?.onEnd(end)
+        }
     }
 
     private fun currentLocale(): Locale = resources.configuration.locales[0]
 
     private fun startDictation(mode: DictationMode): Boolean {
-        if (destroyed || pendingDictation != null) return false
-        if (!speechAvailability.dictationAvailable || !isConversationTargetReady()) return false
+        if (destroyed || pendingDictation != null || liveRun != null) return false
+        if (!speechAvailability.sheetDictationAvailable || !isConversationTargetReady()) return false
         // Insert where the user was typing; without focus, append (roadmap D9).
         if (input.hasFocus()) {
             dictationSelectionStart = input.selectionStart
@@ -2282,8 +2522,9 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun startVoiceConversation() {
-        if (destroyed || pendingDictation != null || voicePhase != VoicePhase.IDLE) return
-        if (!speechAvailability.dictationAvailable || !isConversationTargetReady()) return
+        if (destroyed || pendingDictation != null || liveRun != null || voicePhase != VoicePhase.IDLE) return
+        // The voice conversation still uses the recognizer sheet; P6-3 moves it to the live session.
+        if (!speechAvailability.sheetDictationAvailable || !isConversationTargetReady()) return
         dispatchVoice(VoiceEvent.Start)
     }
 
@@ -2940,6 +3181,8 @@ class ChatActivity : ConfiguredActivity() {
         promptOverride: String? = null,
     ): Long? {
         if (isGenerating) return null
+        // Sending ends live dictation; its gray partial is sent as shown (D215).
+        cancelLiveDictation()
         val target = if (targetOverride == null) {
             resolvedConversationTarget()
         } else {
@@ -3186,6 +3429,7 @@ class ChatActivity : ConfiguredActivity() {
         target: ConversationTargetSnapshot? = targetCatalog?.let(ConversationTargetPolicy::defaultSnapshot),
         keepPendingAttachments: Boolean = false,
     ) {
+        cancelLiveDictation()
         dispatchVoice(VoiceEvent.ConversationChanged)
         stopReading()
         stopGeneration(showToast = false)
@@ -3311,6 +3555,7 @@ class ChatActivity : ConfiguredActivity() {
     private fun enterEditing(messageId: Long) {
         val message = messages.singleOrNull { candidate -> candidate.id == messageId } ?: return
         if (message.role != ChatMessageRole.USER || isGenerating) return
+        cancelLiveDictation()
         dispatchVoice(VoiceEvent.ConversationChanged)
         closeSearch()
         draftBeforeEditing = input.text.toString()
@@ -3760,6 +4005,7 @@ class ChatActivity : ConfiguredActivity() {
             showSnackbar(drawerLayout, getString(R.string.chat_history_not_found))
             return
         }
+        cancelLiveDictation()
         dispatchVoice(VoiceEvent.ConversationChanged)
         stopReading()
         if (isGenerating) stopGeneration(showToast = false) else persistConversationNow()
@@ -4504,6 +4750,9 @@ class ChatActivity : ConfiguredActivity() {
         const val COMPOSER_MIC_INSET_DP = 5
         const val COMPOSER_TEXT_END_DP = 16
         const val COMPOSER_TEXT_END_WITH_MIC_DP = 44
+
+        /** A press while 3-Macaw Speech is still probed waits this long before it opens the sheet. */
+        const val LIVE_DICTATION_PRESS_WAIT_MILLIS = 1_500L
         const val SEARCH_DEBOUNCE_MILLIS = 150L
         const val NO_USAGE = -1L
         const val MAXIMUM_SAVED_MESSAGES = 48

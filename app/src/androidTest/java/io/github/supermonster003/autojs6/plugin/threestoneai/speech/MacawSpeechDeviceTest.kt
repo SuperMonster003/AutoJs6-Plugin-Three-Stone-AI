@@ -1,0 +1,217 @@
+package io.github.supermonster003.autojs6.plugin.threestoneai.speech
+
+import android.app.Activity
+import android.app.Instrumentation
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.speech.RecognizerIntent
+import androidx.core.content.pm.PackageInfoCompat
+import androidx.test.platform.app.InstrumentationRegistry
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ChatTestEnvironment.Companion.composer
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ChatTestEnvironment.Companion.mic
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ChatTestEnvironment.Companion.waitUntil
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
+import org.junit.Test
+import java.util.concurrent.CopyOnWriteArrayList
+
+/**
+ * P6-1 with the real 3-Macaw Speech, whatever this device has: the probe matches what is installed; without a usable
+ * session (3-Macaw Speech or AutoJs6 missing, the emulator) the microphone opens the sheet as in 1.7.2; with one (a
+ * phone with 3-Macaw Speech, its recognition model and the microphone) a session opens, gets ready, cancels and finishes.
+ * Nothing is played; the sessions record only the room for a moment.
+ */
+class MacawSpeechDeviceTest {
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val context = instrumentation.targetContext
+    private val main = Handler(Looper.getMainLooper())
+    private var environment: ChatTestEnvironment? = null
+
+    @After
+    fun tearDown() {
+        environment?.close()
+        MacawSpeechTestHooks.availability = null
+        MacawSpeechTestHooks.source = null
+    }
+
+    @Test
+    fun theProbeMatchesWhatIsInstalled() {
+        val availability = probe()
+        val macaw = installed(MacawSpeech.PACKAGE)
+        val host = installed(HOST)
+        when {
+            !macaw -> assertEquals(MacawSpeechStatus.NOT_INSTALLED, availability.status)
+            // No AutoJs6: org.autojs.permission.PLUGIN does not exist, so binding throws SecurityException.
+            !host -> assertEquals(MacawSpeechStatus.NOT_BINDABLE, availability.status)
+            else -> assertTrue(availability.status.name, availability.status != MacawSpeechStatus.NOT_INSTALLED)
+        }
+        SpeechDeviceReport.receipt(
+            "macaw-probe",
+            mapOf(
+                "macawInstalled" to macaw,
+                "hostInstalled" to host,
+                "macawVersion" to version(MacawSpeech.PACKAGE),
+                "status" to availability.status.name,
+                "contractVersion" to availability.contractVersion,
+                "liveDictation" to availability.liveDictation,
+                "resident" to availability.resident,
+            ),
+        )
+    }
+
+    @Test
+    fun withoutAUsableSessionTheMicrophoneOpensTheSheet() {
+        val probed = probe()
+        assumeTrue("3-Macaw Speech dictates live on this device", !probed.liveDictation)
+        val env = ChatTestEnvironment(macaw = null).also { environment = it }
+        SpeechDeviceProbe.stateOverride = SpeechDeviceState(
+            macawRecognizer = false,
+            anyRecognizer = true,
+            macawTtsEngine = false,
+            anyTtsEngine = false,
+        )
+        DictationIntents.testPackage = env.fakeRecognizerPackage
+        DictationIntents.testExtras = Bundle().apply {
+            putInt(FakeRecognizerActivity.EXTRA_RESULT_CODE, Activity.RESULT_OK)
+            putString(FakeRecognizerActivity.EXTRA_RESULT_TEXT, "from the sheet")
+        }
+        env.launchChat().use { scenario ->
+            waitUntil("the chat probed 3-Macaw Speech", 8_000L) {
+                var probedInChat = false
+                scenario.onActivity { activity -> probedInChat = activity.macawSpeechForTest != null }
+                probedInChat
+            }
+            // Answered and counted by a blocking monitor (the chat may recreate itself once the AutoJs6 appearance
+            // arrives on a cold start, which resets its own counters). Added only now: an intent without an action
+            // matches any action filter, so it would also swallow the launch of the chat.
+            val answer = Intent().putStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS, arrayListOf("from the sheet"))
+            val sheets = Instrumentation.ActivityMonitor(
+                IntentFilter(RecognizerIntent.ACTION_RECOGNIZE_SPEECH),
+                Instrumentation.ActivityResult(Activity.RESULT_OK, answer),
+                true,
+            )
+            instrumentation.addMonitor(sheets)
+            var status = ""
+            try {
+                scenario.onActivity { activity ->
+                    status = activity.macawSpeechForTest!!.status.name
+                    composer(activity).setText("")
+                    mic(activity).performClick()
+                }
+                waitUntil("the sheet answers") {
+                    var text = ""
+                    scenario.onActivity { activity -> text = composer(activity).text.toString() }
+                    text == "from the sheet"
+                }
+            } finally {
+                instrumentation.removeMonitor(sheets)
+            }
+            assertEquals("The sheet opened once", 1, sheets.hits)
+            scenario.onActivity { activity -> assertEquals(0, activity.liveDictationRequestCount) }
+            SpeechDeviceReport.receipt(
+                "macaw-fallback",
+                mapOf("status" to status, "macawInstalled" to installed(MacawSpeech.PACKAGE), "hostInstalled" to installed(HOST), "sheet" to "pass"),
+            )
+        }
+    }
+
+    @Test
+    fun aRealSessionOpensCancelsAndFinishes() {
+        val probed = probe()
+        assumeTrue("3-Macaw Speech is not ready for a session here: ${probed.status}", probed.status == MacawSpeechStatus.AVAILABLE)
+        val events = CopyOnWriteArrayList<String>()
+        var connection: MacawSpeechConnection? = null
+        instrumentation.runOnMainSync { connection = MacawSpeechConnection(context) {}.also(MacawSpeechConnection::connect) }
+        try {
+            waitUntil("the chat connection probes", 8_000L) { connection!!.availability != null }
+            assertEquals(MacawSpeechStatus.AVAILABLE, connection!!.availability!!.status)
+
+            // Opened, ready, cancelled: the end is local and immediate.
+            val openedAt = SystemClock.elapsedRealtime()
+            var readyAt = 0L
+            var session: LiveDictationSession? = null
+            instrumentation.runOnMainSync {
+                session = connection!!.open(LiveDictationMode.CONTINUOUS, recorder(events) { readyAt = SystemClock.elapsedRealtime() })
+            }
+            waitUntil("the session is ready", 15_000L) { "ready" in events }
+            instrumentation.runOnMainSync { session!!.cancel() }
+            waitUntil("the cancel ends it") { events.any { it.startsWith("end:") } }
+            assertEquals("end:${LiveDictationEnd.Cancelled}", events.last())
+            val readyMillis = readyAt - openedAt
+
+            // Opened again (the microphone was given back), ready, finished: 3-Macaw Speech ends it as stopped.
+            events.clear()
+            var finishedAt = 0L
+            instrumentation.runOnMainSync {
+                session = connection!!.open(LiveDictationMode.CONTINUOUS, recorder(events) {})
+            }
+            waitUntil("the second session is ready", 15_000L) { "ready" in events }
+            instrumentation.runOnMainSync {
+                finishedAt = SystemClock.elapsedRealtime()
+                session!!.finish()
+            }
+            waitUntil("the finish ends it", 8_000L) { events.any { it.startsWith("end:") } }
+            val stopMillis = SystemClock.elapsedRealtime() - finishedAt
+            assertEquals("end:${LiveDictationEnd.Stopped}", events.last())
+            SpeechDeviceReport.receipt(
+                "macaw-session",
+                mapOf(
+                    "macawVersion" to version(MacawSpeech.PACKAGE),
+                    "contractVersion" to probed.contractVersion,
+                    "resident" to probed.resident,
+                    "readyMillis" to readyMillis,
+                    "stopMillis" to stopMillis,
+                    "openCancel" to "pass",
+                    "openFinish" to "pass",
+                ),
+            )
+        } finally {
+            instrumentation.runOnMainSync { connection?.disconnect() }
+        }
+    }
+
+    /** Events without their text (D16): partials and finals are only counted. */
+    private fun recorder(events: MutableList<String>, ready: () -> Unit) = object : LiveDictationListener {
+        override fun onReady() {
+            ready()
+            events += "ready"
+        }
+
+        override fun onPartial(text: String) {
+            events += "partial"
+        }
+
+        override fun onFinal(text: String) {
+            events += "final"
+        }
+
+        override fun onEnd(end: LiveDictationEnd) {
+            events += "end:$end"
+        }
+    }
+
+    private fun probe(): MacawSpeechAvailability {
+        MacawSpeechTestHooks.availability = null
+        var result: MacawSpeechAvailability? = null
+        main.post { MacawSpeech.probeOnce(context) { availability -> result = availability } }
+        waitUntil("3-Macaw Speech is probed", MacawSpeech.PROBE_TIMEOUT_MILLIS + 3_000L) { result != null }
+        return result!!
+    }
+
+    private fun installed(name: String) = version(name) != null
+
+    private fun version(name: String): Long? = runCatching {
+        @Suppress("DEPRECATION")
+        PackageInfoCompat.getLongVersionCode(context.packageManager.getPackageInfo(name, 0))
+    }.getOrNull()
+
+    private companion object {
+        const val HOST = "org.autojs.autojs6"
+    }
+}

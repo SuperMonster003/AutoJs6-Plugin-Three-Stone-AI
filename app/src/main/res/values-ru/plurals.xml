@@ -12,4 +12,10 @@
         <item quantity="many">%1$d моделей</item>
         <item quantity="other">%1$d модели</item>
     </plurals>
+    <plurals name="service_headers_summary">
+        <item quantity="one">%1$d заголовок: %2$s</item>
+        <item quantity="few">%1$d заголовка: %2$s</item>
+        <item quantity="many">%1$d заголовков: %2$s</item>
+        <item quantity="other">%1$d заголовка: %2$s</item>
+    </plurals>
 </resources>

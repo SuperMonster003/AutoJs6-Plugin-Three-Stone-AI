@@ -7,9 +7,12 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
+import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.text.method.PasswordTransformationMethod
+import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
@@ -22,6 +25,7 @@ import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -38,6 +42,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.profile.ConfiguredO
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiBaseUrlHistoryPolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiBaseUrlHistoryStore
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiCredentialUpdate
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiHeaderValidationException
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogGroups
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogRepository
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfile
@@ -64,6 +69,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ui.showSnackbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.singleChoiceDialog
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.statusBadge
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.switchRow
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.textButton
 import io.github.supermonster003.autojs6.plugin.threestoneai.ui.uiDpF
 
 /**
@@ -77,7 +83,9 @@ class ServiceDetailActivity : ConfiguredActivity() {
     private lateinit var registry: OnlineAiProfileRegistry
     private lateinit var baseUrlHistoryStore: OnlineAiBaseUrlHistoryStore
     private lateinit var modelCatalog: OnlineAiModelCatalogRepository
-    private lateinit var tester: OnlineServiceConnectionTester
+    @VisibleForTesting
+    internal lateinit var tester: OnlineServiceConnectionTester
+        private set
     private lateinit var screenRoot: View
 
     /** Null until a new service is saved for the first time. */
@@ -99,8 +107,37 @@ class ServiceDetailActivity : ConfiguredActivity() {
     private lateinit var effortRow: SettingRow
     private lateinit var fastRow: SettingRow
     private lateinit var testRow: SettingRow
+    private lateinit var headersRow: SettingRow
+    private lateinit var openCodeHint: View
     private lateinit var modelList: LinearLayout
+    private lateinit var pageScroll: ScrollView
+    private lateinit var detailContent: View
     private var saveItem: MenuItem? = null
+
+    /** The "Request headers" page (1.8.0 P12.1); it swaps with the details inside the same screen. */
+    @VisibleForTesting
+    internal lateinit var headerEditor: ServiceHeaderEditor
+        private set
+
+    @VisibleForTesting
+    internal var headersPageShown = false
+        private set
+    private var detailScrollY = 0
+
+    /** Secret header names with a stored value for the saved service (no values leave the registry). */
+    private var storedHeaderSecrets: Set<String> = emptySet()
+
+    private val headerHost = object : ServiceHeaderEditor.Host {
+        override val feedbackRoot: View
+            get() = screenRoot
+
+        override fun usableStoredSecrets(): Set<String> =
+            if (storedSecretsDropped()) emptySet() else storedHeaderSecrets
+
+        override fun storedSecretsDropped(): Boolean = storedSecretDestinationChanged()
+
+        override fun onHeadersChanged() = refreshState()
+    }
     private val drag = ModelDrag()
     private var lastTouchRawY = 0f
 
@@ -115,7 +152,11 @@ class ServiceDetailActivity : ConfiguredActivity() {
         registry = applicationState.onlineProfileRegistry
         baseUrlHistoryStore = OnlineAiBaseUrlHistoryStore(applicationContext)
         modelCatalog = createOnlineAiModelCatalogRepository(applicationContext)
-        tester = OnlineServiceConnectionTester(this, { screenRoot }) { reloadPersisted() }
+        tester = OnlineServiceConnectionTester(
+            this,
+            { screenRoot },
+            onAddSessionHeader = { id -> if (id == profileId) headerEditor.addSessionHeader() },
+        ) { reloadPersisted() }
 
         val draft = savedInstanceState?.getBundle(KEY_DRAFT)?.let(OnlineAiProfileEditorDraft::fromBundle)
         profileId = draft?.profileId ?: intent.getStringExtra(EXTRA_PROFILE_ID)
@@ -123,10 +164,12 @@ class ServiceDetailActivity : ConfiguredActivity() {
         if (profileId != null && persisted == null) {
             // Deleted elsewhere (an import, another window) while this page was away.
             draft?.credential?.fill('\u0000')
+            draft?.headerSecrets?.values?.forEach { value -> value.fill('\u0000') }
             Toast.makeText(this, R.string.service_detail_missing, Toast.LENGTH_LONG).show()
             finish()
             return
         }
+        storedHeaderSecrets = loadStoredHeaderSecrets()
         baseline = draft?.initial ?: persisted?.let { valuesOf(it.profile) } ?: newServiceValues()
         val current = draft?.current ?: baseline
         lastSuggestedName = draft?.lastSuggestedName ?: baseline.name.takeIf { persisted == null }
@@ -135,13 +178,19 @@ class ServiceDetailActivity : ConfiguredActivity() {
         fastMode = current.fastMode
         models = ServiceModelList(current.modelIds, current.defaultModelId, current.visionModelIds)
 
-        setContentView(createContentView(current))
+        // The editor takes over the restored secret header arrays and clears the ones it drops.
+        setContentView(createContentView(current, draft?.headerSecrets.orEmpty()))
         draft?.credential?.let { characters ->
             if (characters.isNotEmpty()) credentialInput.setText(characters, 0, characters.size)
             characters.fill('\u0000')
         }
         onBackPressedDispatcher.addCallback(this, closeCallback)
         refreshState()
+        if (draft?.headersPageOpen == true) showHeadersPage()
+        if (savedInstanceState == null && intent.getBooleanExtra(EXTRA_ADD_SESSION_HEADER, false)) {
+            // The MissingSessionID entry of the services page and the chat (D169).
+            headerEditor.addSessionHeader()
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -153,15 +202,18 @@ class ServiceDetailActivity : ConfiguredActivity() {
             current = captureValues(),
             lastSuggestedName = lastSuggestedName,
             credential = credentialInput.text?.let(OnlineServiceText::copyCharacters) ?: CharArray(0),
+            headerSecrets = headerEditor.copyTypedSecrets(),
+            headersPageOpen = headersPageShown,
         )
-        // The bundle keeps this array by reference until it is parceled (a recreate in the same
-        // process never parcels it), so it must not be cleared here; onCreate clears it after use.
+        // The bundle keeps these arrays by reference until it is parceled (a recreate in the same
+        // process never parcels it), so they must not be cleared here; onCreate takes them over.
         outState.putBundle(KEY_DRAFT, draft.toBundle())
     }
 
     override fun onDestroy() {
         if (::tester.isInitialized) tester.close()
         if (::credentialInput.isInitialized) credentialInput.text?.clear()
+        if (::headerEditor.isInitialized) headerEditor.close()
         super.onDestroy()
     }
 
@@ -182,12 +234,17 @@ class ServiceDetailActivity : ConfiguredActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private fun createContentView(current: OnlineAiProfileEditorValues): View {
+    private fun createContentView(
+        current: OnlineAiProfileEditorValues,
+        typedHeaderSecrets: Map<String, CharArray>,
+    ): View {
         val scaffold = buildScaffold(R.string.service_detail_title)
         screenRoot = scaffold.root
         if (profileId == null) scaffold.toolbar.title = getString(R.string.online_ai_add_profile_title)
         scaffold.toolbar.setNavigationOnClickListener { requestClose() }
         val content = scaffold.content
+        pageScroll = checkNotNull(scaffold.scroll)
+        detailContent = content
 
         content.addView(sectionHeader(R.string.service_detail_connection_section))
         providerRow = settingRow(
@@ -234,15 +291,18 @@ class ServiceDetailActivity : ConfiguredActivity() {
             credentialInput.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
             credentialInput.setAutofillHints(null)
         }
+        openCodeHint = openCodeHintView()
         content.addView(
             LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPaddingRelative(uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM), uiDp(Ui.SPACE_XXL), uiDp(Ui.SPACE_SM))
                 addView(withTopMargin(nameField, 0))
                 addView(withTopMargin(baseUrlField, Ui.SPACE_LG))
+                addView(openCodeHint)
                 addView(withTopMargin(credentialField, Ui.SPACE_LG))
             },
         )
+        headerEditor = ServiceHeaderEditor(this, current.headers, typedHeaderSecrets, headerHost)
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
@@ -280,6 +340,15 @@ class ServiceDetailActivity : ConfiguredActivity() {
             refreshState()
         }
         content.addView(fastRow.view)
+        headersRow = settingRow(
+            title = getString(R.string.service_headers_title),
+            summary = getString(R.string.service_headers_none),
+            iconResource = R.drawable.ic_code_24,
+            onClick = ::showHeadersPage,
+        )
+        headersRow.summaryView.maxLines = 4
+        headersRow.summaryView.ellipsize = TextUtils.TruncateAt.END
+        content.addView(headersRow.view)
         testRow = settingRow(
             title = getString(R.string.online_ai_action_test),
             summary = getString(R.string.service_detail_test_summary),
@@ -321,6 +390,113 @@ class ServiceDetailActivity : ConfiguredActivity() {
         ).apply { topMargin = uiDp(marginDp) }
     }
 
+    /** D169: shown under the Base URL while it points to opencode.ai without the session header. */
+    private fun openCodeHintView(): View = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        tag = TAG_OPENCODE_HINT
+        visibility = View.GONE
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ).apply { topMargin = uiDp(Ui.SPACE_SM) }
+        addView(
+            ImageView(this@ServiceDetailActivity).apply {
+                setImageDrawable(tintedDrawable(R.drawable.ic_info_24, appPalette.accent))
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            },
+            LinearLayout.LayoutParams(uiDp(20), uiDp(20)).apply { marginEnd = uiDp(Ui.SPACE_SM) },
+        )
+        addView(
+            TextView(this@ServiceDetailActivity).apply {
+                text = getString(R.string.service_headers_opencode_hint, ServiceHeaderPolicy.SESSION_HEADER_NAME)
+                textSize = Ui.TEXT_SECTION
+                setTextColor(appPalette.secondaryText)
+                setLineSpacing(0f, Ui.LINE_SPACING_BODY)
+            },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        addView(textButton(R.string.service_headers_opencode_add) { headerEditor.addSessionHeader() })
+    }
+
+    // ---- Request headers --------------------------------------------------------------------
+
+    private fun loadStoredHeaderSecrets(): Set<String> = profileId?.let { id ->
+        runCatching { registry.configuredHeaderSecrets(id) }.getOrDefault(emptySet())
+    } ?: emptySet()
+
+    /**
+     * True when saving the draft would drop the stored secret header values because the provider
+     * or the host changed (D162, T72). An address that cannot be parsed yet changes nothing here.
+     */
+    private fun storedSecretDestinationChanged(): Boolean {
+        val saved = persisted?.profile ?: return false
+        if (!::baseUrlInput.isInitialized) return false
+        if (provider != saved.provider) return true
+        val draftUrl = baseUrlInput.text?.toString().orEmpty()
+        return runCatching { OnlineAiProfileUrls.origin(draftUrl) != OnlineAiProfileUrls.origin(saved.baseUrl) }
+            .getOrDefault(false)
+    }
+
+    @VisibleForTesting
+    internal fun showHeadersPage() {
+        if (headersPageShown) return
+        currentFocus?.clearFocus()
+        detailScrollY = pageScroll.scrollY
+        headersPageShown = true
+        pageScroll.removeAllViews()
+        pageScroll.addView(
+            headerEditor.page,
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+        )
+        headerEditor.refresh()
+        pageScroll.scrollTo(0, 0)
+        supportActionBar?.title = getString(R.string.service_headers_title)
+    }
+
+    @VisibleForTesting
+    internal fun showDetailsPage() {
+        if (!headersPageShown) return
+        headersPageShown = false
+        pageScroll.removeAllViews()
+        pageScroll.addView(
+            detailContent,
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+        )
+        supportActionBar?.title = getString(
+            if (profileId == null) R.string.online_ai_add_profile_title else R.string.service_detail_title,
+        )
+        refreshState()
+        pageScroll.post { pageScroll.scrollTo(0, detailScrollY) }
+    }
+
+    private fun refreshHeaders() {
+        val headers = headerEditor.headers
+        val missing = headerEditor.missingSecrets()
+        val texts = ServiceHeaderTexts(this)
+        val summary = SpannableStringBuilder(texts.summary(headers))
+        if (missing.isNotEmpty()) {
+            val start = summary.length + 1
+            summary.append('\n').append(texts.missingSecrets(missing))
+            summary.setSpan(
+                ForegroundColorSpan(getColor(R.color.validation_error)),
+                start,
+                summary.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+        }
+        headersRow.summaryView.text = summary
+        headersRow.summaryView.visibility = View.VISIBLE
+        openCodeHint.visibility = if (
+            ServiceHeaderPolicy.needsSessionHeader(baseUrlInput.text?.toString().orEmpty(), headers)
+        ) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+        if (headersPageShown) headerEditor.refresh()
+    }
+
     // ---- State ------------------------------------------------------------------------------
 
     private fun findProfile(id: String): ConfiguredOnlineAiProfile? =
@@ -335,6 +511,7 @@ class ServiceDetailActivity : ConfiguredActivity() {
         visionModelIds = profile.visionModelIds,
         effort = profile.defaultEffort,
         fastMode = profile.fastMode,
+        headers = profile.headers,
     )
 
     private fun newServiceValues(): OnlineAiProfileEditorValues {
@@ -371,6 +548,7 @@ class ServiceDetailActivity : ConfiguredActivity() {
         visionModelIds = models.visionModelIds,
         effort = effort,
         fastMode = fastMode,
+        headers = headerEditor.headers,
     )
 
     @VisibleForTesting
@@ -378,10 +556,12 @@ class ServiceDetailActivity : ConfiguredActivity() {
         initial = baseline,
         current = captureValues(),
         credentialLength = credentialInput.text?.length ?: 0,
+        typedHeaderSecrets = headerEditor.typedSecretCount,
     )
 
     private fun reloadPersisted() {
         profileId?.let { id -> persisted = findProfile(id) }
+        storedHeaderSecrets = loadStoredHeaderSecrets()
         refreshState()
     }
 
@@ -411,6 +591,7 @@ class ServiceDetailActivity : ConfiguredActivity() {
         )
         testRow.summaryView.visibility = View.VISIBLE
         testRow.setRowEnabled(testable)
+        refreshHeaders()
         updateSaveItem()
     }
 
@@ -494,6 +675,11 @@ class ServiceDetailActivity : ConfiguredActivity() {
     // ---- Saving and leaving -----------------------------------------------------------------
 
     private fun requestClose() {
+        if (headersPageShown) {
+            // Back from "Request headers" returns to the details; the draft keeps the edits.
+            showDetailsPage()
+            return
+        }
         if (::credentialInput.isInitialized && hasUnsavedChanges()) {
             confirmDialog(
                 title = getString(R.string.form_discard_changes_title),
@@ -524,6 +710,7 @@ class ServiceDetailActivity : ConfiguredActivity() {
                 visionModelIds = values.visionModelIds,
                 defaultEffort = values.effort,
                 fastMode = values.fastMode,
+                headers = values.headers,
             ) ?: OnlineAiProfile.create(
                 displayName = values.name,
                 provider = values.provider,
@@ -533,10 +720,16 @@ class ServiceDetailActivity : ConfiguredActivity() {
                 visionModelIds = values.visionModelIds,
                 defaultEffort = values.effort,
                 fastMode = values.fastMode,
+                headers = values.headers,
             )
             OnlineAiProfilePolicy.normalizeProfile(raw)
-        }.getOrElse {
-            showSnackbar(screenRoot, getString(R.string.online_ai_form_invalid), Snackbar.LENGTH_LONG)
+        }.getOrElse { error ->
+            val message = if (error is OnlineAiHeaderValidationException) {
+                headerSaveProblem(error, values)
+            } else {
+                getString(R.string.online_ai_form_invalid)
+            }
+            showSnackbar(screenRoot, message, Snackbar.LENGTH_LONG)
             return false
         }
         val credentialText = credentialInput.text ?: return false
@@ -557,12 +750,18 @@ class ServiceDetailActivity : ConfiguredActivity() {
             else -> OnlineAiCredentialUpdate.Keep
         }
         val saved = try {
-            runCatching { registry.save(candidate, update) }
+            // The header secrets update is built right here: the registry owns and clears its copies.
+            runCatching { registry.save(candidate, update, headerEditor.secretsUpdate()) }
         } finally {
             replacement?.fill('\u0000')
         }
-        if (saved.isFailure) {
-            showSnackbar(screenRoot, getString(R.string.online_ai_profile_save_failed), Snackbar.LENGTH_LONG)
+        saved.exceptionOrNull()?.let { error ->
+            val message = if (error is OnlineAiHeaderValidationException) {
+                headerSaveProblem(error, values)
+            } else {
+                getString(R.string.online_ai_profile_save_failed)
+            }
+            showSnackbar(screenRoot, message, Snackbar.LENGTH_LONG)
             return false
         }
         credentialText.clear()
@@ -571,6 +770,8 @@ class ServiceDetailActivity : ConfiguredActivity() {
         profileId = candidate.profileId
         persisted = findProfile(candidate.profileId)
         val stored = persisted?.profile ?: candidate
+        storedHeaderSecrets = loadStoredHeaderSecrets()
+        headerEditor.onSaved(stored.headers)
         baseline = valuesOf(stored)
         lastSuggestedName = null
         // Show what was stored (names and IDs are trimmed on save) and turn the page into an edit page.
@@ -580,11 +781,17 @@ class ServiceDetailActivity : ConfiguredActivity() {
         models = ServiceModelList(stored.modelIds, stored.modelId, stored.visionModelIds)
         if (nameInput.text?.toString() != stored.displayName) nameInput.setText(stored.displayName)
         if (baseUrlInput.text?.toString() != stored.baseUrl) baseUrlInput.setText(stored.baseUrl)
-        supportActionBar?.title = getString(R.string.service_detail_title)
+        if (!headersPageShown) supportActionBar?.title = getString(R.string.service_detail_title)
         renderModels()
         refreshState()
         showSnackbar(screenRoot, getString(R.string.online_ai_profile_saved))
         return true
+    }
+
+    /** T70: names the header and the reason; never includes a value. */
+    private fun headerSaveProblem(error: OnlineAiHeaderValidationException, values: OnlineAiProfileEditorValues): String {
+        val problem = error.problems.firstOrNull() ?: return getString(R.string.online_ai_form_invalid)
+        return ServiceHeaderTexts(this).saveProblem(problem, values.headers)
     }
 
     /** D122: the stored default target and the switcher's favorites follow a changed first model. */
@@ -924,6 +1131,10 @@ class ServiceDetailActivity : ConfiguredActivity() {
 
     companion object {
         const val EXTRA_PROFILE_ID = "serviceProfileId"
+
+        /** Adds OpenCode Go's session header to the draft on open (the MissingSessionID entry, D169). */
+        const val EXTRA_ADD_SESSION_HEADER = "serviceAddSessionHeader"
+        internal const val TAG_OPENCODE_HINT = "serviceOpenCodeHint"
         private const val KEY_DRAFT = "serviceDetailDraft"
         private const val MENU_SAVE = 2401
         internal const val ACTION_PREFERRED = 2501

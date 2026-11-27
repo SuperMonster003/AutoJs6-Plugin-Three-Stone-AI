@@ -16,4 +16,12 @@
         <item quantity="many">%1$d نموذجا</item>
         <item quantity="other">%1$d نموذج</item>
     </plurals>
+    <plurals name="service_headers_summary">
+        <item quantity="zero">لا ترويسات</item>
+        <item quantity="one">ترويسة واحدة: %2$s</item>
+        <item quantity="two">ترويستان: %2$s</item>
+        <item quantity="few">%1$d ترويسات: %2$s</item>
+        <item quantity="many">%1$d ترويسة: %2$s</item>
+        <item quantity="other">%1$d ترويسة: %2$s</item>
+    </plurals>
 </resources>

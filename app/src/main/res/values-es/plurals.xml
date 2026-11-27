@@ -10,4 +10,9 @@
         <item quantity="many">%1$d modelos</item>
         <item quantity="other">%1$d modelos</item>
     </plurals>
+    <plurals name="service_headers_summary">
+        <item quantity="one">%1$d encabezado: %2$s</item>
+        <item quantity="many">%1$d encabezados: %2$s</item>
+        <item quantity="other">%1$d encabezados: %2$s</item>
+    </plurals>
 </resources>

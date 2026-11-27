@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.widget.PopupMenu
 import com.google.android.material.snackbar.Snackbar
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
@@ -16,6 +17,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFai
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureReason
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.ConfiguredOnlineAiProfile
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiCredentialUpdate
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiHeaderPolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogRefreshResult
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiModelCatalogRepository
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfile
@@ -66,7 +68,13 @@ abstract class OnlineServicesActivity : ConfiguredActivity() {
     private var targets: List<AiTarget> = emptyList()
     private var defaultTargetId: String? = null
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val testerDelegate = lazy { OnlineServiceConnectionTester(this, { screenRoot }) { reloadSnapshot() } }
+    private val testerDelegate = lazy {
+        OnlineServiceConnectionTester(
+            this,
+            { screenRoot },
+            onAddSessionHeader = { profileId -> openServiceDetails(profileId, addSessionHeader = true) },
+        ) { reloadSnapshot() }
+    }
     private val tester by testerDelegate
     private val profileImportPicker = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -316,6 +324,9 @@ abstract class OnlineServicesActivity : ConfiguredActivity() {
                 if (state.configured) CardBadge(getString(R.string.models_badge_ready), BadgeTone.NEUTRAL)
                 else CardBadge(getString(R.string.models_badge_missing_key), BadgeTone.WARNING),
             )
+            if (missingHeaderValues(profile)) {
+                add(CardBadge(getString(R.string.service_headers_badge_missing), BadgeTone.WARNING))
+            }
         }
         return itemCard(
             title = profile.displayName,
@@ -327,9 +338,24 @@ abstract class OnlineServicesActivity : ConfiguredActivity() {
         )
     }
 
-    /** The service details page (P5.4, D96) replaces the old editor sheet; null adds a service. */
-    private fun openServiceDetails(profileId: String?) {
-        startActivity(ServiceDetailActivity.intent(this, profileId))
+    /** True when a secret header value has to be entered (again), e.g. after an import (1.8.0 P12.3). */
+    private fun missingHeaderValues(profile: OnlineAiProfile): Boolean {
+        val secretKeys = OnlineAiHeaderPolicy.secretKeys(profile.headers)
+        if (secretKeys.isEmpty()) return false
+        val stored = runCatching { registry.configuredHeaderSecrets(profile.profileId) }.getOrDefault(emptySet())
+        return !stored.containsAll(secretKeys)
+    }
+
+    /**
+     * The service details page (P5.4, D96) replaces the old editor sheet; null adds a service.
+     * [addSessionHeader] adds OpenCode Go's session header to the draft (the MissingSessionID entry, D169).
+     */
+    private fun openServiceDetails(profileId: String?, addSessionHeader: Boolean = false) {
+        startActivity(
+            ServiceDetailActivity.intent(this, profileId).apply {
+                if (addSessionHeader) putExtra(ServiceDetailActivity.EXTRA_ADD_SESSION_HEADER, true)
+            },
+        )
     }
 
     private fun messageBlock(resource: Int) = secondaryText(getString(resource), 15f).apply {
@@ -449,7 +475,12 @@ abstract class OnlineServicesActivity : ConfiguredActivity() {
         }
         runCatching { registry.save(clone, OnlineAiCredentialUpdate.Clear) }
             .onSuccess {
-                showSnackbar(screenRoot, getString(R.string.online_ai_profile_cloned), Snackbar.LENGTH_LONG)
+                val message = if (OnlineAiHeaderPolicy.secretKeys(clone.headers).isEmpty()) {
+                    getString(R.string.online_ai_profile_cloned)
+                } else {
+                    getString(R.string.service_headers_clone_secrets)
+                }
+                showSnackbar(screenRoot, message, Snackbar.LENGTH_LONG)
                 reloadSnapshot()
             }
             .onFailure {
@@ -488,7 +519,9 @@ abstract class OnlineServicesActivity : ConfiguredActivity() {
         )
     }
 
-    private fun importProfiles(uri: Uri) {
+    /** Imports a profile document; the device test passes a file it wrote in place of the picker. */
+    @VisibleForTesting
+    internal fun importProfiles(uri: Uri) {
         val result = runCatching {
             val bytes = contentResolver.openInputStream(uri)?.use(::readBoundedProfileDocument)
                 ?: error("The selected import document could not be opened")
@@ -519,12 +552,15 @@ abstract class OnlineServicesActivity : ConfiguredActivity() {
                     OnlineAiCredentialUpdate.Clear,
                 )
             }
-            document.profiles.size
+            document.profiles.size to document.profiles.any { source ->
+                OnlineAiHeaderPolicy.secretKeys(source.headers).isNotEmpty()
+            }
         }
-        result.onSuccess { count ->
+        result.onSuccess { (count, secretHeaders) ->
+            val message = getString(R.string.online_ai_import_succeeded, count)
             showSnackbar(
                 screenRoot,
-                getString(R.string.online_ai_import_succeeded, count),
+                if (secretHeaders) message + " " + getString(R.string.service_headers_import_secrets) else message,
                 Snackbar.LENGTH_LONG,
             )
             reloadSnapshot()

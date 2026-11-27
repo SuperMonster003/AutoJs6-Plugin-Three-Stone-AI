@@ -184,9 +184,17 @@ internal fun ConfiguredActivity.showSnackbar(
     anchor: View,
     message: CharSequence,
     duration: Int = Snackbar.LENGTH_SHORT,
+    actionText: CharSequence? = null,
+    onAction: (() -> Unit)? = null,
 ) {
     Snackbar.make(anchor, message, duration)
         .setBackgroundTint(appPalette.primaryText)
         .setTextColor(appPalette.windowBackground)
+        .apply {
+            if (actionText != null && onAction != null) {
+                setAction(actionText) { onAction() }
+                setActionTextColor(appPalette.windowBackground)
+            }
+        }
         .show()
 }

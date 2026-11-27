@@ -8,4 +8,8 @@
         <item quantity="one">%1$d model</item>
         <item quantity="other">%1$d models</item>
     </plurals>
+    <plurals name="service_headers_summary">
+        <item quantity="one">%1$d header: %2$s</item>
+        <item quantity="other">%1$d headers: %2$s</item>
+    </plurals>
 </resources>

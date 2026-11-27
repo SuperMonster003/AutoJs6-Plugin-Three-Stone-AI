@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.snackbar.Snackbar
@@ -105,6 +106,8 @@ private fun ConfiguredActivity.showBaseUrlHistoryManager(store: OnlineAiBaseUrlH
 internal class OnlineServiceConnectionTester(
     private val activity: ConfiguredActivity,
     private val feedbackRoot: () -> View,
+    /** Adds the OpenCode Go session header to the tested service (1.8.0 P12.2); null hides the action. */
+    private val onAddSessionHeader: ((profileId: String) -> Unit)? = null,
     private val onFinished: () -> Unit,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -202,14 +205,29 @@ internal class OnlineServiceConnectionTester(
             )
             is CancellationException ->
                 activity.showSnackbar(feedbackRoot(), activity.getString(R.string.online_ai_test_cancelled))
-            else -> activity.materialDialog()
-                .setTitle(R.string.online_ai_test_failed)
-                .setMessage(failureText(failure))
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-                .also(activity::tintDialogButtons)
+            else -> showFailure(test.profileId, failure)
         }
         onFinished()
+    }
+
+    /**
+     * The failure explanation; a MissingSessionID rejection also explains the OpenCode Go session
+     * header and offers to add it (1.8.0 P12.2, D169).
+     */
+    @VisibleForTesting
+    internal fun showFailure(profileId: String, error: Exception): AlertDialog {
+        val text = failureText(error)
+        val builder = activity.materialDialog()
+            .setTitle(R.string.online_ai_test_failed)
+            .setMessage(ServiceHeaderTexts(activity).withMissingSessionHint(text))
+            .setPositiveButton(android.R.string.ok, null)
+        val addSessionHeader = onAddSessionHeader
+        if (addSessionHeader != null && ServiceHeaderPolicy.isMissingSessionError(text)) {
+            builder.setNeutralButton(R.string.service_headers_add_session_action) { _, _ ->
+                addSessionHeader(profileId)
+            }
+        }
+        return builder.show().also(activity::tintDialogButtons)
     }
 
     private fun timeOut(token: Long) {

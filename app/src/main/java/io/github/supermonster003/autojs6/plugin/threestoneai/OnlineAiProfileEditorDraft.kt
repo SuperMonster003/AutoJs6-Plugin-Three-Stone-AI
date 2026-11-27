@@ -2,11 +2,14 @@ package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.os.Bundle
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiCustomHeader
+import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiHeaderValueKind
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProvider
 
 /**
- * Non-secret values shown by the service details page (roadmap D105, P5.4). The API key is kept
- * out of this class so that it never appears in equality checks or in [toString].
+ * Non-secret values shown by the service details page (roadmap D105, P5.4). The API key and typed
+ * secret header values are kept out of this class so that they never appear in equality checks or
+ * in [toString]; [headers] carries only names, kinds and fixed values (1.8.0 P12.1).
  */
 internal data class OnlineAiProfileEditorValues(
     val provider: OnlineAiProvider,
@@ -17,15 +20,20 @@ internal data class OnlineAiProfileEditorValues(
     val visionModelIds: List<String>,
     val effort: GenerationEffort,
     val fastMode: Boolean,
+    val headers: List<OnlineAiCustomHeader> = emptyList(),
 )
 
 internal object OnlineAiProfileEditorPolicy {
-    /** A typed API key always counts as a change: the editor never shows the saved key. */
+    /**
+     * A typed API key or secret header value always counts as a change: the editor never shows the
+     * saved ones.
+     */
     fun hasUnsavedChanges(
         initial: OnlineAiProfileEditorValues,
         current: OnlineAiProfileEditorValues,
         credentialLength: Int,
-    ): Boolean = credentialLength > 0 || initial != current
+        typedHeaderSecrets: Int = 0,
+    ): Boolean = credentialLength > 0 || typedHeaderSecrets > 0 || initial != current
 
     fun provider(name: String?): OnlineAiProvider? =
         OnlineAiProvider.entries.firstOrNull { it.name == name }
@@ -37,8 +45,9 @@ internal object OnlineAiProfileEditorPolicy {
 /**
  * Editor state kept across activity recreation and process death (D105). It lives only in memory
  * and in the saved-instance-state Bundle; nothing here is written to app storage. The Bundle holds
- * [credential] by reference until it is parceled, so only the restoring caller wipes it, once it is
- * back in the field.
+ * [credential] and the [headerSecrets] arrays (typed, not yet saved secret header values keyed by
+ * lower-case name) by reference until it is parceled, so only the restoring caller wipes them, once
+ * they are back in the editor. [headersPageOpen] reopens the "Request headers" page.
  */
 internal class OnlineAiProfileEditorDraft(
     val profileId: String?,
@@ -46,6 +55,8 @@ internal class OnlineAiProfileEditorDraft(
     val current: OnlineAiProfileEditorValues,
     val lastSuggestedName: String?,
     val credential: CharArray,
+    val headerSecrets: Map<String, CharArray> = emptyMap(),
+    val headersPageOpen: Boolean = false,
 ) {
     fun toBundle(): Bundle = Bundle().apply {
         putString(KEY_PROFILE_ID, profileId)
@@ -53,6 +64,11 @@ internal class OnlineAiProfileEditorDraft(
         putBundle(KEY_CURRENT, write(current))
         putString(KEY_LAST_SUGGESTED_NAME, lastSuggestedName)
         putCharArray(KEY_CREDENTIAL, credential)
+        putBundle(
+            KEY_HEADER_SECRETS,
+            Bundle().apply { headerSecrets.forEach { (key, value) -> putCharArray(key, value) } },
+        )
+        putBoolean(KEY_HEADERS_PAGE_OPEN, headersPageOpen)
     }
 
     companion object {
@@ -69,6 +85,11 @@ internal class OnlineAiProfileEditorDraft(
         private const val KEY_VISION_MODEL_IDS = "visionModelIds"
         private const val KEY_EFFORT = "effort"
         private const val KEY_FAST_MODE = "fastMode"
+        private const val KEY_HEADER_NAMES = "headerNames"
+        private const val KEY_HEADER_KINDS = "headerKinds"
+        private const val KEY_HEADER_VALUES = "headerValues"
+        private const val KEY_HEADER_SECRETS = "headerSecrets"
+        private const val KEY_HEADERS_PAGE_OPEN = "headersPageOpen"
 
         /** Returns null for a Bundle this version cannot read; the editor then stays closed. */
         fun fromBundle(bundle: Bundle): OnlineAiProfileEditorDraft? {
@@ -80,6 +101,8 @@ internal class OnlineAiProfileEditorDraft(
                 current = current,
                 lastSuggestedName = bundle.getString(KEY_LAST_SUGGESTED_NAME),
                 credential = bundle.getCharArray(KEY_CREDENTIAL) ?: CharArray(0),
+                headerSecrets = readHeaderSecrets(bundle.getBundle(KEY_HEADER_SECRETS)),
+                headersPageOpen = bundle.getBoolean(KEY_HEADERS_PAGE_OPEN),
             )
         }
 
@@ -92,11 +115,15 @@ internal class OnlineAiProfileEditorDraft(
             putStringArrayList(KEY_VISION_MODEL_IDS, ArrayList(values.visionModelIds))
             putString(KEY_EFFORT, values.effort.name)
             putBoolean(KEY_FAST_MODE, values.fastMode)
+            putStringArrayList(KEY_HEADER_NAMES, ArrayList(values.headers.map(OnlineAiCustomHeader::name)))
+            putStringArrayList(KEY_HEADER_KINDS, ArrayList(values.headers.map { it.kind.wireId }))
+            putStringArrayList(KEY_HEADER_VALUES, ArrayList(values.headers.map(OnlineAiCustomHeader::value)))
         }
 
         private fun read(bundle: Bundle): OnlineAiProfileEditorValues? {
             val modelIds = bundle.getStringArrayList(KEY_MODEL_IDS)?.toList()
             if (modelIds.isNullOrEmpty()) return null
+            val headers = readHeaders(bundle) ?: return null
             return OnlineAiProfileEditorValues(
                 provider = OnlineAiProfileEditorPolicy.provider(bundle.getString(KEY_PROVIDER)) ?: return null,
                 name = bundle.getString(KEY_NAME) ?: return null,
@@ -106,7 +133,28 @@ internal class OnlineAiProfileEditorDraft(
                 visionModelIds = bundle.getStringArrayList(KEY_VISION_MODEL_IDS)?.toList().orEmpty(),
                 effort = OnlineAiProfileEditorPolicy.effort(bundle.getString(KEY_EFFORT)) ?: return null,
                 fastMode = bundle.getBoolean(KEY_FAST_MODE),
+                headers = headers,
             )
+        }
+
+        /** Headers of a Bundle written by this version, none from an older one, null if damaged. */
+        private fun readHeaders(bundle: Bundle): List<OnlineAiCustomHeader>? {
+            val names = bundle.getStringArrayList(KEY_HEADER_NAMES) ?: return emptyList()
+            val kinds = bundle.getStringArrayList(KEY_HEADER_KINDS) ?: return null
+            val values = bundle.getStringArrayList(KEY_HEADER_VALUES) ?: return null
+            if (kinds.size != names.size || values.size != names.size) return null
+            return names.indices.map { index ->
+                val name = names[index] ?: return null
+                val kind = OnlineAiHeaderValueKind.entries.firstOrNull { it.wireId == kinds[index] } ?: return null
+                OnlineAiCustomHeader(name, kind, values[index])
+            }
+        }
+
+        private fun readHeaderSecrets(bundle: Bundle?): Map<String, CharArray> {
+            if (bundle == null) return emptyMap()
+            val result = LinkedHashMap<String, CharArray>()
+            bundle.keySet().sorted().forEach { key -> bundle.getCharArray(key)?.let { result[key] = it } }
+            return result
         }
     }
 }

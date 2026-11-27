@@ -54,6 +54,7 @@ GATE = [PACKAGE + name for name in (
     ".ModelPickerSheetDeviceTest",
     ".PluginDiscoveryAndroidTest",
     ".ServiceDetailDeviceTest",
+    ".ServiceHeadersDeviceTest",
     ".SettingsNavigationTest",
     ".provider.NativeToolSessionAndroidTest",
     ".provider.OwnedParcelFileDescriptorsAndroidTest",
@@ -71,7 +72,8 @@ LEFT_OUT = {
     "ChatAttachmentPickerEmulatorTest": "presses the system pickers, emulator only (D131)",
     "EngineCacheCleanupDeviceTest": "needs an empty model catalog; skipped on a phone with models",
     "ChatAttachmentRealDeviceFlowTest, ChatBranchRealDeviceFlowTest, ModelsAndServicesRealDeviceFlowTest, "
-    "OnlineVisionAcceptanceAndroidTest, SpeechConversationRealDeviceTest": "real AI requests, opt-in",
+    "OnlineVisionAcceptanceAndroidTest, OpenCodeGoSessionHeaderAcceptanceTest, SpeechConversationRealDeviceTest":
+        "real AI requests, opt-in",
     "LiteRtRealModelInferenceInstrumentationTest": "real local model, opt-in",
     "SpeechEngineLatencyDeviceTest": "latency measurement that plays sound",
     "SpeechManualDeviceTest": "waits for a person to speak",

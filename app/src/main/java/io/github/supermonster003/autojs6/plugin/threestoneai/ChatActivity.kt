@@ -57,6 +57,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.ui.roundedRippleFil
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackendSessionRequest
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTarget
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetCatalog
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetIds
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationEffort
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.GenerationListener
@@ -3109,7 +3110,23 @@ class ChatActivity : ConfiguredActivity() {
         }
         finishGenerationUi()
         persistConversationNow()
-        showSnackbar(drawerLayout, getString(R.string.chat_generation_failed_short), com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+        // OpenCode Go's MissingSessionID rejection offers to add the session header (1.8.0 P12.2, D169).
+        val sessionProfileId = generation.target.takeIf { ServiceHeaderPolicy.isMissingSessionError(failureText) }
+            ?.let { target -> runCatching { AiTargetIds.requireProfileId(target.targetId) }.getOrNull() }
+        showSnackbar(
+            drawerLayout,
+            getString(R.string.chat_generation_failed_short),
+            com.google.android.material.snackbar.Snackbar.LENGTH_LONG,
+            actionText = sessionProfileId?.let { getString(R.string.service_headers_add_session_action) },
+            onAction = sessionProfileId?.let { profileId ->
+                {
+                    startActivity(
+                        ServiceDetailActivity.intent(this, profileId)
+                            .putExtra(ServiceDetailActivity.EXTRA_ADD_SESSION_HEADER, true),
+                    )
+                }
+            },
+        )
     }
 
     private fun finishGenerationUi() {

@@ -117,7 +117,9 @@ internal class ChatGenerationText(private val context: Context) {
             context.getString(failure.kind.detailResource()),
         )
         val detail = failure.detail ?: return summary
-        return summary + "\n\n" + context.getString(R.string.chat_generation_failure_detail, detail)
+        val text = summary + "\n\n" + context.getString(R.string.chat_generation_failure_detail, detail)
+        // OpenCode Go's MissingSessionID rejection also explains the session header (1.8.0 P12.2, D169).
+        return ServiceHeaderTexts(context).withMissingSessionHint(text)
     }
 
     fun targetSummary(snapshot: ConversationTargetSnapshot): String = context.getString(

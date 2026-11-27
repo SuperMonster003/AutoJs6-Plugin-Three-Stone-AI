@@ -758,6 +758,11 @@ P0 -> P1 -> P2 -> P3 -> P8 -> P10 -> P5a -> P5b -> P4 -> P6 -> P7 -> P9, 每次�
 | D179 | 请求头的写入 (P11.4 定) | 插件的公共头, 凭据头与协议头各写一次, 同名再写即报错, 取代原来 `fixedHeaders` 的静默覆盖. 自定义 User-Agent 替换默认值 `AutoJs6-Three-Stone-AI/1` (与 1.7.2 相同); 其余自定义头保留用户写的大小写并追加, 与插件已写的头同名时报错 (内置头名单已在校验时挡住, 这里是第二道). 顺序: 公共头, 凭据头, 协议头, 自定义头. 只在请求发出前取保密值, 与 API Key 同一次读取. |
 | D180 | 各调用方的会话号来源 (P11.5 定) | 聊天用对话 ID; 摘要检查点用所属对话的 ID, 所以与该对话的聊天请求同一会话号; 脚本持久会话用脚本在 onStarted 看到的会话 ID (`ScriptSessionIdentity`), 在建第一个后端会话前生成, 压缩后重建沿用; 脚本单次请求, 连接测试与其他调用方不传, 每个后端会话随机生成. 会话号只取决于服务 ID 与对话键, 所以重建, 换同一服务的模型, 进程重启后恢复都不变. |
 | D181 | 错误详情脱敏 (P11.6 定) | 从服务商错误详情里去掉这次请求的 API Key 与全部已发送的保密值: 原样, 连续空格被合并后的形式, JSON 字符串转义后的形式都替换为 `[redacted]`; 详情被截断时, 省略号前至少 4 字节的保密值开头部分也替换; 替换后重新截到 300 字符. 已知局限: 省略号前最多 3 个字符的开头部分会留下; 形如密钥的片段先被通用规则遮盖时, 保密值可能只剩一部分被识别 (遮盖后仍不含完整值). 插件没有请求或请求头日志, 异常消息只含请求头名称, 不含值. |
+| D182 | 请求头页与对话框 (P12.1 定) | "请求头" 页与服务详情在同一屏内切换 (返回键回到详情), 改动随详情页的 "保存" 一起保存, 不单独保存. 对话框的取值方式两项: "填写值" (带 "保密" 勾选) 与 "每个会话自动生成"; 用户没有动过 "保密" 时按名称自动勾选 (含 auth / key / token / secret, D162). 确定时用 `OnlineAiHeaderPolicy` 的同一套规则校验整个列表: 本条的问题写在名称或值的输入框下, 整个列表的问题 (条数, 合计字节) 写在对话框底部, 对话框保持打开. 保密值只显示 "已输入, 保存后生效" / "已设置" / "未设置", 编辑时留空保留当前值, 改名后要重新输入 (D175); 输入的保密值只放在 CharArray 里 (旋转屏幕时经 Bundle 传递), 保存成功或离开页面后清零. |
+| D183 | 四个预设的内容 (P12.2 定) | OpenCode Go 会话: `x-opencode-session`, 每个会话自动生成. OpenRouter 署名: `HTTP-Referer` = 插件仓库地址, `X-OpenRouter-Title` = `3-Stone AI` (OpenRouter 文档的现名, 旧名 X-Title 不用), 均为固定值. Helicone: `Helicone-Auth`, 保密. Cloudflare AI Gateway: `cf-aig-authorization`, 保密. 不需要填值的预设点按即加入并关闭对话框; 需要保密值的预设只填好名称与 "保密", 光标停在值输入框 (占位 `Bearer <令牌>`). 已有同名头时不重复加入, 超过 16 条时报错. |
+| D184 | OpenCode Go 的提示与入口 (P12.2 定) | 服务地址的主机为 opencode.ai 或其子域且没有 `x-opencode-session` 时, 详情页 "连接" 段显示提示与 "添加" 按钮, 点按后加入草稿, 保存后生效. 错误详情含 MissingSessionID (不区分大小写) 时: 测试连接的失败说明给 "添加会话头" 按钮 (服务详情页里直接加入草稿, 服务列表页打开服务详情再加入); 聊天生成失败的提示条给同一动作 (打开服务详情并加入草稿), 失败详情末尾附一句说明. 都不自动保存 (D169). |
+| D185 | 导入与克隆后的保密值 (P12.3 定) | 有保密头而记录里缺值的服务, 服务卡片标出 "请求头待填写", 详情页 "请求头" 行的摘要列出待填写的名称, 请求头页的条目显示 "未设置"; 导入与克隆完成的提示各附一句需要重新填写. 不填也能保存, 未设置的保密头不发送 (D176). |
+| D186 | 设备测试的写法 (P12.5 定) | 服务详情页与请求头页是 View 实现 (Material Components), 不是 Compose, 所以 P12.5 写的 "Compose 仪器测试" 改为 ActivityScenario 加 View 断言 (`ServiceHeadersDeviceTest`); 截图用例要显式传 `-e screenshots true`. P12.7 的真实请求写成默认跳过的 `OpenCodeGoSessionHeaderAcceptanceTest` (要传 `-e openCodeGoAcceptance true`), 由 `.python/device_opencode_go_acceptance.py` 运行, 不进 `device_instrumentation_gate.py` 的门禁清单. |
 
 ### 3. 阶段条目
 
@@ -775,13 +780,13 @@ P0 -> P1 -> P2 -> P3 -> P8 -> P10 -> P5a -> P5b -> P4 -> P6 -> P7 -> P9, 每次�
 
 #### P12 界面, 文档与真机验收 (约 3 天; 依赖 P11; 设备: 模拟器 + XQ-DQ72)
 
-- [ ] P12.1 服务详情页 "请求头" 行与二级页 (D166): 列出, 添加, 编辑, 删除; 对话框含名称, 取值方式, 值与 "保密" 勾选 (默认规则见 D162), 校验报错写明原因 (D161, T70); 保密值不回显.
-- [ ] P12.2 预设与 OpenCode Go 提示 (D166, D169): 四个折叠预设; opencode.ai 缺会话头时的提示与 "添加"; MissingSessionID 错误说明里的同一入口.
-- [ ] P12.3 导入导出与复制服务在界面上的表现: 导入后保密值显示 "未设置" 并提示重填.
-- [ ] P12.4 字符串写全仓库已有的全部语言目录; `check_settings_titles.py` (标题唯一性) 与翻译检查通过.
-- [ ] P12.5 设备测试 (Compose 仪器测试, 先在模拟器跑通): 添加 / 编辑 / 删除, 各类校验报错, 保密值不回显, 预设, OpenCode 提示, 导入后的 "未设置"; 浅色与深色截图由会话先自己核对.
-- [ ] P12.6 文档: changelog 新建 v1.8.0 条目 (10 种语言, 发布日期先用占位), README 与插件说明的功能与安全说明 (10 种语言), 生成文件用 `generate_markdown.py --check` 核对; 更新 issue #1 回复草稿 (`.claude/boards/notes/issues/replies/stone-ai-1-reply.md`, 由维护者自己发).
-- [ ] P12.7 真机验收 (XQ-DQ72, D170): 新建测试服务 (无效占位密钥) 指向 OpenCode Go 的三种端点, 测试连接在加会话头前为 400 MissingSessionID, 加上后为 401; 完成后删除测试服务并恢复默认目标. 首次把含本期改动的调试包覆盖安装到手机前先停下等维护者同意. 交给维护者的手测清单只留观感, 真机输入法与主观体验的项, 不超过 15 项.
+- [x] P12.1 服务详情页 "请求头" 行与二级页 (D166): 列出, 添加, 编辑, 删除; 对话框含名称, 取值方式, 值与 "保密" 勾选 (默认规则见 D162), 校验报错写明原因 (D161, T70); 保密值不回显. 完成 (`9774f90`, D182): `ServiceHeaders.kt` (`ServiceHeaderEditor`, `ServiceHeaderPolicy`, `ServiceHeaderTexts`); 详情页 "连接" 段的 "请求头" 行摘要写出条数, 名称与取值方式, 点按进入请求头页; 条目菜单编辑与删除; `ServiceHeaderPolicyTest` 15 例, 单测 756 -> 771 例, 全部通过.
+- [x] P12.2 预设与 OpenCode Go 提示 (D166, D169): 四个折叠预设; opencode.ai 缺会话头时的提示与 "添加"; MissingSessionID 错误说明里的同一入口. 完成 (`9774f90`, D183, D184): 四个预设折叠在添加对话框的 "常用预设" 下; 详情页 OpenCode 提示与 "添加"; 测试连接失败说明的 "添加会话头" (详情页与服务列表页), 聊天生成失败提示条的同一动作与失败详情里的说明.
+- [x] P12.3 导入导出与复制服务在界面上的表现: 导入后保密值显示 "未设置" 并提示重填. 完成 (`9774f90`, D185): 服务卡片 "请求头待填写", 详情页摘要列出待填写的名称, 请求头页显示 "未设置", 导入与克隆完成的提示各附一句; 导出仍只带固定值 (P11.2).
+- [x] P12.4 字符串写全仓库已有的全部语言目录; `check_settings_titles.py` (标题唯一性) 与翻译检查通过. 完成 (`9774f90`): 新文件 `strings_headers.xml` 与 `plurals.xml` 的新条目写全 11 个目录 (values, values-en, zh, zh-rHK, zh-rTW, ja, ko, fr, es, ru, ar), 繁体按香港与台湾用词分别写, 全部 ASCII 标点; `check_settings_titles.py` 通过 (10 页, 10 种语言, 0 问题), `ApplicationTextPunctuationTest` 随单测通过, `check_repository.py` 通过, `lintDebug` 无错误.
+- [x] P12.5 设备测试 (Compose 仪器测试, 先在模拟器跑通): 添加 / 编辑 / 删除, 各类校验报错, 保密值不回显, 预设, OpenCode 提示, 导入后的 "未设置"; 浅色与深色截图由会话先自己核对. 完成 (`9774f90`, D186): 界面是 View 实现, 改用 ActivityScenario 写 `ServiceHeadersDeviceTest` 7 例 (添加 / 编辑 / 删除且保密值不回显, 各类无效输入保持对话框并写明原因, 上限 / 改名后的保密值 / 已存值, 预设, OpenCode 提示, 导入后的 "未设置", 明暗截图). 模拟器 AVD_API_33 7 / 7 通过, 浅色与深色共 12 张截图已逐张核对; XQ-DQ72 经 `device_instrumentation_gate.py` 6 通过 1 跳过 (截图用例未开启), 同轮 `ServiceDetailDeviceTest` 4 / 4, 前后状态快照一致. 已加入门禁清单. 回归 (模拟器): `SettingsNavigationTest`, `ChatGenerationContinuityDeviceTest`, `ChatBranchDeviceTest`, `ModelsAndServicesScreenshotTest`, `ServiceDetailDeviceTest` 通过.
+- [x] P12.6 文档: changelog 新建 v1.8.0 条目 (10 种语言, 发布日期先用占位), README 与插件说明的功能与安全说明 (10 种语言), 生成文件用 `generate_markdown.py --check` 核对; 更新 issue #1 回复草稿 (`.claude/boards/notes/issues/replies/stone-ai-1-reply.md`, 由维护者自己发). 完成 (`16b89b8`): changelog v1.8.0 10 种语言 (发布日期暂写 2026/11/27, P13.1 改为实际日期), README 与插件说明 10 种语言写请求头, 预设, 保密值与 "带请求头的配置 1.7.2 及更早版本读不出" (D174); `generate_markdown.py --check` 通过; 回复草稿已按实现重写, 界面名称与 values-zh 一致, 建议 P13.2 之后由维护者发出.
+- [x] P12.7 真机验收 (XQ-DQ72, D170): 新建测试服务 (无效占位密钥) 指向 OpenCode Go 的三种端点, 测试连接在加会话头前为 400 MissingSessionID, 加上后为 401; 完成后删除测试服务并恢复默认目标. 首次把含本期改动的调试包覆盖安装到手机前先停下等维护者同意. 交给维护者的手测清单只留观感, 真机输入法与主观体验的项, 不超过 15 项. 完成 (`9774f90` 的 `OpenCodeGoSessionHeaderAcceptanceTest` 与 `.python/device_opencode_go_acceptance.py`, D186): 2026-11-27 XQ-DQ72 (API 33) 经维护者同意覆盖安装调试包, 3 / 3 通过. 三种端点都是: 无效占位密钥且没有会话头时测试连接为 400 MissingSessionID; 详情页显示 OpenCode 提示, 失败说明的 "添加会话头" 加入预设后保存; 再测为 401 (OpenAI 兼容与 Anthropic 为 authentication_error, Google 为 UNAUTHENTICATED), 回复不含占位密钥. 测试服务已删除, 默认目标, 服务 (3 个) 与 Base URL 历史前后相同. 之后装回开工时的 3-Stone AI 1.7.0 (versionCode 353, md5 一致), 测试包已卸载. 手测清单 (12 项) 在看板笔记 `headers-p12-handoff.md`.
 
 #### P13 发布 1.8.0 (约 0.5 天; 依赖 P12; 设备: XQ-DQ72 与 OnePlus 63751f63; 对外动作, 启动前由调度会话先问维护者)
 
@@ -794,4 +799,4 @@ P11 -> P12 -> P13. 第一批只有 P11 卡. 维护者 2026-11-27 定: 只直接�
 
 ### 5. 待决事项 (Q31 起)
 
-立项结束时没有待决. 子会话新登记的待决从 Q31 起, 新决策从 D172 起 (D200 / Q80 起留给语音接入一期).
+立项结束时没有待决. 子会话新登记的待决从 Q31 起, 新决策从 D172 起 (D200 / Q80 起留给语音接入一期). P11 用了 D172 - D181, P12 用了 D182 - D186 且没有新待决, 下一个新决策从 D187 起.

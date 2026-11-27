@@ -763,6 +763,8 @@ P0 -> P1 -> P2 -> P3 -> P8 -> P10 -> P5a -> P5b -> P4 -> P6 -> P7 -> P9, 每次�
 | D184 | OpenCode Go 的提示与入口 (P12.2 定) | 服务地址的主机为 opencode.ai 或其子域且没有 `x-opencode-session` 时, 详情页 "连接" 段显示提示与 "添加" 按钮, 点按后加入草稿, 保存后生效. 错误详情含 MissingSessionID (不区分大小写) 时: 测试连接的失败说明给 "添加会话头" 按钮 (服务详情页里直接加入草稿, 服务列表页打开服务详情再加入); 聊天生成失败的提示条给同一动作 (打开服务详情并加入草稿), 失败详情末尾附一句说明. 都不自动保存 (D169). |
 | D185 | 导入与克隆后的保密值 (P12.3 定) | 有保密头而记录里缺值的服务, 服务卡片标出 "请求头待填写", 详情页 "请求头" 行的摘要列出待填写的名称, 请求头页的条目显示 "未设置"; 导入与克隆完成的提示各附一句需要重新填写. 不填也能保存, 未设置的保密头不发送 (D176). |
 | D186 | 设备测试的写法 (P12.5 定) | 服务详情页与请求头页是 View 实现 (Material Components), 不是 Compose, 所以 P12.5 写的 "Compose 仪器测试" 改为 ActivityScenario 加 View 断言 (`ServiceHeadersDeviceTest`); 截图用例要显式传 `-e screenshots true`. P12.7 的真实请求写成默认跳过的 `OpenCodeGoSessionHeaderAcceptanceTest` (要传 `-e openCodeGoAcceptance true`), 由 `.python/device_opencode_go_acceptance.py` 运行, 不进 `device_instrumentation_gate.py` 的门禁清单. |
+| D187 | 保密值框的输入类型 (P13.1 定, 手测第 6 项) | 勾选 "保密" 时值框的 inputType 换成密码类型 (TYPE_CLASS_TEXT 加 TYPE_TEXT_VARIATION_PASSWORD), 取消时换回普通文本 (TYPE_CLASS_TEXT 加 TYPE_TEXT_FLAG_NO_SUGGESTIONS): 英文 Gboard 不遵守 NO_SUGGESTIONS 标志, 只在密码类型下不给联想. 切换时保留字体与光标位置, 换回普通文本前先把 endIconMode 设回 NONE; API 26 起值框加 IME_FLAG_NO_PERSONALIZED_LEARNING. 设备测试 `ServiceHeadersDeviceTest` 断言两种状态的输入类型与切换后的文字, 光标, 字体. |
+| D188 | 对话框按钮栏随插件语言镜像 (P13.1 定, 手测第 11 项) | Material 1.13.0 的按钮栏写了 `layoutDirection="locale"`, 按进程默认 Locale (系统语言) 排列, 而插件语言只改 Configuration. `materialDialog()` 改用 `ConfiguredDialogBuilder`, create() 后经 `alignButtonBarWithAppLanguage()` 在 decorView 附加到窗口时把按钮栏设成插件配置的方向 (首次布局前, 不闪); `ThemeColorChooser` 自建的对话框同样处理. 影响全部对话框, 1.7.x 起就有, changelog v1.8.0 加一条 Fix (10 种语言). 设备测试: `ServiceHeadersDeviceTest.dialogActionsFollowTheAppLanguageDirection`, `AppearanceSettingsTest` 的 RTL 用例核对按钮顺序. |
 
 ### 3. 阶段条目
 
@@ -790,8 +792,8 @@ P0 -> P1 -> P2 -> P3 -> P8 -> P10 -> P5a -> P5b -> P4 -> P6 -> P7 -> P9, 每次�
 
 #### P13 发布 1.8.0 (约 0.5 天; 依赖 P12; 设备: XQ-DQ72 与 OnePlus 63751f63; 对外动作, 启动前由调度会话先问维护者)
 
-- [ ] P13.1 发布日提交: VERSION_NAME 1.8.0, changelog 的发布日期改为实际日期并重新生成文档. 发布门: 干净克隆单测全绿, XQ-DQ72 仪器测试, XQ-DQ72 与 OnePlus 63751f63 正式包冒烟 (同签名覆盖安装, 保留数据).
-- [ ] P13.2 tag `v1.8.0`, Release (5 个 APK + SHA256SUMS), 官方索引登记; 核对 tag 工作流与索引 CI.
+- [x] P13.1 发布日提交: VERSION_NAME 1.8.0, changelog 的发布日期改为实际日期并重新生成文档. 发布门: 干净克隆单测全绿, XQ-DQ72 仪器测试, XQ-DQ72 与 OnePlus 63751f63 正式包冒烟 (同签名覆盖安装, 保留数据). 完成 (`21dbaeb`, 修复 `da7ad54` / `4798f67`, D187, D188): 2026-11-27 发布日提交 `21dbaeb` (VERSION_NAME 1.8.0, changelog 日期即当天, 生成文件无变化). 维护者手测 12 项报了两处: 第 6 项英文 Gboard 在保密值框里仍给联想, 第 11 项阿拉伯语插件界面加中文系统时对话框的 "取消 / 确定" 仍在系统语言一侧; 在本卡内修复 (`da7ad54` 保密值框改用密码输入类型, `4798f67` 对话框按钮栏随插件语言镜像并在 changelog v1.8.0 加一条 Fix, 10 种语言), 维护者复测两项通过, 没有新待决. 发布门按 `4798f67` (versionCode 379) 重过: 干净克隆单测 771 例 0 失败 (工作机); 正式包 `BUILD_GATE_LOCAL=1` 构建, release-manifest sourceRevision `4798f67`, sourceDirty false, 签名 `31a681fc...` 一致; XQ-DQ72 仪器门禁 (正式签名调试包覆盖) 23 类 98 通过 0 失败 2 跳过, leftovers 0, 前后状态快照全部相同, 之后装回正式包; XQ-DQ72 与 OnePlus 63751f63 正式包冒烟 (覆盖安装, 保留数据) sha256, install, smoke 三项均通过 (process64 true, pageSize 4096), 两台都留 1.8.0 正式包 (vc 379), 测试包已卸载; CI: Build and plugin contract (45938281524) 与 Documentation (45938281447) 通过.
+- [x] P13.2 tag `v1.8.0`, Release (5 个 APK + SHA256SUMS), 官方索引登记; 核对 tag 工作流与索引 CI. 完成 (tag `v1.8.0` 指向 `4798f67`, 索引 `bf0b6d0`): 附注 tag `v1.8.0`, tag 工作流 Icon geometry (45941122722) 与 Icon Studio recipe (45941122622) 通过; Release https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI/releases/tag/v1.8.0 含 5 个 APK 与 SHA256SUMS, sha256 与本地产物一致; 官方索引 `bf0b6d0` (`release-manifests/.../379.json` 与生成文件), 条目在 items (1.8.0, versionCode 379, sourceCommit `4798f67`, 5 个 APK 的 sha256 与签名), 其余条目不变, 索引单测 94 例通过; 索引 CI: Markdown integrity (45942545033) 与 Plugin Index (45942544957) 通过. issue #1 回复草稿第 3 节的 Release 链接已可访问, 由维护者自己发.
 
 ### 4. 顺序与批次
 
@@ -799,4 +801,4 @@ P11 -> P12 -> P13. 第一批只有 P11 卡. 维护者 2026-11-27 定: 只直接�
 
 ### 5. 待决事项 (Q31 起)
 
-立项结束时没有待决. 子会话新登记的待决从 Q31 起, 新决策从 D172 起 (D200 / Q80 起留给语音接入一期). P11 用了 D172 - D181, P12 用了 D182 - D186 且没有新待决, 下一个新决策从 D187 起.
+立项结束时没有待决. 子会话新登记的待决从 Q31 起, 新决策从 D172 起 (D200 / Q80 起留给语音接入一期). P11 用了 D172 - D181, P12 用了 D182 - D186, P13 用了 D187 - D188, 三期都没有新待决; 1.8.0 一期已结束.

@@ -555,6 +555,40 @@ class ServiceHeadersDeviceTest {
     }
 
     /**
+     * The dialog's OK and Cancel follow the plugin's language, also when the system language is
+     * written the other way (Material lays the button bar out by the process default locale).
+     */
+    @Test
+    fun dialogActionsFollowTheAppLanguageDirection() {
+        val restore = keepApplicationSettings()
+        try {
+            ApplicationSettingsStore(context).let { it.save(it.load().copy(language = AppLanguage.ARABIC)) }
+            val id = createProfile(emptyList())
+            launch(id).use { scenario ->
+                assertEquals(View.LAYOUT_DIRECTION_RTL, scenario.call { it.resources.configuration.layoutDirection })
+                scenario.call { it.showHeadersPage() }
+                instrumentation.waitForIdleSync()
+                scenario.openDialog(null)
+                settle()
+                scenario.call { activity ->
+                    val dialog = activity.dialog()
+                    assertEquals(View.LAYOUT_DIRECTION_RTL, dialog.root().layoutDirection)
+                    val positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                    assertEquals(View.LAYOUT_DIRECTION_RTL, (positive.parent as View).layoutDirection)
+                    val positiveX = IntArray(2).also(positive::getLocationOnScreen)[0]
+                    val negativeX = IntArray(2).also(negative::getLocationOnScreen)[0]
+                    assertTrue("OK is to the left of Cancel ($positiveX, $negativeX)", positiveX < negativeX)
+                    negative.performClick()
+                }
+                instrumentation.waitForIdleSync()
+            }
+        } finally {
+            restore()
+        }
+    }
+
+    /**
      * Light and dark renderings for review (run with -e screenshots true). The page and the dialog
      * set FLAG_SECURE, so system screenshots are black; the views are drawn into bitmaps instead.
      */
@@ -564,8 +598,7 @@ class ServiceHeadersDeviceTest {
             "Run with -e screenshots true",
             InstrumentationRegistry.getArguments().getString("screenshots") == "true",
         )
-        val preferences = context.getSharedPreferences("application-settings", Context.MODE_PRIVATE)
-        val saved = preferences.all.toMap()
+        val restore = keepApplicationSettings()
         val store = ApplicationSettingsStore(context)
         val original = store.load()
         val directory = File(checkNotNull(context.getExternalFilesDir(null)), SCREENSHOT_DIRECTORY).apply {
@@ -617,6 +650,15 @@ class ServiceHeadersDeviceTest {
                 }
             }
         } finally {
+            restore()
+        }
+    }
+
+    /** Keeps the appearance and language settings; the returned function writes them back. */
+    private fun keepApplicationSettings(): () -> Unit {
+        val preferences = context.getSharedPreferences("application-settings", Context.MODE_PRIVATE)
+        val saved = preferences.all.toMap()
+        return {
             val restored = preferences.edit().clear().apply {
                 saved.forEach { (key, value) ->
                     when (value) {

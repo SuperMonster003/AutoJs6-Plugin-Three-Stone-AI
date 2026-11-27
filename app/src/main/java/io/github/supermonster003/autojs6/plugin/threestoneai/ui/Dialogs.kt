@@ -27,7 +27,30 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.R
 
 /** Base builder used by every dialog in the app. */
 internal fun ConfiguredActivity.materialDialog(): MaterialAlertDialogBuilder =
-    MaterialAlertDialogBuilder(this)
+    ConfiguredDialogBuilder(this)
+
+private class ConfiguredDialogBuilder(activity: ConfiguredActivity) : MaterialAlertDialogBuilder(activity) {
+    override fun create(): AlertDialog = super.create().also { it.alignButtonBarWithAppLanguage() }
+}
+
+/**
+ * Material lays out the dialog buttons in a bar with android:layoutDirection="locale", which follows
+ * the process default locale (the system language) instead of the language chosen in this app. When
+ * the two are written in opposite directions the buttons would stay on the system language's side
+ * while the rest of the dialog is mirrored, so the bar takes the app's direction before the first layout.
+ */
+internal fun AlertDialog.alignButtonBarWithAppLanguage() {
+    val decor = window?.decorView ?: return
+    decor.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(view: View) = alignButtonBar()
+        override fun onViewDetachedFromWindow(view: View) = Unit
+    })
+}
+
+private fun AlertDialog.alignButtonBar() {
+    val bar = getButton(AlertDialog.BUTTON_POSITIVE)?.parent as? View ?: return
+    bar.layoutDirection = context.resources.configuration.layoutDirection
+}
 
 /** Confirmation dialog; destructive actions color the positive button with the error tone. */
 internal fun ConfiguredActivity.confirmDialog(

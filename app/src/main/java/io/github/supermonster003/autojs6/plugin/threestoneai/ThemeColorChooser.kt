@@ -33,6 +33,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.radiobutton.MaterialRadioButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import io.github.supermonster003.autojs6.plugin.threestoneai.ui.alignButtonBarWithAppLanguage
 import kotlin.math.min
 
 /** Shared, self-contained theme picker. Only OK invokes [onConfirm]; null means follow AutoJs6. */
@@ -220,6 +221,7 @@ internal object ThemeColorChooser {
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(android.R.string.ok, null)
             .create()
+            .apply { alignButtonBarWithAppLanguage() }
         follow.setOnClickListener { followsHost = true; field.error = null; render() }
         custom.setOnClickListener { followsHost = false; fromPreset = false; field.error = if (valid) null else labels.invalid; render() }
         input.addTextChangedListener(object : TextWatcher {

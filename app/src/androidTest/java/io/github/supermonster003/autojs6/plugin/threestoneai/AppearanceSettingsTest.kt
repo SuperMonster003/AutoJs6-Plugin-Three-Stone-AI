@@ -49,6 +49,15 @@ class AppearanceSettingsTest {
         fail("Appearance change did not finish")
     }
     private fun launch() = ActivityScenario.launch<AppSettingsActivity>(Intent(context, AppSettingsActivity::class.java))
+    /** The actions follow the app's right-to-left layout even when the system language is left-to-right. */
+    private fun assertMirroredActions(dialog: AlertDialog) {
+        val positive = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        val negative = dialog.getButton(DialogInterface.BUTTON_NEGATIVE)
+        assertEquals(View.LAYOUT_DIRECTION_RTL, (positive.parent as View).layoutDirection)
+        val positiveX = IntArray(2).also(positive::getLocationOnScreen)[0]
+        val negativeX = IntArray(2).also(negative::getLocationOnScreen)[0]
+        assertTrue("OK is to the left of Cancel ($positiveX, $negativeX)", positiveX < negativeX)
+    }
     private fun backup(): () -> Unit {
         val preferences = context.getSharedPreferences("application-settings", android.content.Context.MODE_PRIVATE)
         val saved = preferences.all.toMap()
@@ -221,6 +230,7 @@ class AppearanceSettingsTest {
                         assertTrue(button.getGlobalVisibleRect(bounds))
                         assertEquals("Action remains fully visible", button.height, bounds.height())
                     }
+                    assertMirroredActions(opened)
                     for (text in views(root).filterIsInstance<TextView>()) {
                         val layout = text.layout ?: continue
                         if (text.visibility != View.VISIBLE || text.text.isNullOrEmpty()) continue
@@ -233,6 +243,14 @@ class AppearanceSettingsTest {
                     }
                     bitmap.recycle()
                     opened.getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
+                }
+                instrumentation.waitForIdleSync()
+                // The theme color chooser builds its dialog without the shared builder.
+                scenario.onActivity { row(it, R.string.app_settings_theme_color).performClick() }
+                waitUntil { var shown = false; scenario.onActivity { shown = it.appearanceDialog?.isShowing == true }; shown }
+                scenario.onActivity { activity ->
+                    assertMirroredActions(dialog(activity))
+                    dialog(activity).getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
                 }
                 instrumentation.waitForIdleSync()
             }

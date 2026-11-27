@@ -13,6 +13,7 @@
 - **附件**: 点按输入框左侧的 "+" 添加图片, 文本文件或 PDF. 图片发给开启了 "图片输入" 的模型, PDF 只发给 Anthropic 与 Gemini 服务; 本地模型暂不支持附件.
 - **切换模型**: 聊天时随时切换模型; 脚本默认使用 "模型与服务" 页中的 "默认目标".
 - **模型管理**: 在 "本地模型" 段检查, 重命名或删除模型. API Key 只保存在本机, 导出服务时不包含 API Key.
+- **请求头**: 在服务详情页的 "请求头" 中添加自定义请求头, 例如 OpenCode Go 需要的会话头; 保密值只保存在本机, 导出时不包含.
 - **语音**: 点按麦克风听写, 长按开始语音对话, 长按回复可以 "朗读"; 装有 3-Macaw Speech 时听写与朗读离线完成.
 - **导出与分享**: 在聊天页的菜单中选择 "导出为 Markdown" 或 "分享为长图".
 
@@ -80,5 +81,9 @@ ai.session({ system: 'Keep every answer short.' }).then((session) => {
 **其他应用请求使用 AI 的情形**
 
 用 AutoJs6 打包并单独签名的应用使用 AI 前, 3-Stone AI 会请你确认授权. 授权后该应用可以使用本地模型与已保存的在线服务, 可能消耗付费额度; 可在 "设置 > 隐私与权限 > 获授权的应用" 中移除授权.
+
+**OpenCode Go 返回 MissingSessionID 的处理**
+
+OpenCode Go 要求每个请求带会话头 x-opencode-session. 在错误说明中点按 "添加会话头", 或在服务详情页的 "请求头" 中添加 "OpenCode Go 会话" 预设, 保存后重试.
 
 全部选项, 事件与错误码见 AutoJs6 文档的 [人工智能 (AI)](https://docs.autojs6.com/#/ai) 章节, 隐私与运行限制见 [项目主页](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI).

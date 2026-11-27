@@ -5,6 +5,18 @@
   "changelog_label_improvement": "Mejora",
   "changelog_label_dependency": "Dependencia",
   "$data": {
+    "v1.8.0": {
+      "released_date": "2026/11/27",
+      "hint": [
+        "Después de añadir encabezados de solicitud a un servicio, la configuración de los servicios se guarda en un formato nuevo (también los archivos exportados que contienen encabezados de solicitud), que la versión 1.7.2 y anteriores no pueden leer. Para volver a una versión anterior, elimina primero los encabezados de solicitud de todos los servicios y guarda"
+      ],
+      "feature": [
+        "Los servicios en línea pueden tener encabezados de solicitud personalizados: en la página \"Modelos y servicios\", abre un servicio y toca \"Encabezados de solicitud\" en \"Conexión\" para añadirlos, editarlos o eliminarlos, hasta 16 por servicio. Hay tres orígenes de valor: un valor fijo; un valor secreto (marca \"Secreto\"; se marca de forma predeterminada cuando el nombre contiene auth, key, token o secret); y \"Generado por conversación\" (no cambia dentro de una conversación, ni siquiera al cambiar a otro modelo del mismo servicio). Pueden usarlos los servicios de los 6 proveedores. Los encabezados de solicitud se aplican automáticamente con la configuración del servicio, así que los scripts no necesitan cambios, y las sesiones persistentes de los scripts (ai.session) también usan un ID de sesión fijo",
+        "Los valores secretos se guardan cifrados en este dispositivo; la interfaz solo muestra \"Definido\", no se vuelven a mostrar al editar y no se incluyen en las exportaciones. Tras importar o clonar un servicio, los valores secretos quedan \"Sin definir\" y la tarjeta del servicio indica \"Falta un valor de encabezado\"; el encabezado no se envía hasta que vuelvas a introducir el valor. Al cambiar de proveedor u origen HTTPS y guardar, los valores secretos guardados se borran junto con la clave API. Si en los detalles de error devueltos por el proveedor aparece una clave API o un valor secreto, se sustituye por [redacted]",
+        "Los encabezados que envía el propio plugin (por ejemplo Authorization, x-api-key, Content-Type) y los que gestiona la conexión HTTP (por ejemplo Host, Content-Length) no se pueden personalizar, y el diálogo indica el motivo; User-Agent sí se puede personalizar (sustituye el valor predeterminado del plugin), y anthropic-beta se combina con el valor que el plugin calcula para la solicitud. Cuando el formato o la longitud de un nombre o un valor no son válidos, o el total de los encabezados de solicitud supera 8192 bytes, el diálogo también indica el motivo",
+        "Al añadir un encabezado de solicitud puedes desplegar \"Ajustes predefinidos comunes\": elegir Sesión de OpenCode Go o Atribución de OpenRouter añade los encabezados correspondientes, y elegir Helicone o Cloudflare AI Gateway rellena el nombre, de modo que solo hay que introducir la clave. Cuando la dirección del servicio está en opencode.ai pero falta el encabezado de sesión x-opencode-session, la página de detalles del servicio muestra un aviso con un botón \"Añadir\"; si al probar la conexión o al chatear se recibe un error MissingSessionID, el mensaje de error explica la causa y ofrece un botón \"Añadir encabezado de sesión\" para resolverlo"
+      ]
+    },
     "v1.7.2": {
       "released_date": "2026/11/20",
       "improvement": [

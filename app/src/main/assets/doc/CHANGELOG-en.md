@@ -4,6 +4,16 @@
 
 ******
 
+# v1.8.0
+
+###### 2026/11/27
+
+* `Hint` After you add request headers to a service, the service configuration is saved in a new format (so are exports that contain request headers), which 1.7.2 and earlier cannot read. To go back to an older version, first delete the request headers of all services and save
+* `Feature` Online services can have custom request headers: on the "Models and services" page, open a service and tap "Request headers" under "Connection" to add, edit or delete them, up to 16 per service. There are three value sources: a fixed value; a secret value (check "Secret"; it is checked by default when the name contains auth, key, token or secret); and "Generated per conversation" (stays the same within a conversation, even after switching to another model of the same service). Services of all 6 providers can use them. Request headers take effect automatically with the service configuration, so scripts need no changes, and persistent script sessions (ai.session) also use a fixed session ID
+* `Feature` Secret values are stored encrypted on this device; the UI only shows "Set", they are not shown when editing, and they are not included in exports. After importing or cloning a service, secret values are "Not set" and the service card shows "Header value needed"; the header is not sent until you enter the value again. When you change the provider or HTTPS origin and save, stored secret values are cleared together with the API key. If an API key or secret value appears in error details returned by the provider, it is replaced with [redacted]
+* `Feature` Headers the plugin sends itself (for example Authorization, x-api-key, Content-Type) and headers managed by the HTTP connection (for example Host, Content-Length) cannot be customized, and the dialog states why; User-Agent can be customized (replacing the plugin's default), and anthropic-beta is merged with the value the plugin computes for the request. When a name or value has an invalid format or length, or all request headers together exceed 8192 bytes, the dialog also states why
+* `Feature` When adding a request header you can expand "Common presets": choosing OpenCode Go session or OpenRouter attribution adds the matching headers, and choosing Helicone or Cloudflare AI Gateway fills in the name so you only need to enter the key. When the service address is on opencode.ai but the session header x-opencode-session is missing, the service details page shows a hint with an "Add" button; when testing the connection or chatting gets a MissingSessionID error, the error message explains the cause and offers an "Add session header" button
+
 # v1.7.2
 
 ###### 2026/11/20

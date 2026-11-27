@@ -13,6 +13,7 @@
 - **Adjuntos**: toca "+" a la izquierda del cuadro de entrada para añadir imágenes, archivos de texto o PDF. Las imágenes van a los modelos con "Entrada de imágenes" activada y los PDF solo a servicios Anthropic y Gemini; los modelos locales aún no admiten adjuntos.
 - **Cambiar de modelo**: cambia de modelo en cualquier momento durante el chat; los scripts usan el "Destino predeterminado" de la página "Modelos y servicios".
 - **Gestión de modelos**: comprueba, cambia el nombre o elimina modelos en la sección "Modelos locales". Las claves API solo se guardan en el dispositivo y no se incluyen al exportar servicios.
+- **Encabezados de solicitud**: añade encabezados de solicitud personalizados en "Encabezados de solicitud" de la página de detalles del servicio, por ejemplo el encabezado de sesión que requiere OpenCode Go; los valores secretos solo se guardan en el dispositivo y no se incluyen al exportar.
 - **Voz**: toca el micrófono para dictar, mantenlo pulsado para iniciar una conversación por voz y mantén pulsada una respuesta para elegir "Leer en voz alta"; con 3-Macaw Speech instalado, el dictado y la lectura funcionan sin conexión.
 - **Exportar y compartir**: elige "Exportar como Markdown" o "Compartir como imagen" en el menú de la pantalla de chat.
 
@@ -80,5 +81,9 @@ Abre el menú de ese modelo en la sección "Modelos locales" y toca "Comprobar m
 **Casos en que otras aplicaciones piden usar la IA**
 
 Antes de que una aplicación empaquetada con AutoJs6 y firmada por separado pueda usar la IA, 3-Stone AI te pide que lo confirmes. Una vez autorizada, puede usar los modelos locales y los servicios en línea guardados, lo que puede consumir cuota de pago; retira el acceso en "Ajustes > Privacidad y permisos > Aplicaciones autorizadas para IA".
+
+**Casos en que OpenCode Go devuelve MissingSessionID**
+
+OpenCode Go exige el encabezado de sesión x-opencode-session en cada solicitud. Toca "Añadir encabezado de sesión" en la explicación del error, o añade el ajuste predefinido "Sesión de OpenCode Go" en "Encabezados de solicitud" de la página de detalles del servicio, guarda y vuelve a intentarlo.
 
 Todas las opciones, eventos y códigos de error están en el capítulo [Inteligencia artificial (IA)](https://docs.autojs6.com/#/ai) de la documentación de AutoJs6; la privacidad y los límites se describen en la [página del proyecto](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI).

@@ -13,6 +13,7 @@
 - **Attachments**: tap "+" on the left of the input box to add images, text files or PDFs. Images go to models with "Image input" turned on and PDFs only to Anthropic and Gemini services; local models do not support attachments yet.
 - **Switching models**: switch models at any time while chatting; scripts use the "Default target" on the "Models and services" page.
 - **Model management**: check, rename or delete models in the "Local models" section. API keys are stored only on the device and are left out when you export services.
+- **Request headers**: add custom request headers under "Request headers" on the service details page, for example the session header OpenCode Go requires; secret values stay on the device and are left out of exports.
 - **Voice**: tap the microphone to dictate, long-press it to start a voice conversation, and long-press a reply to choose "Read aloud"; with 3-Macaw Speech installed, dictation and reading aloud work offline.
 - **Export and share**: choose "Export as Markdown" or "Share as image" in the chat screen menu.
 
@@ -80,5 +81,9 @@ Open that model's menu in the "Local models" section and tap "Check model" to se
 **When other apps ask to use AI**
 
 Before an app packaged with AutoJs6 and signed separately can use AI, 3-Stone AI asks you to confirm. Once allowed, the app can use local models and saved online services, which may use paid quota; remove the access in "Settings > Privacy and permissions > Apps with AI access".
+
+**When OpenCode Go returns MissingSessionID**
+
+OpenCode Go requires the session header x-opencode-session on every request. Tap "Add session header" in the error explanation, or add the "OpenCode Go session" preset under "Request headers" on the service details page, save, and try again.
 
 All options, events and error codes are in the [Artificial intelligence (AI)](https://docs.autojs6.com/#/ai) chapter of the AutoJs6 documentation, and privacy details and limits are on the [project page](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI).

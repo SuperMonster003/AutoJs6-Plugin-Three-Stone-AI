@@ -13,6 +13,7 @@
 - **Pièces jointes**: touchez "+" à gauche du champ de saisie pour ajouter des images, des fichiers texte ou des PDF. Les images vont aux modèles dont "Entrée d'images" est activée, les PDF uniquement aux services Anthropic et Gemini; les modèles locaux ne prennent pas encore en charge les pièces jointes.
 - **Changer de modèle**: changez de modèle à tout moment pendant le chat; les scripts utilisent la "Cible par défaut" de la page "Modèles et services".
 - **Gestion des modèles**: vérifiez, renommez ou supprimez les modèles dans la section "Modèles locaux". Les clés API restent sur l'appareil et ne sont pas incluses lors de l'export des services.
+- **En-têtes de requête**: ajoutez des en-têtes de requête personnalisés dans "En-têtes de requête" sur la page de détails du service, par exemple l'en-tête de session exigé par OpenCode Go; les valeurs secrètes restent sur l'appareil et ne sont pas incluses dans les exports.
 - **Voix**: touchez le micro pour dicter, appuyez longuement dessus pour démarrer une conversation vocale, et appuyez longuement sur une réponse pour choisir "Lire à voix haute"; avec 3-Macaw Speech installé, la dictée et la lecture fonctionnent hors ligne.
 - **Exporter et partager**: choisissez "Exporter en Markdown" ou "Partager en image" dans le menu de la page de chat.
 
@@ -80,5 +81,9 @@ Ouvrez le menu de ce modèle dans la section "Modèles locaux" et touchez "Véri
 **Cas où d'autres applications demandent à utiliser l'IA**
 
 Avant qu'une application empaquetée avec AutoJs6 et signée séparément puisse utiliser l'IA, 3-Stone AI vous demande de confirmer. Une fois autorisée, elle peut utiliser les modèles locaux et les services en ligne enregistrés, ce qui peut consommer un quota payant; retirez l'accès dans "Paramètres > Confidentialité et autorisations > Applications autorisées pour IA".
+
+**Cas où OpenCode Go renvoie MissingSessionID**
+
+OpenCode Go exige l'en-tête de session x-opencode-session dans chaque requête. Touchez "Ajouter l'en-tête de session" dans l'explication de l'erreur, ou ajoutez le préréglage "Session OpenCode Go" dans "En-têtes de requête" sur la page de détails du service, enregistrez, puis réessayez.
 
 Toutes les options, les événements et les codes d'erreur figurent au chapitre [Intelligence artificielle (IA)](https://docs.autojs6.com/#/ai) de la documentation AutoJs6; la confidentialité et les limites sont décrites sur la [page du projet](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Stone-AI).

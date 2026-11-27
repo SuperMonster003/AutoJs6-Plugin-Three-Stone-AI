@@ -4,6 +4,16 @@
 
 ******
 
+# v1.8.0
+
+###### 2026/11/27
+
+* `Note` Une fois des en-têtes de requête ajoutés à un service, la configuration des services est enregistrée dans un nouveau format (de même pour les exports qui contiennent des en-têtes de requête), que la version 1.7.2 et les versions antérieures ne savent pas lire. Pour revenir à une ancienne version, supprimez d'abord les en-têtes de requête de tous les services et enregistrez
+* `Fonctionnalité` Les services en ligne peuvent avoir des en-têtes de requête personnalisés: sur la page "Modèles et services", ouvrez un service et touchez "En-têtes de requête" dans "Connexion" pour en ajouter, en modifier ou en supprimer, jusqu'à 16 par service. Trois sources de valeur sont possibles: une valeur fixe; une valeur secrète (cochez "Secret", coché par défaut lorsque le nom contient auth, key, token ou secret); "Générée par conversation" (identique pendant toute une conversation, même après être passé à un autre modèle du même service). Les services des 6 fournisseurs peuvent les utiliser. Les en-têtes de requête s'appliquent automatiquement avec la configuration du service: les scripts n'ont pas besoin d'être modifiés, et les sessions persistantes des scripts (ai.session) utilisent aussi un identifiant de session fixe
+* `Fonctionnalité` Les valeurs secrètes sont stockées chiffrées sur cet appareil; l'interface affiche seulement "Définie", elles ne sont pas réaffichées lors de la modification et ne sont pas incluses dans les exports. Après l'import ou le clonage d'un service, les valeurs secrètes sont "Non définie" et la carte du service indique "Valeur d'en-tête requise"; l'en-tête n'est pas envoyé tant que la valeur n'a pas été saisie de nouveau. Lorsque vous changez de fournisseur ou de source HTTPS puis enregistrez, les valeurs secrètes enregistrées sont effacées en même temps que la clé API. Si une clé API ou une valeur secrète apparaît dans les détails d'erreur renvoyés par le fournisseur, elle est remplacée par [redacted]
+* `Fonctionnalité` Les en-têtes envoyés par le plugin lui-même (par exemple Authorization, x-api-key, Content-Type) et ceux gérés par la connexion HTTP (par exemple Host, Content-Length) ne sont pas personnalisables, et la boîte de dialogue en indique la raison; User-Agent est personnalisable (il remplace la valeur par défaut du plugin), et anthropic-beta est fusionné avec la valeur que le plugin calcule pour la requête. Lorsque le format ou la longueur d'un nom ou d'une valeur ne convient pas, ou que l'ensemble des en-têtes de requête dépasse 8192 octets, la boîte de dialogue en indique aussi la raison
+* `Fonctionnalité` Lors de l'ajout d'un en-tête de requête, vous pouvez déplier "Préréglages courants": choisir Session OpenCode Go ou Attribution OpenRouter ajoute les en-têtes correspondants, et choisir Helicone ou Cloudflare AI Gateway remplit le nom, il ne reste qu'à saisir la clé. Lorsque l'adresse du service est sur opencode.ai mais que l'en-tête de session x-opencode-session manque, la page de détails du service affiche une indication et un bouton "Ajouter"; si un test de connexion ou une discussion reçoit une erreur MissingSessionID, le message d'erreur en explique la cause et propose un bouton "Ajouter l'en-tête de session" pour y remédier
+
 # v1.7.2
 
 ###### 2026/11/20

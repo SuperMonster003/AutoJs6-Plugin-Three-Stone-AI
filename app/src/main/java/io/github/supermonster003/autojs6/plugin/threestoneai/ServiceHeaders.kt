@@ -5,10 +5,10 @@ import android.text.Editable
 import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
-import android.text.method.PasswordTransformationMethod
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.RadioGroup
@@ -628,7 +628,7 @@ internal class ServiceHeaderEditor(
             val (valueLayout, value) = activity.formTextField(
                 initialValue = existing?.takeIf { it.kind == OnlineAiHeaderValueKind.FIXED }?.value,
                 hint = activity.getString(R.string.service_headers_value),
-                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS,
+                inputType = PLAIN_VALUE_INPUT_TYPE,
                 maxLength = OnlineAiHeaderPolicy.MAXIMUM_VALUE_BYTES * 2,
             )
             valueField = valueLayout
@@ -638,6 +638,8 @@ internal class ServiceHeaderEditor(
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 valueInput.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
                 valueInput.setAutofillHints(null)
+                // Keyboards must not learn header values, secret or not.
+                valueInput.imeOptions = valueInput.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
             }
 
             secretBox = MaterialCheckBox(activity).apply {
@@ -704,12 +706,16 @@ internal class ServiceHeaderEditor(
             conversationHelp.visibility = if (conversation) View.VISIBLE else View.GONE
             if (secret) {
                 if (valueField.endIconMode != TextInputLayout.END_ICON_PASSWORD_TOGGLE) {
+                    // A password input type, not only a hiding transformation: keyboards such as
+                    // Gboard ignore TYPE_TEXT_FLAG_NO_SUGGESTIONS and would offer suggestions.
+                    setValueInputType(SECRET_VALUE_INPUT_TYPE)
                     valueField.endIconMode = TextInputLayout.END_ICON_PASSWORD_TOGGLE
-                    valueInput.transformationMethod = PasswordTransformationMethod.getInstance()
                 }
             } else if (valueField.endIconMode != TextInputLayout.END_ICON_NONE) {
+                // Leaving the password toggle hides the text again; the plain input type below
+                // replaces that transformation with the single line one.
                 valueField.endIconMode = TextInputLayout.END_ICON_NONE
-                valueInput.transformationMethod = null
+                setValueInputType(PLAIN_VALUE_INPUT_TYPE)
             }
             valueField.helperText = when {
                 !secret || valueInput.text?.isNotEmpty() == true -> null
@@ -717,6 +723,15 @@ internal class ServiceHeaderEditor(
                 storedValueKept() -> activity.getString(R.string.service_headers_value_secret_keep)
                 else -> null
             }
+        }
+
+        /** Changes the value field's input type, keeping its font and cursor position. */
+        private fun setValueInputType(type: Int) {
+            val typeface = valueInput.typeface
+            val selection = valueInput.selectionEnd
+            valueInput.inputType = type
+            valueInput.typeface = typeface
+            if (selection in 0..(valueInput.text?.length ?: 0)) valueInput.setSelection(selection)
         }
 
         /** The key of a typed value this entry keeps when the field stays empty. */
@@ -953,5 +968,8 @@ internal class ServiceHeaderEditor(
         const val TAG_SECRET = "serviceHeaderSecret"
         const val TAG_ERROR = "serviceHeaderError"
         const val TAG_PRESETS = "serviceHeaderPresets"
+        const val PLAIN_VALUE_INPUT_TYPE = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        const val SECRET_VALUE_INPUT_TYPE = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD or
+            InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
     }
 }

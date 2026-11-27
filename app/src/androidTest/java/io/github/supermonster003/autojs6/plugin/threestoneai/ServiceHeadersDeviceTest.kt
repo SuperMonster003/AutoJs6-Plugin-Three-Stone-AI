@@ -8,8 +8,12 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.SystemClock
+import android.text.InputType
+import android.text.method.PasswordTransformationMethod
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ScrollView
@@ -102,6 +106,10 @@ class ServiceHeadersDeviceTest {
             waitUntil("the edit dialog opens") { scenario.call { it.headerEditor.dialog?.isShowing == true } }
             assertEquals("X-Title", scenario.fieldText(ServiceHeaderEditor.TAG_NAME))
             assertEquals("AutoJs6 test", scenario.fieldText(ServiceHeaderEditor.TAG_VALUE))
+            assertEquals(
+                ServiceHeaderEditor.PLAIN_VALUE_INPUT_TYPE,
+                scenario.call { checkNotNull(it.dialog().field(ServiceHeaderEditor.TAG_VALUE).editText).inputType },
+            )
             scenario.fill(name = null, value = "AutoJs6 edited")
             assertTrue(scenario.submit())
             val edited = fixed.copy(value = "AutoJs6 edited")
@@ -116,6 +124,34 @@ class ServiceHeadersDeviceTest {
                 scenario.call { it.dialog().field(ServiceHeaderEditor.TAG_VALUE).endIconMode },
             )
             scenario.fill(name = null, value = PLACEHOLDER_SECRET)
+            scenario.call { activity ->
+                val dialog = activity.dialog()
+                val input = checkNotNull(dialog.field(ServiceHeaderEditor.TAG_VALUE).editText)
+                // A password input type, so keyboards that ignore the no-suggestions flag offer none.
+                assertEquals(ServiceHeaderEditor.SECRET_VALUE_INPUT_TYPE, input.inputType)
+                assertEquals(InputType.TYPE_TEXT_VARIATION_PASSWORD, input.inputType and InputType.TYPE_MASK_VARIATION)
+                assertTrue(input.transformationMethod is PasswordTransformationMethod)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    assertTrue(
+                        "keyboards do not learn header values",
+                        input.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0,
+                    )
+                }
+                // Turning the box off and on again keeps the text, the cursor and the font.
+                val font = input.typeface
+                input.setSelection(input.length())
+                dialog.secretBox().isChecked = false
+                assertEquals(ServiceHeaderEditor.PLAIN_VALUE_INPUT_TYPE, input.inputType)
+                assertFalse(input.transformationMethod is PasswordTransformationMethod)
+                assertEquals(PLACEHOLDER_SECRET, input.text.toString())
+                assertEquals(PLACEHOLDER_SECRET.length, input.selectionEnd)
+                assertTrue(font === input.typeface)
+                dialog.secretBox().isChecked = true
+                assertEquals(ServiceHeaderEditor.SECRET_VALUE_INPUT_TYPE, input.inputType)
+                assertTrue(input.transformationMethod is PasswordTransformationMethod)
+                assertEquals(PLACEHOLDER_SECRET.length, input.selectionEnd)
+                assertTrue(font === input.typeface)
+            }
             assertTrue(scenario.submit())
             val secret = OnlineAiCustomHeader("X-Api-Token", OnlineAiHeaderValueKind.SECRET)
             assertTrue(scenario.rowTexts("x-api-token").contains(scenario.entry(secret, ServiceHeaderSecretState.TYPED)))

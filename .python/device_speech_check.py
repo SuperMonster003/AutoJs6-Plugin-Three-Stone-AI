@@ -25,6 +25,7 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "io.github.supermonster003.autojs6.plugin.threestoneai"
@@ -191,7 +192,15 @@ def main():
 
     listing = shell("ls", REMOTE, check=False).split()
     for file in listing:
-        adb("pull", f"{REMOTE}/{file}", output / file, check=False)
+        # A pull occasionally fails on some phones; retry, and report a receipt that never arrives.
+        for _ in range(3):
+            adb("pull", f"{REMOTE}/{file}", output / file, check=False)
+            if (output / file).is_file():
+                break
+            time.sleep(1)
+        else:
+            print(f"  {file}: could not be pulled")
+            continue
         if file.endswith(".json"):
             receipt = json.loads((output / file).read_text(encoding="utf-8"))
             values = " ".join(f"{key}={value}" for key, value in receipt.items())

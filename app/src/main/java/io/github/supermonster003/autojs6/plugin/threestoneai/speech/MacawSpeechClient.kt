@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai.speech
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -39,6 +40,12 @@ internal object MacawSpeech {
     /** A finish that 3-Macaw Speech does not end within this time ends locally. */
     const val FINISH_TIMEOUT_MILLIS = 5_000L
 
+    /**
+     * How long a new session waits for 3-Macaw Speech to end the one cancelled just before: until then it still holds
+     * the microphone and refuses the new one with `SESSION_BUSY` (seen right after its engines loaded, D218).
+     */
+    const val CLOSE_WAIT_MILLIS = 2_000L
+
     /** Binder calls never run on the main thread. */
     internal val worker = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "three-stone-ai-macaw-speech").apply { isDaemon = true }
@@ -57,10 +64,19 @@ internal object MacawSpeech {
     }.isSuccess
 
     /**
-     * API 34+: lets 3-Macaw Speech open its transparent activity that starts the microphone foreground service while the
-     * chat is visible (protocol "Background microphone"); the session would be silenced in the background otherwise.
+     * The flags AutoJs6 binds 3-Macaw Speech with as well (its roadmap D22): `BIND_INCLUDE_CAPABILITIES` (API 29+) lets
+     * the plugin process record with the visible chat's while-in-use microphone capability, otherwise Android silences
+     * the recording (seen as `App op 27 missing, silencing record` on an XQ-AT72, D219); `BIND_IMPORTANT` keeps it at
+     * the chat's priority; `BIND_ALLOW_ACTIVITY_STARTS` (API 34+) lets it open its transparent activity that starts the
+     * microphone foreground service (protocol "Background microphone"). Pure for the JVM tests.
      */
-    fun bindFlags(): Int = Context.BIND_AUTO_CREATE or if (Build.VERSION.SDK_INT >= 34) Context.BIND_ALLOW_ACTIVITY_STARTS else 0
+    @SuppressLint("InlinedApi")
+    fun bindFlags(sdkInt: Int = Build.VERSION.SDK_INT): Int {
+        var flags = Context.BIND_AUTO_CREATE or Context.BIND_IMPORTANT
+        if (sdkInt >= 29) flags = flags or Context.BIND_INCLUDE_CAPABILITIES
+        if (sdkInt >= 34) flags = flags or Context.BIND_ALLOW_ACTIVITY_STARTS
+        return flags
+    }
 
     fun microphonePermissionIntent(): Intent = Intent().setClassName(PACKAGE, MICROPHONE_PERMISSION_ACTIVITY)
 
@@ -154,6 +170,16 @@ internal class MacawSpeechConnection(
     /** Invalidates results of an earlier binding after [disconnect] or a rebinding. */
     private var generation = 0
     private val sessions = mutableSetOf<MacawLiveSession>()
+
+    /** Sessions that ended here (cancelled, failed, timed out) but not yet in 3-Macaw Speech (D218). */
+    private val closing = mutableSetOf<MacawLiveSession>()
+
+    /** Sessions opened while [closing] was not empty; they start once it is, or after [MacawSpeech.CLOSE_WAIT_MILLIS]. */
+    private val waiting = mutableListOf<MacawLiveSession>()
+    private val closeWait = Runnable {
+        closing.clear()
+        startWaiting()
+    }
     // A late connection still publishes its probe afterwards.
     private val probeTimeout = Runnable {
         if (availability == null) publish(MacawSpeechProbe(installed = true, bindFailure = MacawBindFailure.TIMEOUT))
@@ -225,6 +251,7 @@ internal class MacawSpeechConnection(
         main.removeCallbacks(probeTimeout)
         sessions.toList().forEach(MacawLiveSession::cancel)
         sessions.clear()
+        waiting.clear()
         unlinkPlugin()
         plugin = null
         if (bound) runCatching { app.unbindService(connection) }
@@ -235,13 +262,35 @@ internal class MacawSpeechConnection(
         MacawSpeechTestHooks.source?.let { fake -> return fake.open(mode, listener) }
         val session = MacawLiveSession(mode, listener)
         val connected = plugin
-        if (connected == null) {
-            main.post { session.fail(SpeechErrorCodes.PLUGIN_UNAVAILABLE) }
-        } else {
-            sessions += session
-            session.start(connected)
+        when {
+            connected == null -> main.post { session.fail(SpeechErrorCodes.PLUGIN_UNAVAILABLE) }
+            closing.isEmpty() -> {
+                sessions += session
+                session.start(connected)
+            }
+            else -> {
+                sessions += session
+                waiting += session
+                main.removeCallbacks(closeWait)
+                main.postDelayed(closeWait, MacawSpeech.CLOSE_WAIT_MILLIS)
+            }
         }
         return session
+    }
+
+    private fun startWaiting() {
+        main.removeCallbacks(closeWait)
+        val ready = waiting.toList()
+        waiting.clear()
+        ready.forEach { session ->
+            if (session.ended) return@forEach
+            val connected = plugin
+            if (connected == null) session.fail(SpeechErrorCodes.PLUGIN_UNAVAILABLE) else session.start(connected)
+        }
+    }
+
+    private fun closed(session: MacawLiveSession) {
+        if (closing.remove(session) && closing.isEmpty() && waiting.isNotEmpty()) startWaiting()
     }
 
     private fun bind() {
@@ -284,6 +333,10 @@ internal class MacawSpeechConnection(
     private fun onPluginGone(failure: MacawBindFailure) {
         unlinkPlugin()
         plugin = null
+        // Its sessions died with it: nothing is left to wait for.
+        closing.clear()
+        waiting.clear()
+        main.removeCallbacks(closeWait)
         sessions.toList().forEach { session -> session.fail(SpeechErrorCodes.SESSION_CLOSED) }
         sessions.clear()
         if (bound || MacawSpeech.installed(app)) publish(MacawSpeechProbe(installed = true, bindFailure = failure))
@@ -310,8 +363,19 @@ internal class MacawSpeechConnection(
 
         @Volatile
         private var finishRequested = false
+
+        /** `openSession` was sent; main thread. */
+        private var started = false
+
+        /** 3-Macaw Speech ended the session, refused it or died; main thread. */
+        private var remoteDone = false
+
+        val ended: Boolean get() = gate.ended
         private val sessionDeath = IBinder.DeathRecipient {
-            main.post { fail(SpeechErrorCodes.SESSION_CLOSED) }
+            main.post {
+                remoteClosed()
+                fail(SpeechErrorCodes.SESSION_CLOSED)
+            }
         }
         private val finishTimeout = Runnable {
             if (!gate.ended) {
@@ -349,11 +413,15 @@ internal class MacawSpeechConnection(
 
             override fun onEnd(end: Bundle?) {
                 val reason = end?.getString(SpeechResultKeys.REASON)
-                main.post { gate.end(reason) }
+                main.post {
+                    remoteClosed()
+                    gate.end(reason)
+                }
             }
         }
 
         fun start(connected: ISpeechPlugin) {
+            started = true
             val options = Bundle().apply {
                 LiveDictationRequest.options(gate.mode).forEach { (key, value) ->
                     when (value) {
@@ -369,11 +437,17 @@ internal class MacawSpeechConnection(
                     connected.openSession(options, callback)
                 } catch (error: Exception) {
                     val code = MacawSpeech.errorCode(error)
-                    main.post { fail(code) }
+                    main.post {
+                        remoteClosed()
+                        fail(code)
+                    }
                     return@execute
                 }
                 if (opened == null) {
-                    main.post { fail(SpeechErrorCodes.INTERNAL) }
+                    main.post {
+                        remoteClosed()
+                        fail(SpeechErrorCodes.INTERNAL)
+                    }
                     return@execute
                 }
                 remote = opened
@@ -412,9 +486,17 @@ internal class MacawSpeechConnection(
             MacawSpeech.worker.execute { remote?.let { session -> runCatching { session.cancel() } } }
         }
 
+        private fun remoteClosed() {
+            if (remoteDone) return
+            remoteDone = true
+            closed(this)
+        }
+
         private fun ended() {
             main.removeCallbacks(finishTimeout)
             sessions.remove(this)
+            // Ended here first: 3-Macaw Speech keeps the microphone until it ends the session too.
+            if (started && !remoteDone) closing += this
             remote?.let { session -> runCatching { session.asBinder().unlinkToDeath(sessionDeath, 0) } }
         }
 

@@ -137,11 +137,11 @@ class MacawSpeechDeviceTest {
             var readyAt = 0L
             var session: LiveDictationSession? = null
             instrumentation.runOnMainSync {
-                session = connection!!.open(LiveDictationMode.CONTINUOUS, recorder(events) { readyAt = SystemClock.elapsedRealtime() })
+                session = connection.open(LiveDictationMode.CONTINUOUS, recorder(events) { readyAt = SystemClock.elapsedRealtime() })
             }
-            waitUntil("the session is ready", 15_000L) { "ready" in events }
+            awaitEvents("the session is ready", events, 15_000L) { "ready" in events }
             instrumentation.runOnMainSync { session!!.cancel() }
-            waitUntil("the cancel ends it") { events.any { it.startsWith("end:") } }
+            awaitEvents("the cancel ends it", events, 10_000L) { events.any { it.startsWith("end:") } }
             assertEquals("end:${LiveDictationEnd.Cancelled}", events.last())
             val readyMillis = readyAt - openedAt
 
@@ -149,14 +149,14 @@ class MacawSpeechDeviceTest {
             events.clear()
             var finishedAt = 0L
             instrumentation.runOnMainSync {
-                session = connection!!.open(LiveDictationMode.CONTINUOUS, recorder(events) {})
+                session = connection.open(LiveDictationMode.CONTINUOUS, recorder(events) {})
             }
-            waitUntil("the second session is ready", 15_000L) { "ready" in events }
+            awaitEvents("the second session is ready", events, 15_000L) { "ready" in events }
             instrumentation.runOnMainSync {
                 finishedAt = SystemClock.elapsedRealtime()
                 session!!.finish()
             }
-            waitUntil("the finish ends it", 8_000L) { events.any { it.startsWith("end:") } }
+            awaitEvents("the finish ends it", events, 8_000L) { events.any { it.startsWith("end:") } }
             val stopMillis = SystemClock.elapsedRealtime() - finishedAt
             assertEquals("end:${LiveDictationEnd.Stopped}", events.last())
             SpeechDeviceReport.receipt(
@@ -173,6 +173,15 @@ class MacawSpeechDeviceTest {
             )
         } finally {
             instrumentation.runOnMainSync { connection?.disconnect() }
+        }
+    }
+
+    /** Names the events seen so far (never their text) when the wait times out. */
+    private fun awaitEvents(what: String, events: List<String>, timeoutMillis: Long, condition: () -> Boolean) {
+        try {
+            waitUntil(what, timeoutMillis, condition)
+        } catch (error: AssertionError) {
+            throw AssertionError("${error.message}; events $events", error)
         }
     }
 

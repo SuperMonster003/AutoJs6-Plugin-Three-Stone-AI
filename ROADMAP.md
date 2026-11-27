@@ -316,6 +316,8 @@ ConversationContextCoordinator
 | D215 | 会话听写以 cancel 结束时保留所见文字 (2026-11-27, 3-stone-voice-1a) | 离开聊天界面 (`onStop`), 界面重建 (API 28 以下在 `onSaveInstanceState` 里先结束), 发送, 新建或切换会话, 进入编辑, 达到 16,384 字符上限时, 进行中的会话以 `cancel` 结束, 已显示的灰字 partial 按所见保留为正文 (发送时随消息发出), 不丢弃; 已定稿的句子不受影响. 未采用: cancel 时删掉未定稿的灰字 (重建或误触会丢掉刚说的话) | P6-2 |
 | D216 | 实时听写的句间空格 (2026-11-27, 3-stone-voice-1a) | 沿用 `DictationInsertion` 的规则, 另加一条: 前一句以 ASCII 句末标点 (`.` `,` `!` `?` `;` `:`) 结尾, 下一句以使用空格分词的文字 (拉丁, 西里尔, 韩文等) 开头时加一个空格 (Macaw 的英文标点模型输出 ASCII 标点, 否则 "there.How" 连在一起); 全角标点与中日文字仍直接相连; 弹层听写 (P5) 的规则不变 | P6-2 |
 | D217 | 聊天页刚打开时的短按 (2026-11-27, 3-stone-voice-1a) | 聊天页 `onStart` 起绑定 Macaw 并探测 (至多 5 s); 探测还没结果时短按麦克风最多等 1.5 s, 有结果即按结果选择实时听写或弹层, 到时仍无结果则开弹层; 探测结果在每次 `onResume` 时经已有绑定刷新 (模型或麦克风权限可能刚变) | P6-1 |
+| D218 | 本地结束后再开会话 (2026-11-27, 3-stone-voice-1a) | 会话在本地结束 (取消, 失败, 结束超时) 而 Macaw 还没发来 `onEnd` 时, 下一次打开先等它的 `onEnd` (Macaw 在 `onEnd` 之前释放麦克风), 至多 2 s, 到时照常打开. 依据: XQ-AT72 上 Macaw 冷启动后取消刚就绪的会话并立即重开, 三次都是 `SESSION_BUSY` (会被当成占用退回弹层); 改后三次都就绪 | P6-2 |
+| D219 | 直接绑定 Macaw 的 flag (2026-11-27, 3-stone-voice-1a) | 与宿主绑定 Macaw 时相同 (Macaw 路线图 D22): `BIND_AUTO_CREATE` + `BIND_IMPORTANT` + `BIND_INCLUDE_CAPABILITIES` (API 29+, 插件进程借聊天页的 while-in-use 麦克风能力录音) + `BIND_ALLOW_ACTIVITY_STARTS` (API 34+). 依据: 只带前后两个时, XQ-AT72 上 Macaw 的录音被系统静音 (`App op 27 missing, silencing record`) | P6-1 |
 
 ### 10.5 阶段任务
 

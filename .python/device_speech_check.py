@@ -16,6 +16,11 @@ through the phone's speaker (media volume raised to --min-volume percent only wh
 `live-permission` needs 3-Macaw Speech's microphone permission revoked (--revoke-macaw-microphone
 does it) and the maintainer to allow it in the dialog, `live-busy` needs another app's resident
 listener (3-Stove Agent) holding 3-Macaw Speech's microphone.
+
+P6-3 (the voice conversation on that session): `live-conversation` runs the voice conversation cases with a fake
+session source; on request `conversation-local-live` talks ten rounds with the device's own LiteRT model through the
+real session, the phone playing the first sentence of en.wav through its speaker each round (media volume raised to
+--min-volume percent only while it plays), the replies read at the phone's own volume.
 """
 
 import argparse
@@ -43,10 +48,12 @@ CLASSES = {
     "macaw": PACKAGE + ".speech.MacawSpeechDeviceTest",
     "live": PACKAGE + ".speech.SpeechLiveDictationDeviceTest",
     "live-acoustic": PACKAGE + ".speech.LiveDictationRealDeviceTest#twoSentencesThroughTheSpeaker",
+    "live-conversation": PACKAGE + ".speech.SpeechLiveConversationDeviceTest",
+    "conversation-local-live": PACKAGE + ".speech.SpeechConversationRealDeviceTest#localTargetTenRoundsThroughTheSession",
 }
 MACAW_PACKAGE = "io.github.supermonster003.autojs6.plugin.three.macaw.speech"
 # These play sound through the speaker at the device's media volume: never on adjacent phones at once.
-ACOUSTIC = {"engine", "conversation-local", "conversation-online", "live-acoustic"}
+ACOUSTIC = {"engine", "conversation-local", "conversation-online", "live-acoustic", "conversation-local-live"}
 # These wait for the maintainer on the phone (roadmap 10.5 E4); run one at a time on request.
 MANUAL = {
     "manual-dictation": "tap the microphone once and say a sentence",
@@ -65,6 +72,7 @@ CLASSES.update({
 # Instrumentation arguments that switch on the cases of a shared class.
 ARGUMENTS = {
     "live-acoustic": ["-e", "acoustic", "true"],
+    "conversation-local-live": ["-e", "acoustic", "true"],
     "live-permission": ["-e", "permission", "true"],
     "live-busy": ["-e", "busy", "true"],
 }
@@ -110,7 +118,8 @@ def main():
     parser.add_argument("--list-targets", action="store_true",
                         help="real-target conversations: only list the ready targets (model and provider)")
     parser.add_argument("--min-volume", type=int, default=70,
-                        help="live-acoustic: lowest media volume in percent (raised only when lower, then restored)")
+                        help="live-acoustic, conversation-local-live: lowest media volume in percent while the test "
+                             "audio plays (raised only when lower, then restored)")
     parser.add_argument("--revoke-macaw-microphone", action="store_true",
                         help="live-permission: revoke 3-Macaw Speech's RECORD_AUDIO first (the maintainer allows it again)")
     parser.add_argument("--output", type=Path, default=ROOT / "build/verification/speech")
@@ -173,7 +182,7 @@ def main():
             if args.list_targets:
                 extra += ["-e", "listTargets", "true"]
             extra += ARGUMENTS.get(name, [])
-            if name == "live-acoustic":
+            if name in ("live-acoustic", "conversation-local-live"):
                 extra += ["-e", "minVolume", str(args.min_volume)]
             if name == "live-permission" and args.revoke_macaw_microphone:
                 shell("pm", "revoke", MACAW_PACKAGE, "android.permission.RECORD_AUDIO", check=False)

@@ -9,11 +9,15 @@ import android.widget.EditText
  * Applies [LiveDictationEdits] to the input box (roadmap D209): the partial of the current utterance is gray and
  * tracked by spans, so typing elsewhere does not move it; a final replaces it in the normal text color. When the
  * session ends without a final for the partial (a cancel), the text stays as shown (roadmap D215). Main thread only.
+ *
+ * A voice conversation round (P6-3, Q88) uses [appendOnly]: its gray text goes after the text already there, never in
+ * place of a selection, so [discardPartial] can take it out again when the round sends it as the voice message.
  */
 internal class LiveDictationComposer(
     private val input: EditText,
     private val partialColor: Int,
     private val maximumLength: Int,
+    private val appendOnly: Boolean = false,
 ) {
     private var partialSpan: PartialMark? = null
     private var colorSpan: ForegroundColorSpan? = null
@@ -63,6 +67,19 @@ internal class LiveDictationComposer(
         input.text?.let(::clearSpans)
     }
 
+    /** Takes a pending partial out of the input box again, with the spacing shown before it. */
+    fun discardPartial() {
+        val editable = input.text ?: return
+        val mark = partialSpan
+        val start = mark?.let(editable::getSpanStart) ?: -1
+        val end = mark?.let(editable::getSpanEnd) ?: -1
+        clearSpans(editable)
+        if (start in 0 until end) {
+            editable.delete(start, end)
+            input.setSelection(start.coerceIn(0, editable.length))
+        }
+    }
+
     /** The partial's range, else the selection (focused) or the end of the text. */
     private fun pendingRange(editable: Spannable): Pair<Int, Int> {
         partialSpan?.let { mark ->
@@ -71,7 +88,7 @@ internal class LiveDictationComposer(
             if (start in 0..end) return start to end
         }
         val length = editable.length
-        if (!input.hasFocus() || input.selectionStart < 0 || input.selectionEnd < 0) return length to length
+        if (appendOnly || !input.hasFocus() || input.selectionStart < 0 || input.selectionEnd < 0) return length to length
         val start = minOf(input.selectionStart, input.selectionEnd).coerceIn(0, length)
         val end = maxOf(input.selectionStart, input.selectionEnd).coerceIn(0, length)
         return start to end

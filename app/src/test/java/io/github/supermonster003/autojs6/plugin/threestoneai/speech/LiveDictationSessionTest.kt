@@ -103,6 +103,41 @@ class LiveDictationSessionTest {
     }
 
     @Test
+    fun `an empty final closes no voice round and is not heard`() {
+        val recorder = Recorder()
+        var finishes = 0
+        val gate = LiveDictationEventGate(LiveDictationMode.SINGLE_UTTERANCE, recorder) { finishes++ }
+
+        // Noise in a speech segment: the round keeps listening (D220).
+        gate.partial(" ")
+        gate.final("")
+        assertEquals(0, finishes)
+        gate.partial("hello")
+        gate.final("hello there")
+        assertEquals(1, finishes)
+        gate.end(SpeechContract.REASON_STOPPED)
+
+        assertEquals(
+            listOf("partial: ", "final:", "partial:hello", "final:hello there", "end:${LiveDictationEnd.Stopped}"),
+            recorder.events,
+        )
+
+        val silent = Recorder()
+        LiveDictationEventGate(LiveDictationMode.SINGLE_UTTERANCE, silent) {}.apply {
+            final("  ")
+            end(SpeechContract.REASON_TIMEOUT)
+        }
+        assertEquals("end:${LiveDictationEnd.Timeout(heard = false)}", silent.events.last())
+
+        val failed = Recorder()
+        LiveDictationEventGate(LiveDictationMode.CONTINUOUS, failed) {}.apply {
+            partial("")
+            fail(SpeechErrorCodes.SESSION_BUSY)
+        }
+        assertEquals("end:${LiveDictationEnd.Failed(SpeechErrorCodes.SESSION_BUSY, heard = false)}", failed.events.last())
+    }
+
+    @Test
     fun `end reasons map to ends`() {
         fun endOf(mode: LiveDictationMode = LiveDictationMode.CONTINUOUS, block: LiveDictationEventGate.() -> Unit): String {
             val recorder = Recorder()

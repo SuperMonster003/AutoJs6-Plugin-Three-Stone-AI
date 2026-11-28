@@ -88,9 +88,10 @@ internal interface LiveDictationSource {
 
 /**
  * Normalizes the callbacks of one session for [listener] (roadmap D209): nothing after the end, exactly one end,
- * a local [cancel] ends at once, and in [LiveDictationMode.SINGLE_UTTERANCE] the first `final` calls [finishSession]
- * and later text is dropped. Error codes reported before `end` decide the [LiveDictationEnd.Failed] code. Pure, so the
- * rules have unit tests; the caller delivers on one thread.
+ * a local [cancel] ends at once, and in [LiveDictationMode.SINGLE_UTTERANCE] the first `final` with text calls
+ * [finishSession] and later text is dropped; an empty `final` (noise in a speech segment) closes nothing (D220).
+ * "Heard" means text that is not blank arrived. Error codes reported before `end` decide the [LiveDictationEnd.Failed]
+ * code. Pure, so the rules have unit tests; the caller delivers on one thread.
  */
 internal class LiveDictationEventGate(
     val mode: LiveDictationMode,
@@ -110,16 +111,19 @@ internal class LiveDictationEventGate(
 
     fun partial(text: String) {
         if (ended || closedForText()) return
-        heard = true
+        if (text.isNotBlank()) heard = true
         listener.onPartial(text)
     }
 
     fun final(text: String) {
         if (ended || closedForText()) return
-        heard = true
-        finals++
+        val spoken = text.isNotBlank()
+        if (spoken) {
+            heard = true
+            finals++
+        }
         listener.onFinal(text)
-        if (mode == LiveDictationMode.SINGLE_UTTERANCE) requestFinish()
+        if (spoken && mode == LiveDictationMode.SINGLE_UTTERANCE) requestFinish()
     }
 
     /** An `error` event or a failed call; the following [end] reports it. */

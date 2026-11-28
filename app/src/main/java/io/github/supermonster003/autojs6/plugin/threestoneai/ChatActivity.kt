@@ -85,6 +85,8 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictatio
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationRecovery
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationRecoveryPolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveDictationSession
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveVoiceRound
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.LiveVoiceRoundPolicy
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.MacawSpeech
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.MacawSpeechConnection
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.ReadAloudMenuItem
@@ -243,6 +245,15 @@ class ChatActivity : ConfiguredActivity() {
         }
     }
 
+    // A long press while 3-Macaw Speech is still probed waits for it as briefly as a short press (D217, D220).
+    private var voiceConversationPressPending = false
+    private val voiceConversationPressTimeout = Runnable {
+        if (voiceConversationPressPending) {
+            voiceConversationPressPending = false
+            beginVoiceConversation()
+        }
+    }
+
     /** Instrumentation only: a live dictation session runs. */
     @VisibleForTesting
     internal val liveDictationActive: Boolean
@@ -255,6 +266,11 @@ class ChatActivity : ConfiguredActivity() {
 
     @VisibleForTesting
     internal var lastLiveDictationEnd: LiveDictationEnd? = null
+        private set
+
+    /** Instrumentation only: voice conversation rounds that fell back to the recognizer sheet (D209). */
+    @VisibleForTesting
+    internal var voiceSheetFallbackCount = 0
         private set
 
     /** Instrumentation only: the gray partial in the input box, or null. */
@@ -332,6 +348,7 @@ class ChatActivity : ConfiguredActivity() {
 
     private var voiceListenAt = 0L
     private var voiceListenMillis = 0L
+    private var voiceListenLive = false
     private var voiceSendAt = 0L
     private var voiceFirstSoundAt: Long? = null
 
@@ -2312,6 +2329,11 @@ class ChatActivity : ConfiguredActivity() {
             mainHandler.removeCallbacks(liveDictationPressTimeout)
             startComposerDictation()
         }
+        if (voiceConversationPressPending && speechAvailability.macaw != null) {
+            voiceConversationPressPending = false
+            mainHandler.removeCallbacks(voiceConversationPressTimeout)
+            beginVoiceConversation()
+        }
     }
 
     /** A short press: live dictation when 3-Macaw Speech offers it (P6-2), the recognizer sheet otherwise. */
@@ -2328,22 +2350,35 @@ class ChatActivity : ConfiguredActivity() {
         }
     }
 
-    private fun startLiveDictation(): Boolean {
+    /**
+     * Opens a session of 3-Macaw Speech: [LiveDictationMode.CONTINUOUS] for the microphone button (P6-2), or
+     * [LiveDictationMode.SINGLE_UTTERANCE] for one round of a voice conversation (P6-3), whose text is shown after
+     * the input box's text and sent as the voice message (Q88).
+     */
+    private fun startLiveDictation(mode: LiveDictationMode = LiveDictationMode.CONTINUOUS): Boolean {
         if (destroyed || pendingDictation != null || liveRun != null) return false
         if (!isConversationTargetReady()) return false
         stopReading()
+        val round = mode == LiveDictationMode.SINGLE_UTTERANCE
         val run = LiveDictationRun(
-            LiveDictationComposer(input, appPalette.secondaryText, ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS),
+            LiveDictationComposer(
+                input,
+                appPalette.secondaryText,
+                ChatConversationPolicy.MAXIMUM_INPUT_CHARACTERS,
+                appendOnly = round,
+            ),
+            mode,
         )
         liveRun = run
         liveDictationRequestCount++
         renderComposerState()
-        val session = macawSpeech.open(LiveDictationMode.CONTINUOUS, run)
+        val session = macawSpeech.open(mode, run)
         // A source may end the session while opening it.
         if (run.ended) session.cancel() else run.session = session
-        // The button and the hint change silently; say that it listens (deprecated for live regions on API 36).
+        // The button and the hint change silently; say that it listens (deprecated for live regions on API 36). A voice
+        // round does not: its status bar says so, and a spoken announcement would be heard by the microphone.
         @Suppress("DEPRECATION")
-        if (liveRun === run) input.announceForAccessibility(getString(R.string.speech_live_dictation_listening))
+        if (liveRun === run && !round) input.announceForAccessibility(getString(R.string.speech_live_dictation_listening))
         return true
     }
 
@@ -2356,6 +2391,8 @@ class ChatActivity : ConfiguredActivity() {
     private fun cancelLiveDictation() {
         liveDictationPressPending = false
         mainHandler.removeCallbacks(liveDictationPressTimeout)
+        voiceConversationPressPending = false
+        mainHandler.removeCallbacks(voiceConversationPressTimeout)
         val run = liveRun ?: return
         val session = run.session
         if (session != null) session.cancel() else onLiveDictationEnd(run, LiveDictationEnd.Cancelled)
@@ -2364,11 +2401,49 @@ class ChatActivity : ConfiguredActivity() {
     private fun onLiveDictationEnd(run: LiveDictationRun, end: LiveDictationEnd) {
         if (liveRun !== run) return
         liveRun = null
-        run.composer.commitPartial()
         lastLiveDictationEnd = end
+        if (run.mode == LiveDictationMode.SINGLE_UTTERANCE) {
+            onVoiceRoundEnd(run, end)
+            return
+        }
+        run.composer.commitPartial()
         if (destroyed) return
         renderComposerState()
         if (end is LiveDictationEnd.Failed) recoverLiveDictation(end)
+    }
+
+    /** A voice conversation round on 3-Macaw Speech's session ended (P6-3, D209, D220). */
+    private fun onVoiceRoundEnd(run: LiveDictationRun, end: LiveDictationEnd) {
+        val round = LiveVoiceRoundPolicy.outcome(end, run.utterance)
+        // Sent text leaves the input box; text that is not sent stays as shown (D215).
+        if (round is LiveVoiceRound.Ended && !round.keepText) run.composer.discardPartial() else run.composer.commitPartial()
+        if (destroyed) return
+        renderComposerState()
+        val listening = voicePhase == VoicePhase.LISTENING
+        if (listening) {
+            voiceListenMillis = android.os.SystemClock.elapsedRealtime() - voiceListenAt
+            voiceListenLive = true
+        }
+        when (round) {
+            is LiveVoiceRound.Ended -> dispatchVoice(round.event)
+            LiveVoiceRound.Sheet -> {
+                if (!listening) return
+                val visible = lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+                // This round only; the next one tries the session again (D209).
+                if (visible && startDictation(DictationMode.CONVERSATION)) {
+                    voiceSheetFallbackCount++
+                } else {
+                    dispatchVoice(VoiceEvent.RecognitionCanceled)
+                    if (end is LiveDictationEnd.Failed) showSnackbar(drawerLayout, liveDictationFailureText(end.code))
+                }
+            }
+            LiveVoiceRound.MicrophonePermission -> {
+                dispatchVoice(VoiceEvent.RecognitionCanceled)
+                if (listening && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                    openMacawMicrophonePermission()
+                }
+            }
+        }
     }
 
     /** SESSION_BUSY and MODEL_MISSING open the sheet this once, PERMISSION_DENIED 3-Macaw Speech's dialog (D209). */
@@ -2413,9 +2488,16 @@ class ChatActivity : ConfiguredActivity() {
     )
 
     /** One live dictation session; its events reach the input box only while it is the current one. */
-    private inner class LiveDictationRun(val composer: LiveDictationComposer) : LiveDictationListener {
+    private inner class LiveDictationRun(
+        val composer: LiveDictationComposer,
+        val mode: LiveDictationMode,
+    ) : LiveDictationListener {
         var session: LiveDictationSession? = null
         var ended = false
+            private set
+
+        /** A voice conversation round: its final, sent when the session ends (P6-3). */
+        var utterance: String? = null
             private set
 
         override fun onPartial(text: String) {
@@ -2426,6 +2508,13 @@ class ChatActivity : ConfiguredActivity() {
 
         override fun onFinal(text: String) {
             if (liveRun !== this) return
+            if (mode == LiveDictationMode.SINGLE_UTTERANCE) {
+                // Stays gray until the round sends it (Q88); an empty final (noise) only clears the partial (D220).
+                composer.partial(text)
+                if (text.isNotBlank()) utterance = text
+                liveDictationObserverForTest?.onFinal(text)
+                return
+            }
             val edit = composer.final(text)
             liveDictationObserverForTest?.onFinal(text)
             if (edit == null) return
@@ -2506,6 +2595,7 @@ class ChatActivity : ConfiguredActivity() {
         )
         if (mode == DictationMode.CONVERSATION) {
             voiceListenMillis = android.os.SystemClock.elapsedRealtime() - voiceListenAt
+            voiceListenLive = false
         }
         when {
             mode == DictationMode.CONVERSATION && voicePhase == VoicePhase.LISTENING -> dispatchVoice(
@@ -2523,9 +2613,29 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun startVoiceConversation() {
         if (destroyed || pendingDictation != null || liveRun != null || voicePhase != VoicePhase.IDLE) return
-        // The voice conversation still uses the recognizer sheet; P6-3 moves it to the live session.
-        if (!speechAvailability.sheetDictationAvailable || !isConversationTargetReady()) return
+        // 3-Macaw Speech is still being probed (a long press right after the chat opened): wait for it briefly.
+        if (uiSettings.preferMacawSpeech && speechAvailability.macaw == null) {
+            voiceConversationPressPending = true
+            mainHandler.removeCallbacks(voiceConversationPressTimeout)
+            mainHandler.postDelayed(voiceConversationPressTimeout, LIVE_DICTATION_PRESS_WAIT_MILLIS)
+            return
+        }
+        beginVoiceConversation()
+    }
+
+    private fun beginVoiceConversation() {
+        if (destroyed || pendingDictation != null || liveRun != null || voicePhase != VoicePhase.IDLE) return
+        // Each round listens through 3-Macaw Speech's session when it dictates live (P6-3), else the sheet (P5-4).
+        if (!speechAvailability.liveDictation && !speechAvailability.sheetDictationAvailable) return
+        if (!isConversationTargetReady()) return
         dispatchVoice(VoiceEvent.Start)
+    }
+
+    /** Listens for one round: 3-Macaw Speech's session without a sheet when it dictates live (P6-3), else the sheet. */
+    private fun startVoiceListening(): Boolean = if (speechAvailability.liveDictation) {
+        startLiveDictation(LiveDictationMode.SINGLE_UTTERANCE)
+    } else {
+        startDictation(DictationMode.CONVERSATION)
     }
 
     private fun dispatchVoice(event: VoiceEvent) {
@@ -2544,6 +2654,11 @@ class ChatActivity : ConfiguredActivity() {
         if (previous != VoicePhase.IDLE && voicePhase == VoicePhase.IDLE) {
             lastVoiceExit = event::class.simpleName
         }
+        // A round on 3-Macaw Speech's session lives only while the conversation listens: the exit button, a typed
+        // message or leaving the chat cancel it (D220); what it showed stays in the input box (D215).
+        if (voicePhase != VoicePhase.LISTENING && liveRun?.mode == LiveDictationMode.SINGLE_UTTERANCE) {
+            cancelLiveDictation()
+        }
         transition.effects.forEach(::applyVoiceEffect)
         renderVoiceStatus()
     }
@@ -2557,6 +2672,7 @@ class ChatActivity : ConfiguredActivity() {
             firstSoundMillis = voiceFirstSoundAt?.minus(voiceSendAt),
             roundMillis = now - voiceSendAt,
             replyCharacters = reply?.text?.length ?: 0,
+            live = voiceListenLive,
         )
     }
 
@@ -2595,12 +2711,14 @@ class ChatActivity : ConfiguredActivity() {
             VoiceEffect.CancelEditing -> cancelEditing()
             VoiceEffect.StopGeneration -> if (isGenerating) stopGeneration(showToast = false)
             VoiceEffect.StopReading -> stopReading()
-            VoiceEffect.Listen -> if (startDictation(DictationMode.CONVERSATION)) {
+            VoiceEffect.Listen -> {
+                // Set first: a session source may end the round while it opens.
                 voiceListenAt = android.os.SystemClock.elapsedRealtime()
-            } else {
-                voicePhase = VoicePhase.IDLE
-                voiceReplyId = null
-                lastVoiceExit = "ListenUnavailable"
+                if (!startVoiceListening()) {
+                    voicePhase = VoicePhase.IDLE
+                    voiceReplyId = null
+                    lastVoiceExit = "ListenUnavailable"
+                }
             }
             is VoiceEffect.Send -> {
                 voiceSendAt = android.os.SystemClock.elapsedRealtime()
@@ -4807,12 +4925,14 @@ internal object ChatViewTags {
     const val VOICE_STATUS_ACTION = "chat-voice-status-action"
 }
 
-/** One voice round: recognizer open to result, send to first sound and to the end of reading. */
+/** One voice round: listening start to result, send to first sound and to the end of reading. */
 internal data class VoiceRoundTiming(
     val listenMillis: Long,
     val firstSoundMillis: Long?,
     val roundMillis: Long,
     val replyCharacters: Int,
+    /** The round listened through 3-Macaw Speech's session (P6-3), not the recognizer sheet. */
+    val live: Boolean = false,
 )
 
 /** A recognizer result as instrumentation sees it: kind, time from request to result, text length. */

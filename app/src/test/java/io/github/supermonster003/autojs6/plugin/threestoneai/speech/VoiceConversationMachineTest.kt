@@ -4,6 +4,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoicePhase.I
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoicePhase.LISTENING
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoicePhase.SPEAKING
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoicePhase.THINKING
+import org.autojs.plugin.speech.api.SpeechErrorCodes
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -100,6 +101,78 @@ class VoiceConversationMachineTest {
         )
         assertEquals(VoiceTransition(THINKING), next(THINKING, VoiceEvent.Interrupt))
         assertEquals(VoiceTransition(LISTENING), next(LISTENING, VoiceEvent.Interrupt))
+    }
+
+    // P6-3 (D209, D220): a round on 3-Macaw Speech's session ends in one of the recognizer events above.
+    private fun round(end: LiveDictationEnd, text: String? = null) = LiveVoiceRoundPolicy.outcome(end, text)
+
+    private fun ended(event: VoiceEvent, keepText: Boolean = true) = LiveVoiceRound.Ended(event, keepText)
+
+    @Test
+    fun `a session round sends its final however the session stops`() {
+        val sent = ended(VoiceEvent.Recognized("What time is it?"), keepText = false)
+
+        assertEquals(sent, round(LiveDictationEnd.Stopped, "What time is it?"))
+        assertEquals(sent, round(LiveDictationEnd.Stopped, "  What time is it? "))
+        // A timeout or the five minutes racing the automatic finish.
+        assertEquals(sent, round(LiveDictationEnd.Timeout(heard = true), "What time is it?"))
+        assertEquals(sent, round(LiveDictationEnd.MaxDuration, "What time is it?"))
+        // A whole sentence before a failure is still sent.
+        assertEquals(sent, round(LiveDictationEnd.Failed(SpeechErrorCodes.ENGINE_FAILED, heard = true), "What time is it?"))
+    }
+
+    @Test
+    fun `a session round without speech ends the conversation as the sheet did`() {
+        // 8 s without speech is RESULT_NO_MATCH of P5-4, and so is a finish before anything was said.
+        assertEquals(ended(VoiceEvent.RecognitionNoMatch), round(LiveDictationEnd.Timeout(heard = false)))
+        assertEquals(ended(VoiceEvent.RecognitionNoMatch), round(LiveDictationEnd.Stopped))
+        assertEquals(ended(VoiceEvent.RecognitionNoMatch), round(LiveDictationEnd.Stopped, " "))
+        // A partial without its final stays in the input box.
+        assertEquals(ended(VoiceEvent.RecognitionNoMatch), round(LiveDictationEnd.Timeout(heard = true)))
+        assertEquals(ended(VoiceEvent.RecognitionNoMatch), round(LiveDictationEnd.MaxDuration))
+        // Leaving the chat, the exit button or a typed message cancel the round; the shown text stays (D215).
+        assertEquals(ended(VoiceEvent.RecognitionCanceled), round(LiveDictationEnd.Cancelled))
+        assertEquals(ended(VoiceEvent.RecognitionCanceled), round(LiveDictationEnd.Cancelled, "half a sentence"))
+
+        assertEquals(VoiceTransition(IDLE), next(LISTENING, VoiceEvent.RecognitionNoMatch))
+        assertEquals(VoiceTransition(IDLE), next(LISTENING, VoiceEvent.RecognitionCanceled))
+    }
+
+    @Test
+    fun `a busy microphone or a missing model fall back to the sheet for the round`() {
+        for (code in listOf(
+            SpeechErrorCodes.SESSION_BUSY,
+            SpeechErrorCodes.MODEL_MISSING,
+            SpeechErrorCodes.SESSION_CLOSED,
+            SpeechErrorCodes.PLUGIN_UNAVAILABLE,
+            SpeechErrorCodes.FEATURE_UNAVAILABLE,
+        )) {
+            assertEquals(code, LiveVoiceRound.Sheet, round(LiveDictationEnd.Failed(code, heard = false)))
+        }
+        assertEquals(
+            LiveVoiceRound.MicrophonePermission,
+            round(LiveDictationEnd.Failed(SpeechErrorCodes.PERMISSION_DENIED, heard = false)),
+        )
+        // The sheet answers the round with the recognizer events of P5-4, so the machine still listens meanwhile.
+        assertEquals(VoiceTransition(LISTENING), next(LISTENING, VoiceEvent.ReplyDone))
+        assertEquals(
+            VoiceTransition(THINKING, listOf(VoiceEffect.Send("from the sheet"))),
+            next(LISTENING, VoiceEvent.Recognized("from the sheet")),
+        )
+    }
+
+    @Test
+    fun `other session errors are reported and end the conversation`() {
+        val reported = ended(VoiceEvent.RecognitionFailed(DictationFailure.OTHER))
+
+        assertEquals(reported, round(LiveDictationEnd.Failed(SpeechErrorCodes.ENGINE_FAILED, heard = false)))
+        assertEquals(reported, round(LiveDictationEnd.Failed(SpeechErrorCodes.INTERNAL, heard = false)))
+        // Something was heard but not finished: the text stays and the failure is reported, not the sheet.
+        assertEquals(reported, round(LiveDictationEnd.Failed(SpeechErrorCodes.SESSION_BUSY, heard = true)))
+        assertEquals(
+            VoiceTransition(IDLE, listOf(VoiceEffect.ReportFailure(DictationFailure.OTHER))),
+            next(LISTENING, VoiceEvent.RecognitionFailed(DictationFailure.OTHER)),
+        )
     }
 
     @Test

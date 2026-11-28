@@ -8,6 +8,7 @@
     <string name="speech_auto_read_unavailable">На устройстве нет синтезатора речи</string>
     <string name="speech_conversation_exit">Выйти из голосового диалога</string>
     <string name="speech_conversation_listening">Голосовой диалог: слушаю</string>
+    <string name="speech_conversation_preparing">Голосовой диалог: подготовка микрофона</string>
     <string name="speech_conversation_prompt">Скажите следующее сообщение</string>
     <string name="speech_conversation_speaking">Голосовой диалог: озвучивание, нажмите, чтобы прервать</string>
     <string name="speech_conversation_start">Начать голосовой диалог</string>
@@ -28,6 +29,7 @@
     <string name="speech_live_dictation_listening">Слушаю. Нажмите кнопку остановки, чтобы закончить</string>
     <string name="speech_live_dictation_model_missing">Сначала загрузите модель распознавания речи в 3-Macaw Speech</string>
     <string name="speech_live_dictation_permission">Разрешите 3-Macaw Speech использовать микрофон, затем снова нажмите на микрофон</string>
+    <string name="speech_live_dictation_preparing">Подготовка микрофона. Говорите, когда начнётся прослушивание</string>
     <string name="speech_prefer_macaw">Предпочитать 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">Диктовать в реальном времени в поле ввода и озвучивать через 3-Macaw Speech без выбора приложения каждый раз. Выключите, чтобы выбирала система</string>
     <string name="speech_read_aloud_failed">Не удалось запустить синтезатор речи</string>

@@ -7,9 +7,15 @@ import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledExecutorService
 
-/** Process-scoped owner for initialized engines; bound Service instances may come and go per call. */
+/**
+ * Process-scoped owner for initialized engines; bound Service instances may come and go per call.
+ *
+ * [beforeLoad] runs before each engine load; the app uses it to ask its other process to give back
+ * an idle engine first, so the model is not held twice (D227).
+ */
 internal class LiteRtLmEngineRuntime(
     private val cacheDirectory: File,
+    beforeLoad: () -> Unit = {},
 ) : AutoCloseable {
     private val scheduler: ScheduledExecutorService =
         Executors.newSingleThreadScheduledExecutor { runnable ->
@@ -18,6 +24,7 @@ internal class LiteRtLmEngineRuntime(
     private val engineCache = ReusableResourceCache<EngineCacheKey, Engine>(
         scheduler = scheduler,
         idleTimeoutMillis = ENGINE_IDLE_TIMEOUT_MILLIS,
+        beforeLoad = beforeLoad,
     )
 
     fun createSession(
@@ -40,6 +47,15 @@ internal class LiteRtLmEngineRuntime(
         } catch (_: RejectedExecutionException) {
             engineCache.evict()
         }
+    }
+
+    /**
+     * Releases the engine now or, while a session still uses it, as soon as that session returns it;
+     * waits up to [timeoutMillis] for the memory to be given back and returns whether it was (D227).
+     */
+    fun releaseIdleEngine(timeoutMillis: Long): Boolean {
+        engineCache.evict()
+        return engineCache.awaitEmpty(timeoutMillis)
     }
 
     override fun close() {

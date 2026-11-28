@@ -16,6 +16,9 @@ internal enum class VoicePhase {
 
 internal enum class VoiceStatusLabel {
     READING,
+
+    /** The round's session is open but the microphone has not started yet (A4, D225). */
+    PREPARING,
     LISTENING,
     THINKING,
     SPEAKING,
@@ -35,14 +38,18 @@ internal data class VoiceStatus(
 )
 
 internal object VoiceStatusPolicy {
-    fun status(phase: VoicePhase, reading: Boolean): VoiceStatus? = when (phase) {
+    /** [preparing]: the round listens through a session that has not reported ready yet (A4, D225). */
+    fun status(phase: VoicePhase, reading: Boolean, preparing: Boolean = false): VoiceStatus? = when (phase) {
         VoicePhase.IDLE -> if (reading) {
             VoiceStatus(VoiceStatusLabel.READING, VoiceStatusAction.STOP_READING, tapInterrupts = false)
         } else {
             null
         }
-        VoicePhase.LISTENING ->
-            VoiceStatus(VoiceStatusLabel.LISTENING, VoiceStatusAction.EXIT_CONVERSATION, tapInterrupts = false)
+        VoicePhase.LISTENING -> VoiceStatus(
+            if (preparing) VoiceStatusLabel.PREPARING else VoiceStatusLabel.LISTENING,
+            VoiceStatusAction.EXIT_CONVERSATION,
+            tapInterrupts = false,
+        )
         VoicePhase.THINKING ->
             VoiceStatus(VoiceStatusLabel.THINKING, VoiceStatusAction.EXIT_CONVERSATION, tapInterrupts = false)
         VoicePhase.SPEAKING ->

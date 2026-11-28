@@ -8,6 +8,7 @@
     <string name="speech_auto_read_unavailable">이 기기에 사용할 수 있는 음성 합성 엔진이 없습니다</string>
     <string name="speech_conversation_exit">음성 대화 종료</string>
     <string name="speech_conversation_listening">음성 대화: 듣는 중</string>
+    <string name="speech_conversation_preparing">음성 대화: 마이크 준비 중</string>
     <string name="speech_conversation_prompt">다음 메시지를 말씀하세요</string>
     <string name="speech_conversation_speaking">음성 대화: 읽는 중, 탭하여 중단</string>
     <string name="speech_conversation_start">음성 대화 시작</string>
@@ -28,6 +29,7 @@
     <string name="speech_live_dictation_listening">듣는 중입니다. 중지 버튼을 눌러 끝내세요</string>
     <string name="speech_live_dictation_model_missing">먼저 3-Macaw Speech에서 음성 인식 모델을 다운로드하세요</string>
     <string name="speech_live_dictation_permission">3-Macaw Speech의 마이크 사용을 허용한 뒤 마이크를 다시 누르세요</string>
+    <string name="speech_live_dictation_preparing">마이크를 준비하고 있습니다. 듣는 중으로 바뀐 뒤 말하세요</string>
     <string name="speech_prefer_macaw">3-Macaw Speech 우선 사용</string>
     <string name="speech_prefer_macaw_summary">매번 앱을 고르지 않고 3-Macaw Speech로 받아쓰기 (입력란에 실시간 표시)와 읽기를 합니다. 끄면 시스템이 선택합니다</string>
     <string name="speech_read_aloud_failed">음성 엔진을 시작할 수 없습니다</string>

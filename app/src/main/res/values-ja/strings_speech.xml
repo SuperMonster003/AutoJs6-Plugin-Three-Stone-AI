@@ -8,6 +8,7 @@
     <string name="speech_auto_read_unavailable">この端末には音声合成エンジンがありません</string>
     <string name="speech_conversation_exit">音声会話を終了</string>
     <string name="speech_conversation_listening">音声会話: 聞き取り中</string>
+    <string name="speech_conversation_preparing">音声会話: マイクを準備中</string>
     <string name="speech_conversation_prompt">次のメッセージを話してください</string>
     <string name="speech_conversation_speaking">音声会話: 読み上げ中, タップで中断</string>
     <string name="speech_conversation_start">音声会話を開始</string>
@@ -28,6 +29,7 @@
     <string name="speech_live_dictation_listening">聞き取り中. 停止ボタンで終了します</string>
     <string name="speech_live_dictation_model_missing">先に 3-Macaw Speech で音声認識モデルをダウンロードしてください</string>
     <string name="speech_live_dictation_permission">3-Macaw Speech にマイクの使用を許可してから, もう一度マイクをタップしてください</string>
+    <string name="speech_live_dictation_preparing">マイクを準備中です. 聞き取り中と表示されてから話してください</string>
     <string name="speech_prefer_macaw">3-Macaw Speech を優先</string>
     <string name="speech_prefer_macaw_summary">毎回アプリを選ばずに 3-Macaw Speech で音声入力 (入力欄にリアルタイム表示) と読み上げを行います. オフにするとシステムが選択します</string>
     <string name="speech_read_aloud_failed">読み上げエンジンを起動できませんでした</string>

@@ -36,6 +36,10 @@ internal sealed interface SummaryCheckpointOutcome {
         val validatedState: ConversationContextState,
         val statistics: GenerationStatistics?,
         val attempts: Int,
+        /** Memory items of the reply set aside by [SummaryCheckpointValidator.repairMemory] (D229). */
+        val memoryItemsSetAside: Int = 0,
+        /** Why the previous attempt failed (exception class and message, never the reply), for the log. */
+        val retriedAfter: String? = null,
     ) : SummaryCheckpointOutcome
 
     data class Failure(
@@ -106,6 +110,7 @@ internal class SummaryCheckpointer(
         private val activeSession = AtomicReference<AiBackendSession?>()
         private var attempts = 0
         private var useStructuredJson = request.structuredJson
+        private var previousFailure: String? = null
 
         fun start() = dispatch(::runAttempt)
 
@@ -203,24 +208,55 @@ internal class SummaryCheckpointer(
                 } else {
                     runCatching {
                         val draft = SummaryCheckpointJsonCodec.decode(checkNotNull(response))
-                        val state = SummaryCheckpointValidator.apply(
-                            state = request.state,
-                            plan = request.plan,
-                            draft = draft,
-                            transcript = request.transcript,
-                        )
-                        SummaryCheckpointOutcome.Success(
-                            draft = draft,
-                            validatedState = state,
-                            statistics = statistics,
-                            attempts = attempts,
-                        )
+                        try {
+                            val state = SummaryCheckpointValidator.apply(
+                                state = request.state,
+                                plan = request.plan,
+                                draft = draft,
+                                transcript = request.transcript,
+                            )
+                            SummaryCheckpointOutcome.Success(
+                                draft = draft,
+                                validatedState = state,
+                                statistics = statistics,
+                                attempts = attempts,
+                                retriedAfter = previousFailure,
+                            )
+                        } catch (invalid: IllegalArgumentException) {
+                            // Keeps the summary when only some memory items broke the rules (D229).
+                            val (repaired, setAside) = SummaryCheckpointValidator.repairMemory(
+                                state = request.state,
+                                plan = request.plan,
+                                draft = draft,
+                                transcript = request.transcript,
+                            ) ?: throw invalid
+                            val state = try {
+                                SummaryCheckpointValidator.apply(
+                                    state = request.state,
+                                    plan = request.plan,
+                                    draft = repaired,
+                                    transcript = request.transcript,
+                                )
+                            } catch (still: IllegalArgumentException) {
+                                invalid.addSuppressed(still)
+                                throw invalid
+                            }
+                            SummaryCheckpointOutcome.Success(
+                                draft = repaired,
+                                validatedState = state,
+                                statistics = statistics,
+                                attempts = attempts,
+                                memoryItemsSetAside = setAside,
+                                retriedAfter = previousFailure,
+                            )
+                        }
                     }
                 }
                 result.fold(
                     onSuccess = { outcome -> complete(outcome) },
                     onFailure = { failure ->
                         if (attempts < maximumAttempts) {
+                            previousFailure = "${failure.javaClass.simpleName}: ${failure.message?.take(160)}"
                             if (error == null && useStructuredJson) useStructuredJson = false
                             runAttempt()
                         } else {

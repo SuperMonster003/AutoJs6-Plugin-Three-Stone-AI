@@ -48,6 +48,7 @@ GATE = [PACKAGE + name for name in (
     ".ChatExportDeviceTest",
     ".ChatGenerationContinuityDeviceTest",
     ".ChatReasoningCardDeviceTest",
+    ".HostSnapshotCopyDeviceTest",
     ".HostSnapshotThreadTest",
     ".LauncherIconResourceTest",
     ".ModelDownloadDeviceTest",
@@ -68,6 +69,8 @@ GATE = [PACKAGE + name for name in (
 LEFT_OUT = {
     "AppearanceSettingsTest, LauncherIcon{ApplyAuto,Migration,PrepareDark,PrepareUpgrade,Selection}Test":
         "change the appearance or the launcher alias of the installed app; emulator only",
+    "ApplicationNightModeDeviceTest": "changes the appearance setting and the recorded night mode (restored); "
+        "see device_splash_night_mode.py",
     "ModelsAndServicesScreenshotTest": "screenshots for the evidence, emulator",
     "ChatAttachmentPickerEmulatorTest": "presses the system pickers, emulator only (D131)",
     "EngineCacheCleanupDeviceTest": "needs an empty model catalog; skipped on a phone with models",

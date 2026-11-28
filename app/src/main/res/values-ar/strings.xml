@@ -101,6 +101,7 @@
     <string name="chat_generation_failure_cloud">فشل التوليد السحابي عبر %1$s. لم يتم اختيار هدف محلي تلقائيا.\n\n%2$s</string>
     <string name="chat_generation_failure_detail">استجابة المزود: %1$s</string>
     <string name="chat_generation_failure_local">فشل التوليد المحلي عبر %1$s. لم يتم اختيار هدف سحابي تلقائيا.\n\n%2$s</string>
+    <string name="chat_generation_failure_local_busy">لا يزال النموذج على الجهاز مشغولا بمهمة أخرى. حاول مرة أخرى بعد قليل.</string>
     <string name="chat_generation_failure_local_execution">تعذر على النموذج المحدد على الجهاز إكمال هذا الطلب.</string>
     <string name="chat_generation_failure_target_unavailable">الهدف المسجل لم يعد متاحا.</string>
     <string name="chat_generation_failure_unknown">تعذر على الهدف المحدد إكمال هذا الطلب.</string>

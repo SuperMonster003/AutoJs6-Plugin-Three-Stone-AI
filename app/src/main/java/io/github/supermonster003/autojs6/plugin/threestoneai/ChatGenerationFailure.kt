@@ -4,10 +4,13 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLoc
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetUnavailableException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureReason
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.ResourceBusyException
 
 internal enum class ChatGenerationFailureKind {
     TARGET_UNAVAILABLE,
     LOCAL_EXECUTION,
+    /** The on-device engine stayed lent to another session for the whole wait (D222). */
+    LOCAL_BUSY,
     CREDENTIAL,
     PROFILE_CHANGED,
     AUTHENTICATION,
@@ -41,6 +44,8 @@ internal object ChatGenerationFailurePolicy {
         locality = target.locality,
         kind = when {
             error is AiTargetUnavailableException -> ChatGenerationFailureKind.TARGET_UNAVAILABLE
+            target.locality == AiTargetLocality.LOCAL && error is ResourceBusyException ->
+                ChatGenerationFailureKind.LOCAL_BUSY
             target.locality == AiTargetLocality.LOCAL ->
                 ChatGenerationFailureKind.LOCAL_EXECUTION
             error !is OnlineAiFailureException -> ChatGenerationFailureKind.UNKNOWN

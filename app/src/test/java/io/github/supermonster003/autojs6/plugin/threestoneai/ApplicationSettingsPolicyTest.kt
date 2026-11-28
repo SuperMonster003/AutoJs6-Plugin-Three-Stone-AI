@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import android.app.UiModeManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -15,6 +16,46 @@ class ApplicationSettingsPolicyTest {
         assertEquals(AppDarkMode.FOLLOW_AUTOJS6, settings.darkMode)
         assertEquals(AppLanguage.FOLLOW_AUTOJS6, settings.language)
         assertEquals("#FFDEAD", AppSettingsPolicy.colorHex(settings.customThemeColor))
+    }
+
+    @Test
+    fun `the system records the resolved night mode for the starting window (D224)`() {
+        fun host(dark: Boolean) = AutoJs6HostSettingsResult(
+            AutoJs6HostAvailability.AVAILABLE,
+            AutoJs6HostSettingsSnapshot(
+                hostVersionCode = 6642L,
+                hostVersionName = "6.8.1",
+                themeColorPrimary = 0xFF000000.toInt(),
+                themeColorPrimaryDark = 0xFF000000.toInt(),
+                themeColorAccent = 0xFF000000.toInt(),
+                darkModePolicy = if (dark) AutoJs6DarkModePolicy.DARK else AutoJs6DarkModePolicy.LIGHT,
+                darkModeActive = dark,
+                languageTag = "zh-CN",
+                resolvedLanguageTag = "zh-CN",
+            ),
+        )
+        val policy = ApplicationNightModePolicy
+
+        assertEquals(UiModeManager.MODE_NIGHT_YES, policy.mode(AppDarkMode.DARK, null))
+        assertEquals(UiModeManager.MODE_NIGHT_NO, policy.mode(AppDarkMode.LIGHT, host(dark = true)))
+        assertEquals(UiModeManager.MODE_NIGHT_AUTO, policy.mode(AppDarkMode.FOLLOW_SYSTEM, host(dark = true)))
+        assertEquals(UiModeManager.MODE_NIGHT_NO, policy.mode(AppDarkMode.FOLLOW_AUTOJS6, host(dark = false)))
+        assertEquals(UiModeManager.MODE_NIGHT_YES, policy.mode(AppDarkMode.FOLLOW_AUTOJS6, host(dark = true)))
+        // AutoJs6 gone for good: follow the system again.
+        listOf(AutoJs6HostAvailability.NOT_INSTALLED, AutoJs6HostAvailability.DISABLED).forEach { absent ->
+            assertEquals(
+                UiModeManager.MODE_NIGHT_AUTO,
+                policy.mode(AppDarkMode.FOLLOW_AUTOJS6, AutoJs6HostSettingsResult(absent)),
+            )
+        }
+        // Not known yet (cold start before the first refresh): keep what the system remembers.
+        assertNull(
+            policy.mode(
+                AppDarkMode.FOLLOW_AUTOJS6,
+                AutoJs6HostSettingsResult(AutoJs6HostAvailability.CONTRACT_UNAVAILABLE),
+            ),
+        )
+        assertNull(policy.mode(AppDarkMode.FOLLOW_AUTOJS6, null))
     }
 
     @Test

@@ -8,6 +8,7 @@
     <string name="speech_auto_read_unavailable">裝置上沒有可用的語音合成引擎</string>
     <string name="speech_conversation_exit">退出語音對話</string>
     <string name="speech_conversation_listening">語音對話: 正在聆聽</string>
+    <string name="speech_conversation_preparing">語音對話: 正在準備麥克風</string>
     <string name="speech_conversation_prompt">請說出下一句</string>
     <string name="speech_conversation_speaking">語音對話: 正在朗讀, 輕按可打斷</string>
     <string name="speech_conversation_start">開始語音對話</string>
@@ -28,6 +29,7 @@
     <string name="speech_live_dictation_listening">正在聆聽, 按停止按鈕結束</string>
     <string name="speech_live_dictation_model_missing">請先在 3-Macaw Speech 中下載語音辨識模型</string>
     <string name="speech_live_dictation_permission">請允許 3-Macaw Speech 使用麥克風, 然後再按一下麥克風</string>
+    <string name="speech_live_dictation_preparing">正在準備麥克風, 顯示正在聆聽之後先講嘢</string>
     <string name="speech_prefer_macaw">優先使用 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">聽寫 (在輸入框內即時顯示) 與朗讀直接使用 3-Macaw Speech, 不必每次選擇應用程式; 關閉後由系統選擇</string>
     <string name="speech_read_aloud_failed">朗讀引擎無法啟動</string>

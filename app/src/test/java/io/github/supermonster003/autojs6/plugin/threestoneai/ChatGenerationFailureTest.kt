@@ -4,6 +4,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLoc
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetUnavailableException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureException
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiFailureReason
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.ResourceBusyException
 import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -20,6 +21,18 @@ class ChatGenerationFailureTest {
         assertEquals(
             ChatGenerationFailure(AiTargetLocality.LOCAL, ChatGenerationFailureKind.LOCAL_EXECUTION),
             failure,
+        )
+    }
+
+    @Test
+    fun `a local engine still lent after the whole wait is a readable busy failure (D222)`() {
+        assertEquals(
+            ChatGenerationFailure(AiTargetLocality.LOCAL, ChatGenerationFailureKind.LOCAL_BUSY),
+            ChatGenerationFailurePolicy.classify(localTarget, ResourceBusyException(60_000L)),
+        )
+        assertEquals(
+            ChatGenerationFailure(AiTargetLocality.LOCAL, ChatGenerationFailureKind.LOCAL_EXECUTION),
+            ChatGenerationFailurePolicy.classify(localTarget, IllegalStateException("native")),
         )
     }
 

@@ -8,6 +8,7 @@
     <string name="speech_auto_read_unavailable">No text-to-speech engine is installed on this device</string>
     <string name="speech_conversation_exit">Exit voice conversation</string>
     <string name="speech_conversation_listening">Voice conversation: listening</string>
+    <string name="speech_conversation_preparing">Voice conversation: preparing the microphone</string>
     <string name="speech_conversation_prompt">Say your next message</string>
     <string name="speech_conversation_speaking">Voice conversation: reading, tap to interrupt</string>
     <string name="speech_conversation_start">Start a voice conversation</string>
@@ -28,6 +29,7 @@
     <string name="speech_live_dictation_listening">Listening. Tap the stop button to finish</string>
     <string name="speech_live_dictation_model_missing">Download a speech recognition model in 3-Macaw Speech first</string>
     <string name="speech_live_dictation_permission">Allow 3-Macaw Speech to use the microphone, then tap the microphone again</string>
+    <string name="speech_live_dictation_preparing">Preparing the microphone. Speak when it says listening</string>
     <string name="speech_prefer_macaw">Prefer 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">Dictate live in the input box and read aloud with 3-Macaw Speech without choosing an app each time. Turn off to let the system choose</string>
     <string name="speech_read_aloud_failed">The speech engine could not start</string>

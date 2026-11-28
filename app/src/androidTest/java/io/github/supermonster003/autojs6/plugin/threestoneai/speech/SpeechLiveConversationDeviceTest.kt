@@ -63,8 +63,12 @@ class SpeechLiveConversationDeviceTest : SpeechConversationCases() {
                 assertEquals(VoicePhase.LISTENING, activity.currentVoicePhase)
                 assertEquals(activity.getString(R.string.speech_dictation_stop), mic(activity).contentDescription)
             }
-            assertTrue(statusShows(scenario, R.string.speech_conversation_listening))
+            // Until the session is ready the microphone is not recording yet (A4, D225).
+            assertTrue(statusShows(scenario, R.string.speech_conversation_preparing))
+            scenario.onActivity { activity -> assertEquals(VoiceStatusLabel.PREPARING, activity.voiceStatusLabelForTest) }
             round.ready()
+            assertTrue(statusShows(scenario, R.string.speech_conversation_listening))
+            scenario.onActivity { activity -> assertEquals(VoiceStatusLabel.LISTENING, activity.voiceStatusLabelForTest) }
             round.partial("What")
             assertComposer(scenario, "my draft What")
             scenario.onActivity { activity -> assertTrue("The round's text is gray", grayed(activity, "What")) }
@@ -165,6 +169,65 @@ class SpeechLiveConversationDeviceTest : SpeechConversationCases() {
             }
         }
         SpeechDeviceReport.receipt("live-conversation-fallback", values)
+    }
+
+    /** A4 (D225): the exit button works while the round still prepares, and no text was sent. */
+    @Test
+    fun theExitButtonEndsARoundThatIsStillPreparing() {
+        environment.launchChat().use { scenario ->
+            start(scenario)
+            val round = awaitRound(scenario)
+            scenario.onActivity { activity -> assertEquals(VoiceStatusLabel.PREPARING, activity.voiceStatusLabelForTest) }
+            scenario.onActivity { activity ->
+                assertTrue(activity.window.decorView.findViewWithTag<View>(ChatViewTags.VOICE_STATUS_ACTION).performClick())
+            }
+            waitForExit(scenario)
+            assertEquals("Exit", exit(scenario))
+            assertEquals(1, round.cancels)
+            assertTrue(environment.backend.prompts.isEmpty())
+            // The ready that comes late is dropped: nothing listens any more.
+            round.ready()
+            scenario.onActivity { activity ->
+                assertFalse(activity.liveDictationActive)
+                assertEquals(null, activity.voiceStatusLabelForTest)
+            }
+        }
+        SpeechDeviceReport.receipt("live-conversation-preparing", mapOf("exitWhilePreparing" to "pass"))
+    }
+
+    /**
+     * F1 (3-stone-voice-1c, A5): another app keeps 3-Macaw Speech's microphone the whole time (3-Stove Agent's v1
+     * resident listener): every round is `SESSION_BUSY`, so every round listens through the sheet (D209) and the
+     * conversation goes on as usual until the sheet is canceled, without looping or crashing.
+     */
+    @Test
+    fun aMicrophoneBusyEveryRoundUsesTheSheetEveryRound() {
+        environment.launchChat().use { scenario ->
+            environment.script(
+                Activity.RESULT_OK to "sheet one",
+                Activity.RESULT_OK to "sheet two",
+                Activity.RESULT_OK to "sheet three",
+                Activity.RESULT_CANCELED to "",
+            )
+            source.everyOpenFailure = SpeechErrorCodes.SESSION_BUSY
+            try {
+                start(scenario)
+                waitForExit(scenario, timeoutMillis = 30_000L)
+            } finally {
+                source.everyOpenFailure = null
+            }
+            assertEquals(listOf("sheet one", "sheet two", "sheet three"), environment.backend.prompts.toList())
+            assertEquals("each round tried the session first", 4, source.sessions.size)
+            scenario.onActivity { activity ->
+                assertEquals(4, activity.voiceSheetFallbackCount)
+                // The canceled fourth sheet ends the conversation and is not a round.
+                assertEquals(listOf(false, false, false), activity.voiceRounds.map { it.live })
+                assertEquals("RecognitionCanceled", activity.lastVoiceExit)
+                assertFalse(activity.isFinishing)
+            }
+            assertEquals(Lifecycle.State.RESUMED, scenario.state)
+        }
+        SpeechDeviceReport.receipt("live-conversation-busy-every-round", mapOf("sheetRounds" to 4, "sent" to 3))
     }
 
     @Test

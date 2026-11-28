@@ -8,6 +8,7 @@
     <string name="speech_auto_read_unavailable">Aucun moteur de synthèse vocale n\'est installé sur cet appareil</string>
     <string name="speech_conversation_exit">Quitter la conversation vocale</string>
     <string name="speech_conversation_listening">Conversation vocale: écoute</string>
+    <string name="speech_conversation_preparing">Conversation vocale: préparation du micro</string>
     <string name="speech_conversation_prompt">Dites votre prochain message</string>
     <string name="speech_conversation_speaking">Conversation vocale: lecture, touchez pour interrompre</string>
     <string name="speech_conversation_start">Démarrer une conversation vocale</string>
@@ -28,6 +29,7 @@
     <string name="speech_live_dictation_listening">Écoute en cours. Touchez le bouton d\'arrêt pour terminer</string>
     <string name="speech_live_dictation_model_missing">Téléchargez d\'abord un modèle de reconnaissance vocale dans 3-Macaw Speech</string>
     <string name="speech_live_dictation_permission">Autorisez 3-Macaw Speech à utiliser le micro, puis touchez à nouveau le micro</string>
+    <string name="speech_live_dictation_preparing">Préparation du micro. Parlez quand l\'écoute commence</string>
     <string name="speech_prefer_macaw">Privilégier 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">Dicter en direct dans le champ de saisie et lire avec 3-Macaw Speech sans choisir une application à chaque fois. Désactivez pour laisser le système choisir</string>
     <string name="speech_read_aloud_failed">Le moteur vocal n\'a pas pu démarrer</string>

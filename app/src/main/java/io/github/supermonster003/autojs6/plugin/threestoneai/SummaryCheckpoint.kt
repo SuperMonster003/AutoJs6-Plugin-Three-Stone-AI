@@ -229,9 +229,10 @@ internal object SummaryCheckpointJsonCodec {
                 key = item.requireString("key"),
                 kind = enumValue<MemoryItemKind>(item.requireString("kind"), "memory kind"),
                 text = item.requireString("text"),
+                // Repeated IDs are merged: the schema cannot say "unique" for every backend.
                 sourceMessageIds = sourceIds.mapIndexed { sourceIndex, source ->
                     source.requirePositiveLong("workingMemory[$index].sourceMessageIds[$sourceIndex]")
-                },
+                }.distinct(),
                 status = enumValue<MemoryItemStatus>(
                     item.requireString("status"),
                     "memory status",
@@ -341,39 +342,7 @@ internal object SummaryCheckpointValidator {
         val transcriptById = transcript.associateBy(ChatMessage::id)
         val currentSourceIds = plan.sourceMessageIds.toSet()
         draft.workingMemory.forEach { incoming ->
-            val previous = previousByKey[incoming.key]
-            if (previous == null) {
-                require(
-                    incoming.status == MemoryItemStatus.PROPOSED ||
-                        incoming.status == MemoryItemStatus.CONFIRMED,
-                ) { "New memory must start as proposed or explicitly confirmed" }
-                validateNewSources(incoming.sourceMessageIds, currentSourceIds, transcriptById)
-            } else {
-                require(isAllowedTransition(previous.status, incoming.status)) {
-                    "Illegal working-memory status transition"
-                }
-                require(incoming.sourceMessageIds.containsAll(previous.sourceMessageIds)) {
-                    "A memory update cannot discard existing provenance"
-                }
-                val newSourceIds = incoming.sourceMessageIds - previous.sourceMessageIds.toSet()
-                if (incoming != previous) {
-                    require(newSourceIds.isNotEmpty()) {
-                        "A memory update must cite at least one newly covered message"
-                    }
-                    validateNewSources(newSourceIds, currentSourceIds, transcriptById)
-                }
-            }
-            val becomesConfirmed = incoming.status == MemoryItemStatus.CONFIRMED &&
-                (previous?.status != MemoryItemStatus.CONFIRMED || incoming != previous)
-            if (becomesConfirmed) {
-                val finalSourceId = incoming.sourceMessageIds.last()
-                require(finalSourceId in currentSourceIds) {
-                    "New confirmation must cite the current checkpoint range"
-                }
-                require(transcriptById[finalSourceId]?.role == ChatMessageRole.USER) {
-                    "Only a user message may confirm working memory"
-                }
-            }
+            checkItem(incoming, previousByKey[incoming.key], currentSourceIds, transcriptById)
         }
 
         val segment = SummarySegment(
@@ -388,6 +357,89 @@ internal object SummaryCheckpointValidator {
             segment = segment,
             workingMemory = draft.workingMemory,
         )
+    }
+
+    /**
+     * A small on-device model often breaks one memory rule while its summary is fine (P6-3b, D229:
+     * Gemma 4 E2B confirmed a fact from its own reply). Keeps the summary and every memory item that
+     * passes on its own: an invalid or repeated update keeps the previous item unchanged, an invalid
+     * new item is left out, and a previous item the reply omitted stays as it was. Returns the
+     * repaired draft and how many items were set aside, or null when nothing needed repairing or the
+     * repair would exceed the memory limit. The rules themselves are not relaxed: [apply] still runs.
+     */
+    fun repairMemory(
+        state: ConversationContextState,
+        plan: SummaryCheckpointPlan,
+        draft: SummaryCheckpointDraft,
+        transcript: List<ChatMessage>,
+    ): Pair<SummaryCheckpointDraft, Int>? {
+        val previousByKey = state.workingMemory.associateBy(MemoryItem::key)
+        val transcriptById = transcript.associateBy(ChatMessage::id)
+        val currentSourceIds = plan.sourceMessageIds.toSet()
+        val kept = LinkedHashMap<String, MemoryItem>()
+        var setAside = 0
+        draft.workingMemory.forEach { incoming ->
+            if (incoming.key in kept) {
+                setAside += 1
+                return@forEach
+            }
+            val previous = previousByKey[incoming.key]
+            val valid = runCatching { checkItem(incoming, previous, currentSourceIds, transcriptById) }.isSuccess
+            if (valid) {
+                kept[incoming.key] = incoming
+            } else {
+                setAside += 1
+                if (previous != null) kept[incoming.key] = previous
+            }
+        }
+        state.workingMemory.forEach { previous ->
+            if (previous.key !in kept) {
+                kept[previous.key] = previous
+                setAside += 1
+            }
+        }
+        if (setAside == 0 || kept.size > ConversationContextPolicy.MAXIMUM_WORKING_MEMORY_ITEMS) return null
+        return draft.copy(workingMemory = kept.values.toList()) to setAside
+    }
+
+    private fun checkItem(
+        incoming: MemoryItem,
+        previous: MemoryItem?,
+        currentSourceIds: Set<Long>,
+        transcriptById: Map<Long, ChatMessage>,
+    ) {
+        if (previous == null) {
+            require(
+                incoming.status == MemoryItemStatus.PROPOSED ||
+                    incoming.status == MemoryItemStatus.CONFIRMED,
+            ) { "New memory must start as proposed or explicitly confirmed" }
+            validateNewSources(incoming.sourceMessageIds, currentSourceIds, transcriptById)
+        } else {
+            require(isAllowedTransition(previous.status, incoming.status)) {
+                "Illegal working-memory status transition"
+            }
+            require(incoming.sourceMessageIds.containsAll(previous.sourceMessageIds)) {
+                "A memory update cannot discard existing provenance"
+            }
+            val newSourceIds = incoming.sourceMessageIds - previous.sourceMessageIds.toSet()
+            if (incoming != previous) {
+                require(newSourceIds.isNotEmpty()) {
+                    "A memory update must cite at least one newly covered message"
+                }
+                validateNewSources(newSourceIds, currentSourceIds, transcriptById)
+            }
+        }
+        val becomesConfirmed = incoming.status == MemoryItemStatus.CONFIRMED &&
+            (previous?.status != MemoryItemStatus.CONFIRMED || incoming != previous)
+        if (becomesConfirmed) {
+            val finalSourceId = incoming.sourceMessageIds.last()
+            require(finalSourceId in currentSourceIds) {
+                "New confirmation must cite the current checkpoint range"
+            }
+            require(transcriptById[finalSourceId]?.role == ChatMessageRole.USER) {
+                "Only a user message may confirm working memory"
+            }
+        }
     }
 
     private fun validateNewSources(
@@ -545,6 +597,11 @@ internal object SummaryPromptProtocol {
         Output strict JSON only, with no markdown fence or commentary.
     """.trimIndent()
 
+    /**
+     * Without "uniqueItems": LiteRT-LM's constrained decoding (LLGuidance) rejects the whole schema
+     * for it ("Unimplemented keys"), so no local summary could start (P6-3b A1); the codec merges
+     * repeated source IDs instead.
+     */
     val RESPONSE_SCHEMA: String = """
         {
           "type":"object",
@@ -563,7 +620,7 @@ internal object SummaryPromptProtocol {
                   "key":{"type":"string","pattern":"^[a-z0-9][a-z0-9._-]{0,63}$"},
                   "kind":{"type":"string","enum":["GOAL","CONSTRAINT","DECISION","OPEN_QUESTION","PREFERENCE","FACT"]},
                   "text":{"type":"string","minLength":1,"maxLength":2048},
-                  "sourceMessageIds":{"type":"array","minItems":1,"maxItems":64,"uniqueItems":true,"items":{"type":"integer","minimum":1}},
+                  "sourceMessageIds":{"type":"array","minItems":1,"maxItems":64,"items":{"type":"integer","minimum":1}},
                   "status":{"type":"string","enum":["PROPOSED","CONFIRMED","REJECTED","SUPERSEDED"]}
                 }
               }

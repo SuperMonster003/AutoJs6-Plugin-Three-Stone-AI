@@ -25,6 +25,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 /** The chat's view of the reply being generated, as handed to an attaching screen. */
@@ -163,6 +164,7 @@ internal class ChatGenerationText(private val context: Context) {
             R.string.chat_generation_failure_target_unavailable
         ChatGenerationFailureKind.LOCAL_EXECUTION ->
             R.string.chat_generation_failure_local_execution
+        ChatGenerationFailureKind.LOCAL_BUSY -> R.string.chat_generation_failure_local_busy
         ChatGenerationFailureKind.CREDENTIAL -> R.string.online_ai_test_failure_credential
         ChatGenerationFailureKind.PROFILE_CHANGED ->
             R.string.online_ai_test_failure_profile_changed
@@ -322,7 +324,26 @@ internal class ChatGenerationCoordinator internal constructor(
     private var activeSummaryEpoch = 0L
     private var activeSummaryConversationId: String? = null
     private var activeSummarySourceHash: String? = null
+    /** The active summary runs on the on-device engine the chat would need (D223). */
+    private var activeSummaryLocal = false
+    /** Identifies the pending idle wait of a local summary; any newer value drops it (D223). */
+    private var summaryDeferral = 0L
     private var failedSummaryPlanKey: String? = null
+
+    /** Instrumentation only (D222 / D223): counts of session hand-overs on this process's engine. */
+    internal class EngineHandoffCounts {
+        /** Turns that rebuilt the session while the previous one still had to return the engine. */
+        val replacedSessions = AtomicInteger()
+        val summariesStarted = AtomicInteger()
+        val summariesCompleted = AtomicInteger()
+        val summariesFailed = AtomicInteger()
+        /** Local summaries that gave the engine back to a new local turn before finishing. */
+        val summariesYielded = AtomicInteger()
+        /** Idle local chat sessions closed because another process loads an engine (D227). */
+        val releasedForAnotherProcess = AtomicInteger()
+    }
+
+    internal val engineHandoffCountsForTest = EngineHandoffCounts()
 
     val isGenerating: Boolean
         get() = active != null
@@ -356,6 +377,14 @@ internal class ChatGenerationCoordinator internal constructor(
     /** Starts a turn; any other generation is cancelled first. Returns the generation ID. */
     fun start(request: ChatTurnRequest): Long {
         stop(reason = "superseded")
+        // The process keeps one on-device engine and lends it to one session at a time: a summary
+        // checkpoint on it yields to the reply and is planned again after this turn (D223).
+        nextSummaryDeferral()
+        if (request.target.locality == AiTargetLocality.LOCAL && activeSummaryLocal) {
+            logger.debug("Context summary yields to a local turn conversation=$activeSummaryConversationId")
+            engineHandoffCountsForTest.summariesYielded.incrementAndGet()
+            cancelSummaryCheckpoint()
+        }
         val backendConversation = synchronized(backendLock) { activeBackendConversationId }
         if (backendConversation != null && backendConversation != request.conversationId) {
             closeBackend(reason = "conversation-changed")
@@ -448,14 +477,45 @@ internal class ChatGenerationCoordinator internal constructor(
 
     fun cancelSummaryCheckpoint() {
         nextSummaryEpoch()
+        nextSummaryDeferral()
         activeSummaryTask?.cancel()
         activeSummaryTask = null
         activeSummaryConversationId = null
         activeSummarySourceHash = null
+        activeSummaryLocal = false
     }
 
     fun resetSummaryFailure() {
         failedSummaryPlanKey = null
+    }
+
+    /**
+     * Another process of the app is about to load an on-device engine (D227): an idle local chat
+     * session and a local summary give theirs back, while a local reply in progress keeps it. The
+     * next local turn loads the engine again and rebuilds its session from the transcript.
+     * Must run on the main thread like every public method. Returns whether a session or summary was released.
+     */
+    fun releaseIdleLocalEngine(): Boolean {
+        var released = false
+        // A summary waiting for the chat to stay idle would load the engine again behind the other
+        // process's back; it is planned again after the next turn.
+        nextSummaryDeferral()
+        if (activeSummaryLocal) {
+            logger.debug("Context summary yields to another process conversation=$activeSummaryConversationId")
+            engineHandoffCountsForTest.summariesYielded.incrementAndGet()
+            cancelSummaryCheckpoint()
+            released = true
+        }
+        if (active == null) {
+            val idleLocal = synchronized(backendLock) {
+                activeBackendAiTarget?.locality == AiTargetLocality.LOCAL
+            }
+            if (idleLocal && closeBackend(reason = "engine-requested-elsewhere")) {
+                engineHandoffCountsForTest.releasedForAnotherProcess.incrementAndGet()
+                released = true
+            }
+        }
+        return released
     }
 
     private fun startBackendTurn(generation: ActiveGeneration, request: ChatTurnRequest) {
@@ -600,7 +660,10 @@ internal class ChatGenerationCoordinator internal constructor(
                 "compactionTargetTokens=${budget.compactionTargetTokens}",
         )
         // The replaced session is cancelled on its own thread like every other close.
-        backendToReplace?.let(::cancelDetached)
+        backendToReplace?.let { replaced ->
+            engineHandoffCountsForTest.replacedSessions.incrementAndGet()
+            cancelDetached(replaced)
+        }
         submitBackendWork(generationId) {
             if (!isGenerationCurrent(generationId)) return@submitBackendWork
             val created = backend().createSession(
@@ -1108,12 +1171,20 @@ internal class ChatGenerationCoordinator internal constructor(
                 ChatConversationSnapshot(stored.messages, stored.contextState)
             }
 
-    private fun maybeScheduleSummaryCheckpoint(conversationId: String, settings: ChatUiSettings) {
+    /**
+     * [idleWaited] is true when a local summary comes back after [LOCAL_SUMMARY_IDLE_MILLIS] without
+     * a new turn; an online summary starts at once.
+     */
+    private fun maybeScheduleSummaryCheckpoint(
+        conversationId: String,
+        settings: ChatUiSettings,
+        idleWaited: Boolean = false,
+    ) {
         if (activeSummaryTask != null) return
-        val (target, accounting) = synchronized(backendLock) {
+        val (target, accounting, turnsOnBackend) = synchronized(backendLock) {
             if (activeBackendConversationId != conversationId) return
             val target = activeBackendAiTarget ?: return
-            target to activeBackendContextTelemetry
+            Triple(target, activeBackendContextTelemetry, completedTurnsOnBackend)
         }
         if (!target.configured || !target.available || !target.capabilities.streaming) return
         val source = conversationSource(conversationId) ?: return
@@ -1124,6 +1195,22 @@ internal class ChatGenerationCoordinator internal constructor(
             maximumOutputTokens = settings.maximumOutputTokens,
         )
         if (!SummaryCheckpointTriggerPolicy.shouldSchedule(accounting.accounting, chatBudget)) return
+        val local = target.locality == AiTargetLocality.LOCAL
+        // A summary needs the engine the open chat session holds, so a local one waits until the
+        // next turn rebuilds the session anyway, and until the chat has been idle for a while (a
+        // voice conversation asks again within seconds); it then takes the engine (D223).
+        if (local) {
+            if (!ContextAccountingPolicy.shouldRotateBackend(accounting.accounting, chatBudget, turnsOnBackend)) return
+            if (!idleWaited) {
+                val token = nextSummaryDeferral()
+                scheduler.post(LOCAL_SUMMARY_IDLE_MILLIS) {
+                    if (token == summaryDeferral && active == null) {
+                        maybeScheduleSummaryCheckpoint(conversationId, settings, idleWaited = true)
+                    }
+                }
+                return
+            }
+        }
 
         val summaryBudget = ContextBudgetCalculator.calculate(
             targetLimits = target.limits,
@@ -1161,13 +1248,22 @@ internal class ChatGenerationCoordinator internal constructor(
             estimator = estimator,
             maximumSourceTokens = maximumSourceTokens,
             maximumInputTokens = summaryBudget.effectiveInputTokens,
-        ) ?: return
+        ) ?: run {
+            logger.debug(
+                "Context summary skipped target=${target.targetId} reason=no-plan " +
+                    "maximumSourceTokens=$maximumSourceTokens effectiveInputTokens=${summaryBudget.effectiveInputTokens}",
+            )
+            return
+        }
         val planKey = summaryPlanKey(plan)
         if (failedSummaryPlanKey == planKey) return
 
         val epoch = nextSummaryEpoch()
         activeSummaryConversationId = conversationId
         activeSummarySourceHash = plan.sourceHash
+        activeSummaryLocal = local
+        // The idle session would be rebuilt by the next turn; its close returns the engine (D223).
+        if (local) closeBackend(reason = "summary-checkpoint-local")
         logger.debug(
             "Context summary start target=${target.targetId} " +
                 "conversation=$conversationId range=${plan.firstMessageId}-${plan.lastMessageId} " +
@@ -1176,6 +1272,7 @@ internal class ChatGenerationCoordinator internal constructor(
                 "accountingTokens=${accounting.accounting.tokens} " +
                 "softWatermarkTokens=${chatBudget.softWatermarkTokens}",
         )
+        engineHandoffCountsForTest.summariesStarted.incrementAndGet()
         activeSummaryTask = SummaryCheckpointer(backend(), summaryExecutor).generate(
             SummaryCheckpointRequest(
                 targetId = target.targetId,
@@ -1210,8 +1307,10 @@ internal class ChatGenerationCoordinator internal constructor(
         activeSummaryTask = null
         activeSummaryConversationId = null
         activeSummarySourceHash = null
+        activeSummaryLocal = false
         when (outcome) {
             is SummaryCheckpointOutcome.Failure -> {
+                engineHandoffCountsForTest.summariesFailed.incrementAndGet()
                 failedSummaryPlanKey = planKey
                 logger.warn(
                     "Context summary failed conversation=$conversationId " +
@@ -1237,10 +1336,12 @@ internal class ChatGenerationCoordinator internal constructor(
                     )
                 }.getOrNull()
                 if (validated == null) {
+                    engineHandoffCountsForTest.summariesFailed.incrementAndGet()
                     failedSummaryPlanKey = planKey
                     return
                 }
                 if (validated != outcome.validatedState) {
+                    engineHandoffCountsForTest.summariesFailed.incrementAndGet()
                     failedSummaryPlanKey = planKey
                     logger.error(
                         "Context summary validation was non-deterministic; discarding result " +
@@ -1259,18 +1360,26 @@ internal class ChatGenerationCoordinator internal constructor(
                     }
                 }
                 if (active == null) closeBackend(reason = "summary-checkpoint")
+                engineHandoffCountsForTest.summariesCompleted.incrementAndGet()
                 logger.debug(
                     "Context summary complete conversation=$conversationId " +
                         "range=${plan.firstMessageId}-${plan.lastMessageId} " +
                         "segments=${validated.summarySegments.size} " +
                         "workingMemoryItems=${validated.workingMemory.size} " +
                         "attempts=${outcome.attempts} " +
+                        "memoryItemsSetAside=${outcome.memoryItemsSetAside} " +
+                        (outcome.retriedAfter?.let { reason -> "retriedAfter=\"$reason\" " } ?: "") +
                         "inputTokens=${outcome.statistics?.inputTokens} " +
                         "outputTokens=${outcome.statistics?.outputTokens} " +
                         "fingerprint=${ConversationContextPolicy.fingerprint(validated)}",
                 )
             }
         }
+    }
+
+    private fun nextSummaryDeferral(): Long {
+        summaryDeferral = if (summaryDeferral == Long.MAX_VALUE) 1L else summaryDeferral + 1L
+        return summaryDeferral
     }
 
     private fun nextSummaryEpoch(): Long {
@@ -1314,10 +1423,15 @@ internal class ChatGenerationCoordinator internal constructor(
     companion object {
         const val TAG = "ThreeStoneAiChat"
         const val DELTA_FLUSH_INTERVAL_MILLIS = 32L
+        /** How long a local chat stays idle before its summary may take the engine (D223). */
+        const val LOCAL_SUMMARY_IDLE_MILLIS = 30_000L
         private const val NANOS_PER_MILLI = 1_000_000L
 
         @Volatile
         private var instance: ChatGenerationCoordinator? = null
+
+        /** The coordinator if this process already created one; the script provider process never does. */
+        fun existing(): ChatGenerationCoordinator? = instance
 
         fun get(context: Context): ChatGenerationCoordinator = instance ?: synchronized(this) {
             instance ?: create(context.applicationContext).also { created -> instance = created }

@@ -101,6 +101,7 @@
     <string name="chat_generation_failure_cloud">Cloud generation failed for %1$s. No local target was selected automatically.\n\n%2$s</string>
     <string name="chat_generation_failure_detail">Provider response: %1$s</string>
     <string name="chat_generation_failure_local">Local generation failed for %1$s. No cloud target was selected automatically.\n\n%2$s</string>
+    <string name="chat_generation_failure_local_busy">The on-device model is still busy with another task. Try again in a moment.</string>
     <string name="chat_generation_failure_local_execution">The selected on-device model could not complete this request.</string>
     <string name="chat_generation_failure_target_unavailable">The recorded target is no longer available.</string>
     <string name="chat_generation_failure_unknown">The selected target could not complete this request.</string>

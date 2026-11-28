@@ -100,4 +100,16 @@ class ReadAloudStateTest {
             }
         }
     }
+
+    @Test
+    fun `a round on the session says preparing until the microphone is ready (A4, D225)`() {
+        assertEquals(
+            VoiceStatus(VoiceStatusLabel.PREPARING, VoiceStatusAction.EXIT_CONVERSATION, tapInterrupts = false),
+            VoiceStatusPolicy.status(VoicePhase.LISTENING, reading = false, preparing = true),
+        )
+        // Only listening prepares: the other phases ignore it.
+        assertEquals(VoiceStatusLabel.THINKING, VoiceStatusPolicy.status(VoicePhase.THINKING, false, preparing = true)?.label)
+        assertEquals(VoiceStatusLabel.SPEAKING, VoiceStatusPolicy.status(VoicePhase.SPEAKING, false, preparing = true)?.label)
+        assertNull(VoiceStatusPolicy.status(VoicePhase.IDLE, false, preparing = true))
+    }
 }

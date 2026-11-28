@@ -44,7 +44,12 @@ internal class LiteRtLocalSession(
         try {
             synchronized(nativeLifecycleLock) {
                 if (closed.get() || cancelled.get()) return
-                val localEngineLease = engineCache.acquire(EngineCacheKey(modelSha256, backendProfile)) {
+                // Waits for the previous borrower (a replaced chat session closing on its own thread,
+                // or a summary checkpoint that was told to yield) to return the engine (D222).
+                val localEngineLease = engineCache.acquire(
+                    key = EngineCacheKey(modelSha256, backendProfile),
+                    shouldStop = { closed.get() || cancelled.get() },
+                ) {
                     LiteRtLmEngineFactory.create(modelPath, cacheDirectory, backendProfile).also { created ->
                         try {
                             created.initialize()

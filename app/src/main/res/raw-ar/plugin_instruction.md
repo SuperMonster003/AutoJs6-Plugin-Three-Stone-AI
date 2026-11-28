@@ -60,9 +60,13 @@ let session = speech.listen({ timeoutMillis: 8000 });
 session.on('final', () => session.stop());
 session.on('end', () => {
     let question = session.result();
+    console.log('Heard:', question);
     if (!question) return;
     ai.chat(question, { maxTokens: 256 })
-        .then((response) => speech.speak(response.text))
+        .then((response) => {
+            console.log('Answer:', response.text);
+            return speech.speak(response.text);
+        })
         .catch((error) => console.error(error.code, error.message));
 });
 ```

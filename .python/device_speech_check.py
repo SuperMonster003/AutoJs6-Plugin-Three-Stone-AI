@@ -21,6 +21,12 @@ P6-3 (the voice conversation on that session): `live-conversation` runs the voic
 session source; on request `conversation-local-live` talks ten rounds with the device's own LiteRT model through the
 real session, the phone playing the first sentence of en.wav through its speaker each round (media volume raised to
 --min-volume percent only while it plays), the replies read at the phone's own volume.
+
+P6-3b (3-stone-voice-1c, A1): `conversation-local-summary` talks rounds of three with the device's own LiteRT model,
+with the default settings (output tokens unlimited, so the session is rebuilt every round), and idles between them
+until a local context summary has taken the engine and finished; the recognizer is the scripted fake and a silent
+engine reads the replies, so it makes no sound. It is skipped on a phone without a ready local model. The engine
+handover between the chat and the script provider (D227) needs AutoJs6 and runs with device_engine_handover.py.
 """
 
 import argparse
@@ -50,6 +56,7 @@ CLASSES = {
     "live-acoustic": PACKAGE + ".speech.LiveDictationRealDeviceTest#twoSentencesThroughTheSpeaker",
     "live-conversation": PACKAGE + ".speech.SpeechLiveConversationDeviceTest",
     "conversation-local-live": PACKAGE + ".speech.SpeechConversationRealDeviceTest#localTargetTenRoundsThroughTheSession",
+    "conversation-local-summary": PACKAGE + ".speech.SpeechConversationRealDeviceTest#localTargetRoundsAcrossASummary",
 }
 MACAW_PACKAGE = "io.github.supermonster003.autojs6.plugin.three.macaw.speech"
 # These play sound through the speaker at the device's media volume: never on adjacent phones at once.

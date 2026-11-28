@@ -67,13 +67,18 @@ class SpeechLiveDictationDeviceTest {
             scenario.onActivity { activity ->
                 assertTrue(activity.liveDictationActive)
                 assertEquals(activity.getString(R.string.speech_dictation_stop), mic(activity).contentDescription)
-                assertEquals(activity.getString(R.string.speech_live_dictation_listening), composer(activity).hint.toString())
+                // Preparing until the session is ready (A4, D225), then listening.
+                assertEquals(activity.getString(R.string.speech_live_dictation_preparing), composer(activity).hint.toString())
                 assertEquals("No sheet was opened", 0, activity.dictationRequestCount)
             }
-            SpeechDeviceReport.screenshot("live-dictation-listening")
             values["stopButton"] = "pass"
 
             session.ready()
+            scenario.onActivity { activity ->
+                assertEquals(activity.getString(R.string.speech_live_dictation_listening), composer(activity).hint.toString())
+            }
+            SpeechDeviceReport.screenshot("live-dictation-listening")
+            values["preparingThenListening"] = "pass"
             session.partial("Hello")
             scenario.onActivity { activity ->
                 assertEquals("Hello", composer(activity).text.toString())

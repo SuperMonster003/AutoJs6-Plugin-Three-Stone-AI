@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.threestoneai
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLocality
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiTargetLimits
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -142,6 +143,17 @@ class SummaryCheckpointTest {
         assertThrows(IllegalArgumentException::class.java) {
             SummaryCheckpointJsonCodec.decode(valid.replace("[1]", "[1.0]"))
         }
+    }
+
+    @Test
+    fun `the response schema avoids keywords LiteRT-LM cannot constrain and the codec merges repeated IDs (P6-3b)`() {
+        // LLGuidance answered "Unimplemented keys: [\"uniqueItems\"]" for every local summary on XQ-AT72.
+        assertFalse(SummaryPromptProtocol.RESPONSE_SCHEMA.contains("uniqueItems"))
+        val repeated = validCheckpointJson().replace("[1]", "[1,1]")
+
+        val decoded = SummaryCheckpointJsonCodec.decode(repeated)
+
+        assertEquals(listOf(1L), decoded.workingMemory.single().sourceMessageIds)
     }
 
     @Test
@@ -302,6 +314,76 @@ class SummaryCheckpointTest {
                 transcript,
             )
         }
+    }
+
+    @Test
+    fun `repair keeps the summary and valid memory and never accepts an invalid item (D229)`() {
+        val transcript = listOf(
+            user(1, "Always answer concisely."),
+            assistant(2, "I will keep answers concise."),
+            user(3, "Use metric units."),
+            assistant(4, "Metric it is."),
+            user(5, "new"),
+            assistant(6, "reply"),
+        )
+        val firstPlan = checkNotNull(
+            SummaryCheckpointPlanner.plan(
+                transcript.take(4),
+                ConversationContextState.EMPTY,
+                retainedRawMessageIds = listOf(3L, 4L),
+                estimator = exactEstimator,
+                maximumSourceTokens = 1_000L,
+            ),
+        )
+        val concise = memory(key = "preference.concise", sourceIds = listOf(1L), status = MemoryItemStatus.CONFIRMED)
+        val first = SummaryCheckpointValidator.apply(
+            ConversationContextState.EMPTY,
+            firstPlan,
+            SummaryCheckpointDraft("The user wants concise answers.", listOf(concise)),
+            transcript.take(4),
+        )
+        val plan = checkNotNull(
+            SummaryCheckpointPlanner.plan(
+                transcript,
+                first,
+                retainedRawMessageIds = listOf(5L, 6L),
+                estimator = exactEstimator,
+                maximumSourceTokens = 1_000L,
+            ),
+        )
+        val metric = memory(key = "preference.metric", sourceIds = listOf(3L), status = MemoryItemStatus.CONFIRMED)
+        val draft = SummaryCheckpointDraft(
+            summary = "The user wants concise answers in metric units.",
+            workingMemory = listOf(
+                // An update that drops its provenance: the previous item stays.
+                concise.copy(text = "Be brief.", sourceMessageIds = listOf(3L)),
+                metric,
+                // Confirmed only by the assistant: left out.
+                memory(key = "decision.assistant-only", sourceIds = listOf(4L), status = MemoryItemStatus.CONFIRMED),
+                // A repeated key: the first one counts.
+                metric.copy(text = "Imperial."),
+            ),
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            SummaryCheckpointValidator.apply(first, plan, draft, transcript)
+        }
+
+        val (repaired, setAside) = checkNotNull(SummaryCheckpointValidator.repairMemory(first, plan, draft, transcript))
+        val state = SummaryCheckpointValidator.apply(first, plan, repaired, transcript)
+
+        assertEquals(3, setAside)
+        assertEquals(listOf(concise, metric), repaired.workingMemory)
+        assertEquals(draft.summary, state.summarySegments.last().summary)
+        assertEquals(4L, state.coveredThroughMessageId)
+        // A valid reply needs no repair.
+        assertNull(
+            SummaryCheckpointValidator.repairMemory(
+                first,
+                plan,
+                SummaryCheckpointDraft("Fine.", listOf(concise, metric)),
+                transcript,
+            ),
+        )
     }
 
     @Test

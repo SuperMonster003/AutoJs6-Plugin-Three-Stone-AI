@@ -106,6 +106,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceEffect
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceEvent
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoicePhase
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceSituation
+import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatus
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusAction
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusLabel
 import io.github.supermonster003.autojs6.plugin.threestoneai.speech.VoiceStatusPolicy
@@ -2260,7 +2261,8 @@ class ChatActivity : ConfiguredActivity() {
         input.isEnabled = targetReady
         input.hint = getString(
             when {
-                liveRun != null -> R.string.speech_live_dictation_listening
+                liveRun?.ready == true -> R.string.speech_live_dictation_listening
+                liveRun != null -> R.string.speech_live_dictation_preparing
                 targetReady -> R.string.chat_input_hint
                 isConversationLocalModelDeleted() -> R.string.chat_input_local_model_deleted_hint
                 else -> R.string.chat_input_no_target_hint
@@ -2496,6 +2498,10 @@ class ChatActivity : ConfiguredActivity() {
         var ended = false
             private set
 
+        /** The session reported ready: 3-Macaw Speech records from now on (A4, D225). */
+        var ready = false
+            private set
+
         /** A voice conversation round: its final, sent when the session ends (P6-3). */
         var utterance: String? = null
             private set
@@ -2534,7 +2540,12 @@ class ChatActivity : ConfiguredActivity() {
         }
 
         override fun onReady() {
-            if (liveRun === this) liveDictationObserverForTest?.onReady()
+            if (liveRun !== this) return
+            ready = true
+            // Until now the hint and the status bar said "preparing": words said before ready are not heard.
+            renderComposerState()
+            renderVoiceStatus()
+            liveDictationObserverForTest?.onReady()
         }
 
         override fun onEnd(end: LiveDictationEnd) {
@@ -2828,18 +2839,19 @@ class ChatActivity : ConfiguredActivity() {
 
     private fun renderVoiceStatus() {
         if (!::voiceStatusBar.isInitialized) return
-        val status = VoiceStatusPolicy.status(voicePhase, readingMessageId != null)
+        val status = currentVoiceStatus()
         if (status == null) {
             voiceStatusBar.visibility = View.GONE
             return
         }
-        val listening = status.label == VoiceStatusLabel.LISTENING
+        val listening = status.label == VoiceStatusLabel.LISTENING || status.label == VoiceStatusLabel.PREPARING
         voiceStatusIcon.setImageDrawable(
             tintedDrawable(if (listening) R.drawable.ic_mic_24 else R.drawable.ic_volume_up_24, appPalette.accent),
         )
         voiceStatusLabel.text = getString(
             when (status.label) {
                 VoiceStatusLabel.READING -> R.string.speech_reading_status
+                VoiceStatusLabel.PREPARING -> R.string.speech_conversation_preparing
                 VoiceStatusLabel.LISTENING -> R.string.speech_conversation_listening
                 VoiceStatusLabel.THINKING -> R.string.speech_conversation_thinking
                 VoiceStatusLabel.SPEAKING -> R.string.speech_conversation_speaking
@@ -2857,8 +2869,20 @@ class ChatActivity : ConfiguredActivity() {
         voiceStatusBar.visibility = View.VISIBLE
     }
 
+    /** A round on the session shows "preparing" until the session is ready (A4, D225); a sheet round never does. */
+    private fun currentVoiceStatus(): VoiceStatus? = VoiceStatusPolicy.status(
+        voicePhase,
+        readingMessageId != null,
+        preparing = liveRun?.let { run -> run.mode == LiveDictationMode.SINGLE_UTTERANCE && !run.ready } == true,
+    )
+
+    /** Instrumentation only: the label the voice status bar shows, null when it is hidden. */
+    @VisibleForTesting
+    internal val voiceStatusLabelForTest: VoiceStatusLabel?
+        get() = currentVoiceStatus()?.label
+
     private fun onVoiceStatusAction() {
-        val status = VoiceStatusPolicy.status(voicePhase, readingMessageId != null) ?: return
+        val status = currentVoiceStatus() ?: return
         when (status.action) {
             VoiceStatusAction.STOP_READING -> stopReading()
             VoiceStatusAction.EXIT_CONVERSATION -> dispatchVoice(VoiceEvent.Exit)
@@ -2866,7 +2890,7 @@ class ChatActivity : ConfiguredActivity() {
     }
 
     private fun onVoiceStatusTapped() {
-        val status = VoiceStatusPolicy.status(voicePhase, readingMessageId != null) ?: return
+        val status = currentVoiceStatus() ?: return
         if (status.tapInterrupts) dispatchVoice(VoiceEvent.Interrupt)
     }
 

@@ -182,6 +182,72 @@ class MacawSpeechDeviceTest {
         }
     }
 
+    /**
+     * A4 (D225): after 3-Macaw Speech's process is stopped, the first voice round says "preparing" from the long press
+     * until the real session is ready, then "listening". Nothing is played and nothing is sent; the exit button ends it.
+     */
+    @Test
+    fun theFirstRoundAfterAColdStartPreparesUntilTheSessionIsReady() {
+        val probed = probe()
+        assumeTrue("3-Macaw Speech is not ready for a session here: ${probed.status}", probed.status == MacawSpeechStatus.AVAILABLE)
+        instrumentation.uiAutomation.executeShellCommand("am force-stop ${MacawSpeech.PACKAGE}").close()
+        SystemClock.sleep(1_000L)
+        val env = ChatTestEnvironment(macaw = null).also { environment = it }
+        val settings = io.github.supermonster003.autojs6.plugin.threestoneai.ChatUiSettingsStore(env.context)
+        settings.save(settings.load().copy(preferMacawSpeech = true))
+        env.launchChat().use { scenario ->
+            waitUntil("the chat probed 3-Macaw Speech", 10_000L) {
+                var live = false
+                scenario.onActivity { activity -> live = activity.liveDictationAvailableForTest }
+                live
+            }
+            var pressedAt = 0L
+            var readyAt = 0L
+            var labelAtPress: VoiceStatusLabel? = null
+            var labelAtReady: VoiceStatusLabel? = null
+            scenario.onActivity { activity ->
+                activity.liveDictationObserverForTest = object : LiveDictationListener {
+                    override fun onReady() {
+                        readyAt = SystemClock.elapsedRealtime()
+                        labelAtReady = activity.voiceStatusLabelForTest
+                    }
+
+                    override fun onPartial(text: String) = Unit
+
+                    override fun onFinal(text: String) = Unit
+
+                    override fun onEnd(end: LiveDictationEnd) = Unit
+                }
+                pressedAt = SystemClock.elapsedRealtime()
+                assertTrue(mic(activity).performLongClick())
+                labelAtPress = activity.voiceStatusLabelForTest
+            }
+            waitUntil("the first round's session is ready", 20_000L) { readyAt != 0L }
+            scenario.onActivity { activity ->
+                activity.window.decorView.findViewWithTag<android.view.View>(
+                    io.github.supermonster003.autojs6.plugin.threestoneai.ChatViewTags.VOICE_STATUS_ACTION,
+                ).performClick()
+            }
+            waitUntil("the conversation ends", 10_000L) {
+                var ended = false
+                scenario.onActivity { activity -> ended = activity.currentVoicePhase == VoicePhase.IDLE && !activity.liveDictationActive }
+                ended
+            }
+            SpeechDeviceReport.receipt(
+                "macaw-cold-round",
+                mapOf(
+                    "macawVersion" to version(MacawSpeech.PACKAGE),
+                    "labelAtPress" to labelAtPress,
+                    "labelAtReady" to labelAtReady,
+                    "preparingMillis" to readyAt - pressedAt,
+                ),
+            )
+            assertEquals(VoiceStatusLabel.PREPARING, labelAtPress)
+            assertEquals(VoiceStatusLabel.LISTENING, labelAtReady)
+            assertTrue(env.backend.prompts.isEmpty())
+        }
+    }
+
     /** Names the events seen so far (never their text) when the wait times out. */
     private fun awaitEvents(what: String, events: List<String>, timeoutMillis: Long, condition: () -> Boolean) {
         try {

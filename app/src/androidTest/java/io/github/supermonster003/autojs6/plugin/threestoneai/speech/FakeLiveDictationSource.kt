@@ -20,6 +20,10 @@ internal class FakeLiveDictationSource : LiveDictationSource {
     @Volatile
     var openFailure: String? = null
 
+    /** Fails every open with this code, like another app holding the microphone the whole time (F1). */
+    @Volatile
+    var everyOpenFailure: String? = null
+
     /** What a finish flushes as the last final; null flushes nothing. */
     @Volatile
     var finishFinal: String? = null
@@ -45,7 +49,7 @@ internal class FakeLiveDictationSource : LiveDictationSource {
     override fun open(mode: LiveDictationMode, listener: LiveDictationListener): LiveDictationSession {
         val session = Session(mode, listener)
         sessions += session
-        val failure = openFailure
+        val failure = openFailure ?: everyOpenFailure
         val script = rounds
         when {
             failure != null -> {

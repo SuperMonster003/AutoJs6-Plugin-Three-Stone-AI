@@ -82,6 +82,27 @@ class SummaryCheckpointerTest {
     }
 
     @Test
+    fun `an assistant-only confirmation is set aside and the summary kept without a retry (D229)`() {
+        // What Gemma 4 E2B answered on XQ-AT72: the summary is fine, one memory item confirms the model's own reply.
+        val reply = validResponse().replace(
+            "}]",
+            "},{\"key\":\"fact.understood\",\"kind\":\"FACT\",\"text\":\"The assistant understood.\"," +
+                "\"sourceMessageIds\":[2],\"status\":\"CONFIRMED\"}]",
+        )
+        val backend = FakeBackend(success(reply))
+        var outcome: SummaryCheckpointOutcome? = null
+
+        SummaryCheckpointer(backend, directExecutor).generate(request()) { result -> outcome = result }
+
+        val success = outcome as SummaryCheckpointOutcome.Success
+        assertEquals(1, success.attempts)
+        assertEquals(1, success.memoryItemsSetAside)
+        assertEquals("The user wants concise answers.", success.validatedState.summarySegments.single().summary)
+        assertEquals(listOf("preference.concise"), success.validatedState.workingMemory.map(MemoryItem::key))
+        assertEquals(1, backend.createdSessions)
+    }
+
+    @Test
     fun `malformed JSON and network failures receive exactly one retry`() {
         val malformedBackend = FakeBackend(success("{}"), success(validResponse()))
         var malformedOutcome: SummaryCheckpointOutcome? = null

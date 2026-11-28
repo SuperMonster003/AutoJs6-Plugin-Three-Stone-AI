@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
+import android.app.UiModeManager
 import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Configuration
@@ -84,6 +85,57 @@ internal object AppConfiguration {
             configuration.setLayoutDirection(locale)
         }
         return base.createConfigurationContext(configuration)
+    }
+}
+
+/**
+ * The night mode handed to the system on API 31+ so the starting window of the next cold start is
+ * drawn like the app (F5, Q90, D224). The system persists it per package and also applies it to the
+ * process configuration, so the first frame after a cold start keeps the last AutoJs6 appearance
+ * until the host settings arrive.
+ */
+internal object ApplicationNightModePolicy {
+    /**
+     * A [UiModeManager] `MODE_NIGHT_*` value, or null to keep the recorded one: following AutoJs6
+     * whose settings are not known yet (a cold start before the first host refresh) must not reset
+     * the remembered host appearance to the system's.
+     */
+    fun mode(darkMode: AppDarkMode, host: AutoJs6HostSettingsResult?): Int? = when (darkMode) {
+        AppDarkMode.DARK -> UiModeManager.MODE_NIGHT_YES
+        AppDarkMode.LIGHT -> UiModeManager.MODE_NIGHT_NO
+        AppDarkMode.FOLLOW_SYSTEM -> UiModeManager.MODE_NIGHT_AUTO
+        AppDarkMode.FOLLOW_AUTOJS6 -> {
+            val snapshot = host?.snapshot
+            when {
+                snapshot != null ->
+                    if (snapshot.darkModeActive) UiModeManager.MODE_NIGHT_YES else UiModeManager.MODE_NIGHT_NO
+                host?.definitiveAbsence == true -> UiModeManager.MODE_NIGHT_AUTO
+                else -> null
+            }
+        }
+    }
+}
+
+internal object ApplicationNightModeSync {
+    @Volatile
+    private var applied: Int? = null
+
+    /** The mode last handed to the system by this process; null before the first change. */
+    internal val appliedForTest: Int?
+        get() = applied
+
+    /**
+     * Records the resolved night mode with the system once per process and on every change. An
+     * unchanged mode is not sent again; a changed one makes the system relaunch the activities like
+     * any other night mode change.
+     */
+    fun sync(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val resolved = ApplicationSettingsResolver.resolve(context)
+        val mode = ApplicationNightModePolicy.mode(resolved.settings.darkMode, resolved.hostResult) ?: return
+        if (applied == mode) return
+        val manager = context.getSystemService(UiModeManager::class.java) ?: return
+        runCatching { manager.setApplicationNightMode(mode) }.onSuccess { applied = mode }
     }
 }
 
@@ -341,6 +393,7 @@ abstract class ConfiguredActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         systemContext = newBase
+        ApplicationNightModeSync.sync(newBase)
         val configuredBase = AppConfiguration.wrap(newBase)
         val configuredNightMode = configuredBase.resources.configuration.uiMode and
             Configuration.UI_MODE_NIGHT_MASK
@@ -373,7 +426,7 @@ abstract class ConfiguredActivity : AppCompatActivity() {
         val expected = ++appearanceGeneration
         AutoJs6HostSettingsClient.refresh(applicationContext) { next ->
             if (expected != appearanceGeneration || isFinishing || isDestroyed) return@refresh
-            AutoJs6HostSettingsClient.publish(next)
+            AutoJs6HostSettingsClient.accept(applicationContext, next)
             if (recreationRequested) return@refresh
             if (!interacted && !hasUnconfirmedDialog() && !defersAppearanceRecreation() &&
                 currentHostAppearanceSignature() != appliedHostAppearanceSignature) {
@@ -386,6 +439,12 @@ abstract class ConfiguredActivity : AppCompatActivity() {
     }
 
     override fun onPause() { appearanceGeneration++; super.onPause() }
+
+    /** A changed appearance reaches the system before the relaunch, so both land together (D224). */
+    override fun recreate() {
+        ApplicationNightModeSync.sync(systemContext)
+        super.recreate()
+    }
 
     private fun currentHostAppearanceSignature(): Int {
         val resolved = ApplicationSettingsResolver.resolve(systemContext)

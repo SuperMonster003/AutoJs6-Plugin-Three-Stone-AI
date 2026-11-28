@@ -109,9 +109,13 @@ let session = speech.listen({ timeoutMillis: 8000 });
 session.on('final', () => session.stop());
 session.on('end', () => {
     let question = session.result();
+    console.log('Heard:', question);
     if (!question) return;
     ai.chat(question, { maxTokens: 256 })
-        .then((response) => speech.speak(response.text))
+        .then((response) => {
+            console.log('Answer:', response.text);
+            return speech.speak(response.text);
+        })
         .catch((error) => console.error(error.code, error.message));
 });
 ```
@@ -233,6 +237,11 @@ La hoja de ruta se organiza en funciones entregables para el usuario, cada una v
 
 * `Función` Con 3-Macaw Speech instalado, al tocar el micrófono se dicta en directo en el cuadro de entrada en lugar de abrir la pantalla del reconocedor: el texto que aún no es definitivo aparece en gris, cada frase se vuelve definitiva tras una pausa y la escucha continúa, así que puedes decir varias frases seguidas; termina cuando vuelves a tocar el micrófono (mientras tanto es un botón de parada), tras 15 segundos sin hablar o a los 5 minutos. Salir del chat, enviar o cambiar de conversación termina el dictado, y el texto ya mostrado se queda en el cuadro de entrada
 * `Función` Con 3-Macaw Speech instalado, la conversación por voz que se inicia con una pulsación larga en el micrófono tampoco abre ya la pantalla del reconocedor: lo que dices aparece en gris al final del cuadro de entrada, cada frase se envía al terminarla y la escucha se reanuda después de leer la respuesta; termina tras 8 segundos sin hablar, con el botón de salida de la barra de estado o al salir del chat, y tocar el micrófono mientras escucha envía enseguida lo que has dicho
+* `Corrección` En una conversación seguida con un modelo local (sobre todo en la conversación por voz), el turno siguiente a veces se detenía con "Resource cache already has an active lease": pedía el modelo antes de que el turno anterior lo hubiera devuelto. Ahora el turno siguiente espera a que lo devuelva (normalmente menos de un segundo); si el modelo sigue realmente ocupado con otra tarea más de un minuto, se muestra "El modelo en el dispositivo sigue ocupado con otra tarea" en lugar del error interno
+* `Corrección` En conversaciones largas con un modelo local, los mensajes más antiguos nunca se resumían (cada intento fallaba), por lo que el modelo olvidaba con más facilidad el principio de la conversación; ahora un modelo local resume después de 30 segundos de pausa en la conversación y cede el paso a un turno nuevo que empiece mientras tanto
+* `Corrección` Después de chatear con un modelo local, un script de AutoJs6 que llamaba a un modelo local (o al revés) hacía que el chat y el servicio de scripts cargaran cada uno su propia copia del modelo, lo que duplicaba la memoria usada (unos 1,5 GB más con Gemma 4 E2B); en teléfonos con poca memoria el sistema podía terminar la llamada del script ("BINDER_DIED"). Ahora, antes de cargar el modelo, cada lado pide al otro que devuelva su copia sin usar, de modo que ambos tienen una solo mientras los dos generan una respuesta a la vez
+* `Corrección` Cuando la apariencia del plugin no coincidía con la del sistema (por ejemplo, un sistema claro con el plugin siguiendo un AutoJs6 oscuro), un arranque en frío mostraba primero el modo y el idioma del sistema y luego saltaba a los del plugin. Ahora el plugin recuerda el último idioma, modo y color de tema de AutoJs6, así que la primera pantalla de un arranque en frío ya los usa; en Android 12 y posteriores además comunica su apariencia al sistema, así que desde el segundo inicio después de instalarlo la pantalla de inicio también la usa desde el principio (en Android 11 y anteriores la pantalla de inicio sigue al sistema)
+* `Corrección` La conversación por voz y el dictado en directo en el cuadro de entrada mostraban "escuchando" antes de que el micrófono empezara a grabar de verdad, así que podían perderse las primeras palabras; ahora muestran primero "preparando el micrófono" y "escuchando" cuando empieza la grabación
 * `Mejora` Cuando otra aplicación está usando el micrófono (por ejemplo la escucha permanente de 3-Stove Agent) o 3-Macaw Speech todavía no tiene un modelo de reconocimiento, ese dictado o ese turno de conversación abre en su lugar su ventana de reconocimiento (la ventana pausa la escucha de la otra aplicación y te guía para descargar un modelo); sin el permiso del micrófono se abre la pantalla de permisos de 3-Macaw Speech. Ajustes > Voz muestra si funciona el dictado en directo en el cuadro de entrada y, si no, por qué. Sin 3-Macaw Speech, o con "Preferir 3-Macaw Speech" desactivado, todo funciona como antes
 * `Dependencia` Se añade la interfaz de plugin de voz speech-api de AutoJs6, contrato v3 (dictado en directo y conversación por voz en el cuadro de entrada)
 

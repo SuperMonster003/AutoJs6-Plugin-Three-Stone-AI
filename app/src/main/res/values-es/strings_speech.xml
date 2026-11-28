@@ -8,6 +8,7 @@
     <string name="speech_auto_read_unavailable">No hay ningún motor de texto a voz instalado en este dispositivo</string>
     <string name="speech_conversation_exit">Salir de la conversación por voz</string>
     <string name="speech_conversation_listening">Conversación por voz: escuchando</string>
+    <string name="speech_conversation_preparing">Conversación por voz: preparando el micrófono</string>
     <string name="speech_conversation_prompt">Di tu siguiente mensaje</string>
     <string name="speech_conversation_speaking">Conversación por voz: leyendo, toca para interrumpir</string>
     <string name="speech_conversation_start">Iniciar una conversación por voz</string>
@@ -28,6 +29,7 @@
     <string name="speech_live_dictation_listening">Escuchando. Toca el botón de detener para terminar</string>
     <string name="speech_live_dictation_model_missing">Primero descarga un modelo de reconocimiento de voz en 3-Macaw Speech</string>
     <string name="speech_live_dictation_permission">Permite que 3-Macaw Speech use el micrófono y vuelve a tocar el micrófono</string>
+    <string name="speech_live_dictation_preparing">Preparando el micrófono. Habla cuando indique que está escuchando</string>
     <string name="speech_prefer_macaw">Preferir 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">Dicta en vivo en el cuadro de entrada y lee en voz alta con 3-Macaw Speech sin elegir una aplicación cada vez. Desactívalo para que elija el sistema</string>
     <string name="speech_read_aloud_failed">No se pudo iniciar el motor de voz</string>

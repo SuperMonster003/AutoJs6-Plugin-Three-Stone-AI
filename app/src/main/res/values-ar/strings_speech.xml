@@ -8,6 +8,7 @@
     <string name="speech_auto_read_unavailable">لا يوجد محرك لتحويل النص إلى كلام على هذا الجهاز</string>
     <string name="speech_conversation_exit">إنهاء المحادثة الصوتية</string>
     <string name="speech_conversation_listening">المحادثة الصوتية: جار الاستماع</string>
+    <string name="speech_conversation_preparing">المحادثة الصوتية: جار تجهيز الميكروفون</string>
     <string name="speech_conversation_prompt">قل رسالتك التالية</string>
     <string name="speech_conversation_speaking">المحادثة الصوتية: جار القراءة, انقر للمقاطعة</string>
     <string name="speech_conversation_start">بدء محادثة صوتية</string>
@@ -28,6 +29,7 @@
     <string name="speech_live_dictation_listening">جار الاستماع. المس زر الإيقاف للإنهاء</string>
     <string name="speech_live_dictation_model_missing">نزل أولا نموذجا للتعرف على الكلام في ⁨3-Macaw Speech⁩</string>
     <string name="speech_live_dictation_permission">اسمح لـ ⁨3-Macaw Speech⁩ باستخدام الميكروفون, ثم المس الميكروفون مرة أخرى</string>
+    <string name="speech_live_dictation_preparing">جار تجهيز الميكروفون. تحدث عندما يظهر جار الاستماع</string>
     <string name="speech_prefer_macaw">تفضيل ⁨3-Macaw Speech⁩</string>
     <string name="speech_prefer_macaw_summary">الإملاء مباشرة في مربع الإدخال والقراءة بصوت عال باستخدام ⁨3-Macaw Speech⁩ دون اختيار تطبيق في كل مرة. أوقفه ليختار النظام</string>
     <string name="speech_read_aloud_failed">تعذر تشغيل محرك الكلام</string>

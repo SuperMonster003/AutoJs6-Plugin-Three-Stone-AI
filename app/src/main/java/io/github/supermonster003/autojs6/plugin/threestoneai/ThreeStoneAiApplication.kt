@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.threestoneai
 
 import android.app.Application
+import android.os.Handler
 import androidx.annotation.VisibleForTesting
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AiBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.AndroidOnlineAiNetworkAccess
@@ -11,6 +12,7 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.backend.FileDefault
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLocalBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmBackendCompatibilityDetector
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LiteRtLmEngineRuntime
+import io.github.supermonster003.autojs6.plugin.threestoneai.backend.LocalEngineHandover
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiBackend
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.OnlineAiHttpExecution
 import io.github.supermonster003.autojs6.plugin.threestoneai.backend.liteRtLmCacheDirectory
@@ -22,11 +24,14 @@ import io.github.supermonster003.autojs6.plugin.threestoneai.model.ModelReposito
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.FileOnlineAiProfileDocumentStorage
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileRegistry
 import io.github.supermonster003.autojs6.plugin.threestoneai.profile.OnlineAiProfileRepository
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class ThreeStoneAiApplication : Application() {
     private val engineRuntimeDelegate = lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         LiteRtLmEngineRuntime(
             cacheDirectory = liteRtLmCacheDirectory(cacheDir),
+            beforeLoad = { LocalEngineHandover.requestRelease(this) },
         )
     }
 
@@ -113,6 +118,28 @@ class ThreeStoneAiApplication : Application() {
     internal val aiBackend: AiBackend
         get() = aiBackendOverride ?: aiBackendDelegate.value
 
+    override fun onCreate() {
+        super.onCreate()
+        // The chat and the script provider run in two processes; only one of them holds the model (D227).
+        LocalEngineHandover.register(this, ::releaseLocalEngineForAnotherProcess)
+    }
+
+    /** Runs on a worker thread when another process of the app is about to load an on-device engine. */
+    private fun releaseLocalEngineForAnotherProcess(): Boolean {
+        if (!engineRuntimeDelegate.isInitialized()) return true
+        // The chat keeps its local session open between turns; an idle one gives the engine back.
+        val chatReleased = CountDownLatch(1)
+        Handler(mainLooper).post {
+            try {
+                ChatGenerationCoordinator.existing()?.releaseIdleLocalEngine()
+            } finally {
+                chatReleased.countDown()
+            }
+        }
+        chatReleased.await(CHAT_RELEASE_WAIT_MILLIS, TimeUnit.MILLISECONDS)
+        return engineRuntime.releaseIdleEngine(LocalEngineHandover.RELEASE_WAIT_MILLIS)
+    }
+
     override fun onTrimMemory(level: Int) {
         if (
             engineRuntimeDelegate.isInitialized() &&
@@ -126,6 +153,10 @@ class ThreeStoneAiApplication : Application() {
     override fun onLowMemory() {
         if (engineRuntimeDelegate.isInitialized()) engineRuntime.requestEviction()
         super.onLowMemory()
+    }
+
+    private companion object {
+        const val CHAT_RELEASE_WAIT_MILLIS = 1_000L
     }
 
     override fun onTerminate() {

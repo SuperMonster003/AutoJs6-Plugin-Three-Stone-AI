@@ -8,6 +8,7 @@
     <string name="speech_auto_read_unavailable">设备上没有可用的语音合成引擎</string>
     <string name="speech_conversation_exit">退出语音对话</string>
     <string name="speech_conversation_listening">语音对话: 正在听</string>
+    <string name="speech_conversation_preparing">语音对话: 正在准备麦克风</string>
     <string name="speech_conversation_prompt">请说出下一句</string>
     <string name="speech_conversation_speaking">语音对话: 正在朗读, 点按可打断</string>
     <string name="speech_conversation_start">开始语音对话</string>
@@ -28,6 +29,7 @@
     <string name="speech_live_dictation_listening">正在听, 点停止按钮结束</string>
     <string name="speech_live_dictation_model_missing">请先在 3-Macaw Speech 中下载语音识别模型</string>
     <string name="speech_live_dictation_permission">请允许 3-Macaw Speech 使用麦克风, 然后再点一次麦克风</string>
+    <string name="speech_live_dictation_preparing">正在准备麦克风, 显示正在听之后再说话</string>
     <string name="speech_prefer_macaw">优先使用 3-Macaw Speech</string>
     <string name="speech_prefer_macaw_summary">听写 (在输入框内实时显示) 与朗读直接使用 3-Macaw Speech, 不必每次选择应用; 关闭后由系统选择</string>
     <string name="speech_read_aloud_failed">朗读引擎无法启动</string>

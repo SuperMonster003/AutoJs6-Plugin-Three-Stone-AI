@@ -53,6 +53,20 @@
 
 {{ placeholder_voice_faq }}
 
+{{ p_voice_script }}
+
+```js
+let session = speech.listen({ timeoutMillis: 8000 });
+session.on('final', () => session.stop());
+session.on('end', () => {
+    let question = session.result();
+    if (!question) return;
+    ai.chat(question, { maxTokens: 256 })
+        .then((response) => speech.speak(response.text))
+        .catch((error) => console.error(error.code, error.message));
+});
+```
+
 ******
 
 ### {{ h3_formats }}

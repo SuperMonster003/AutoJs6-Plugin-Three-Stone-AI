@@ -14,7 +14,7 @@
 - **切换模型**: 聊天时随时切换模型; 脚本默认使用 "模型与服务" 页中的 "默认目标".
 - **模型管理**: 在 "本地模型" 段检查, 重命名或删除模型. API Key 只保存在本机, 导出服务时不包含 API Key.
 - **请求头**: 在服务详情页的 "请求头" 中添加自定义请求头, 例如 OpenCode Go 需要的会话头; 保密值只保存在本机, 导出时不包含.
-- **语音**: 点按麦克风听写, 长按开始语音对话, 长按回复可以 "朗读"; 装有 3-Macaw Speech 时听写与朗读离线完成.
+- **语音**: 点按麦克风听写, 长按开始语音对话, 长按回复可以 "朗读"; 装有 3-Macaw Speech 时直接在输入框里实时听写, 语音对话也不再弹出识别界面, 听写与朗读离线完成.
 - **导出与分享**: 在聊天页的菜单中选择 "导出为 Markdown" 或 "分享为长图".
 
 ### 在脚本中使用
@@ -53,9 +53,24 @@ ai.session({ system: 'Keep every answer short.' }).then((session) => {
 });
 ```
 
+装有 3-Macaw Speech 时, 可以用 `speech` 模块把听写, 提问与朗读串起来: 听到一句话后停止听写, 把文字交给 `ai.chat`, 再用 `speech.speak` 读出回答:
+
+```js
+let session = speech.listen({ timeoutMillis: 8000 });
+session.on('final', () => session.stop());
+session.on('end', () => {
+    let question = session.result();
+    if (!question) return;
+    ai.chat(question, { maxTokens: 256 })
+        .then((response) => speech.speak(response.text))
+        .catch((error) => console.error(error.code, error.message));
+});
+```
+
 - `ai.chat` 返回包含用量的完整响应, `ai.stream` 边生成边返回文本.
 - `temperature`, `topK`, `topP` 与 `maxTokens` 控制采样与输出长度; 目标支持结构化输出时, 传入 `responseSchema` 可以得到符合该 JSON Schema 的文本.
 - 目标不可用或未配置时请求直接失败 (例如 `TARGET_UNAVAILABLE`), 不会自动换用其他模型.
+- `ai.stream` 同样可以接在 `speech.listen` 之后: 在 `done` 事件中朗读 `response.text`, 或在 `delta` 中按句切分后用 `speech.speak(sentence, { queue: 'add' })` 边生成边朗读. `speech` 模块由 3-Macaw Speech 提供, 没有安装时调用失败 (`PLUGIN_UNAVAILABLE`).
 
 ### 运行要求
 

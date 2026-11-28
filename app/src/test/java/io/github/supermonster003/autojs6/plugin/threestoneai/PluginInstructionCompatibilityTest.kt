@@ -13,7 +13,8 @@ import java.io.File
  * `.readme/lang_*.json` and `.readme/template_plugin_instruction.md`; the generator's `--check`
  * mode covers drift. These tests keep the contract the plugin page relies on: every locale ships
  * an instruction, the raw provider protocol stays out of it, and the script examples use the
- * documented `ai` module of AutoJs6.
+ * documented `ai` module of AutoJs6, with the voice example combining it with the `speech` module
+ * (D21; up to four examples and a 7 KB Simplified Chinese budget since D221).
  */
 class PluginInstructionCompatibilityTest {
 
@@ -69,7 +70,7 @@ class PluginInstructionCompatibilityTest {
         val files = instructionFiles()
         val reference = codeBlocks("raw-zh", files.getValue("raw-zh").readLines())
 
-        assertTrue("Expected one to three code blocks", reference.size in 1..3)
+        assertTrue("Expected one to four code blocks", reference.size in 1..4)
         reference.forEach { block ->
             assertTrue("A code block must not exceed 15 lines", block.size <= 15)
         }
@@ -128,7 +129,7 @@ class PluginInstructionCompatibilityTest {
     private companion object {
         const val INSTRUCTION_FILE_NAME = "plugin_instruction.md"
         const val AI_DOCS_URL = "https://docs.autojs6.com/#/ai"
-        const val ZH_HANS_BYTE_BUDGET = 6L * 1024
+        const val ZH_HANS_BYTE_BUDGET = 7L * 1024
         const val FENCE = "```"
         const val JS_FENCE = "```js"
 
@@ -161,6 +162,8 @@ class PluginInstructionCompatibilityTest {
             "ai.catalog(",
             "ai.session(",
             "session.close()",
+            "speech.listen(",
+            "speech.speak(",
         )
     }
 }

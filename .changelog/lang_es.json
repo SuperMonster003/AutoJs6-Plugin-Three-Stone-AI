@@ -5,6 +5,19 @@
   "changelog_label_improvement": "Mejora",
   "changelog_label_dependency": "Dependencia",
   "$data": {
+    "v1.9.0": {
+      "released_date": "2026/11/28",
+      "feature": [
+        "Con 3-Macaw Speech instalado, al tocar el micrófono se dicta en directo en el cuadro de entrada en lugar de abrir la pantalla del reconocedor: el texto que aún no es definitivo aparece en gris, cada frase se vuelve definitiva tras una pausa y la escucha continúa, así que puedes decir varias frases seguidas; termina cuando vuelves a tocar el micrófono (mientras tanto es un botón de parada), tras 15 segundos sin hablar o a los 5 minutos. Salir del chat, enviar o cambiar de conversación termina el dictado, y el texto ya mostrado se queda en el cuadro de entrada",
+        "Con 3-Macaw Speech instalado, la conversación por voz que se inicia con una pulsación larga en el micrófono tampoco abre ya la pantalla del reconocedor: lo que dices aparece en gris al final del cuadro de entrada, cada frase se envía al terminarla y la escucha se reanuda después de leer la respuesta; termina tras 8 segundos sin hablar, con el botón de salida de la barra de estado o al salir del chat, y tocar el micrófono mientras escucha envía enseguida lo que has dicho"
+      ],
+      "improvement": [
+        "Cuando otra aplicación está usando el micrófono (por ejemplo la escucha permanente de 3-Stove Agent) o 3-Macaw Speech todavía no tiene un modelo de reconocimiento, ese dictado o ese turno de conversación abre en su lugar su ventana de reconocimiento (la ventana pausa la escucha de la otra aplicación y te guía para descargar un modelo); sin el permiso del micrófono se abre la pantalla de permisos de 3-Macaw Speech. Ajustes > Voz muestra si funciona el dictado en directo en el cuadro de entrada y, si no, por qué. Sin 3-Macaw Speech, o con \"Preferir 3-Macaw Speech\" desactivado, todo funciona como antes"
+      ],
+      "dependency": [
+        "Se añade la interfaz de plugin de voz speech-api de AutoJs6, contrato v3 (dictado en directo y conversación por voz en el cuadro de entrada)"
+      ]
+    },
     "v1.8.0": {
       "released_date": "2026/11/27",
       "hint": [

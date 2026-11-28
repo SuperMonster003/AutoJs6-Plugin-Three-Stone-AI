@@ -5,6 +5,19 @@
   "changelog_label_improvement": "Amélioration",
   "changelog_label_dependency": "Dépendance",
   "$data": {
+    "v1.9.0": {
+      "released_date": "2026/11/28",
+      "feature": [
+        "Si 3-Macaw Speech est installé, toucher le micro dicte en direct dans le champ de saisie au lieu d'ouvrir un écran de reconnaissance: le texte pas encore définitif est en gris, chaque phrase devient définitive après une pause et l'écoute continue, vous pouvez donc dire plusieurs phrases d'affilée; la dictée s'arrête quand vous touchez de nouveau le micro (c'est alors un bouton d'arrêt), après 15 secondes sans parole ou au bout de 5 minutes. Quitter la discussion, envoyer ou changer de conversation arrête la dictée, et le texte déjà affiché reste dans le champ de saisie",
+        "Si 3-Macaw Speech est installé, la conversation vocale lancée par un appui long sur le micro n'ouvre plus d'écran de reconnaissance non plus: ce que vous dites s'affiche en gris à la fin du champ de saisie, chaque phrase est envoyée dès que vous la terminez, et l'écoute reprend après la lecture de la réponse; elle s'arrête après 8 secondes sans parole, avec le bouton de sortie de la barre d'état ou quand vous quittez la discussion, et toucher le micro pendant l'écoute envoie aussitôt ce que vous avez dit"
+      ],
+      "improvement": [
+        "Quand le micro est utilisé par une autre application (par exemple l'écoute permanente de 3-Stove Agent) ou que 3-Macaw Speech n'a pas encore de modèle de reconnaissance, cette dictée ou ce tour de conversation ouvre plutôt sa fenêtre de reconnaissance (la fenêtre met en pause l'écoute de l'autre application et vous guide pour télécharger un modèle); sans l'autorisation du micro, l'écran d'autorisation de 3-Macaw Speech s'ouvre. Paramètres > Voix indique si la dictée en direct dans le champ de saisie fonctionne et, sinon, pourquoi. Sans 3-Macaw Speech, ou avec \"Privilégier 3-Macaw Speech\" désactivé, rien ne change"
+      ],
+      "dependency": [
+        "Ajout de l'interface de plugin vocal speech-api d'AutoJs6, contrat v3 (dictée en direct et conversation vocale dans le champ de saisie)"
+      ]
+    },
     "v1.8.0": {
       "released_date": "2026/11/27",
       "hint": [

@@ -14,7 +14,7 @@
 - **モデルの切り替え**: チャット中いつでもモデルを切り替えられます. スクリプトは "モデルとサービス" 画面の "既定のターゲット" を使います.
 - **モデル管理**: "ローカルモデル" セクションでモデルのチェック, 名前の変更, 削除ができます. API キーは端末内にのみ保存され, サービスをエクスポートしても含まれません.
 - **リクエストヘッダー**: サービスの詳細画面の "リクエストヘッダー" でカスタムリクエストヘッダーを追加できます (例: OpenCode Go が必要とするセッションヘッダー). 秘密値は端末内にのみ保存され, エクスポートには含まれません.
-- **音声**: マイクをタップすると音声入力, 長押しすると音声会話を開始します. 応答を長押しすると "読み上げ" を選べます. 3-Macaw Speech をインストールすると音声入力と読み上げをオフラインで行えます.
+- **音声**: マイクをタップすると音声入力, 長押しすると音声会話を開始します. 応答を長押しすると "読み上げ" を選べます. 3-Macaw Speech をインストールすると入力欄にリアルタイムで音声入力でき, 音声会話でも認識画面が開かず, 音声入力と読み上げをオフラインで行えます.
 - **エクスポートと共有**: チャット画面のメニューで "Markdown でエクスポート" または "画像として共有" を選びます.
 
 ### スクリプトでの使い方
@@ -53,9 +53,24 @@ ai.session({ system: 'Keep every answer short.' }).then((session) => {
 });
 ```
 
+3-Macaw Speech がインストールされている場合, `speech` モジュールで音声入力, 質問, 読み上げをつなげられます. 一文聞き取ったら音声入力を止め, その文字を `ai.chat` に渡し, `speech.speak` で回答を読み上げます:
+
+```js
+let session = speech.listen({ timeoutMillis: 8000 });
+session.on('final', () => session.stop());
+session.on('end', () => {
+    let question = session.result();
+    if (!question) return;
+    ai.chat(question, { maxTokens: 256 })
+        .then((response) => speech.speak(response.text))
+        .catch((error) => console.error(error.code, error.message));
+});
+```
+
 - `ai.chat` は使用量を含む完全な応答を返し, `ai.stream` は生成に合わせてテキストを返します.
 - `temperature`, `topK`, `topP`, `maxTokens` でサンプリングと出力の長さを調整します. ターゲットが構造化出力に対応している場合, `responseSchema` を渡すとその JSON Schema に沿ったテキストが返ります.
 - ターゲットが利用できない, または設定されていない場合, リクエストはそのまま失敗し (例: `TARGET_UNAVAILABLE`), 別のモデルに切り替わることはありません.
+- `ai.stream` も `speech.listen` の後に使えます. `done` イベントで `response.text` を読み上げるか, `delta` を文ごとに区切って `speech.speak(sentence, { queue: 'add' })` で生成しながら読み上げます. `speech` モジュールは 3-Macaw Speech が提供し, インストールされていないと呼び出しは失敗します (`PLUGIN_UNAVAILABLE`).
 
 ### 動作要件
 

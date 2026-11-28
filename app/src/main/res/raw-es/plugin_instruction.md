@@ -14,7 +14,7 @@
 - **Cambiar de modelo**: cambia de modelo en cualquier momento durante el chat; los scripts usan el "Destino predeterminado" de la página "Modelos y servicios".
 - **Gestión de modelos**: comprueba, cambia el nombre o elimina modelos en la sección "Modelos locales". Las claves API solo se guardan en el dispositivo y no se incluyen al exportar servicios.
 - **Encabezados de solicitud**: añade encabezados de solicitud personalizados en "Encabezados de solicitud" de la página de detalles del servicio, por ejemplo el encabezado de sesión que requiere OpenCode Go; los valores secretos solo se guardan en el dispositivo y no se incluyen al exportar.
-- **Voz**: toca el micrófono para dictar, mantenlo pulsado para iniciar una conversación por voz y mantén pulsada una respuesta para elegir "Leer en voz alta"; con 3-Macaw Speech instalado, el dictado y la lectura funcionan sin conexión.
+- **Voz**: toca el micrófono para dictar, mantenlo pulsado para iniciar una conversación por voz y mantén pulsada una respuesta para elegir "Leer en voz alta"; con 3-Macaw Speech instalado, el dictado aparece en directo en el cuadro de entrada, la conversación por voz ya no abre la pantalla del reconocedor, y el dictado y la lectura funcionan sin conexión.
 - **Exportar y compartir**: elige "Exportar como Markdown" o "Compartir como imagen" en el menú de la pantalla de chat.
 
 ### Uso en scripts
@@ -53,9 +53,24 @@ ai.session({ system: 'Keep every answer short.' }).then((session) => {
 });
 ```
 
+Con 3-Macaw Speech instalado, el módulo `speech` encadena el dictado, la pregunta y la lectura: deja de escuchar tras una frase, pasa el texto a `ai.chat` y lee la respuesta con `speech.speak`:
+
+```js
+let session = speech.listen({ timeoutMillis: 8000 });
+session.on('final', () => session.stop());
+session.on('end', () => {
+    let question = session.result();
+    if (!question) return;
+    ai.chat(question, { maxTokens: 256 })
+        .then((response) => speech.speak(response.text))
+        .catch((error) => console.error(error.code, error.message));
+});
+```
+
 - `ai.chat` devuelve la respuesta completa con el uso, y `ai.stream` devuelve el texto a medida que se genera.
 - `temperature`, `topK`, `topP` y `maxTokens` controlan el muestreo y la longitud de salida; si el destino admite salida estructurada, pasar `responseSchema` devuelve texto que cumple ese JSON Schema.
 - Si el destino no está disponible o no está configurado, la solicitud falla directamente (por ejemplo con `TARGET_UNAVAILABLE`) y nunca cambia a otro modelo.
+- `ai.stream` también puede seguir a `speech.listen`: lee `response.text` en el evento `done`, o divide el texto de `delta` en frases y lee cada una con `speech.speak(sentence, { queue: 'add' })` mientras se genera. El módulo `speech` lo proporciona 3-Macaw Speech; sin él, las llamadas fallan (`PLUGIN_UNAVAILABLE`).
 
 ### Requisitos
 

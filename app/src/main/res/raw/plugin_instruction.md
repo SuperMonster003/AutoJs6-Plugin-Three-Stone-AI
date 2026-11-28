@@ -14,7 +14,7 @@
 - **Switching models**: switch models at any time while chatting; scripts use the "Default target" on the "Models and services" page.
 - **Model management**: check, rename or delete models in the "Local models" section. API keys are stored only on the device and are left out when you export services.
 - **Request headers**: add custom request headers under "Request headers" on the service details page, for example the session header OpenCode Go requires; secret values stay on the device and are left out of exports.
-- **Voice**: tap the microphone to dictate, long-press it to start a voice conversation, and long-press a reply to choose "Read aloud"; with 3-Macaw Speech installed, dictation and reading aloud work offline.
+- **Voice**: tap the microphone to dictate, long-press it to start a voice conversation, and long-press a reply to choose "Read aloud"; with 3-Macaw Speech installed, dictation appears live in the input box, the voice conversation no longer opens a recognizer screen, and dictation and reading aloud work offline.
 - **Export and share**: choose "Export as Markdown" or "Share as image" in the chat screen menu.
 
 ### Using it in scripts
@@ -53,9 +53,24 @@ ai.session({ system: 'Keep every answer short.' }).then((session) => {
 });
 ```
 
+With 3-Macaw Speech installed, the `speech` module chains dictation, the question and reading aloud: stop listening after one sentence, pass the text to `ai.chat`, and read the answer with `speech.speak`:
+
+```js
+let session = speech.listen({ timeoutMillis: 8000 });
+session.on('final', () => session.stop());
+session.on('end', () => {
+    let question = session.result();
+    if (!question) return;
+    ai.chat(question, { maxTokens: 256 })
+        .then((response) => speech.speak(response.text))
+        .catch((error) => console.error(error.code, error.message));
+});
+```
+
 - `ai.chat` returns the full response including usage, and `ai.stream` returns text as it is generated.
 - `temperature`, `topK`, `topP` and `maxTokens` control sampling and output length; when the target supports structured output, passing `responseSchema` returns text that matches that JSON Schema.
 - If the target is unavailable or not configured, the request fails directly (for example with `TARGET_UNAVAILABLE`) and never switches to another model.
+- `ai.stream` can follow `speech.listen` as well: read `response.text` in the `done` event, or split the `delta` text into sentences and read each with `speech.speak(sentence, { queue: 'add' })` while it is generated. The `speech` module comes from 3-Macaw Speech; without it the calls fail (`PLUGIN_UNAVAILABLE`).
 
 ### Requirements
 

@@ -14,7 +14,7 @@
 - **切換模型**: 聊天時隨時切換模型; 指令碼預設使用 "模型與服務" 頁面中的 "預設目標".
 - **模型管理**: 在 "本機模型" 區段檢查, 重新命名或刪除模型. API Key 只儲存在本機, 匯出服務時不包含 API Key.
 - **請求標頭**: 在服務詳細資料頁的 "請求標頭" 中新增自訂請求標頭, 例如 OpenCode Go 需要的工作階段標頭; 保密值只儲存在本機, 匯出時不包含.
-- **語音**: 輕觸麥克風聽寫, 長按開始語音對話, 長按回覆可以 "朗讀"; 安裝 3-Macaw Speech 時聽寫與朗讀可離線完成.
+- **語音**: 輕觸麥克風聽寫, 長按開始語音對話, 長按回覆可以 "朗讀"; 安裝 3-Macaw Speech 時直接在輸入框內即時聽寫, 語音對話也不再跳出辨識畫面, 聽寫與朗讀可離線完成.
 - **匯出與分享**: 在聊天頁的選單中選擇 "匯出為 Markdown" 或 "分享為長圖".
 
 ### 在指令碼中使用
@@ -53,9 +53,24 @@ ai.session({ system: 'Keep every answer short.' }).then((session) => {
 });
 ```
 
+安裝 3-Macaw Speech 時, 可以用 `speech` 模組把聽寫, 提問與朗讀串連起來: 聽到一句話後停止聽寫, 把文字交給 `ai.chat`, 再用 `speech.speak` 讀出回答:
+
+```js
+let session = speech.listen({ timeoutMillis: 8000 });
+session.on('final', () => session.stop());
+session.on('end', () => {
+    let question = session.result();
+    if (!question) return;
+    ai.chat(question, { maxTokens: 256 })
+        .then((response) => speech.speak(response.text))
+        .catch((error) => console.error(error.code, error.message));
+});
+```
+
 - `ai.chat` 傳回包含用量的完整回應, `ai.stream` 邊產生邊傳回文字.
 - `temperature`, `topK`, `topP` 與 `maxTokens` 控制取樣與輸出長度; 目標支援結構化輸出時, 傳入 `responseSchema` 可以取得符合該 JSON Schema 的文字.
 - 目標無法使用或未設定時請求直接失敗 (例如 `TARGET_UNAVAILABLE`), 不會自動改用其他模型.
+- `ai.stream` 同樣可以接在 `speech.listen` 之後: 在 `done` 事件中朗讀 `response.text`, 或在 `delta` 中按句子切分後用 `speech.speak(sentence, { queue: 'add' })` 邊產生邊朗讀. `speech` 模組由 3-Macaw Speech 提供, 未安裝時呼叫會失敗 (`PLUGIN_UNAVAILABLE`).
 
 ### 執行需求
 

@@ -14,7 +14,7 @@
 - **모델 전환**: 채팅 중 언제든 모델을 바꿀 수 있습니다. 스크립트는 "모델 및 서비스" 화면의 "기본 대상"을 사용합니다.
 - **모델 관리**: "로컬 모델" 섹션에서 모델을 확인, 이름 변경, 삭제할 수 있습니다. API 키는 기기에만 저장되며 서비스를 내보낼 때 포함되지 않습니다.
 - **요청 헤더**: 서비스 세부정보 화면의 "요청 헤더"에서 OpenCode Go에 필요한 세션 헤더 같은 사용자 지정 요청 헤더를 추가합니다. 비밀 값은 기기에만 저장되며 내보낼 때 포함되지 않습니다.
-- **음성**: 마이크를 누르면 음성 입력, 길게 누르면 음성 대화를 시작합니다. 응답을 길게 누르면 "읽어 주기"를 선택할 수 있습니다. 3-Macaw Speech를 설치하면 음성 입력과 읽어 주기가 오프라인으로 동작합니다.
+- **음성**: 마이크를 누르면 음성 입력, 길게 누르면 음성 대화를 시작합니다. 응답을 길게 누르면 "읽어 주기"를 선택할 수 있습니다. 3-Macaw Speech를 설치하면 입력란에 실시간으로 받아쓰고, 음성 대화도 인식 화면을 열지 않으며, 음성 입력과 읽어 주기가 오프라인으로 동작합니다.
 - **내보내기와 공유**: 채팅 화면 메뉴에서 "Markdown으로 내보내기" 또는 "이미지로 공유"를 선택합니다.
 
 ### 스크립트에서 사용하기
@@ -53,9 +53,24 @@ ai.session({ system: 'Keep every answer short.' }).then((session) => {
 });
 ```
 
+3-Macaw Speech가 설치되어 있으면 `speech` 모듈로 받아쓰기, 질문, 읽어 주기를 이을 수 있습니다. 한 문장을 들으면 받아쓰기를 멈추고, 그 텍스트를 `ai.chat`에 넘긴 뒤 `speech.speak`로 답을 읽어 줍니다:
+
+```js
+let session = speech.listen({ timeoutMillis: 8000 });
+session.on('final', () => session.stop());
+session.on('end', () => {
+    let question = session.result();
+    if (!question) return;
+    ai.chat(question, { maxTokens: 256 })
+        .then((response) => speech.speak(response.text))
+        .catch((error) => console.error(error.code, error.message));
+});
+```
+
 - `ai.chat`은 사용량을 포함한 전체 응답을 반환하고, `ai.stream`은 생성되는 대로 텍스트를 반환합니다.
 - `temperature`, `topK`, `topP`, `maxTokens`로 샘플링과 출력 길이를 조절합니다. 대상이 구조화된 출력을 지원하면 `responseSchema`를 전달해 해당 JSON Schema에 맞는 텍스트를 받을 수 있습니다.
 - 대상을 사용할 수 없거나 구성되지 않았으면 요청은 바로 실패하며 (예: `TARGET_UNAVAILABLE`), 다른 모델로 바뀌지 않습니다.
+- `ai.stream`도 `speech.listen` 뒤에 쓸 수 있습니다. `done` 이벤트에서 `response.text`를 읽어 주거나, `delta`를 문장 단위로 나누어 `speech.speak(sentence, { queue: 'add' })`로 생성하면서 읽어 줍니다. `speech` 모듈은 3-Macaw Speech가 제공하며, 설치되어 있지 않으면 호출이 실패합니다(`PLUGIN_UNAVAILABLE`).
 
 ### 요구 사항
 
